@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     return NextResponse.json({ message: "GET /api/orders" });
   } catch (error) {
@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    return NextResponse.json({ message: "POST /api/orders" });
+    const body = await request.json();
+    return NextResponse.json({ message: "POST /api/orders", data: body });
   } catch (error) {
     return NextResponse.json(
       { error: "Internal server error" },
