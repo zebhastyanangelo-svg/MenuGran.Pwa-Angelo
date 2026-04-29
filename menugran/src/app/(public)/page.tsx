@@ -3,7 +3,7 @@ import { Utensils, Search, Smartphone, Truck, Star, Clock } from 'lucide-react';
 
 export default function PublicLandingPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white" suppressHydrationWarning>
       {/* Navbar */}
       <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -20,12 +20,12 @@ export default function PublicLandingPage() {
             </div>
 
             <div className="flex items-center space-x-4">
-              <Link href="/auth/login">
+              <Link href="/login">
                 <button className="text-red-600 border border-red-600 px-4 py-2 rounded-lg hover:bg-red-50 transition-colors">
                   Iniciar Sesión
                 </button>
               </Link>
-              <Link href="/auth/login">
+              <Link href="/register">
                 <button className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
                   Registrarme
                 </button>
@@ -194,11 +194,5 @@ export default function PublicLandingPage() {
         </div>
       </footer>
     </div>
-  );
-}
-          </ul>
-        </div>
-      </section>
-    </main>
   );
 }

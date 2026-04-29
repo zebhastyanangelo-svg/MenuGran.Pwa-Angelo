@@ -8,6 +8,10 @@ export const viewport: Viewport = {
   maximumScale: 5,
   viewportFit: "cover",
   colorScheme: "light dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
 };
 
 export const metadata: Metadata = {
@@ -17,10 +21,6 @@ export const metadata: Metadata = {
   },
   description: "MenuGran - Tu aplicación PWA de pedidos de comida con entregas en tiempo real",
   manifest: "/manifest.webmanifest",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#000000" },
-  ],
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { User, Lock } from 'lucide-react';
 import Link from 'next/link';
 
-export default function LoginPage() {
+export default function AdminLoginPage() {
   const [cedula, setCedula] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -28,8 +28,8 @@ export default function LoginPage() {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-      console.log('Login exitoso - redirigir a /client');
-      // Aquí iría la redirección: router.push('/client');
+      console.log('Login admin exitoso - redirigir a /admin');
+      // Aquí iría la redirección: router.push('/admin');
     }, 1500);
   };
 
@@ -37,9 +37,9 @@ export default function LoginPage() {
     <div className="w-full max-w-md">
       <div className="bg-white shadow-xl rounded-2xl p-8">
         <div className="text-center mb-8">
-          <div className="text-6xl mb-4">🍽️</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Iniciar Sesión</h1>
-          <p className="text-gray-500">Ingresa a tu cuenta MenuGran</p>
+          <div className="text-6xl mb-4">🏪</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Panel de Administrador</h1>
+          <p className="text-gray-500">Acceso exclusivo para dueños de restaurante</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -95,29 +95,13 @@ export default function LoginPage() {
             disabled={isLoading}
             className="w-full bg-red-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isLoading ? 'Cargando...' : 'Ingresar'}
+            {isLoading ? 'Cargando...' : 'Ingresar al Panel'}
           </button>
         </form>
 
-        <div className="mt-6 text-center space-y-4">
-          <Link href="/forgot-pin" className="text-sm text-gray-600 hover:text-red-600 transition-colors">
-            ¿Olvidaste tu PIN?
-          </Link>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">o</span>
-            </div>
-          </div>
-
-          <Link
-            href="/register"
-            className="w-full inline-flex justify-center items-center px-4 py-3 border border-red-600 text-red-600 rounded-lg font-medium hover:bg-red-50 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
-          >
-            Crear cuenta nueva
+        <div className="mt-6 text-center">
+          <Link href="/login" className="text-sm text-gray-600 hover:text-red-600 transition-colors">
+            ¿Eres cliente? Inicia sesión aquí
           </Link>
         </div>
       </div>
