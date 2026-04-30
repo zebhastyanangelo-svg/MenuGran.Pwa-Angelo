@@ -133,7 +133,7 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {loading ? null : error ? null : (
+      {!loading && !error ? (
         <>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {metricCards.map((card) => (
@@ -163,107 +163,101 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-        <div className="rounded-3xl bg-white p-6 shadow-sm shadow-slate-200">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Ventas últimos 7 días</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(totalSales)}</p>
-            </div>
-            <span className="rounded-full bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{period}</span>
-          </div>
-          <div className="mt-8 flex items-end gap-4 overflow-x-auto">
-            {salesLast7Days.map((bar) => {
-              const height = Math.max(80, (bar.amount / maxBar) * 220);
-              return (
-                <div key={bar.day} className="flex flex-col items-center gap-3 text-center">
-                  <div
-                    className="flex h-56 w-12 items-end overflow-hidden rounded-3xl bg-slate-100"
-                    style={{ minHeight: '220px' }}
-                  >
-                    <div
-                      className="w-full rounded-t-3xl bg-red-600 transition-all duration-300"
-                      style={{ height: `${height}px` }}
-                    />
-                  </div>
-                  <div className="text-sm font-semibold text-slate-900">{bar.day}</div>
-                  <div className="text-xs text-slate-500">{formatCurrency(bar.amount)}</div>
+            <div className="rounded-3xl bg-white p-6 shadow-sm shadow-slate-200">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Ventas últimos 7 días</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(totalSales)}</p>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="rounded-3xl bg-white p-6 shadow-sm shadow-slate-200">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Pedidos por método</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">Distribución</p>
+                <span className="rounded-full bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{period}</span>
+              </div>
+              <div className="mt-8 flex items-end gap-4 overflow-x-auto pb-4">
+                {salesLast7Days.map((bar) => {
+                  const height = Math.max(80, (bar.amount / maxBar) * 220);
+                  return (
+                    <div key={bar.day} className="flex flex-col items-center gap-3 text-center">
+                      <div
+                        className="flex h-56 w-12 items-end overflow-hidden rounded-3xl bg-gradient-to-t from-red-600 to-red-400 transition-all hover:shadow-md"
+                        style={{ height: `${height}px` }}
+                      />
+                      <p className="text-xs font-semibold text-slate-700">{bar.day}</p>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <span className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">{period}</span>
-          </div>
-          <div className="mt-8 flex flex-col items-center gap-8 md:flex-row md:items-start">
-            <div className="relative h-44 w-44 rounded-full bg-slate-100" style={{ backgroundImage: pieGradient }} />
-            <div className="space-y-3">
-              {paymentMethods.map((method) => (
-                <div key={method.label} className="flex items-center gap-3">
-                  <span className="inline-flex h-3.5 w-3.5 rounded-full" style={{ backgroundColor: method.color }} />
-                  <p className="text-sm font-semibold text-slate-900">{method.label}</p>
-                  <p className="text-sm text-slate-500">{method.value}%</p>
+
+            <div className="rounded-3xl bg-white p-6 shadow-sm shadow-slate-200">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Distribución</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">Métodos de pago</p>
                 </div>
-              ))}
+                <span className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">{period}</span>
+              </div>
+              <div className="mt-8 flex flex-col items-center gap-8 md:flex-row md:items-start">
+                <div className="relative h-44 w-44 rounded-full" style={{ background: pieGradient }} />
+                <div className="space-y-3">
+                  {paymentMethods.map((method) => (
+                    <div key={method.label} className="flex items-center gap-3">
+                      <span className="inline-flex h-3.5 w-3.5 rounded-full" style={{ backgroundColor: method.color }} />
+                      <p className="text-sm font-semibold text-slate-900">{method.label}</p>
+                      <p className="text-sm text-slate-500">{method.value}%</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div className="rounded-3xl bg-white p-6 shadow-sm shadow-slate-200">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Top 5 platos</p>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-900">Más vendidos</h2>
+          <div className="rounded-3xl bg-white p-6 shadow-sm shadow-slate-200">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Top 5 platos</p>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-900">Más vendidos</h2>
+              </div>
+              <button className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">
+                Ver todos
+              </button>
+            </div>
+
+            <div className="mt-6 overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-3 font-semibold text-slate-500">#</th>
+                    <th className="px-4 py-3 font-semibold text-slate-500">Plato</th>
+                    <th className="px-4 py-3 font-semibold text-slate-500">Categoría</th>
+                    <th className="px-4 py-3 font-semibold text-slate-500">Veces pedido</th>
+                    <th className="px-4 py-3 font-semibold text-slate-500">Total vendido</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {topDishes.map((dish) => (
+                    <tr key={dish.rank} className="hover:bg-slate-50">
+                      <td className="px-4 py-4 font-semibold text-slate-900">{dish.rank}</td>
+                      <td className="px-4 py-4 text-slate-900">{dish.name}</td>
+                      <td className="px-4 py-4 text-slate-500">{dish.category}</td>
+                      <td className="px-4 py-4 font-semibold text-slate-900">{dish.times}</td>
+                      <td className="px-4 py-4 font-semibold text-slate-900">{formatCurrency(dish.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <button className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">
-            Ver todos
-          </button>
-        </div>
-
-        <div className="mt-6 overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-            <thead>
-              <tr>
-                <th className="px-4 py-3 font-semibold text-slate-500">#</th>
-                <th className="px-4 py-3 font-semibold text-slate-500">Plato</th>
-                <th className="px-4 py-3 font-semibold text-slate-500">Categoría</th>
-                <th className="px-4 py-3 font-semibold text-slate-500">Veces pedido</th>
-                <th className="px-4 py-3 font-semibold text-slate-500">Total vendido</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {topDishes.map((dish) => (
-                <tr key={dish.rank} className="hover:bg-slate-50">
-                  <td className="px-4 py-4 font-semibold text-slate-900">{dish.rank}</td>
-                  <td className="px-4 py-4 text-slate-900">{dish.name}</td>
-                  <td className="px-4 py-4 text-slate-500">{dish.category}</td>
-                  <td className="px-4 py-4 font-semibold text-slate-900">{dish.times}</td>
-                  <td className="px-4 py-4 font-semibold text-slate-900">{formatCurrency(dish.total)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      </>
+        </>
       ) : null}
 
-      {loading ? (
+      {loading && (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[...Array(4)].map((_, index) => (
             <div key={index} className="h-32 animate-pulse rounded-3xl bg-slate-100" />
           ))}
         </div>
-      ) : null}
+      )}
 
-      {error ? (
+      {error && (
         <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-700">
           <p className="font-semibold">Error de carga</p>
           <p className="mt-2">{error}</p>
@@ -279,7 +273,7 @@ export default function AnalyticsPage() {
             Reintentar
           </button>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
