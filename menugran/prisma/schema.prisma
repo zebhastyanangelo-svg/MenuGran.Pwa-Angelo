@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,41 +7,50 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Usuario
+enum UserRole {
+  CLIENT
+  OPERATOR
+  ADMIN
+  RIDER
+  SUPERADMIN
+}
+
 model User {
   id            String    @id @default(cuid())
-  name          String?
+  name          String
   email         String?   @unique
   emailVerified DateTime?
-  password      String?
   image         String?
-  role          String    @default("CLIENT") // CLIENT, OPERATOR, ADMIN, RIDER, SUPERADMIN
+  role          UserRole  @default(CLIENT)
   phone         String?
+  cedula        String?   @unique
+  active        Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  orders        Order[]
-  locations     Location[]
+  accounts           Account[]
+  sessions           Session[]
+  clientOrders       Order[]              @relation("ClientOrders")
+  riderOrders        Order[]              @relation("RiderOrders")
+  locations          Location[]
+  managedRestaurants Restaurant[]         @relation("AdminRestaurant")
 
   @@map("users")
 }
 
-// Cuenta (NextAuth)
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String  @map("user_id")
-  type               String
-  provider           String
-  providerAccountId  String  @map("provider_account_id")
-  refreshToken       String?  @db.Text
-  accessToken        String?  @db.Text
-  expiresAt          Int?
-  tokenType          String?
-  scope              String?
-  idToken            String?  @db.Text
-  sessionState       String?
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refreshToken      String? @db.Text
+  accessToken       String? @db.Text
+  expiresAt         Int?
+  tokenType         String?
+  scope             String?
+  idToken           String? @db.Text
+  sessionState      String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -52,7 +58,6 @@ model Account {
   @@map("accounts")
 }
 
-// Sesión (NextAuth)
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique @map("session_token")
@@ -63,7 +68,6 @@ model Session {
   @@map("sessions")
 }
 
-// Verificación de Email (NextAuth)
 model VerificationToken {
   identifier String
   token      String   @unique
@@ -73,103 +77,135 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
-// Negocio
 model Business {
   id          String   @id @default(cuid())
   name        String
+  slug        String   @unique
   description String?  @db.Text
   logo        String?
-  address     String
-  lat         Float
-  lng         Float
-  phone       String
+  active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  menuItems   MenuItem[]
-  orders      Order[]
+  restaurants Restaurant[]
 
   @@map("businesses")
 }
 
-// Categoría de Menu
-model Category {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  icon        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model Restaurant {
+  id         String   @id @default(cuid())
+  businessId String   @map("business_id")
+  adminId    String   @map("admin_id")
+  name       String
+  address    String
+  phone      String?
+  lat        Float
+  lng        Float
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  menuItems   MenuItem[]
+  business   Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  admin      User           @relation("AdminRestaurant", fields: [adminId], references: [id])
+  categories MenuCategory[]
+  menuItems  MenuItem[]
+  orders     Order[]
 
-  @@map("categories")
+  @@map("restaurants")
 }
 
-// Item del Menu
-model MenuItem {
-  id          String   @id @default(cuid())
-  businessId  String
-  categoryId  String
-  name        String
-  description String?  @db.Text
-  price       Float
-  image       String?
-  available   Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model MenuCategory {
+  id           String   @id @default(cuid())
+  restaurantId String   @map("restaurant_id")
+  name         String
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
 
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  orderItems  OrderItem[]
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  items      MenuItem[]
+
+  @@map("menu_categories")
+}
+
+model MenuItem {
+  id           String  @id @default(cuid())
+  restaurantId String  @map("restaurant_id")
+  categoryId   String  @map("category_id")
+  name         String
+  description  String? @db.Text
+  price        Float
+  image        String?
+  available    Boolean @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  restaurant Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  category   MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
 
   @@map("menu_items")
 }
 
-// Pedido
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  DELIVERING
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  MOBILE_PAYMENT
+  TRANSFER
+}
+
 model Order {
-  id                String      @id @default(cuid())
-  clientId          String
-  businessId        String
-  status            String      @default("PENDING") // PENDING, CONFIRMED, PREPARING, READY, DELIVERING, DELIVERED, CANCELLED
-  totalPrice        Float
-  deliveryAddress   String
-  lat               Float?
-  lng               Float?
-  estimatedDelivery DateTime?
-  rideId            String?
-  notes             String?     @db.Text
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  id              String        @id @default(cuid())
+  clientId        String        @map("client_id")
+  restaurantId    String        @map("restaurant_id")
+  riderId         String?       @map("rider_id")
+  status          OrderStatus   @default(PENDING)
+  totalPrice      Float         @map("total_price")
+  paymentMethod   PaymentMethod @default(CASH) @map("payment_method")
+  reference       String?
+  deliveryAddress String?       @map("delivery_address")
+  lat             Float?
+  lng             Float?
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
 
-  client            User        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  business          Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  items             OrderItem[]
-  locations         Location[]
+  client     User        @relation("ClientOrders", fields: [clientId], references: [id])
+  restaurant Restaurant  @relation(fields: [restaurantId], references: [id])
+  rider      User?       @relation("RiderOrders", fields: [riderId], references: [id])
+  items      OrderItem[]
+  locations  Location[]
 
+  @@index([restaurantId, status, createdAt])
   @@map("orders")
 }
 
-// Items del Pedido
 model OrderItem {
-  id        String   @id @default(cuid())
-  orderId   String
-  menuId    String
-  quantity  Int
-  price     Float
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  orderId    String   @map("order_id")
+  menuItemId String   @map("menu_item_id")
+  quantity   Int
+  price      Float
+  createdAt  DateTime @default(now())
 
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem  MenuItem @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
 
   @@map("order_items")
 }
 
-// Ubicación GPS
 model Location {
   id        String   @id @default(cuid())
-  userId    String
-  orderId   String?
+  userId    String   @map("user_id")
+  orderId   String?  @map("order_id")
   latitude  Float
   longitude Float
   accuracy  Float?
@@ -183,4 +219,3 @@ model Location {
   @@index([timestamp])
   @@map("locations")
 }
-

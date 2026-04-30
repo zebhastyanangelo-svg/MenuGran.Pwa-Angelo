@@ -48,3 +48,9 @@ prisma/dev.db-journal
 
 # Service Worker
 sw.js
+
+node_modules
+.env
+.env.local
+.next
+dist
