@@ -61,7 +61,6 @@ export default function RiderAvailableOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [pullHint, setPullHint] = useState('');
   const [available] = useState(true);
   const touchStartY = useRef(0);
@@ -78,7 +77,6 @@ export default function RiderAvailableOrdersPage() {
       setError('Error al cargar los pedidos disponibles');
     } finally {
       setLoading(false);
-      setRefreshing(false);
       setPullHint('');
     }
   };
@@ -91,7 +89,6 @@ export default function RiderAvailableOrdersPage() {
   }, []);
 
   const handleRefresh = async () => {
-    setRefreshing(true);
     await fetchOrders();
   };
 

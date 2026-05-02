@@ -170,8 +170,7 @@ export default function MenuPage() {
     const category = categories.find((item) => item.id === dishCategoryId);
     const newDish: Dish = {
       id: selectedDish?.id ?? `d_${Date.now()}`,
-      name: dishName.trim(),
-      categoryId: dishCategoryId,
+      name: dishName.trim(),      description: dishDescription.trim(),      categoryId: dishCategoryId,
       categoryName: category?.name ?? 'Sin categoría',
       price: Number(dishPrice),
       available: selectedDish?.available ?? true,
@@ -220,7 +219,6 @@ export default function MenuPage() {
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
-    setDishImage(file);
     if (!file) {
       setDishImagePreview('');
       return;

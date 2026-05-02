@@ -168,15 +168,11 @@ const playNotificationSound = () => {
 export default function OperatorOrdersPage() {
   const [orders, setOrders] = useState(sampleOrders);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterOption>('Todos');
   const [activeColumn, setActiveColumn] = useState<OrderStatus>('pending');
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      if (Math.random() < 0.06) {
-        setError('No se pudo cargar los pedidos. Intenta nuevamente.');
-      }
       setLoading(false);
     }, 700);
     return () => window.clearTimeout(timer);

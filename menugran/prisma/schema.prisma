@@ -24,6 +24,7 @@ model User {
   role          UserRole  @default(CLIENT)
   phone         String?
   cedula        String?   @unique
+  pin           String?   // PIN de 4 dígitos para login
   active        Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -204,7 +205,7 @@ model OrderItem {
 
 model Location {
   id        String   @id @default(cuid())
-  userId    String   @map("user_id")
+  userId    String   @unique @map("user_id")
   orderId   String?  @map("order_id")
   latitude  Float
   longitude Float
@@ -214,7 +215,6 @@ model Location {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
-  @@index([userId])
   @@index([orderId])
   @@index([timestamp])
   @@map("locations")

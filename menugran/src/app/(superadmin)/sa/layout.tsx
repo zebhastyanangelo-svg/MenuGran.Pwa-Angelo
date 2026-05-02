@@ -11,7 +11,6 @@ import {
   Settings,
   Bell,
   Menu,
-  X,
   ShieldAlert,
 } from 'lucide-react';
 

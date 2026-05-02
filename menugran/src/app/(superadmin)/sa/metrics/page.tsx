@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Download, ChevronDown, ChevronUp, BarChart3, CreditCard, Clock, Smile } from 'lucide-react';
+import { Download, ChevronUp, BarChart3, CreditCard, Clock, Smile } from 'lucide-react';
 
 interface BusinessComparison {
   name: string;

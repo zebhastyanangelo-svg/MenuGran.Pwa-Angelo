@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Plus, Eye, Edit3, Power, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Plus, Eye, Edit3, Power } from 'lucide-react';
 
 interface Business {
   id: string;

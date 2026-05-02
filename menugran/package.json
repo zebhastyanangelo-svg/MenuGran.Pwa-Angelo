@@ -20,7 +20,8 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.4.0",
     "@prisma/client": "^5.15.0",
-    "@supabase/supabase-js": "^2.43.0",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.105.1",
     "@tailwindcss/postcss": "^4.0.0",
     "@tanstack/react-query": "^5.45.0",
     "@types/leaflet": "^1.9.12",

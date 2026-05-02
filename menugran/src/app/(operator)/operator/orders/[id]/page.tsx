@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Phone, MapPin, CreditCard, Truck, Printer, Clock } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin, CreditCard, Printer, Clock } from 'lucide-react';
 
 // Tipos basados en la estructura existente
 type OrderStatus = 'pending' | 'confirmed' | 'cooking' | 'ready' | 'delivered' | 'cancelled';
