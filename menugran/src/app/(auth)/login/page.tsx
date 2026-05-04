@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [cedula, setCedula] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -24,13 +26,35 @@ export default function LoginPage() {
       return;
     }
 
-    // Simular envío a API
+    // Enviar a API real
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cedula: cedula.trim(), pin }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        setError(data.message || 'Error al iniciar sesión');
+        setIsLoading(false);
+        return;
+      }
+
+      // Redirigir según el rol
+      const role = data.user.role;
+      if (role === 'CLIENT') router.push('/client');
+      else if (role === 'OPERATOR') router.push('/operator');
+      else if (role === 'ADMIN') router.push('/admin');
+      else if (role === 'RIDER') router.push('/rider');
+      else if (role === 'SUPERADMIN') router.push('/sa');
+      else router.push('/client');
+    } catch (err) {
+      setError('Error de conexión. Intenta de nuevo.');
       setIsLoading(false);
-      console.log('Login exitoso - redirigir a /client');
-      // Aquí iría la redirección: router.push('/client');
-    }, 1500);
+    }
   };
 
   return (
