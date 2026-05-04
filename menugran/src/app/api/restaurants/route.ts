@@ -7,6 +7,7 @@ export async function GET() {
       where: { active: true },
       include: {
         categories: {
+          orderBy: { order: 'asc' },
           include: {
             items: true,
           },

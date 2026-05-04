@@ -3,12 +3,13 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { ClipboardList, BarChart3, Users, Settings, UtensilsCrossed, Menu } from 'lucide-react';
 
 const navItems = [
-  { label: '📋 Menú', href: '/admin/menu' },
-  { label: '📊 Analytics', href: '/admin/analytics' },
-  { label: '👥 Staff', href: '/admin/staff' },
-  { label: '⚙️ Configuración', href: '/admin/settings' },
+  { label: 'Menú', href: '/admin/menu', icon: ClipboardList },
+  { label: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
+  { label: 'Staff', href: '/admin/staff', icon: Users },
+  { label: 'Configuración', href: '/admin/settings', icon: Settings },
 ];
 
 export default function AdminLayout({
@@ -41,26 +42,28 @@ export default function AdminLayout({
         <div className="flex h-full flex-col justify-between px-5 py-6">
           <div>
             <Link href="/admin/menu" className="mb-10 flex items-center gap-3 text-xl font-bold text-white">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-red-600 text-lg shadow-sm">
-                🍽️
-              </span>
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-red-600 text-lg shadow-sm">
+                <UtensilsCrossed className="h-6 w-6" />
+              </div>
               <span>MenuGran Admin</span>
             </Link>
 
             <nav className="space-y-1">
               {navItems.map((item) => {
                 const active = pathname === item.href;
+                const Icon = item.icon;
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`block rounded-2xl px-4 py-3 text-sm font-medium transition-colors duration-200 ${
+                    className={`flex items-center rounded-2xl px-4 py-3 text-sm font-medium transition-colors duration-200 ${
                       active
                         ? 'bg-red-600 text-white'
                         : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                     }`}
                     onClick={() => setSidebarOpen(false)}
                   >
+                    <Icon className="mr-3 h-5 w-5" />
                     {item.label}
                   </Link>
                 );
@@ -89,7 +92,7 @@ export default function AdminLayout({
                 className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 md:hidden"
                 aria-label="Abrir menú"
               >
-                <span className="text-xl">☰</span>
+                <Menu className="h-5 w-5" />
               </button>
 
               <div>

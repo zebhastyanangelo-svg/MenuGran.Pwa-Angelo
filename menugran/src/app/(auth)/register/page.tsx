@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { User, CreditCard, Phone, Lock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { UserPlus, User, Phone, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     nombre: '',
     cedula: '',
@@ -15,21 +17,20 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: keyof typeof formData, value: string | boolean) => {
     if (field === 'cedula' || field === 'telefono') {
-      value = value.replace(/\D/g, '');
+      value = String(value).replace(/\D/g, '');
     }
     if (field === 'pin') {
-      value = value.replace(/\D/g, '').slice(0, 4);
+      value = String(value).replace(/\D/g, '').slice(0, 4);
     }
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Validación
     if (!formData.nombre.trim()) {
       setError('Por favor ingresa tu nombre');
       return;
@@ -51,39 +52,62 @@ export default function RegisterPage() {
       return;
     }
 
-    // Simular registro
     setIsLoading(true);
-    setTimeout(() => {
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.nombre.trim(),
+          cedula: formData.cedula,
+          phone: formData.telefono,
+          pin: formData.pin,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        setError(data.message || 'No se pudo registrar');
+        setIsLoading(false);
+        return;
+      }
+
+      window.localStorage.setItem('menugran-user', JSON.stringify(data.user));
+      router.push('/client');
+    } catch (err) {
+      setError('Error de conexión. Intenta de nuevo.');
       setIsLoading(false);
-      console.log('Registrando usuario...', formData);
-      // Aquí iría la redirección: router.push('/login');
-    }, 1500);
+    }
   };
 
   return (
     <div className="w-full max-w-md">
-      <div className="bg-white shadow-xl rounded-2xl p-8">
+      <div className="bg-white shadow-xl rounded-3xl p-8">
         <div className="text-center mb-8">
-          <div className="text-6xl mb-4">�</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Crear Cuenta</h1>
-          <p className="text-gray-500">Únete a MenuGran</p>
+          <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-red-100 text-red-600">
+            <UserPlus className="h-8 w-8" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Crear Cuenta</h1>
+          <p className="text-sm text-slate-500">Únete a MenuGran</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="nombre" className="block text-sm font-medium text-slate-700 mb-2">
               Nombre
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-gray-400" />
+                <User className="h-5 w-5 text-slate-400" />
               </div>
               <input
                 id="nombre"
                 type="text"
                 value={formData.nombre}
                 onChange={(e) => handleChange('nombre', e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-900 placeholder-gray-500"
+                className="block w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100"
                 placeholder="Ingresa tu nombre completo"
                 disabled={isLoading}
               />
@@ -91,19 +115,19 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="cedula" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="cedula" className="block text-sm font-medium text-slate-700 mb-2">
               Cédula
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <CreditCard className="h-5 w-5 text-gray-400" />
+                <User className="h-5 w-5 text-slate-400" />
               </div>
               <input
                 id="cedula"
                 type="text"
                 value={formData.cedula}
                 onChange={(e) => handleChange('cedula', e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-900 placeholder-gray-500"
+                className="block w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100"
                 placeholder="Ingresa tu cédula"
                 disabled={isLoading}
               />
@@ -111,19 +135,19 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="telefono" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="telefono" className="block text-sm font-medium text-slate-700 mb-2">
               Teléfono
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Phone className="h-5 w-5 text-gray-400" />
+                <Phone className="h-5 w-5 text-slate-400" />
               </div>
               <input
                 id="telefono"
                 type="text"
                 value={formData.telefono}
                 onChange={(e) => handleChange('telefono', e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-900 placeholder-gray-500"
+                className="block w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100"
                 placeholder="Ingresa tu teléfono"
                 disabled={isLoading}
               />
@@ -131,12 +155,12 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="pin" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="pin" className="block text-sm font-medium text-slate-700 mb-2">
               PIN
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
+                <Lock className="h-5 w-5 text-slate-400" />
               </div>
               <input
                 id="pin"
@@ -144,29 +168,29 @@ export default function RegisterPage() {
                 maxLength={4}
                 value={formData.pin}
                 onChange={(e) => handleChange('pin', e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-900 placeholder-gray-500"
+                className="block w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100"
                 placeholder="****"
                 disabled={isLoading}
               />
             </div>
           </div>
 
-          <div className="flex items-center">
+          <div className="flex items-center gap-3">
             <input
               id="aceptarTerminos"
               type="checkbox"
               checked={formData.aceptarTerminos}
-              onChange={(e) => setFormData(prev => ({ ...prev, aceptarTerminos: e.target.checked }))}
-              className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+              onChange={(e) => handleChange('aceptarTerminos', e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500"
               disabled={isLoading}
             />
-            <label htmlFor="aceptarTerminos" className="ml-2 block text-sm text-gray-700">
+            <label htmlFor="aceptarTerminos" className="text-sm text-slate-700">
               Acepto los términos y condiciones
             </label>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
@@ -174,19 +198,17 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-red-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full rounded-2xl bg-red-600 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? 'Registrando...' : 'Registrarme'}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <div className="text-sm text-gray-600">
-            ¿Ya tienes cuenta?{' '}
-            <Link href="/login" className="text-red-600 hover:text-red-700 font-medium transition-colors">
-              Inicia Sesión
-            </Link>
-          </div>
+        <div className="mt-6 text-center text-sm text-slate-500">
+          ¿Ya tienes cuenta?{' '}
+          <Link href="/login" className="font-semibold text-red-600 hover:text-red-700">
+            Inicia Sesión
+          </Link>
         </div>
       </div>
     </div>

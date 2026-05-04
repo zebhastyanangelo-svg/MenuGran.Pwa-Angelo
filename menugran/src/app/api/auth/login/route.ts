@@ -39,11 +39,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Login exitoso",
       user: {
         id: user.id,
         name: user.name,
-        cedula: user.cedula,
         role: user.role,
       },
     });

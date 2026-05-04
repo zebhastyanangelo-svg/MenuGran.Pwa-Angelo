@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Store, User, Lock } from 'lucide-react';
+import { Globe, User, Lock } from 'lucide-react';
 import Link from 'next/link';
 
-export default function LoginPage() {
+export default function SuperadminLoginPage() {
   const router = useRouter();
   const [cedula, setCedula] = useState('');
   const [pin, setPin] = useState('');
@@ -42,15 +42,14 @@ export default function LoginPage() {
         return;
       }
 
-      window.localStorage.setItem('menugran-user', JSON.stringify(data.user));
+      if (data.user.role !== 'SUPERADMIN') {
+        setError('No tienes permisos de superadministrador');
+        setIsLoading(false);
+        return;
+      }
 
-      const role = data.user.role;
-      if (role === 'CLIENT') router.push('/client');
-      else if (role === 'OPERATOR') router.push('/operator');
-      else if (role === 'ADMIN') router.push('/admin');
-      else if (role === 'RIDER') router.push('/rider');
-      else if (role === 'SUPERADMIN') router.push('/sa');
-      else router.push('/client');
+      window.localStorage.setItem('menugran-user', JSON.stringify(data.user));
+      router.push('/sa');
     } catch (err) {
       setError('Error de conexión. Intenta de nuevo.');
       setIsLoading(false);
@@ -62,10 +61,10 @@ export default function LoginPage() {
       <div className="bg-white shadow-xl rounded-3xl p-8">
         <div className="text-center mb-8">
           <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-red-100 text-red-600">
-            <Store className="h-8 w-8" />
+            <Globe className="h-8 w-8" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Iniciar Sesión</h1>
-          <p className="text-sm text-slate-500">Ingresa a tu cuenta MenuGran</p>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Superadmin</h1>
+          <p className="text-sm text-slate-500">Panel de control global de MenuGran</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -124,22 +123,6 @@ export default function LoginPage() {
             {isLoading ? 'Cargando...' : 'Ingresar'}
           </button>
         </form>
-
-        <div className="mt-6 space-y-3 text-center text-sm text-slate-500">
-          <Link href="/forgot-pin" className="block hover:text-red-600 transition-colors">
-            ¿Olvidaste tu PIN?
-          </Link>
-          <div className="relative">
-            <div className="absolute inset-x-0 top-1/2 h-px bg-slate-200" />
-            <span className="relative inline-block bg-white px-3">o</span>
-          </div>
-          <Link
-            href="/register"
-            className="inline-flex w-full justify-center rounded-2xl border border-red-600 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-          >
-            Crear cuenta nueva
-          </Link>
-        </div>
       </div>
     </div>
   );
