@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import { Globe, User, Lock } from 'lucide-react';
 import Link from 'next/link';
 
@@ -29,6 +30,18 @@ export default function SuperadminLoginPage() {
     setIsLoading(true);
 
     try {
+      const result = await signIn('credentials', {
+        cedula: cedula.trim(),
+        pin,
+        redirect: false,
+      });
+
+      if (!result?.ok || result?.error) {
+        setError('Cédula o PIN incorrectos');
+        setIsLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -57,31 +70,31 @@ export default function SuperadminLoginPage() {
   };
 
   return (
-    <div className="w-full max-w-md">
-      <div className="bg-white shadow-xl rounded-3xl p-8">
+    <div className="w-full max-w-md animate-fade-in">
+      <div className="bg-white shadow-elevated rounded-2xl p-8">
         <div className="text-center mb-8">
-          <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-red-100 text-red-600">
+          <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100 text-brand-500">
             <Globe className="h-8 w-8" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Superadmin</h1>
-          <p className="text-sm text-slate-500">Panel de control global de MenuGran</p>
+          <h1 className="text-2xl font-bold text-ink mb-2">Superadmin</h1>
+          <p className="text-sm text-neutral-500">Panel de control global de MenuGran</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="cedula" className="block text-sm font-medium text-slate-700 mb-2">
+            <label htmlFor="cedula" className="block text-sm font-medium text-ink mb-2">
               Cédula
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-slate-400" />
+                <User className="h-5 w-5 text-neutral-400" />
               </div>
               <input
                 id="cedula"
                 type="text"
                 value={cedula}
                 onChange={(e) => setCedula(e.target.value.replace(/\D/g, ''))}
-                className="block w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100"
+                className="input pl-10"
                 placeholder="Ingresa tu cédula"
                 disabled={isLoading}
               />
@@ -89,12 +102,12 @@ export default function SuperadminLoginPage() {
           </div>
 
           <div>
-            <label htmlFor="pin" className="block text-sm font-medium text-slate-700 mb-2">
+            <label htmlFor="pin" className="block text-sm font-medium text-ink mb-2">
               PIN
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-slate-400" />
+                <Lock className="h-5 w-5 text-neutral-400" />
               </div>
               <input
                 id="pin"
@@ -102,7 +115,7 @@ export default function SuperadminLoginPage() {
                 maxLength={4}
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                className="block w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100"
+                className="input pl-10"
                 placeholder="****"
                 disabled={isLoading}
               />
@@ -110,7 +123,7 @@ export default function SuperadminLoginPage() {
           </div>
 
           {error && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-lg border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-600">
               {error}
             </div>
           )}
@@ -118,7 +131,7 @@ export default function SuperadminLoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full rounded-2xl bg-red-600 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-primary btn-md w-full"
           >
             {isLoading ? 'Cargando...' : 'Ingresar'}
           </button>

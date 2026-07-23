@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
 
 type Category = {
   id: string;
@@ -20,45 +21,6 @@ type Dish = {
   image: string;
 };
 
-const initialCategories: Category[] = [
-  { id: 'c1', name: 'Entradas', order: 1, dishCount: 4 },
-  { id: 'c2', name: 'Platos Fuertes', order: 2, dishCount: 6 },
-  { id: 'c3', name: 'Postres', order: 3, dishCount: 2 },
-];
-
-const initialDishes: Dish[] = [
-  {
-    id: 'd1',
-    name: 'Nachos con Queso',
-    description: 'Nachos crujientes con queso derretido y jalapeños.',
-    categoryId: 'c1',
-    categoryName: 'Entradas',
-    price: 12500,
-    available: true,
-    image: 'https://images.unsplash.com/photo-1555992336-03a23c4ca505?auto=format&fit=crop&w=80&q=80',
-  },
-  {
-    id: 'd2',
-    name: 'Hamburguesa Clásica',
-    description: 'Carne, queso y salsas artesanales en pan brioche.',
-    categoryId: 'c2',
-    categoryName: 'Platos Fuertes',
-    price: 24500,
-    available: true,
-    image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=80&q=80',
-  },
-  {
-    id: 'd3',
-    name: 'Tacos de Pollo',
-    description: 'Tacos suaves con pollo marinado y pico de gallo.',
-    categoryId: 'c2',
-    categoryName: 'Platos Fuertes',
-    price: 17500,
-    available: false,
-    image: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=80&q=80',
-  },
-];
-
 export default function MenuPage() {
   const [activeTab, setActiveTab] = useState<'categories' | 'dishes'>('categories');
   const [search, setSearch] = useState('');
@@ -76,22 +38,28 @@ export default function MenuPage() {
   const [dishDescription, setDishDescription] = useState('');
   const [dishPrice, setDishPrice] = useState('');
   const [dishCategoryId, setDishCategoryId] = useState('');
-  const [dishImage, setDishImage] = useState<File | null>(null);
+  const [dishImageFile, setDishImageFile] = useState<File | null>(null);
   const [dishImagePreview, setDishImagePreview] = useState('');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      if (Math.random() < 0.08) {
-        setError('No se pudo cargar los datos. Intenta de nuevo.');
-      } else {
-        setCategories(initialCategories);
-        setDishes(initialDishes);
-      }
+  const fetchData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/menu');
+      if (!res.ok) throw new Error('Error al cargar datos');
+      const data = await res.json();
+      setCategories(data.categories ?? []);
+      setDishes(data.dishes ?? []);
+    } catch {
+      setError('No se pudo cargar los datos. Intenta de nuevo.');
+    } finally {
       setLoading(false);
-    }, 700);
+    }
+  };
 
-    return () => window.clearTimeout(timer);
+  useEffect(() => {
+    fetchData();
   }, []);
 
   const filteredDishes = useMemo(() => {
@@ -125,7 +93,7 @@ export default function MenuPage() {
     setDishPrice(dish ? String(dish.price) : '');
     setDishCategoryId(dish?.categoryId ?? categories[0]?.id ?? '');
     setDishImagePreview(dish?.image ?? '');
-    setDishImage(null);
+    setDishImageFile(null);
     setDishModalOpen(true);
   };
 
@@ -134,87 +102,171 @@ export default function MenuPage() {
     setDishDescription('');
     setDishPrice('');
     setDishCategoryId(categories[0]?.id ?? '');
-    setDishImage(null);
+    setDishImageFile(null);
     setDishImagePreview('');
   };
 
   const saveCategory = async () => {
     if (!categoryName.trim() || !categoryOrder.trim()) return;
     setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      const body: Record<string, unknown> = {
+        action: 'category',
+        name: categoryName.trim(),
+        order: Number(categoryOrder),
+      };
+      if (selectedCategory) body.id = selectedCategory.id;
 
-    const newCategory: Category = {
-      id: selectedCategory?.id ?? `c_${Date.now()}`,
-      name: categoryName.trim(),
-      order: Number(categoryOrder),
-      dishCount: selectedCategory?.dishCount ?? 0,
-    };
+      const res = await fetch('/api/admin/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error('Error al guardar');
+      const saved = await res.json();
 
-    setCategories((current) => {
-      const existing = current.find((item) => item.id === newCategory.id);
-      if (existing) {
-        return current.map((item) => (item.id === newCategory.id ? newCategory : item));
-      }
-      return [...current, newCategory].sort((a, b) => a.order - b.order);
-    });
+      setCategories((current) => {
+        const existing = current.find((item) => item.id === saved.id);
+        if (existing) {
+          return current.map((item) => (item.id === saved.id ? saved : item));
+        }
+        return [...current, saved].sort((a, b) => a.order - b.order);
+      });
 
-    setSaving(false);
-    setCategoryModalOpen(false);
+      setCategoryModalOpen(false);
+    } catch {
+      setError('Error al guardar la categoría');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const saveDish = async () => {
     if (!dishName.trim() || !dishPrice.trim() || !dishCategoryId) return;
     setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      if (dishImageFile) {
+        const formData = new FormData();
+        formData.append('action', 'dish');
+        formData.append('name', dishName.trim());
+        formData.append('description', dishDescription.trim());
+        formData.append('price', dishPrice);
+        formData.append('categoryId', dishCategoryId);
+        formData.append('image', dishImageFile);
+        if (selectedDish) formData.append('id', selectedDish.id);
 
-    const category = categories.find((item) => item.id === dishCategoryId);
-    const newDish: Dish = {
-      id: selectedDish?.id ?? `d_${Date.now()}`,
-      name: dishName.trim(),      description: dishDescription.trim(),      categoryId: dishCategoryId,
-      categoryName: category?.name ?? 'Sin categoría',
-      price: Number(dishPrice),
-      available: selectedDish?.available ?? true,
-      image:
-        dishImagePreview ||
-        'https://images.unsplash.com/photo-1525755662778-989d0524087e?auto=format&fit=crop&w=80&q=80',
-    };
+        const res = await fetch('/api/admin/menu', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!res.ok) throw new Error('Error al guardar');
+        const saved = await res.json();
 
-    setDishes((current) => {
-      const existing = current.find((item) => item.id === newDish.id);
-      if (existing) {
-        return current.map((item) => (item.id === newDish.id ? newDish : item));
+        setDishes((current) => {
+          const existing = current.find((item) => item.id === saved.id);
+          if (existing) {
+            return current.map((item) => (item.id === saved.id ? saved : item));
+          }
+          return [saved, ...current];
+        });
+
+        setCategories((current) =>
+          current.map((item) =>
+            item.id === dishCategoryId
+              ? { ...item, dishCount: item.dishCount + (selectedDish ? 0 : 1) }
+              : item
+          )
+        );
+
+        setDishModalOpen(false);
+        resetDishForm();
+        setSaving(false);
+        return;
       }
-      return [newDish, ...current];
-    });
 
-    setCategories((current) =>
-      current.map((item) =>
-        item.id === dishCategoryId
-          ? { ...item, dishCount: item.dishCount + (selectedDish ? 0 : 1) }
-          : item
-      )
-    );
+      const body: Record<string, unknown> = {
+        action: 'dish',
+        name: dishName.trim(),
+        description: dishDescription.trim(),
+        price: Number(dishPrice),
+        categoryId: dishCategoryId,
+        image: (selectedDish?.image ?? dishImagePreview) || null,
+      };
+      if (selectedDish) body.id = selectedDish.id;
 
-    setSaving(false);
-    setDishModalOpen(false);
-    resetDishForm();
+      const res = await fetch('/api/admin/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error('Error al guardar');
+      const saved = await res.json();
+
+      setDishes((current) => {
+        const existing = current.find((item) => item.id === saved.id);
+        if (existing) {
+          return current.map((item) => (item.id === saved.id ? saved : item));
+        }
+        return [saved, ...current];
+      });
+
+      setCategories((current) =>
+        current.map((item) =>
+          item.id === dishCategoryId
+            ? { ...item, dishCount: item.dishCount + (selectedDish ? 0 : 1) }
+            : item
+        )
+      );
+
+      setDishModalOpen(false);
+      resetDishForm();
+    } catch {
+      setError('Error al guardar el plato');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const confirmedDelete = (message: string) => window.confirm(message);
 
-  const deleteDish = (dishId: string) => {
-    if (!confirmedDelete('¿Eliminar este plato? Esta acción no se puede deshacer.')) {
-      return;
+  const deleteDish = async (dishId: string) => {
+    if (!confirmedDelete('¿Eliminar este plato? Esta acción no se puede deshacer.')) return;
+    try {
+      const res = await fetch(`/api/admin/menu/dishes/${dishId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Error al eliminar');
+      const deletedDish = dishes.find((d) => d.id === dishId);
+      setDishes((current) => current.filter((dish) => dish.id !== dishId));
+      if (deletedDish) {
+        setCategories((current) =>
+          current.map((item) =>
+            item.id === deletedDish.categoryId
+              ? { ...item, dishCount: Math.max(0, item.dishCount - 1) }
+              : item
+          )
+        );
+      }
+    } catch {
+      setError('Error al eliminar el plato');
     }
-    setDishes((current) => current.filter((dish) => dish.id !== dishId));
   };
 
-  const toggleAvailability = (dishId: string) => {
-    setDishes((current) =>
-      current.map((dish) =>
-        dish.id === dishId ? { ...dish, available: !dish.available } : dish
-      )
-    );
+  const toggleAvailability = async (dishId: string) => {
+    const dish = dishes.find((d) => d.id === dishId);
+    if (!dish) return;
+    try {
+      const res = await fetch(`/api/admin/menu/dishes/${dishId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ available: !dish.available }),
+      });
+      if (!res.ok) throw new Error('Error al actualizar');
+      const updated = await res.json();
+      setDishes((current) =>
+        current.map((d) => (d.id === dishId ? updated : d))
+      );
+    } catch {
+      setError('Error al cambiar disponibilidad');
+    }
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,12 +283,12 @@ export default function MenuPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm shadow-slate-200 md:flex-row md:items-center md:justify-between">
+    <div className="space-y-8 animate-fade-in">
+      <div className="flex flex-col gap-4 rounded-xl bg-white p-6 shadow-soft md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Administración de menú</p>
-          <h2 className="mt-2 text-3xl font-semibold text-slate-900">Gestión de cocina</h2>
-          <p className="mt-2 max-w-2xl text-sm text-slate-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-neutral-500">Administración de menú</p>
+          <h2 className="mt-2 text-3xl font-semibold text-ink">Gestión de cocina</h2>
+          <p className="mt-2 max-w-2xl text-sm text-neutral-500">
             Organiza categorías, platos y controla la disponibilidad de tu carta desde un solo panel.
           </p>
         </div>
@@ -244,30 +296,30 @@ export default function MenuPage() {
           <button
             type="button"
             onClick={() => openCategoryModal()}
-            className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-200"
+            className="btn-secondary btn-md"
           >
             Agregar categoría
           </button>
           <button
             type="button"
             onClick={() => openDishModal()}
-            className="rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
+            className="btn-primary btn-md"
           >
             Agregar plato
           </button>
         </div>
       </div>
 
-      <div className="rounded-3xl bg-white p-4 shadow-sm shadow-slate-200">
-        <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 md:flex-row md:items-center md:justify-between">
+      <div className="rounded-xl bg-white p-4 shadow-soft">
+        <div className="flex flex-col gap-3 border-b border-neutral-200 pb-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setActiveTab('categories')}
               className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                 activeTab === 'categories'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
               }`}
             >
               Categorías
@@ -277,8 +329,8 @@ export default function MenuPage() {
               onClick={() => setActiveTab('dishes')}
               className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                 activeTab === 'dishes'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
               }`}
             >
               Platos
@@ -292,7 +344,7 @@ export default function MenuPage() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Buscar platos por nombre"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 md:w-80"
+                className="input md:w-80"
               />
             </div>
           ) : null}
@@ -302,18 +354,25 @@ export default function MenuPage() {
           {loading ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, index) => (
-                <div key={index} className="animate-pulse rounded-3xl bg-slate-100 p-6" />
+                <div key={index} className="animate-pulse rounded-xl bg-neutral-100 p-6" />
               ))}
             </div>
           ) : error ? (
-            <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-700">
+            <div className="rounded-xl border border-brand-200 bg-brand-50 p-6 text-brand-600">
               <p className="font-semibold">Error al cargar</p>
               <p className="mt-2 text-sm">{error}</p>
+              <button
+                type="button"
+                onClick={fetchData}
+                className="btn-primary btn-md mt-4"
+              >
+                Reintentar
+              </button>
             </div>
           ) : activeTab === 'categories' ? (
             <div className="space-y-4">
               {categories.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
+                <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center text-neutral-500">
                   No hay categorías creadas. Agrega tu primera categoría para comenzar.
                 </div>
               ) : (
@@ -321,20 +380,20 @@ export default function MenuPage() {
                   {categories.map((category) => (
                     <div
                       key={category.id}
-                      className="flex flex-col justify-between gap-4 rounded-3xl border border-slate-200 bg-slate-50 p-5 sm:flex-row sm:items-center"
+                      className="flex flex-col justify-between gap-4 rounded-xl border border-neutral-200 bg-neutral-50 p-5 sm:flex-row sm:items-center"
                     >
                       <div>
-                        <p className="text-lg font-semibold text-slate-900">{category.name}</p>
-                        <p className="mt-1 text-sm text-slate-500">{category.dishCount} platos</p>
+                        <p className="text-lg font-semibold text-ink">{category.name}</p>
+                        <p className="mt-1 text-sm text-neutral-500">{category.dishCount} platos</p>
                       </div>
                       <div className="flex items-center gap-3 self-start sm:self-auto">
-                        <span className="rounded-full bg-slate-200 px-3 py-1 text-sm text-slate-700">
+                        <span className="badge-neutral">
                           Orden {category.order}
                         </span>
                         <button
                           type="button"
                           onClick={() => openCategoryModal(category)}
-                          className="rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
+                          className="btn-ghost btn-sm"
                         >
                           Editar
                         </button>
@@ -347,8 +406,8 @@ export default function MenuPage() {
           ) : (
             <div>
               {filteredDishes.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-slate-600">
-                  <p className="text-xl font-semibold text-slate-900">Agrega tu primer plato 🍽️</p>
+                <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-10 text-center text-neutral-600">
+                  <p className="text-xl font-semibold text-ink">Agrega tu primer plato</p>
                   <p className="mt-2 text-sm">Aún no hay platos que coincidan con tu búsqueda.</p>
                 </div>
               ) : (
@@ -356,31 +415,31 @@ export default function MenuPage() {
                   <table className="min-w-full border-separate border-spacing-y-3 text-left">
                     <thead>
                       <tr>
-                        <th className="px-4 py-3 text-sm font-semibold text-slate-500">Imagen</th>
-                        <th className="px-4 py-3 text-sm font-semibold text-slate-500">Nombre</th>
-                        <th className="px-4 py-3 text-sm font-semibold text-slate-500">Categoría</th>
-                        <th className="px-4 py-3 text-sm font-semibold text-slate-500">Precio</th>
-                        <th className="px-4 py-3 text-sm font-semibold text-slate-500">Disponible</th>
-                        <th className="px-4 py-3 text-sm font-semibold text-slate-500">Acciones</th>
+                        <th className="px-4 py-3 text-sm font-semibold text-neutral-500">Imagen</th>
+                        <th className="px-4 py-3 text-sm font-semibold text-neutral-500">Nombre</th>
+                        <th className="px-4 py-3 text-sm font-semibold text-neutral-500">Categoría</th>
+                        <th className="px-4 py-3 text-sm font-semibold text-neutral-500">Precio</th>
+                        <th className="px-4 py-3 text-sm font-semibold text-neutral-500">Disponible</th>
+                        <th className="px-4 py-3 text-sm font-semibold text-neutral-500">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredDishes.map((dish) => (
-                        <tr key={dish.id} className="rounded-3xl bg-white shadow-sm">
+                        <tr key={dish.id} className="rounded-xl bg-white shadow-soft">
                           <td className="whitespace-nowrap px-4 py-4 align-middle">
                             <img
-                              src={dish.image}
+                              src={dish.image || 'https://images.unsplash.com/photo-1525755662778-989d0524087e?auto=format&fit=crop&w=80&q=80'}
                               alt={dish.name}
                               className="h-10 w-10 rounded-full object-cover"
                             />
                           </td>
-                          <td className="px-4 py-4 align-middle text-sm font-semibold text-slate-900">
+                          <td className="px-4 py-4 align-middle text-sm font-semibold text-ink">
                             {dish.name}
                           </td>
-                          <td className="px-4 py-4 align-middle text-sm text-slate-600">
+                          <td className="px-4 py-4 align-middle text-sm text-neutral-600">
                             {dish.categoryName}
                           </td>
-                          <td className="px-4 py-4 align-middle text-sm text-slate-900">
+                          <td className="px-4 py-4 align-middle text-sm text-ink">
                             {formatPrice(dish.price)}
                           </td>
                           <td className="px-4 py-4 align-middle">
@@ -388,7 +447,7 @@ export default function MenuPage() {
                               type="button"
                               onClick={() => toggleAvailability(dish.id)}
                               className={`relative inline-flex h-8 w-14 items-center rounded-full px-1 transition ${
-                                dish.available ? 'bg-emerald-500' : 'bg-slate-300'
+                                dish.available ? 'bg-success-500' : 'bg-neutral-300'
                               }`}
                             >
                               <span
@@ -403,17 +462,17 @@ export default function MenuPage() {
                               <button
                                 type="button"
                                 onClick={() => openDishModal(dish)}
-                                className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 text-slate-700 transition hover:bg-slate-200"
+                                className="btn-ghost btn-sm gap-2"
                               >
-                                <span>✏️</span>
+                                <Pencil size={14} />
                                 Editar
                               </button>
                               <button
                                 type="button"
                                 onClick={() => deleteDish(dish.id)}
-                                className="inline-flex items-center gap-2 rounded-2xl bg-red-50 px-3 py-2 text-red-700 transition hover:bg-red-100"
+                                className="inline-flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2 text-brand-600 transition hover:bg-brand-100"
                               >
-                                <span>🗑️</span>
+                                <Trash2 size={14} />
                                 Eliminar
                               </button>
                             </div>
@@ -431,42 +490,42 @@ export default function MenuPage() {
 
       {isCategoryModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">{selectedCategory ? 'Editar' : 'Nueva'} categoría</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900">{selectedCategory ? selectedCategory.name : 'Agregar categoría'}</h3>
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-neutral-500">{selectedCategory ? 'Editar' : 'Nueva'} categoría</p>
+                <h3 className="mt-2 text-2xl font-semibold text-ink">{selectedCategory ? selectedCategory.name : 'Agregar categoría'}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setCategoryModalOpen(false)}
-                className="text-slate-400 transition hover:text-slate-700"
+                className="text-neutral-400 transition hover:text-neutral-700"
               >
                 ✕
               </button>
             </div>
             <div className="mt-6 space-y-4">
-              <label className="block text-sm font-semibold text-slate-700">Nombre</label>
+              <label className="block text-sm font-semibold text-neutral-700">Nombre</label>
               <input
                 value={categoryName}
                 onChange={(event) => setCategoryName(event.target.value)}
                 placeholder="Ej. Postres"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                className="input"
               />
 
-              <label className="block text-sm font-semibold text-slate-700">Orden</label>
+              <label className="block text-sm font-semibold text-neutral-700">Orden</label>
               <input
                 value={categoryOrder}
                 onChange={(event) => setCategoryOrder(event.target.value.replace(/\D/g, ''))}
                 placeholder="1"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                className="input"
               />
             </div>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => setCategoryModalOpen(false)}
-                className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+                className="btn-secondary btn-md"
               >
                 Cancelar
               </button>
@@ -474,7 +533,7 @@ export default function MenuPage() {
                 type="button"
                 onClick={saveCategory}
                 disabled={saving}
-                className="rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+                className="btn-primary btn-md"
               >
                 {saving ? 'Guardando...' : 'Guardar categoría'}
               </button>
@@ -485,53 +544,53 @@ export default function MenuPage() {
 
       {isDishModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">{selectedDish ? 'Editar' : 'Nuevo'} plato</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900">{selectedDish ? selectedDish.name : 'Agregar nuevo plato'}</h3>
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-neutral-500">{selectedDish ? 'Editar' : 'Nuevo'} plato</p>
+                <h3 className="mt-2 text-2xl font-semibold text-ink">{selectedDish ? selectedDish.name : 'Agregar nuevo plato'}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setDishModalOpen(false)}
-                className="text-slate-400 transition hover:text-slate-700"
+                className="text-neutral-400 transition hover:text-neutral-700"
               >
                 ✕
               </button>
             </div>
             <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1fr]">
               <div className="space-y-4">
-                <label className="block text-sm font-semibold text-slate-700">Nombre</label>
+                <label className="block text-sm font-semibold text-neutral-700">Nombre</label>
                 <input
                   value={dishName}
                   onChange={(event) => setDishName(event.target.value)}
                   placeholder="Nombre del plato"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                  className="input"
                 />
 
-                <label className="block text-sm font-semibold text-slate-700">Descripción</label>
+                <label className="block text-sm font-semibold text-neutral-700">Descripción</label>
                 <textarea
                   value={dishDescription}
                   onChange={(event) => setDishDescription(event.target.value)}
                   placeholder="Descripción corta"
-                  className="min-h-[120px] w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                  className="input min-h-[120px]"
                 />
               </div>
 
               <div className="space-y-4">
-                <label className="block text-sm font-semibold text-slate-700">Precio</label>
+                <label className="block text-sm font-semibold text-neutral-700">Precio</label>
                 <input
                   value={dishPrice}
-                  onChange={(event) => setDishPrice(event.target.value.replace(/[^0-9]/g, ''))}
+                  onChange={(event) => setDishPrice(event.target.value.replace(/[^0-9.]/g, ''))}
                   placeholder="12500"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                  className="input"
                 />
 
-                <label className="block text-sm font-semibold text-slate-700">Categoría</label>
+                <label className="block text-sm font-semibold text-neutral-700">Categoría</label>
                 <select
                   value={dishCategoryId}
                   onChange={(event) => setDishCategoryId(event.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                  className="input"
                 >
                   {categoryOptions.map((category) => (
                     <option key={category.id} value={category.id}>
@@ -540,19 +599,19 @@ export default function MenuPage() {
                   ))}
                 </select>
 
-                <label className="block text-sm font-semibold text-slate-700">Imagen</label>
+                <label className="block text-sm font-semibold text-neutral-700">Imagen</label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleImageChange}
-                  className="w-full text-sm text-slate-600"
+                  className="w-full text-sm text-neutral-600"
                 />
                 {dishImagePreview ? (
-                  <div className="mt-3 flex h-36 items-center justify-center overflow-hidden rounded-3xl bg-slate-100">
+                  <div className="mt-3 flex h-36 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
                     <img src={dishImagePreview} alt="Preview" className="h-full object-cover" />
                   </div>
                 ) : (
-                  <div className="mt-3 flex h-36 items-center justify-center rounded-3xl bg-slate-100 text-sm text-slate-500">
+                  <div className="mt-3 flex h-36 items-center justify-center rounded-xl bg-neutral-100 text-sm text-neutral-500">
                     Previsualización de imagen
                   </div>
                 )}
@@ -562,7 +621,7 @@ export default function MenuPage() {
               <button
                 type="button"
                 onClick={() => setDishModalOpen(false)}
-                className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+                className="btn-secondary btn-md"
               >
                 Cancelar
               </button>
@@ -570,7 +629,7 @@ export default function MenuPage() {
                 type="button"
                 onClick={saveDish}
                 disabled={saving}
-                className="rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+                className="btn-primary btn-md"
               >
                 {saving ? 'Guardando...' : selectedDish ? 'Guardar cambios' : 'Guardar plato'}
               </button>
