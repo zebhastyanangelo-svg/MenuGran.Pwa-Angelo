@@ -56,7 +56,7 @@ export async function searchRestaurants(query: string) {
     const restaurants = await prisma.restaurant.findMany({
       where: {
         active: true,
-        OR: [{ name: { contains: query, mode: 'insensitive' } }],
+        OR: [{ name: { contains: query } }],
       },
       take: 10,
     });

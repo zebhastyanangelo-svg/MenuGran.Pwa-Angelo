@@ -2,6 +2,8 @@
 
 export type UserRole = "CLIENT" | "OPERATOR" | "ADMIN" | "RIDER" | "SUPERADMIN";
 
+export type ServiceType = "MESA" | "DELIVERY";
+
 export type OrderStatus = 
   | "PENDING" 
   | "CONFIRMED" 
@@ -39,13 +41,15 @@ export interface Order {
   clientId: string;
   client?: User;
   status: OrderStatus;
+  serviceType: ServiceType;
   items: OrderItem[];
   totalPrice: number;
-  deliveryAddress: string;
+  deliveryAddress?: string;
+  tableNumber?: number;
   lat?: number;
   lng?: number;
   estimatedDelivery?: Date;
-  rideId?: string;
+  riderId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
