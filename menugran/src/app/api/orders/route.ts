@@ -1,21 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-// GET: Obtener todos los pedidos activos (operador/admin)
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
+    const where: any = {};
+
+    if (userId) {
+      where.clientId = userId;
+    } else {
+      where.status = {
+        notIn: ['DELIVERED', 'CANCELLED'],
+      };
+    }
+
     const orders = await prisma.order.findMany({
-      where: {
-        status: {
-          notIn: ['DELIVERED', 'CANCELLED'],
-        },
-      },
+      where,
       include: {
         client: {
           select: { id: true, name: true, phone: true },
         },
         restaurant: {
           select: { id: true, name: true },
+        },
+        table: {
+          select: { number: true },
         },
         items: {
           include: {
@@ -28,25 +39,29 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Formatear para el frontend
     const formattedOrders = orders.map((order) => {
       const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
-      
+
       return {
         id: order.id,
         number: `#${order.id.slice(-4).toUpperCase()}`,
-        type: order.deliveryAddress ? 'DELIVERY' : 'LOCAL',
+        serviceType: order.serviceType,
         status: order.status,
         total: order.totalPrice,
         paymentMethod: order.paymentMethod,
         paymentStatus: 'CONFIRMED',
         clientName: order.client.name || 'Sin nombre',
         clientPhone: order.client.phone || 'Sin telefono',
-        address: order.deliveryAddress || 'Mesa',
+        address: order.deliveryAddress || (order.table ? `Mesa ${order.table.number}` : 'Mesa'),
+        tableNumber: order.table?.number ?? null,
+        lat: order.lat,
+        lng: order.lng,
         items: itemCount,
         createdAt: order.createdAt.toISOString(),
         riderId: order.riderId,
         riderName: null,
+        restaurantName: order.restaurant.name,
+        restaurantId: order.restaurant.id,
       };
     });
 
@@ -57,24 +72,43 @@ export async function GET() {
   }
 }
 
-// POST: Crear un nuevo pedido (cliente)
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { clientId, restaurantId, items, deliveryAddress } = body;
+    const { clientId, restaurantId, items, serviceType, tableNumber, lat, lng, deliveryAddress } = body;
 
     if (!clientId || !restaurantId || !items || items.length === 0) {
       return NextResponse.json({ error: 'Faltan datos requeridos' }, { status: 400 });
     }
 
-    // Calcular total
+    const service = serviceType === 'DELIVERY' ? 'DELIVERY' : 'MESA';
+
+    let tableId: string | undefined;
+
+    if (service === 'MESA') {
+      if (!tableNumber) {
+        return NextResponse.json({ error: 'Número de mesa requerido para pedidos en mesa' }, { status: 400 });
+      }
+      const existing = await prisma.table.findUnique({
+        where: { restaurantId_number: { restaurantId, number: tableNumber } },
+      });
+      if (existing) {
+        tableId = existing.id;
+      } else {
+        const created = await prisma.table.create({
+          data: { restaurantId, number: tableNumber },
+        });
+        tableId = created.id;
+      }
+    }
+
     let totalPrice = 0;
     for (const item of items) {
       const menuItem = await prisma.menuItem.findUnique({
         where: { id: item.menuItemId },
       });
       if (menuItem) {
-        totalPrice += menuItem.price * item.quantity;
+        totalPrice += Number(menuItem.price) * item.quantity;
       }
     }
 
@@ -83,7 +117,11 @@ export async function POST(req: NextRequest) {
         clientId,
         restaurantId,
         totalPrice,
-        deliveryAddress: deliveryAddress || null,
+        serviceType: service,
+        tableId: tableId || null,
+        deliveryAddress: service === 'DELIVERY' ? (deliveryAddress || null) : null,
+        lat: service === 'DELIVERY' ? (lat || null) : null,
+        lng: service === 'DELIVERY' ? (lng || null) : null,
         status: 'PENDING',
         paymentMethod: body.paymentMethod || 'CASH',
         items: {
@@ -97,6 +135,7 @@ export async function POST(req: NextRequest) {
       include: {
         client: { select: { name: true, phone: true } },
         restaurant: { select: { name: true } },
+        table: { select: { number: true } },
         items: {
           include: {
             menuItem: { select: { name: true, price: true } },

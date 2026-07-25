@@ -31,17 +31,17 @@ export default function SuperAdminLayout({
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900">
+    <div className="min-h-screen bg-neutral-100 text-ink">
       <div className={`fixed inset-0 bg-black/40 z-30 md:hidden transition-opacity ${sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} onClick={() => setSidebarOpen(false)} />
 
-      <aside className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-slate-950 text-white shadow-2xl transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+      <aside className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-ink text-white shadow-popover transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
         <div className="flex h-full flex-col justify-between">
           <div className="space-y-6 px-5 py-6">
-            <Link href="/sa" className="flex items-center gap-3 rounded-3xl bg-slate-900 px-4 py-4 shadow-sm ring-1 ring-white/10">
-              <ShieldAlert className="h-6 w-6 text-red-500" />
+            <Link href="/sa" className="flex items-center gap-3 rounded-xl bg-neutral-800 px-4 py-4 shadow-soft ring-1 ring-white/10">
+              <ShieldAlert className="h-6 w-6 text-brand-500" />
               <div>
                 <p className="text-sm font-semibold">MenuGran SA</p>
-                <p className="text-xs text-slate-400">Panel principal</p>
+                <p className="text-xs text-neutral-400">Panel principal</p>
               </div>
             </Link>
 
@@ -53,7 +53,7 @@ export default function SuperAdminLayout({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-colors ${active ? 'bg-red-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-900 hover:text-white'}`}
+                    className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${active ? 'bg-brand-500 text-white shadow-soft' : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'}`}
                     onClick={() => setSidebarOpen(false)}
                   >
                     <Icon className="h-4 w-4" />
@@ -65,11 +65,11 @@ export default function SuperAdminLayout({
           </div>
 
           <div className="border-t border-white/10 px-5 py-6">
-            <div className="flex items-center gap-3 rounded-3xl bg-slate-900 px-4 py-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-600 text-white font-semibold">SA</div>
+            <div className="flex items-center gap-3 rounded-xl bg-neutral-800 px-4 py-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500 text-white font-semibold">SA</div>
               <div>
                 <p className="text-sm font-semibold">Aurora Vega</p>
-                <p className="text-xs text-slate-400">aurora@menugran.com</p>
+                <p className="text-xs text-neutral-400">aurora@menugran.com</p>
               </div>
             </div>
           </div>
@@ -77,33 +77,33 @@ export default function SuperAdminLayout({
       </aside>
 
       <div className="md:pl-64">
-        <header className="sticky top-0 z-20 border-b border-slate-200/5 bg-white/90 backdrop-blur md:px-8 px-4 py-4 shadow-sm">
+        <header className="sticky top-0 z-20 border-b border-neutral-200 bg-white/90 backdrop-blur md:px-8 px-4 py-4 shadow-soft">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-2 text-slate-700 shadow-sm md:hidden"
+                className="inline-flex items-center justify-center rounded-lg border border-neutral-200 bg-white p-2 text-ink-light shadow-soft md:hidden"
                 onClick={() => setSidebarOpen(true)}
               >
                 <Menu className="h-5 w-5" />
               </button>
               <div>
-                <p className="text-sm font-semibold text-slate-900">{navItems.find((item) => item.href === pathname)?.label ?? 'Dashboard'}</p>
+                <p className="text-sm font-semibold text-ink">{navItems.find((item) => item.href === pathname)?.label ?? 'Dashboard'}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
+              <button className="btn-secondary btn-sm">
                 Ver como...
               </button>
-              <button className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm hover:bg-slate-800 transition-colors">
+              <button className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-ink text-white shadow-soft hover:bg-neutral-800 transition-colors">
                 <Bell className="h-5 w-5" />
               </button>
             </div>
           </div>
         </header>
 
-        <main className="min-h-screen px-4 py-6 md:px-8">
+        <main className="min-h-screen px-4 py-6 md:px-8 animate-fade-in">
           {children}
         </main>
       </div>

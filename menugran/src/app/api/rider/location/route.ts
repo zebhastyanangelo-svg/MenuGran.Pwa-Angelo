@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateRiderLocation, findNearbyRiders } from "@/modules/delivery/services";
-import { auth } from "@/lib/nextauth";
+import { auth } from "@/lib/auth-next";
 
 export async function POST(request: NextRequest) {
   try {
