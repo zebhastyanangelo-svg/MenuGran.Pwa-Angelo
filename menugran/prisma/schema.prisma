@@ -14,6 +14,26 @@ enum ServiceType {
   @@map("service_type")
 }
 
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  DELIVERING
+  DELIVERED
+  CANCELLED
+
+  @@map("order_status")
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+
+  @@map("payment_method")
+}
+
 model User {
   id            String   @id @default(cuid())
   name          String
@@ -166,9 +186,9 @@ model Order {
   clientId        String   @map("client_id")
   restaurantId    String   @map("restaurant_id")
   riderId         String?  @map("rider_id")
-  status          String   @default("PENDING")
-  totalPrice      Decimal   @db.Decimal(10, 2) @map("total_price")
-  paymentMethod   String   @default("CASH") @map("payment_method")
+  status          OrderStatus   @default(PENDING)
+  totalPrice      Decimal       @db.Decimal(10, 2) @map("total_price")
+  paymentMethod   PaymentMethod @default(CASH) @map("payment_method")
   reference       String?
   serviceType     ServiceType   @default(MESA) @map("service_type")
   tableId         String?       @map("table_id")

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-auth";
 
 export async function GET() {
+  const session = await withAuth({ requiredRole: "SUPERADMIN" });
+  if (session instanceof NextResponse) return session;
+
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -38,6 +42,9 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
+  const session = await withAuth({ requiredRole: "SUPERADMIN" });
+  if (session instanceof NextResponse) return session;
+
   try {
     const body = await request.json();
     const { id, active } = body;

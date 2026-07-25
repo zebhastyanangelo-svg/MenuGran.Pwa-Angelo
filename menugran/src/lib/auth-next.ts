@@ -3,6 +3,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import { verifyPin } from "@/lib/crypto";
 
+type Role = "CLIENT" | "ADMIN" | "OPERATOR" | "RIDER" | "SUPERADMIN";
+
 export const { handlers, auth } = NextAuth({
   providers: [
     CredentialsProvider({
@@ -28,9 +30,10 @@ export const { handlers, auth } = NextAuth({
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role as "CLIENT" | "ADMIN" | "OPERATOR" | "RIDER" | "SUPERADMIN",
+          role: user.role as Role,
           cedula: user.cedula,
-        } as any;
+          phone: user.phone,
+        };
       },
     }),
   ],
@@ -39,14 +42,19 @@ export const { handlers, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role || "CLIENT";
+        token.role = (user as { role: Role }).role || "CLIENT";
+        token.cedula = (user as { cedula: string | null }).cedula ?? null;
+        token.phone = (user as { phone: string | null }).phone ?? null;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).role = token.role;
+        const u = session.user as unknown as Record<string, unknown>;
+        u.id = token.id as string;
+        u.role = (token.role as Role) || "CLIENT";
+        u.cedula = (token.cedula as string | null) ?? null;
+        u.phone = (token.phone as string | null) ?? null;
       }
       return session;
     },

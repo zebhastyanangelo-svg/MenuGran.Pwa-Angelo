@@ -1,0 +1,1 @@
+cd menugran && npx lint-staged

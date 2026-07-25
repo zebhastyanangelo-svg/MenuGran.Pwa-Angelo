@@ -40,26 +40,14 @@ export default function LoginPage() {
         return;
       }
 
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cedula: cedula.trim(), pin }),
-      });
-      const data = await res.json();
+      const sessionRes = await fetch('/api/auth/session');
+      const session = await sessionRes.json();
+      const role = session?.user?.role;
 
-      if (!data.success) {
-        setError(data.message || 'Error al iniciar sesion');
-        setLoading(false);
-        return;
-      }
-
-      localStorage.setItem('user', JSON.stringify(data.user));
-
-      const role = data.user.role;
       if (role === 'CLIENT') router.push('/client');
+      else if (role === 'RIDER') router.push('/rider');
       else if (role === 'OPERATOR') router.push('/operator');
       else if (role === 'ADMIN') router.push('/admin');
-      else if (role === 'RIDER') router.push('/rider');
       else if (role === 'SUPERADMIN') router.push('/sa');
       else router.push('/client');
     } catch (err) {

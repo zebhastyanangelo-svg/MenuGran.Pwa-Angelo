@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBox } from '@fortawesome/free-solid-svg-icons';
 
@@ -54,6 +55,7 @@ interface OrderFromApi {
 }
 
 export default function ClientOrdersPage() {
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<'activos' | 'historial'>('activos');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -62,16 +64,9 @@ export default function ClientOrdersPage() {
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [pullMessage, setPullMessage] = useState('Desliza para actualizar');
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (userId: string) => {
     try {
-      const stored = localStorage.getItem('user');
-      if (!stored) {
-        setError('Usuario no autenticado');
-        setLoading(false);
-        return;
-      }
-      const user = JSON.parse(stored);
-      const res = await fetch(`/api/orders?userId=${user.id}`);
+      const res = await fetch(`/api/orders?userId=${userId}`);
       const data = await res.json();
       if (data.success) {
         setOrders(data.data);
@@ -86,8 +81,8 @@ export default function ClientOrdersPage() {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    if (session?.user?.id) fetchOrders(session.user.id);
+  }, [session?.user?.id]);
 
   const visibleOrders = useMemo(() => {
     return orders
@@ -101,9 +96,10 @@ export default function ClientOrdersPage() {
 
   const handleRefresh = () => {
     if (loading) return;
+    if (!session?.user?.id) return;
     setRefreshing(true);
     setPullMessage('Actualizando...');
-    fetchOrders().finally(() => {
+    fetchOrders(session.user.id).finally(() => {
       setRefreshing(false);
       setPullMessage('Desliza para actualizar');
     });

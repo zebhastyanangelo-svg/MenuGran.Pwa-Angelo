@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export type CartItem = {
   id: string;
@@ -11,8 +12,6 @@ export type CartItem = {
 
 type CartState = {
   items: CartItem[];
-  total: number;
-  itemCount: number;
   addItem: (item: CartItem) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
@@ -25,49 +24,43 @@ const calculateTotal = (items: CartItem[]) =>
 const calculateItemCount = (items: CartItem[]) =>
   items.reduce((count, item) => count + item.quantity, 0);
 
-export const useCartStore = create<CartState>((set) => ({
-  items: [],
-  total: 0,
-  itemCount: 0,
-  addItem: (item) =>
-    set((state) => {
-      const existing = state.items.find((entry) => entry.id === item.id);
-      const items = existing
-        ? state.items.map((entry) =>
-            entry.id === item.id
-              ? { ...entry, quantity: entry.quantity + item.quantity }
-              : entry
-          )
-        : [...state.items, item];
+// Derivados — se calculan on-demand, no se persisten
+export const selectTotal = (s: CartState) => calculateTotal(s.items);
+export const selectItemCount = (s: CartState) => calculateItemCount(s.items);
 
-      return {
-        items,
-        total: calculateTotal(items),
-        itemCount: calculateItemCount(items),
-      };
+export const useCartStore = create<CartState>()(
+  persist(
+    (set) => ({
+      items: [],
+      addItem: (item) =>
+        set((state) => {
+          const existing = state.items.find((entry) => entry.id === item.id);
+          return {
+            items: existing
+              ? state.items.map((entry) =>
+                  entry.id === item.id
+                    ? { ...entry, quantity: entry.quantity + item.quantity }
+                    : entry
+                )
+              : [...state.items, item],
+          };
+        }),
+      removeItem: (id) =>
+        set((state) => ({
+          items: state.items.filter((item) => item.id !== id),
+        })),
+      updateQuantity: (id, quantity) =>
+        set((state) => ({
+          items: state.items
+            .map((item) => (item.id === id ? { ...item, quantity } : item))
+            .filter((item) => item.quantity > 0),
+        })),
+      clearCart: () => set({ items: [] }),
     }),
-  removeItem: (id) =>
-    set((state) => {
-      const items = state.items.filter((item) => item.id !== id);
-      return {
-        items,
-        total: calculateTotal(items),
-        itemCount: calculateItemCount(items),
-      };
-    }),
-  updateQuantity: (id, quantity) =>
-    set((state) => {
-      const items = state.items
-        .map((item) =>
-          item.id === id ? { ...item, quantity } : item
-        )
-        .filter((item) => item.quantity > 0);
-
-      return {
-        items,
-        total: calculateTotal(items),
-        itemCount: calculateItemCount(items),
-      };
-    }),
-  clearCart: () => set({ items: [], total: 0, itemCount: 0 }),
-}));
+    {
+      name: 'menugran-cart',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (s) => ({ items: s.items }),
+    }
+  )
+);

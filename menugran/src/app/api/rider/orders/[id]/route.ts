@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-auth";
+import { OrderStatus } from "@prisma/client";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await withAuth({ requiredRole: "RIDER" });
+  if (session instanceof NextResponse) return session;
+
   try {
     const order = await prisma.order.findUnique({
       where: { id: params.id },
@@ -40,6 +45,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await withAuth({ requiredRole: "RIDER" });
+  if (session instanceof NextResponse) return session;
+
   try {
     const body = await req.json();
     const { action, riderId, status } = body;
@@ -53,7 +61,7 @@ export async function PATCH(
         where: { id: params.id },
         data: {
           riderId,
-          status: "DELIVERING",
+          status: OrderStatus.DELIVERING,
         },
         include: {
           client: {
@@ -76,7 +84,7 @@ export async function PATCH(
     }
 
     if (status) {
-      const validStatuses = ["DELIVERING", "DELIVERED", "CANCELLED"];
+      const validStatuses = [OrderStatus.DELIVERING, OrderStatus.DELIVERED, OrderStatus.CANCELLED];
       if (!validStatuses.includes(status)) {
         return NextResponse.json({ error: "Invalid status" }, { status: 400 });
       }

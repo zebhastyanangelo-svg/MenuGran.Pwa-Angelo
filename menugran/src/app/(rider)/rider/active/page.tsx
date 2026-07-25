@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { MapPin, Phone, Clock, CheckCircle, Package } from 'lucide-react';
 import Link from 'next/link';
 
@@ -30,23 +31,23 @@ function timeAgo(dateStr: string) {
 }
 
 export default function ActiveRidersPage() {
+  const { data: session } = useSession();
   const [activeDeliveries, setActiveDeliveries] = useState<ActiveOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('menugran-user') || '{}');
-    if (!user?.id) {
+    if (!session?.user?.id) {
       setLoading(false);
       return;
     }
-    fetch(`/api/rider/orders?riderId=${user.id}&status=DELIVERING`)
+    fetch(`/api/rider/orders?riderId=${session.user.id}&status=DELIVERING`)
       .then((res) => res.json())
       .then((data) => {
         setActiveDeliveries(data.orders || []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [session?.user?.id]);
 
   const handleComplete = async (orderId: string) => {
     try {

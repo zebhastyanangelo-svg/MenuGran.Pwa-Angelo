@@ -42,26 +42,16 @@ export default function SuperadminLoginPage() {
         return;
       }
 
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cedula: cedula.trim(), pin }),
-      });
-      const data = await response.json();
+      const sessionRes = await fetch('/api/auth/session');
+      const session = await sessionRes.json();
+      const role = session?.user?.role;
 
-      if (!data.success) {
-        setError(data.message || 'Error al iniciar sesión');
-        setIsLoading(false);
-        return;
-      }
-
-      if (data.user.role !== 'SUPERADMIN') {
+      if (role !== 'SUPERADMIN') {
         setError('No tienes permisos de superadministrador');
         setIsLoading(false);
         return;
       }
 
-      window.localStorage.setItem('menugran-user', JSON.stringify(data.user));
       router.push('/sa');
     } catch (err) {
       setError('Error de conexión. Intenta de nuevo.');

@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCartShopping, faXmark, faMoneyBillWave, faMobileScreen } from '@fortawesome/free-solid-svg-icons';
-import { useCartStore } from '@/modules/cart/store';
+import { useCartStore, selectTotal } from '@/modules/cart/store';
 import ServiceTypeModal from '@/modules/cart/ServiceTypeModal';
 import type { ServiceType } from '@/types';
 
@@ -16,23 +17,22 @@ interface CartDrawerProps {
 
 export default function CartDrawer({ open, onClose }: CartDrawerProps) {
   const router = useRouter();
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'MOBILE_PAYMENT'>('CASH');
   const [showServiceModal, setShowServiceModal] = useState(false);
   const items = useCartStore((state) => state.items);
-  const total = useCartStore((state) => state.total);
+  const total = useCartStore(selectTotal);
   const removeItem = useCartStore((state) => state.removeItem);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const clearCart = useCartStore((state) => state.clearCart);
 
   const handleSubmit = (serviceData: { serviceType: ServiceType; tableNumber?: number; deliveryAddress?: string; lat?: number; lng?: number }) => {
-    const stored = localStorage.getItem('user');
-    if (!stored) return;
-    const user = JSON.parse(stored);
     const restaurantId = items[0]?.restaurantId;
-    if (!restaurantId) return;
+    if (!restaurantId || !userId) return;
 
     const payload = {
-      clientId: user.id,
+      clientId: userId,
       restaurantId,
       items: items.map((i) => ({
         menuItemId: i.id,

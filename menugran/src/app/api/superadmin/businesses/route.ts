@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { OrderStatus } from '@prisma/client';
 
 export async function GET() {
   try {
@@ -8,7 +9,7 @@ export async function GET() {
         restaurants: {
           include: {
             orders: {
-              where: { status: 'DELIVERED' },
+              where: { status: OrderStatus.DELIVERED },
               select: { totalPrice: true },
             },
           },

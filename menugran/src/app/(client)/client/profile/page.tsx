@@ -1,51 +1,37 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
 import { User, Phone, CreditCard, LogOut, Save } from 'lucide-react';
 
-interface UserData {
-  id: string;
-  name: string;
-  email?: string;
-  cedula: string;
-  phone: string;
-  role: string;
-}
-
 export default function ClientProfilePage() {
-  const router = useRouter();
-  const [user, setUser] = useState<UserData | null>(null);
+  const { data: session, update } = useSession();
+  const user = session?.user;
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (stored) {
-      const u = JSON.parse(stored) as UserData;
-      setUser(u);
-      setName(u.name || '');
-      setPhone(u.phone || '');
+    if (user) {
+      setName(user.name || '');
+      setPhone(user.phone || '');
     }
-  }, []);
+  }, [user?.id]);
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user?.id) return;
     setSaving(true);
     setSaved(false);
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/auth/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: user.id, name, phone }),
       });
       const data = await res.json();
       if (data.success) {
-        const updated = { ...user, name, phone };
-        localStorage.setItem('user', JSON.stringify(updated));
-        setUser(updated);
+        await update();
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
       }
@@ -56,8 +42,7 @@ export default function ClientProfilePage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    router.push('/login');
+    signOut({ callbackUrl: '/login' });
   };
 
   if (!user) {
@@ -76,11 +61,11 @@ export default function ClientProfilePage() {
       <div className="mb-6 rounded-xl bg-white p-6 shadow-soft border border-neutral-200 animate-slide-up">
         <div className="flex flex-col items-center gap-4 sm:flex-row">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-500 text-3xl font-bold text-white shadow-soft">
-            {user.name.charAt(0).toUpperCase()}
+            {user.name?.charAt(0)?.toUpperCase() || '?'}
           </div>
           <div className="text-center sm:text-left">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-neutral-500">Perfil</p>
-            <h1 className="mt-1 text-2xl font-semibold text-ink">{user.name}</h1>
+            <h1 className="mt-1 text-2xl font-semibold text-ink">{user.name || ''}</h1>
             <p className="mt-1 text-sm text-neutral-500">{user.role}</p>
           </div>
         </div>
@@ -120,7 +105,7 @@ export default function ClientProfilePage() {
             </label>
             <input
               type="text"
-              value={user.cedula}
+              value={user.cedula || ''}
               disabled
               className="input bg-neutral-50 text-neutral-400 cursor-not-allowed"
             />

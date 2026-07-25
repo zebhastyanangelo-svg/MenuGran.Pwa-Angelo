@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { OrderStatus, ServiceType } from "@prisma/client";
 
 export async function GET(
   req: NextRequest,
@@ -69,12 +70,11 @@ export async function PATCH(
 ) {
   try {
     const body = await req.json();
-    const { status, riderId, riderName } = body;
+    const { status: rawStatus, riderId, riderName } = body;
 
-    const validStatuses = ["PENDING", "CONFIRMED", "PREPARING", "READY", "DELIVERING", "DELIVERED", "CANCELLED"];
-    if (status && !validStatuses.includes(status)) {
-      return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
-    }
+    const validStatus = rawStatus && Object.values(OrderStatus).includes(rawStatus)
+      ? (rawStatus as OrderStatus)
+      : undefined;
 
     const current = await prisma.order.findUnique({
       where: { id: params.id },
@@ -85,12 +85,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
     }
 
-    if (status === "DELIVERING" && current.serviceType === "MESA") {
+    if (validStatus === OrderStatus.DELIVERING && current.serviceType === ServiceType.MESA) {
       return NextResponse.json({ error: "Pedidos en mesa no pasan a DELIVERING" }, { status: 400 });
     }
 
-    const updateData: any = {};
-    if (status) updateData.status = status;
+    const updateData: { status?: OrderStatus; riderId?: string } = {};
+    if (validStatus) updateData.status = validStatus;
     if (riderId) updateData.riderId = riderId;
 
     const order = await prisma.order.update({

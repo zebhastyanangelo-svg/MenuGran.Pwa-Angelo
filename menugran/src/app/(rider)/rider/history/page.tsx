@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface DeliveryRecord {
   id: string;
@@ -34,16 +35,16 @@ function formatDateGroup(dateStr: string) {
 }
 
 export default function RiderHistoryPage() {
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
   const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([]);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('menugran-user') || '{}');
-    if (!user?.id) {
+    if (!session?.user?.id) {
       setLoading(false);
       return;
     }
-    fetch(`/api/rider/orders?riderId=${user.id}&status=DELIVERED`)
+    fetch(`/api/rider/orders?riderId=${session.user.id}&status=DELIVERED`)
       .then((res) => res.json())
       .then((data) => {
         const mapped: DeliveryRecord[] = (data.orders || []).map((o: any) => ({
@@ -58,7 +59,7 @@ export default function RiderHistoryPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [session?.user?.id]);
 
   const totalEarnings = deliveries.reduce((sum, d) => sum + d.earnings, 0);
   const totalDeliveries = deliveries.length;

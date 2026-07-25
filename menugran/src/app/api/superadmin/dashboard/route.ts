@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { OrderStatus } from '@prisma/client';
 
 export async function GET() {
   try {
@@ -16,11 +17,11 @@ export async function GET() {
     const [revenueResult, revenueTodayResult] = await Promise.all([
       prisma.order.aggregate({
         _sum: { totalPrice: true },
-        where: { status: 'DELIVERED' },
+        where: { status: OrderStatus.DELIVERED },
       }),
       prisma.order.aggregate({
         _sum: { totalPrice: true },
-        where: { status: 'DELIVERED', createdAt: { gte: todayStart } },
+        where: { status: OrderStatus.DELIVERED, createdAt: { gte: todayStart } },
       }),
     ]);
 
@@ -34,7 +35,7 @@ export async function GET() {
         restaurants: {
           include: {
             orders: {
-              where: { status: 'DELIVERED' },
+              where: { status: OrderStatus.DELIVERED },
             },
           },
         },

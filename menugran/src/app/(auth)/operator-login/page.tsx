@@ -42,26 +42,16 @@ export default function OperatorLoginPage() {
         return;
       }
 
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cedula: cedula.trim(), pin }),
-      });
-      const data = await response.json();
+      const sessionRes = await fetch('/api/auth/session');
+      const session = await sessionRes.json();
+      const role = session?.user?.role;
 
-      if (!data.success) {
-        setError(data.message || 'Error al iniciar sesión');
-        setIsLoading(false);
-        return;
-      }
-
-      if (data.user.role !== 'OPERATOR') {
+      if (role !== 'OPERATOR') {
         setError('No tienes permisos de operador');
         setIsLoading(false);
         return;
       }
 
-      window.localStorage.setItem('menugran-user', JSON.stringify(data.user));
       router.push('/operator');
     } catch (err) {
       setError('Error de conexión. Intenta de nuevo.');

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { OrderStatus } from "@prisma/client";
 
 export async function GET(
   req: NextRequest,
@@ -53,16 +54,15 @@ export async function PATCH(
 ) {
   try {
     const body = await req.json();
-    const { status } = body;
+    const { status: rawStatus } = body;
 
-    const validStatuses = ["PENDING", "CONFIRMED", "PREPARING", "READY", "DELIVERING", "DELIVERED", "CANCELLED"];
-    if (status && !validStatuses.includes(status)) {
-      return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
-    }
+    const validStatus = rawStatus && Object.values(OrderStatus).includes(rawStatus)
+      ? (rawStatus as OrderStatus)
+      : undefined;
 
     const order = await prisma.order.update({
       where: { id: params.id },
-      data: { ...(status ? { status } : {}) },
+      data: { ...(validStatus ? { status: validStatus } : {}) },
       include: {
         client: {
           select: { id: true, name: true, phone: true },

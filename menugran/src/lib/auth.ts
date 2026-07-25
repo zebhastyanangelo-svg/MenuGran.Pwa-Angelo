@@ -54,7 +54,9 @@ export async function verifyPIN(userId: string, pin: string) {
     where: { id: userId },
     select: { pin: true },
   });
-  return user?.pin === pin;
+  if (!user?.pin) return false;
+  const { verifyPin } = await import('@/lib/crypto');
+  return verifyPin(pin, user.pin);
 }
 
 export function canAccessAdminPanel(role: string): boolean {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import { MapPin, Package, Bike, User, Phone, CheckCircle } from 'lucide-react';
 
 interface ApiOrder {
@@ -42,16 +43,12 @@ function statusColor(status: string) {
 }
 
 export default function RiderPage() {
+  const { data: session } = useSession();
+  const riderId = session?.user?.id ?? null;
   const [isAvailable, setIsAvailable] = useState(true);
   const [availableOrders, setAvailableOrders] = useState<ApiOrder[]>([]);
   const [myDeliveries, setMyDeliveries] = useState<ApiOrder[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<ApiOrder | null>(null);
-  const [riderId, setRiderId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('menugran-user') || '{}');
-    if (user?.id) setRiderId(user.id);
-  }, []);
 
   const fetchAvailable = useCallback(async () => {
     try {
@@ -70,6 +67,7 @@ export default function RiderPage() {
   useEffect(() => {
     if (!riderId) return;
     const fetchDeliveries = async () => {
+      if (!riderId) return;
       try {
         const [deliveringRes, deliveredRes] = await Promise.all([
           fetch(`/api/rider/orders?riderId=${riderId}&status=DELIVERING`),
@@ -83,7 +81,7 @@ export default function RiderPage() {
         ]);
       } catch {}
     };
-    fetchDeliveries();
+    if (riderId) fetchDeliveries();
   }, [riderId]);
 
   const handleAcceptOrder = async (orderId: string) => {

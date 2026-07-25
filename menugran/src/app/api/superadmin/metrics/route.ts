@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { OrderStatus } from '@prisma/client';
 
 export async function GET() {
   try {
@@ -13,23 +14,23 @@ export async function GET() {
 
     const [ordersLast7, ordersLast6Months, allDelivered, paymentMethods, userRoles] = await Promise.all([
       prisma.order.findMany({
-        where: { createdAt: { gte: sevenDaysAgo }, status: 'DELIVERED' },
+        where: { createdAt: { gte: sevenDaysAgo }, status: OrderStatus.DELIVERED },
         select: { totalPrice: true, createdAt: true },
         orderBy: { createdAt: 'asc' },
       }),
       prisma.order.findMany({
-        where: { createdAt: { gte: sixMonthsAgo }, status: 'DELIVERED' },
+        where: { createdAt: { gte: sixMonthsAgo }, status: OrderStatus.DELIVERED },
         select: { totalPrice: true, createdAt: true },
         orderBy: { createdAt: 'asc' },
       }),
       prisma.order.findMany({
-        where: { status: 'DELIVERED' },
+        where: { status: OrderStatus.DELIVERED },
         select: { totalPrice: true, paymentMethod: true },
       }),
       prisma.order.groupBy({
         by: ['paymentMethod'],
         _count: { id: true },
-        where: { status: 'DELIVERED' },
+        where: { status: OrderStatus.DELIVERED },
       }),
       prisma.user.groupBy({
         by: ['role'],
@@ -78,7 +79,7 @@ export async function GET() {
     const restaurantsWithRevenue = await prisma.restaurant.findMany({
       include: {
         orders: {
-          where: { status: 'DELIVERED' },
+          where: { status: OrderStatus.DELIVERED },
           select: { totalPrice: true },
         },
       },

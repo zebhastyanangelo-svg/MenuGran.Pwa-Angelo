@@ -1,6 +1,14 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import SessionProvider from "@/components/providers/SessionProvider";
+import SWUpdatePrompt from "@/components/SWUpdatePrompt";
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -9,8 +17,8 @@ export const viewport: Viewport = {
   maximumScale: 5,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FFFCF7" },
-    { media: "(prefers-color-scheme: dark)", color: "#2D2825" },
+    { media: "(prefers-color-scheme: light)", color: "#f8f9ff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1c30" },
   ],
 };
 
@@ -54,12 +62,13 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="MenuGran" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#FFFCF7" />
+        <meta name="theme-color" content="#f8f9ff" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
       </head>
-      <body className="bg-cream-50 text-ink">
+      <body className={`${inter.variable} bg-cream-50 text-ink font-sans`}>
         <SessionProvider>{children}</SessionProvider>
+        <SWUpdatePrompt />
       </body>
     </html>
   );
