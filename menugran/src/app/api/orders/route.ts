@@ -56,9 +56,6 @@ export async function GET(request: NextRequest) {
         restaurant: {
           select: { id: true, name: true },
         },
-        table: {
-          select: { number: true },
-        },
         items: {
           include: {
             menuItem: {
@@ -70,6 +67,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
+    // Formatear para el frontend
     const formattedOrders = orders.map((order) => {
       const itemCount = order.items.reduce(
         (sum, item) => sum + item.quantity,
@@ -79,7 +77,7 @@ export async function GET(request: NextRequest) {
       return {
         id: order.id,
         number: `#${order.id.slice(-4).toUpperCase()}`,
-        serviceType: order.serviceType,
+        type: order.deliveryAddress ? 'DELIVERY' : 'LOCAL',
         status: order.status,
         total: order.totalPrice,
         paymentMethod: order.paymentMethod,
@@ -96,8 +94,6 @@ export async function GET(request: NextRequest) {
         createdAt: order.createdAt.toISOString(),
         riderId: order.riderId,
         riderName: null,
-        restaurantName: order.restaurant.name,
-        restaurantId: order.restaurant.id,
       };
     });
 

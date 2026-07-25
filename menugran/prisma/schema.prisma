@@ -7,11 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum ServiceType {
-  MESA
-  DELIVERY
-
-  @@map("service_type")
+enum UserRole {
+  CLIENT
+  OPERATOR
+  ADMIN
+  RIDER
+  SUPERADMIN
 }
 
 enum OrderStatus {
@@ -35,15 +36,15 @@ enum PaymentMethod {
 }
 
 model User {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   name          String
-  email         String?  @unique
+  email         String?   @unique
   emailVerified DateTime?
   image         String?
-  role          String   @default("CLIENT")
+  role          UserRole  @default(CLIENT)
   phone         String?
   cedula        String?   @unique
-  pin           String?   // Hash bcrypt del PIN de 4 dígitos
+  pin           String?   // PIN de 4 dígitos para login
   active        Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -64,12 +65,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String  @map("provider_account_id")
-  refreshToken      String? 
-  accessToken       String? 
+  refreshToken      String? @db.Text
+  accessToken       String? @db.Text
   expiresAt         Int?
   tokenType         String?
   scope             String?
-  idToken           String? 
+  idToken           String? @db.Text
   sessionState      String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -101,7 +102,7 @@ model Business {
   id          String   @id @default(cuid())
   name        String
   slug        String   @unique
-  description String?  
+  description String?  @db.Text
   logo        String?
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -129,7 +130,6 @@ model Restaurant {
   admin      User           @relation("AdminRestaurant", fields: [adminId], references: [id])
   categories MenuCategory[]
   menuItems  MenuItem[]
-  tables     Table[]
   orders     Order[]
 
   @@map("restaurants")
@@ -153,8 +153,8 @@ model MenuItem {
   restaurantId String  @map("restaurant_id")
   categoryId   String  @map("category_id")
   name         String
-  description  String? 
-  price        Decimal   @db.Decimal(10, 2)
+  description  String? @db.Text
+  price        Decimal @db.Decimal(10, 2)
   image        String?
   available    Boolean @default(true)
   createdAt    DateTime @default(now())
@@ -167,18 +167,20 @@ model MenuItem {
   @@map("menu_items")
 }
 
-model Table {
-  id           String   @id @default(cuid())
-  restaurantId String   @map("restaurant_id")
-  number       Int
-  qrCode       String?  @map("qr_code")
-  createdAt    DateTime @default(now())
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  DELIVERING
+  DELIVERED
+  CANCELLED
+}
 
-  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  orders     Order[]
-
-  @@unique([restaurantId, number])
-  @@map("tables")
+enum PaymentMethod {
+  CASH
+  MOBILE_PAYMENT
+  TRANSFER
 }
 
 model Order {
@@ -190,26 +192,20 @@ model Order {
   totalPrice      Decimal       @db.Decimal(10, 2) @map("total_price")
   paymentMethod   PaymentMethod @default(CASH) @map("payment_method")
   reference       String?
-  serviceType     ServiceType   @default(MESA) @map("service_type")
-  tableId         String?       @map("table_id")
   deliveryAddress String?       @map("delivery_address")
   lat             Float?
   lng             Float?
-  notes           String?       
+  notes           String?       @db.Text
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
   client     User        @relation("ClientOrders", fields: [clientId], references: [id])
   restaurant Restaurant  @relation(fields: [restaurantId], references: [id])
-  table      Table?       @relation(fields: [tableId], references: [id])
   rider      User?       @relation("RiderOrders", fields: [riderId], references: [id])
   items      OrderItem[]
   locations  Location[]
 
-  @@index([restaurantId, serviceType, status, createdAt])
-  @@index([clientId, createdAt])
-  @@index([riderId, status])
-  @@index([serviceType, status])
+  @@index([restaurantId, status, createdAt])
   @@map("orders")
 }
 

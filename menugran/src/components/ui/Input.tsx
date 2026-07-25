@@ -1,48 +1,41 @@
+// components/ui/Input.tsx - Componente de input reutilizable
+
 import { InputHTMLAttributes } from 'react';
 import { clsx } from 'clsx';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
-  hint?: string;
+  disabled?: boolean;
 }
 
 export default function Input({
   label,
   error,
-  hint,
+  disabled,
   className,
-  id,
   ...props
 }: InputProps) {
-  const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
-
   return (
     <div className="w-full">
       {label && (
-        <label
-          htmlFor={inputId}
-          className="block text-sm font-medium text-ink mb-1.5"
-        >
+        <label className="block text-sm font-medium text-gray-700 mb-1">
           {label}
         </label>
       )}
       <input
-        id={inputId}
-        className={clsx(error ? 'input-error' : 'input', className)}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
+        disabled={disabled}
+        className={clsx(
+          'w-full px-4 py-2 border border-gray-300 rounded-lg',
+          'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent',
+          'disabled:bg-gray-100 disabled:cursor-not-allowed',
+          error && 'border-danger-500 focus:ring-danger-500',
+          className
+        )}
         {...props}
       />
       {error && (
-        <p id={`${inputId}-error`} className="mt-1 text-sm text-danger-500" role="alert">
-          {error}
-        </p>
-      )}
-      {hint && !error && (
-        <p id={`${inputId}-hint`} className="mt-1 text-sm text-neutral-500">
-          {hint}
-        </p>
+        <p className="mt-1 text-sm text-danger-500">{error}</p>
       )}
     </div>
   );

@@ -3,23 +3,58 @@
 import { useEffect, useState, useRef } from 'react';
 import { MapPin, Home, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 
-interface OrderItem {
-  name: string;
-  qty: number;
-  price: number;
-}
-
 interface AvailableOrder {
   id: string;
   restaurant: string;
   pickup: string;
   delivery: string;
+  distance: string;
   total: number;
-  items: OrderItem[];
+  items: Array<{ name: string; qty: number; price: number }>;
 }
 
-const formatPrice = (v: number) =>
-  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
+const sampleOrders: AvailableOrder[] = [
+  {
+    id: 'A-102',
+    restaurant: 'La Casa del Sabor',
+    pickup: 'Av. Central 123',
+    delivery: 'Calle Luna 45',
+    distance: '4.2 km',
+    total: 28.50,
+    items: [
+      { name: 'Pollo a la brasa', qty: 1, price: 16.0 },
+      { name: 'Chicha morada', qty: 1, price: 4.5 },
+      { name: 'Arroz chaufa', qty: 1, price: 8.0 },
+    ],
+  },
+  {
+    id: 'A-107',
+    restaurant: 'Sushi Express',
+    pickup: 'Calle del Mar 89',
+    delivery: 'Plaza Mayor 7',
+    distance: '6.1 km',
+    total: 34.20,
+    items: [
+      { name: 'Combo sushi 12 piezas', qty: 1, price: 24.0 },
+      { name: 'Sopa miso', qty: 1, price: 3.5 },
+      { name: 'Ginger', qty: 1, price: 0.70 },
+      { name: 'Soja', qty: 1, price: 0.50 },
+    ],
+  },
+  {
+    id: 'A-113',
+    restaurant: 'Burger Factory',
+    pickup: 'Av. Roosevelt 210',
+    delivery: 'Jardines del Sol 14',
+    distance: '2.8 km',
+    total: 22.80,
+    items: [
+      { name: 'Burger doble', qty: 1, price: 14.0 },
+      { name: 'Papas rústicas', qty: 1, price: 4.5 },
+      { name: 'Refresco', qty: 1, price: 4.3 },
+    ],
+  },
+];
 
 export default function RiderAvailableOrdersPage() {
   const [orders, setOrders] = useState<AvailableOrder[]>([]);
@@ -62,6 +97,7 @@ export default function RiderAvailableOrdersPage() {
 
   useEffect(() => {
     fetchOrders();
+
     const interval = setInterval(fetchOrders, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -96,51 +132,51 @@ export default function RiderAvailableOrdersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-cream-50 text-ink animate-fade-in">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       <div
         className="min-h-screen"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="bg-white border-b border-neutral-200 px-4 py-4 sticky top-0 z-10">
+        <div className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-neutral-500">Pedidos disponibles</p>
-              <h1 className="text-lg font-semibold text-ink">Pedidos disponibles para entrega</h1>
+              <p className="text-xs uppercase tracking-[0.24em] text-gray-500">Pedidos disponibles</p>
+              <h1 className="text-lg font-semibold text-gray-900">Pedidos disponibles para entrega</h1>
             </div>
             <button
               type="button"
               onClick={handleRefresh}
-              className="btn-primary btn-sm"
+              className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
               Actualizar
             </button>
           </div>
-          {pullHint && <p className="mt-3 text-sm text-neutral-500">{pullHint}</p>}
+          {pullHint && <p className="mt-3 text-sm text-gray-500">{pullHint}</p>}
         </div>
 
         {!available ? (
-          <div className="px-4 py-10 text-center text-ink-light">Esta pantalla solo esta disponible cuando estas activo.</div>
+          <div className="px-4 py-10 text-center text-gray-600">Esta pantalla solo está disponible cuando estás activo.</div>
         ) : loading ? (
           <div className="px-4 py-20 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 mx-auto"></div>
-            <p className="mt-4 text-neutral-500">Cargando pedidos...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Cargando pedidos...</p>
           </div>
         ) : error ? (
-          <div className="px-4 py-20 text-center text-brand-500">
+          <div className="px-4 py-20 text-center text-red-600">
             <p className="font-semibold">{error}</p>
           </div>
         ) : orders.length === 0 ? (
           <div className="px-4 py-20 text-center">
-            <p className="text-2xl font-semibold text-ink">No hay pedidos disponibles</p>
-            <p className="mt-3 text-ink-light">Vuelve a intentar en unos minutos</p>
+            <p className="text-2xl font-semibold text-gray-900">No hay pedidos disponibles 🎉</p>
+            <p className="mt-3 text-gray-600">Vuelve a intentar en unos minutos</p>
           </div>
         ) : (
           <div className="space-y-4 px-4 py-5">
             {orders.map(order => (
-              <div key={order.id} className="rounded-xl bg-white border border-neutral-200 shadow-soft overflow-hidden">
+              <div key={order.id} className="rounded-3xl bg-white border border-gray-200 shadow-sm overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setExpandedId(prev => (prev === order.id ? null : order.id))}
@@ -148,44 +184,45 @@ export default function RiderAvailableOrdersPage() {
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-sm font-semibold text-ink">{order.restaurant}</p>
-                      <p className="mt-2 text-sm text-ink-light flex items-center gap-2">
+                      <p className="text-sm font-semibold text-gray-900">{order.restaurant}</p>
+                      <p className="mt-2 text-sm text-gray-600 flex items-center gap-2">
                         <MapPin className="w-4 h-4" />
                         {order.pickup}
                       </p>
-                      <p className="mt-2 text-sm text-ink-light flex items-center gap-2">
+                      <p className="mt-2 text-sm text-gray-600 flex items-center gap-2">
                         <Home className="w-4 h-4" />
                         {order.delivery}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-semibold text-ink">{formatPrice(order.total)}</p>
+                      <p className="text-lg font-semibold text-gray-900">${order.total.toFixed(2)}</p>
+                      <p className="text-sm text-gray-500">{order.distance}</p>
                     </div>
                   </div>
                 </button>
 
                 {expandedId === order.id && (
-                  <div className="border-t border-neutral-200 bg-neutral-50 p-4 space-y-4">
+                  <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-4">
                     <div className="space-y-2">
-                      <p className="text-sm font-semibold text-ink">Detalles del pedido</p>
+                      <p className="text-sm font-semibold text-gray-900">Detalles del pedido</p>
                       {order.items.map((item, index) => (
-                        <div key={index} className="flex justify-between text-sm text-ink-light">
+                        <div key={index} className="flex justify-between text-sm text-gray-700">
                           <span>{item.qty} x {item.name}</span>
-                          <span>{formatPrice(item.qty * item.price)}</span>
+                          <span>${(item.qty * item.price).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm text-ink-light">Total</span>
-                      <span className="text-lg font-semibold text-ink">{formatPrice(order.total)}</span>
+                      <span className="text-sm text-gray-600">Total</span>
+                      <span className="text-lg font-semibold text-gray-900">${order.total.toFixed(2)}</span>
                     </div>
                     <button
                       type="button"
-                      className="btn-primary btn-md w-full"
+                      className="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors"
                     >
                       Aceptar Entrega
                     </button>
-                    <div className="flex items-center text-sm text-neutral-500 gap-2">
+                    <div className="flex items-center text-sm text-gray-500 gap-2">
                       {expandedId === order.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       <span>Ver menos detalles</span>
                     </div>

@@ -49,6 +49,8 @@ export async function getUserByCedula(cedula: string) {
   });
 }
 
+import bcrypt from "bcryptjs";
+
 export async function verifyPIN(userId: string, pin: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },

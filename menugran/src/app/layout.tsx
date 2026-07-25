@@ -16,6 +16,7 @@ export const viewport: Viewport = {
   minimumScale: 1,
   maximumScale: 5,
   viewportFit: "cover",
+  colorScheme: "light dark",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f8f9ff" },
     { media: "(prefers-color-scheme: dark)", color: "#0b1c30" },
@@ -24,10 +25,10 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "MenuGran - Pide comida fácil y rápido",
+    default: "MenuGran - Pide comida fácil",
     template: "%s | MenuGran",
   },
-  description: "Pide comida a domicilio o desde tu mesa. Menú digital, pedidos en tiempo real y seguimiento de entrega.",
+  description: "MenuGran - Tu aplicación PWA de pedidos de comida con entregas en tiempo real",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -40,9 +41,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "es_ES",
-    siteName: "MenuGran",
-    title: "MenuGran - Pide comida fácil y rápido",
-    description: "Pide comida a domicilio o desde tu mesa con MenúGran.",
+    url: "https://menugran.app",
+    title: "MenuGran - Pide comida fácil",
+    description: "Tu aplicación PWA de pedidos de comida con entregas en tiempo real",
   },
   icons: {
     icon: "/icons/icon-192x192.png",

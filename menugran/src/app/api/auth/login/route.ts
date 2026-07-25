@@ -25,8 +25,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const pinOk = await verifyPin(pin, user.pin || "");
-    if (!pinOk) {
+    // Comprobar PIN de forma segura utilizando bcryptjs
+    const isPinValid = await bcrypt.compare(pin, user.pin || "");
+    if (!isPinValid) {
       return NextResponse.json(
         { success: false, message: "PIN incorrecto" },
         { status: 401 }
@@ -45,7 +46,6 @@ export async function POST(req: NextRequest) {
       user: {
         id: user.id,
         name: user.name,
-        email: user.email,
         role: user.role,
       },
     });

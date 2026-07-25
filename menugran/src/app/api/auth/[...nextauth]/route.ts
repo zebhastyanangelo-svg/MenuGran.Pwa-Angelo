@@ -1,3 +1,5 @@
-import { handlers } from "@/lib/auth-next";
+import { handlers } from "@/lib/nextauth";
 
-export const { GET, POST } = handlers;
+const { GET, POST } = handlers;
+
+export { GET, POST };
