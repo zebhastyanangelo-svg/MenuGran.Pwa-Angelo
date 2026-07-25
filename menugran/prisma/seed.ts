@@ -1,21 +1,13 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-async function hashPin(pin: string): Promise<string> {
-  return bcrypt.hash(pin, 10);
-}
-
 async function main() {
-  console.log("🌱 Sembrando datos de prueba (con PINs hasheados)...");
+  console.log(" Sembrando datos de prueba...");
 
-  const p1111 = await hashPin("1111");
-  const p2222 = await hashPin("2222");
-  const p3333 = await hashPin("3333");
-  const p4444 = await hashPin("4444");
-  const p5555 = await hashPin("5555");
-  const p6666 = await hashPin("6666");
+  // ──────────────────────────────────────
+  // USUARIOS CON PIN
+  // ──────────────────────────────────────
 
   const superadmin = await prisma.user.upsert({
     where: { cedula: "00000001" },
@@ -23,7 +15,7 @@ async function main() {
     create: {
       name: "Angelo Superadmin",
       cedula: "00000001",
-      pin: p1111,
+      pin: "1111",
       role: "SUPERADMIN",
       phone: "04120000001",
       active: true,
@@ -36,7 +28,7 @@ async function main() {
     create: {
       name: "María Dueña",
       cedula: "12345678",
-      pin: p2222,
+      pin: "2222",
       role: "ADMIN",
       phone: "04121234567",
       active: true,
@@ -49,7 +41,7 @@ async function main() {
     create: {
       name: "Carlos Operador",
       cedula: "23456789",
-      pin: p3333,
+      pin: "3333",
       role: "OPERATOR",
       phone: "04129876543",
       active: true,
@@ -62,7 +54,7 @@ async function main() {
     create: {
       name: "Pedro Repartidor",
       cedula: "34567890",
-      pin: p4444,
+      pin: "4444",
       role: "RIDER",
       phone: "04121112233",
       active: true,
@@ -75,7 +67,7 @@ async function main() {
     create: {
       name: "Juan Cliente",
       cedula: "11111111",
-      pin: p5555,
+      pin: "5555",
       role: "CLIENT",
       phone: "04141111111",
       active: true,
@@ -88,7 +80,7 @@ async function main() {
     create: {
       name: "Ana García",
       cedula: "22222222",
-      pin: p6666,
+      pin: "6666",
       role: "CLIENT",
       phone: "04142222222",
       active: true,

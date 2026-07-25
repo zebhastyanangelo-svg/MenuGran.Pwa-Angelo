@@ -1,6 +1,5 @@
-import withSerwist from "@serwist/next";
-
 /** @type {import('next').NextConfig} */
+
 const nextConfig = {
   reactStrictMode: true,
 
@@ -48,7 +47,4 @@ const nextConfig = {
   },
 };
 
-export default withSerwist({
-  swSrc: "src/pwa/sw.ts",
-  swDest: "public/sw.js",
-})(nextConfig);
+export default nextConfig;

@@ -30,7 +30,7 @@ export async function createOrder(
         };
       }
 
-      const itemTotal = Number(menuItem.price) * item.quantity;
+      const itemTotal = menuItem.price * item.quantity;
       totalPrice += itemTotal;
 
       orderItems.push({

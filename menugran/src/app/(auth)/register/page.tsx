@@ -83,31 +83,31 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="w-full max-w-md animate-fade-in">
-      <div className="bg-white shadow-elevated rounded-2xl p-8">
+    <div className="w-full max-w-md">
+      <div className="bg-white shadow-xl rounded-3xl p-8">
         <div className="text-center mb-8">
-          <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100 text-brand-500">
+          <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-red-100 text-red-600">
             <UserPlus className="h-8 w-8" />
           </div>
-          <h1 className="text-2xl font-bold text-ink mb-2">Crear Cuenta</h1>
-          <p className="text-sm text-neutral-500">Únete a MenuGran</p>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Crear Cuenta</h1>
+          <p className="text-sm text-slate-500">Únete a MenuGran</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="nombre" className="block text-sm font-medium text-ink mb-2">
+            <label htmlFor="nombre" className="block text-sm font-medium text-slate-700 mb-2">
               Nombre
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-neutral-400" />
+                <User className="h-5 w-5 text-slate-400" />
               </div>
               <input
                 id="nombre"
                 type="text"
                 value={formData.nombre}
                 onChange={(e) => handleChange('nombre', e.target.value)}
-                className="input pl-10"
+                className="block w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100"
                 placeholder="Ingresa tu nombre completo"
                 disabled={isLoading}
               />
@@ -115,19 +115,19 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="cedula" className="block text-sm font-medium text-ink mb-2">
+            <label htmlFor="cedula" className="block text-sm font-medium text-slate-700 mb-2">
               Cédula
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-neutral-400" />
+                <User className="h-5 w-5 text-slate-400" />
               </div>
               <input
                 id="cedula"
                 type="text"
                 value={formData.cedula}
                 onChange={(e) => handleChange('cedula', e.target.value)}
-                className="input pl-10"
+                className="block w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100"
                 placeholder="Ingresa tu cédula"
                 disabled={isLoading}
               />
@@ -135,19 +135,19 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="telefono" className="block text-sm font-medium text-ink mb-2">
+            <label htmlFor="telefono" className="block text-sm font-medium text-slate-700 mb-2">
               Teléfono
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Phone className="h-5 w-5 text-neutral-400" />
+                <Phone className="h-5 w-5 text-slate-400" />
               </div>
               <input
                 id="telefono"
                 type="text"
                 value={formData.telefono}
                 onChange={(e) => handleChange('telefono', e.target.value)}
-                className="input pl-10"
+                className="block w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100"
                 placeholder="Ingresa tu teléfono"
                 disabled={isLoading}
               />
@@ -155,12 +155,12 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="pin" className="block text-sm font-medium text-ink mb-2">
+            <label htmlFor="pin" className="block text-sm font-medium text-slate-700 mb-2">
               PIN
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-neutral-400" />
+                <Lock className="h-5 w-5 text-slate-400" />
               </div>
               <input
                 id="pin"
@@ -168,7 +168,7 @@ export default function RegisterPage() {
                 maxLength={4}
                 value={formData.pin}
                 onChange={(e) => handleChange('pin', e.target.value)}
-                className="input pl-10"
+                className="block w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100"
                 placeholder="****"
                 disabled={isLoading}
               />
@@ -181,16 +181,16 @@ export default function RegisterPage() {
               type="checkbox"
               checked={formData.aceptarTerminos}
               onChange={(e) => handleChange('aceptarTerminos', e.target.checked)}
-              className="h-4 w-4 rounded border-neutral-300 text-brand-500 focus:ring-brand-500"
+              className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500"
               disabled={isLoading}
             />
-            <label htmlFor="aceptarTerminos" className="text-sm text-ink-light">
+            <label htmlFor="aceptarTerminos" className="text-sm text-slate-700">
               Acepto los términos y condiciones
             </label>
           </div>
 
           {error && (
-            <div className="rounded-lg border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-600">
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
@@ -198,15 +198,15 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="btn-primary btn-md w-full"
+            className="w-full rounded-2xl bg-red-600 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? 'Registrando...' : 'Registrarme'}
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-neutral-500">
+        <div className="mt-6 text-center text-sm text-slate-500">
           ¿Ya tienes cuenta?{' '}
-          <Link href="/login" className="font-semibold text-brand-500 hover:text-brand-600 transition-colors">
+          <Link href="/login" className="font-semibold text-red-600 hover:text-red-700">
             Inicia Sesión
           </Link>
         </div>

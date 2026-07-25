@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
 import { User, Lock, LogIn, Store } from 'lucide-react';
 import Link from 'next/link';
 
@@ -28,23 +27,12 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const result = await signIn('credentials', {
-        cedula: cedula.trim(),
-        pin,
-        redirect: false,
-      });
-
-      if (!result?.ok || result?.error) {
-        setError('Cédula o PIN incorrectos');
-        setLoading(false);
-        return;
-      }
-
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cedula: cedula.trim(), pin }),
       });
+
       const data = await res.json();
 
       if (!data.success) {
@@ -53,8 +41,10 @@ export default function LoginPage() {
         return;
       }
 
+      // Guardar usuario en localStorage
       localStorage.setItem('user', JSON.stringify(data.user));
 
+      // Redirigir segun rol
       const role = data.user.role;
       if (role === 'CLIENT') router.push('/client');
       else if (role === 'OPERATOR') router.push('/operator');
@@ -69,31 +59,31 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md animate-fade-in">
-        <div className="bg-white shadow-elevated rounded-2xl p-8">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white shadow-xl rounded-2xl p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 rounded-2xl mb-4">
-              <Store className="h-8 w-8 text-brand-500" />
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+              <Store className="h-8 w-8 text-red-600" />
             </div>
-            <h1 className="text-2xl font-bold text-ink">Iniciar Sesion</h1>
-            <p className="text-neutral-500 mt-1">Ingresa a tu cuenta MenuGran</p>
+            <h1 className="text-2xl font-bold text-gray-900">Iniciar Sesion</h1>
+            <p className="text-gray-500 mt-1">Ingresa a tu cuenta MenuGran</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Cedula
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                  <User className="h-5 w-5 text-neutral-400" />
+                  <User className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   type="text"
                   value={cedula}
                   onChange={(e) => setCedula(e.target.value.replace(/\D/g, ''))}
-                  className="input pl-10"
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                   placeholder="Ingresa tu cedula"
                   disabled={loading}
                 />
@@ -101,19 +91,19 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 PIN
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                  <Lock className="h-5 w-5 text-neutral-400" />
+                  <Lock className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   type="password"
                   maxLength={4}
                   value={pin}
                   onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  className="input pl-10"
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                   placeholder="****"
                   disabled={loading}
                 />
@@ -121,7 +111,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="bg-danger-50 border border-danger-200 text-danger-600 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
@@ -129,7 +119,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary btn-md w-full"
+              className="w-full flex items-center justify-center gap-2 bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 transition"
             >
               <LogIn className="h-5 w-5" />
               {loading ? 'Ingresando...' : 'Ingresar'}
@@ -137,22 +127,22 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center space-y-3">
-            <Link href="/forgot-pin" className="text-sm text-neutral-500 hover:text-brand-500 transition-colors">
+            <Link href="/forgot-pin" className="text-sm text-gray-500 hover:text-red-600">
               Olvidaste tu PIN?
             </Link>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-neutral-200"></div>
+                <div className="w-full border-t border-gray-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-neutral-400">o</span>
+                <span className="px-2 bg-white text-gray-400">o</span>
               </div>
             </div>
 
             <Link
               href="/register"
-              className="btn-secondary btn-md block w-full text-center"
+              className="block w-full text-center py-3 border border-red-600 text-red-600 rounded-lg font-medium hover:bg-red-50 transition"
             >
               Crear cuenta nueva
             </Link>
