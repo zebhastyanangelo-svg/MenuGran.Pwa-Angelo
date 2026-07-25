@@ -1,124 +1,62 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { MapPin, Package, Bike, User, Phone, CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, Package, Bike, Clock, User, Phone, CheckCircle } from 'lucide-react';
 
-interface ApiOrder {
-  id: string;
-  totalPrice: number;
-  deliveryAddress: string | null;
-  createdAt: string;
-  status: string;
-  restaurant: { id: string; name: string; address: string; phone?: string };
-  client: { id: string; name: string; phone: string };
-  items: Array<{ menuItem: { name: string }; quantity: number; price: number }>;
-}
+const availableOrders = [
+  { id: '1', number: '#001', restaurant: 'La Parrilla de Juan', pickupAddress: 'Av. Principal, CC Plaza Mayor', deliveryAddress: 'Calle 72 #10-34', distance: '2.5 km', total: 45000, clientName: 'Juan Perez', clientPhone: '04121111111', items: 3 },
+  { id: '2', number: '#002', restaurant: 'Arepas Dona Rosa', pickupAddress: 'Calle 72 #10-34, Maracaibo', deliveryAddress: 'Av. Libertador', distance: '1.8 km', total: 35000, clientName: 'Ana Garcia', clientPhone: '04122222222', items: 2 },
+  { id: '3', number: '#003', restaurant: 'Sushi Express', pickupAddress: 'Av. Libertador, CC Sambil', deliveryAddress: 'Carrera 15 #8-20', distance: '3.2 km', total: 62000, clientName: 'Carlos Lopez', clientPhone: '04123333333', items: 4 },
+];
 
-const formatPrice = (v: number) =>
-  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
+const todayDeliveries = [
+  { id: 'd1', number: '#010', client: 'Maria Diaz', total: 28000, time: '10:30 AM', status: 'Entregado' },
+  { id: 'd2', number: '#011', client: 'Pedro Ramos', total: 55000, time: '12:15 PM', status: 'Entregado' },
+  { id: 'd3', number: '#012', client: 'Rosa Martinez', total: 32000, time: '2:00 PM', status: 'Entregado' },
+];
 
-function shortId(id: string) {
-  return '#' + id.slice(-4).toUpperCase();
-}
-
-function formatTime(dateStr: string) {
-  return new Date(dateStr).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-}
-
-function statusLabel(status: string) {
-  switch (status) {
-    case 'DELIVERING': return 'En camino';
-    case 'DELIVERED': return 'Entregado';
-    default: return status;
-  }
-}
-
-function statusColor(status: string) {
-  switch (status) {
-    case 'DELIVERING': return 'text-brand-600';
-    case 'DELIVERED': return 'text-success-600';
-    default: return 'text-neutral-600';
-  }
-}
+const formatPrice = (v: number) => '$' + v.toLocaleString('es-CO');
 
 export default function RiderPage() {
   const [isAvailable, setIsAvailable] = useState(true);
-  const [availableOrders, setAvailableOrders] = useState<ApiOrder[]>([]);
-  const [myDeliveries, setMyDeliveries] = useState<ApiOrder[]>([]);
-  const [selectedOrder, setSelectedOrder] = useState<ApiOrder | null>(null);
-  const [riderId, setRiderId] = useState<string | null>(null);
+  const [orders, setOrders] = useState(availableOrders);
+  const [selectedOrder, setSelectedOrder] = useState<typeof availableOrders[0] | null>(null);
+  const [myDeliveries, setMyDeliveries] = useState(todayDeliveries);
 
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('menugran-user') || '{}');
-    if (user?.id) setRiderId(user.id);
-  }, []);
-
-  const fetchAvailable = useCallback(async () => {
-    try {
-      const res = await fetch('/api/rider/orders');
-      if (res.ok) {
-        const data = await res.json();
-        setAvailableOrders(data.orders || []);
-      }
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    fetchAvailable();
-  }, [fetchAvailable]);
-
-  useEffect(() => {
-    if (!riderId) return;
-    const fetchDeliveries = async () => {
-      try {
-        const [deliveringRes, deliveredRes] = await Promise.all([
-          fetch(`/api/rider/orders?riderId=${riderId}&status=DELIVERING`),
-          fetch(`/api/rider/orders?riderId=${riderId}&status=DELIVERED`),
-        ]);
-        const deliveringData = await deliveringRes.json();
-        const deliveredData = await deliveredRes.json();
-        setMyDeliveries([
-          ...(deliveringData.orders || []),
-          ...(deliveredData.orders || []),
-        ]);
-      } catch {}
-    };
-    fetchDeliveries();
-  }, [riderId]);
-
-  const handleAcceptOrder = async (orderId: string) => {
-    if (!riderId) return;
-    try {
-      const res = await fetch(`/api/rider/orders/${orderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'accept', riderId }),
-      });
-      if (res.ok) {
-        const order = availableOrders.find((o) => o.id === orderId);
-        setAvailableOrders((prev) => prev.filter((o) => o.id !== orderId));
-        if (order) {
-          setMyDeliveries((prev) => [{ ...order, status: 'DELIVERING' }, ...prev]);
-        }
-        setSelectedOrder(null);
-      }
-    } catch {}
+  const handleAcceptOrder = (orderId: string) => {
+    const order = orders.find((o) => o.id === orderId);
+    if (order) {
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      setMyDeliveries((prev) => [
+        {
+          id: order.id,
+          number: order.number,
+          client: order.clientName,
+          total: order.total,
+          time: 'Ahora',
+          status: 'En camino',
+        },
+        ...prev,
+      ]);
+      setSelectedOrder(null);
+    }
   };
 
   return (
-    <div className="animate-fade-in">
-      <div className="bg-white rounded-xl shadow-soft p-4 border border-neutral-200 mb-4">
+    <div>
+      {/* Toggle Disponibilidad */}
+      <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 mb-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-semibold text-ink">Estado</h2>
-            <p className="text-sm text-neutral-500">
+            <h2 className="font-semibold text-gray-900">Estado</h2>
+            <p className="text-sm text-gray-500">
               {isAvailable ? 'Estas disponible para recibir pedidos' : 'No estas disponible'}
             </p>
           </div>
           <button
             onClick={() => setIsAvailable(!isAvailable)}
             className={`relative w-14 h-7 rounded-full transition-colors ${
-              isAvailable ? 'bg-success-500' : 'bg-neutral-300'
+              isAvailable ? 'bg-green-500' : 'bg-gray-300'
             }`}
           >
             <span
@@ -130,48 +68,52 @@ export default function RiderPage() {
         </div>
       </div>
 
+      {/* Pedidos Disponibles */}
       {isAvailable && (
         <>
-          <h3 className="text-lg font-semibold text-ink mb-3">Pedidos disponibles</h3>
-          {availableOrders.length === 0 ? (
-            <div className="text-center py-8 bg-white rounded-xl border border-neutral-200">
-              <Package className="h-10 w-10 text-neutral-300 mx-auto mb-2" />
-              <p className="text-neutral-500">No hay pedidos disponibles</p>
-              <p className="text-sm text-neutral-400 mt-1">Vuelve a intentar en unos minutos</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">Pedidos disponibles</h3>
+          {orders.length === 0 ? (
+            <div className="text-center py-8 bg-white rounded-xl border border-gray-100">
+              <Package className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500">No hay pedidos disponibles</p>
+              <p className="text-sm text-gray-400 mt-1">Vuelve a intentar en unos minutos</p>
             </div>
           ) : (
             <div className="space-y-3 mb-6">
-              {availableOrders.map((order) => (
+              {orders.map((order) => (
                 <div
                   key={order.id}
                   onClick={() => setSelectedOrder(order)}
-                  className="bg-white rounded-xl shadow-soft border border-neutral-200 p-4 cursor-pointer hover:border-brand-300 transition"
+                  className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 cursor-pointer hover:border-gray-300 transition"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-ink">{shortId(order.id)}</span>
+                    <span className="font-bold text-gray-900">{order.number}</span>
+                    <span className="text-sm text-gray-400 flex items-center gap-1">
+                      <MapPin className="h-3 w-3" /> {order.distance}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-neutral-500 mb-2">
+                  <div className="flex items-center gap-3 text-sm text-gray-500 mb-2">
                     <div className="flex items-center gap-1">
                       <Package className="h-3.5 w-3.5" />
-                      <span className="truncate max-w-[120px]">{order.restaurant.name}</span>
+                      <span className="truncate max-w-[120px]">{order.restaurant}</span>
                     </div>
                     <span>→</span>
                     <div className="flex items-center gap-1">
                       <MapPin className="h-3.5 w-3.5" />
-                      <span className="truncate max-w-[120px]">{order.deliveryAddress || order.restaurant.address}</span>
+                      <span className="truncate max-w-[120px]">{order.deliveryAddress}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-xs text-neutral-400">
-                      <span>{order.items.length} items</span>
-                      <span>{formatPrice(order.totalPrice)}</span>
+                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                      <span>{order.items} items</span>
+                      <span>{formatPrice(order.total)}</span>
                     </div>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleAcceptOrder(order.id);
                       }}
-                      className="btn-primary btn-sm rounded-full"
+                      className="px-4 py-1.5 bg-red-600 text-white rounded-full text-xs font-medium hover:bg-red-700 transition"
                     >
                       Aceptar
                     </button>
@@ -183,28 +125,29 @@ export default function RiderPage() {
         </>
       )}
 
-      <h3 className="text-lg font-semibold text-ink mb-3">Mis entregas de hoy</h3>
+      {/* Historial del Dia */}
+      <h3 className="text-lg font-semibold text-gray-900 mb-3">Mis entregas de hoy</h3>
       {myDeliveries.length === 0 ? (
-        <div className="text-center py-6 bg-white rounded-xl border border-neutral-200">
-          <Bike className="h-10 w-10 text-neutral-300 mx-auto mb-2" />
-          <p className="text-neutral-500">Aun no has hecho entregas hoy</p>
+        <div className="text-center py-6 bg-white rounded-xl border border-gray-100">
+          <Bike className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+          <p className="text-gray-500">Aun no has hecho entregas hoy</p>
         </div>
       ) : (
         <div className="space-y-2">
           {myDeliveries.map((delivery) => (
-            <div key={delivery.id} className="bg-white rounded-xl shadow-soft border border-neutral-200 p-4">
+            <div key={delivery.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-ink text-sm">{shortId(delivery.id)}</span>
-                    <span className="text-xs text-neutral-400">{formatTime(delivery.createdAt)}</span>
+                    <span className="font-bold text-gray-900 text-sm">{delivery.number}</span>
+                    <span className="text-xs text-gray-400">{delivery.time}</span>
                   </div>
-                  <p className="text-sm text-neutral-500 mt-1">{delivery.client.name}</p>
+                  <p className="text-sm text-gray-500 mt-1">{delivery.client}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-ink">{formatPrice(delivery.totalPrice)}</p>
-                  <span className={`text-xs flex items-center gap-1 ${statusColor(delivery.status)}`}>
-                    <CheckCircle className="h-3 w-3" /> {statusLabel(delivery.status)}
+                  <p className="font-semibold text-gray-900">{formatPrice(delivery.total)}</p>
+                  <span className="text-xs text-green-600 flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" /> {delivery.status}
                   </span>
                 </div>
               </div>
@@ -213,50 +156,55 @@ export default function RiderPage() {
         </div>
       )}
 
+      {/* Modal Detalle */}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setSelectedOrder(null)}>
-          <div className="bg-white rounded-xl max-w-sm w-full p-5 shadow-popover" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-xl max-w-sm w-full p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-ink">{shortId(selectedOrder.id)}</h2>
-              <button onClick={() => setSelectedOrder(null)} className="text-neutral-400 text-lg hover:text-ink transition-colors">×</button>
+              <h2 className="text-lg font-bold text-gray-900">{selectedOrder.number}</h2>
+              <button onClick={() => setSelectedOrder(null)} className="text-gray-400 text-lg">×</button>
             </div>
 
             <div className="space-y-3 text-sm">
-              <div className="flex items-center gap-2 text-ink-light">
+              <div className="flex items-center gap-2 text-gray-600">
                 <Package className="h-4 w-4" />
                 <div>
-                  <p className="text-xs text-neutral-400">Recoger en</p>
-                  <p className="font-medium">{selectedOrder.restaurant.name}</p>
-                  <p className="text-xs text-neutral-400">{selectedOrder.restaurant.address}</p>
+                  <p className="text-xs text-gray-400">Recoger en</p>
+                  <p className="font-medium">{selectedOrder.restaurant}</p>
+                  <p className="text-xs text-gray-400">{selectedOrder.pickupAddress}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-ink-light">
+              <div className="flex items-center gap-2 text-gray-600">
                 <MapPin className="h-4 w-4" />
                 <div>
-                  <p className="text-xs text-neutral-400">Entregar en</p>
-                  <p className="font-medium">{selectedOrder.deliveryAddress || 'No especificada'}</p>
+                  <p className="text-xs text-gray-400">Entregar en</p>
+                  <p className="font-medium">{selectedOrder.deliveryAddress}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-ink-light">
+              <div className="flex items-center gap-2 text-gray-600">
                 <User className="h-4 w-4" />
                 <div>
-                  <p className="font-medium">{selectedOrder.client.name}</p>
-                  <p className="text-xs text-neutral-400">{selectedOrder.client.phone}</p>
+                  <p className="font-medium">{selectedOrder.clientName}</p>
+                  <p className="text-xs text-gray-400">{selectedOrder.clientPhone}</p>
                 </div>
               </div>
-              <div className="flex justify-between pt-3 border-t border-neutral-200">
-                <span className="text-neutral-500">Items</span>
-                <span className="font-medium">{selectedOrder.items.length}</span>
+              <div className="flex justify-between pt-3 border-t border-gray-100">
+                <span className="text-gray-500">Items</span>
+                <span className="font-medium">{selectedOrder.items}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-neutral-500">Total</span>
-                <span className="font-bold text-base">{formatPrice(selectedOrder.totalPrice)}</span>
+                <span className="text-gray-500">Distancia</span>
+                <span className="font-medium">{selectedOrder.distance}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Total</span>
+                <span className="font-bold text-base">{formatPrice(selectedOrder.total)}</span>
               </div>
             </div>
 
             <button
               onClick={() => handleAcceptOrder(selectedOrder.id)}
-              className="btn-primary btn-md w-full"
+              className="w-full mt-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition"
             >
               Aceptar Entrega
             </button>

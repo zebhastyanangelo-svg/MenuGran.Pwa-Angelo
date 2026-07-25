@@ -30,24 +30,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!user.active) {
-      return NextResponse.json(
-        { success: false, message: "Usuario inactivo. Contacta al administrador" },
-        { status: 403 }
-      );
-    }
-
     return NextResponse.json({
       success: true,
       user: {
         id: user.id,
         name: user.name,
+        cedula: user.cedula,
         role: user.role,
       },
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: String(error) },
+      { success: false, message: "Error del servidor" },
       { status: 500 }
     );
   }

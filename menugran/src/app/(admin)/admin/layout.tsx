@@ -26,7 +26,7 @@ export default function AdminLayout({
   }, [pathname]);
 
   return (
-    <div className="min-h-screen bg-neutral-100 text-ink">
+    <div className="min-h-screen bg-slate-100 text-slate-900">
       <div
         className={`fixed inset-0 z-30 bg-black/30 transition-opacity duration-300 md:hidden ${
           sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
@@ -35,14 +35,14 @@ export default function AdminLayout({
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-ink text-neutral-100 shadow-popover transition-transform duration-300 md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-slate-900 text-slate-100 shadow-2xl transition-transform duration-300 md:static md:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex h-full flex-col justify-between px-5 py-6">
           <div>
             <Link href="/admin/menu" className="mb-10 flex items-center gap-3 text-xl font-bold text-white">
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-lg shadow-soft">
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-red-600 text-lg shadow-sm">
                 <UtensilsCrossed className="h-6 w-6" />
               </div>
               <span>MenuGran Admin</span>
@@ -56,10 +56,10 @@ export default function AdminLayout({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-colors duration-200 ${
+                    className={`flex items-center rounded-2xl px-4 py-3 text-sm font-medium transition-colors duration-200 ${
                       active
-                        ? 'bg-brand-500 text-white'
-                        : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
+                        ? 'bg-red-600 text-white'
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                     }`}
                     onClick={() => setSidebarOpen(false)}
                   >
@@ -74,7 +74,7 @@ export default function AdminLayout({
           <div className="mt-6">
             <Link
               href="/"
-              className="flex items-center justify-center rounded-full border border-neutral-700 bg-neutral-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-700"
+              className="flex items-center justify-center rounded-full border border-slate-700 bg-slate-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
             >
               Volver al sitio
             </Link>
@@ -83,40 +83,40 @@ export default function AdminLayout({
       </aside>
 
       <div className="md:pl-64">
-        <header className="sticky top-0 z-20 border-b border-neutral-200 bg-white/95 px-4 py-4 shadow-soft backdrop-blur-md md:px-6">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-4 shadow-sm backdrop-blur-md md:px-6">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setSidebarOpen((current) => !current)}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-neutral-200 bg-white text-ink-light shadow-soft transition hover:bg-neutral-50 md:hidden"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 md:hidden"
                 aria-label="Abrir menú"
               >
                 <Menu className="h-5 w-5" />
               </button>
 
               <div>
-                <p className="text-sm uppercase tracking-[0.24em] text-neutral-500">Panel administrativo</p>
-                <h1 className="text-2xl font-semibold text-ink">{pageTitle}</h1>
+                <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Panel administrativo</p>
+                <h1 className="text-2xl font-semibold text-slate-900">{pageTitle}</h1>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="hidden shrink-0 rounded-lg bg-neutral-50 px-3 py-2 text-sm text-neutral-500 md:block">
+              <div className="hidden shrink-0 rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-500 md:block">
                 Admin</div>
-              <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white px-3 py-2 shadow-soft">
-                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand-500 text-lg text-white">A</div>
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-600 text-lg text-white">A</div>
                 <div>
-                  <p className="text-sm font-semibold text-ink">Andrea</p>
-                  <p className="text-xs text-neutral-500">Administrador</p>
+                  <p className="text-sm font-semibold text-slate-900">Andrea</p>
+                  <p className="text-xs text-slate-500">Administrador</p>
                 </div>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-4rem)] bg-neutral-100 px-4 py-6 md:px-6">
-          <div className="rounded-xl bg-white p-6 shadow-soft border border-neutral-200 animate-fade-in">{children}</div>
+        <main className="min-h-[calc(100vh-4rem)] bg-slate-100 px-4 py-6 md:px-6">
+          <div className="rounded-3xl bg-white p-6 shadow-sm shadow-slate-200/60">{children}</div>
         </main>
       </div>
     </div>

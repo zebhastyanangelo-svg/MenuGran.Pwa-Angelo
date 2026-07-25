@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { hashPin } from "@/lib/crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,14 +30,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const hashedPin = await hashPin(pin);
-
     const user = await prisma.user.create({
       data: {
         name,
         cedula,
         phone,
-        pin: hashedPin,
+        pin,
         role: 'CLIENT',
       },
     });

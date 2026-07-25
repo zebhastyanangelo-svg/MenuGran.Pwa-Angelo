@@ -1,14 +1,13 @@
 {
-  "name": "MenuGran - Pide comida fácil",
+  "name": "MenuGran",
   "short_name": "MenuGran",
-  "description": "Pide comida a domicilio o desde tu mesa. Menú digital con seguimiento en tiempo real.",
+  "description": "MenuGran PWA",
   "start_url": "/",
   "display": "standalone",
   "scope": "/",
   "orientation": "portrait-primary",
-  "background_color": "#FFFCF7",
-  "theme_color": "#C85A3A",
-  "lang": "es",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",

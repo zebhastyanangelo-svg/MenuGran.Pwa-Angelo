@@ -1,14 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faLock, faStore } from '@fortawesome/free-solid-svg-icons';
+import { User, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [cedula, setCedula] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -18,6 +14,7 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setError('');
 
+    // Validación
     if (!cedula.trim()) {
       setError('Por favor ingresa tu cédula');
       return;
@@ -27,74 +24,39 @@ export default function AdminLoginPage() {
       return;
     }
 
+    // Simular envío a API
     setIsLoading(true);
-
-    try {
-      const result = await signIn('credentials', {
-        cedula: cedula.trim(),
-        pin,
-        redirect: false,
-      });
-
-      if (!result?.ok || result?.error) {
-        setError('Cédula o PIN incorrectos');
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cedula: cedula.trim(), pin }),
-      });
-      const data = await response.json();
-
-      if (!data.success) {
-        setError(data.message || 'Error al iniciar sesión');
-        setIsLoading(false);
-        return;
-      }
-
-      if (data.user.role !== 'ADMIN' && data.user.role !== 'SUPERADMIN') {
-        setError('No tienes permisos de administrador');
-        setIsLoading(false);
-        return;
-      }
-
-      window.localStorage.setItem('menugran-user', JSON.stringify(data.user));
-      router.push('/admin');
-    } catch (err) {
-      setError('Error de conexión. Intenta de nuevo.');
+    setTimeout(() => {
       setIsLoading(false);
-    }
+      console.log('Login admin exitoso - redirigir a /admin');
+      // Aquí iría la redirección: router.push('/admin');
+    }, 1500);
   };
 
   return (
-    <div className="w-full max-w-md animate-fade-in">
-      <div className="bg-white shadow-elevated rounded-2xl p-8">
+    <div className="w-full max-w-md">
+      <div className="bg-white shadow-xl rounded-2xl p-8">
         <div className="text-center mb-8">
-          <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100 text-brand-500">
-            <FontAwesomeIcon icon={faStore} className="h-8 w-8" />
-          </div>
-          <h1 className="text-2xl font-bold text-ink mb-2">Panel de Administrador</h1>
-          <p className="text-neutral-500">Acceso exclusivo para dueños de restaurante</p>
+          <div className="text-6xl mb-4">🏪</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Panel de Administrador</h1>
+          <p className="text-gray-500">Acceso exclusivo para dueños de restaurante</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="cedula" className="block text-sm font-medium text-ink mb-2">
+            <label htmlFor="cedula" className="block text-sm font-medium text-gray-700 mb-2">
               Cédula
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-neutral-400" />
+                <User className="h-5 w-5 text-gray-400" />
               </div>
               <input
                 id="cedula"
                 type="text"
                 value={cedula}
                 onChange={(e) => setCedula(e.target.value.replace(/\D/g, ''))}
-                className="input pl-10"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-900 placeholder-gray-500"
                 placeholder="Ingresa tu cédula"
                 disabled={isLoading}
               />
@@ -102,12 +64,12 @@ export default function AdminLoginPage() {
           </div>
 
           <div>
-            <label htmlFor="pin" className="block text-sm font-medium text-ink mb-2">
+            <label htmlFor="pin" className="block text-sm font-medium text-gray-700 mb-2">
               PIN
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FontAwesomeIcon icon={faLock} className="h-5 w-5 text-neutral-400" />
+                <Lock className="h-5 w-5 text-gray-400" />
               </div>
               <input
                 id="pin"
@@ -115,7 +77,7 @@ export default function AdminLoginPage() {
                 maxLength={4}
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                className="input pl-10"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-900 placeholder-gray-500"
                 placeholder="****"
                 disabled={isLoading}
               />
@@ -123,7 +85,7 @@ export default function AdminLoginPage() {
           </div>
 
           {error && (
-            <div className="rounded-lg border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-600">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
@@ -131,14 +93,14 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="btn-primary btn-md w-full"
+            className="w-full bg-red-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isLoading ? 'Cargando...' : 'Ingresar al Panel'}
           </button>
         </form>
 
         <div className="mt-6 text-center">
-          <Link href="/login" className="text-sm text-neutral-600 hover:text-brand-500 transition-colors">
+          <Link href="/login" className="text-sm text-gray-600 hover:text-red-600 transition-colors">
             ¿Eres cliente? Inicia sesión aquí
           </Link>
         </div>

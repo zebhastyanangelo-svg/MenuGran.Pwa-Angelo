@@ -3,79 +3,85 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Phone, MapPin, CreditCard, Printer, Clock } from 'lucide-react';
 
-import { useState, useEffect } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faPhone, faMapPin, faCreditCard, faPrint, faClock, faTriangleExclamation, faUtensils, faMotorcycle } from '@fortawesome/free-solid-svg-icons';
-
-type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
+// Tipos basados en la estructura existente
+type OrderStatus = 'pending' | 'confirmed' | 'cooking' | 'ready' | 'delivered' | 'cancelled';
 
 interface OrderItem {
   id: string;
+  name: string;
   quantity: number;
-  menuItem: {
-    id: string;
-    name: string;
-    price: number;
-  };
+  price: number;
+  notes?: string;
 }
 
-interface Client {
-  id: string;
+interface Customer {
   name: string;
   phone: string;
+  address?: string;
+  table?: string;
 }
 
 interface Rider {
   id: string;
   name: string;
-  phone: string;
+  photo: string;
+  status: 'available' | 'busy' | 'en_route' | 'delivered';
 }
 
 interface Order {
   id: string;
-  number: string;
-  serviceType: 'MESA' | 'DELIVERY';
-  tableNumber: number | null;
   status: OrderStatus;
-  total: number;
-  paymentMethod: string;
-  client: Client;
-  deliveryAddress: string | null;
-  notes: string | null;
+  customer: Customer;
   items: OrderItem[];
-  rider: Rider | null;
-  createdAt: string;
+  subtotal: number;
+  tax: number;
+  discount: number;
+  total: number;
+  paymentMethod: 'cash' | 'card' | 'transfer';
+  paymentStatus: 'pending' | 'confirmed';
+  paymentReference?: string;
+  rider?: Rider;
+  createdAt: Date;
+  type: 'delivery' | 'dine_in';
 }
 
-interface RiderOption {
-  id: string;
-  name: string;
-  status: string;
-}
-
-const formatPrice = (v: number) =>
-  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
-
-const statusConfig: Record<OrderStatus, { label: string; color: string }> = {
-  PENDING: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800' },
-  CONFIRMED: { label: 'Confirmado', color: 'bg-blue-100 text-blue-800' },
-  PREPARING: { label: 'Cocinando', color: 'bg-orange-100 text-orange-800' },
-  READY: { label: 'Listo', color: 'bg-green-100 text-green-800' },
-  DELIVERING: { label: 'En entrega', color: 'bg-purple-100 text-purple-800' },
-  DELIVERED: { label: 'Entregado', color: 'bg-gray-100 text-gray-800' },
-  CANCELLED: { label: 'Cancelado', color: 'bg-brand-100 text-brand-700' },
+// Datos de muestra
+const sampleOrder: Order = {
+  id: '001',
+  status: 'confirmed',
+  customer: {
+    name: 'María García',
+    phone: '+1234567890',
+    address: 'Calle Principal 123, Ciudad',
+    table: undefined,
+  },
+  items: [
+    { id: '1', name: 'Pizza Margherita', quantity: 2, price: 12.99, notes: 'Sin cebolla' },
+    { id: '2', name: 'Ensalada César', quantity: 1, price: 8.50 },
+    { id: '3', name: 'Refresco Cola', quantity: 3, price: 2.50 },
+  ],
+  subtotal: 38.48,
+  tax: 3.85,
+  discount: 0,
+  total: 42.33,
+  paymentMethod: 'card',
+  paymentStatus: 'confirmed',
+  paymentReference: undefined,
+  rider: {
+    id: 'r1',
+    name: 'Carlos Rodríguez',
+    photo: '/rider-photo.jpg',
+    status: 'en_route',
+  },
+  createdAt: new Date(Date.now() - 30 * 60 * 1000), // 30 minutos atrás
+  type: 'delivery',
 };
 
-const getNextAction = (order: Order): { action: string; status: OrderStatus } | null => {
-  if (order.status === 'PENDING') return { action: 'confirm', status: 'CONFIRMED' };
-  if (order.status === 'CONFIRMED') return { action: 'start_cooking', status: 'PREPARING' };
-  if (order.status === 'PREPARING') return { action: 'mark_ready', status: 'READY' };
-  if (order.status === 'READY') {
-    if (order.serviceType === 'DELIVERY') return { action: 'assign_rider', status: 'DELIVERING' };
-    return { action: 'deliver_table', status: 'DELIVERED' };
-  }
-  return null;
-};
+const sampleRiders: Rider[] = [
+  { id: 'r1', name: 'Carlos Rodríguez', photo: '/rider1.jpg', status: 'available' },
+  { id: 'r2', name: 'Ana López', photo: '/rider2.jpg', status: 'available' },
+  { id: 'r3', name: 'Pedro Martínez', photo: '/rider3.jpg', status: 'busy' },
+];
 
 export default function OperatorOrderDetailPage({ params }: { params: { id: string } }) {
   const [order, setOrder] = useState<Order | null>(null);
@@ -84,48 +90,46 @@ export default function OperatorOrderDetailPage({ params }: { params: { id: stri
   const [elapsedTime, setElapsedTime] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ action: string; newStatus: OrderStatus } | null>(null);
-  const [selectedRider, setSelectedRider] = useState('');
-  const [riders, setRiders] = useState<RiderOption[]>([]);
-  const [updating, setUpdating] = useState(false);
-
-  const fetchOrder = async () => {
-    try {
-      setLoading(true);
-      const [orderRes, ridersRes] = await Promise.all([
-        fetch(`/api/operator/orders/${params.id}`),
-        fetch('/api/operator/riders'),
-      ]);
-      if (!orderRes.ok) {
-        setError('Pedido no encontrado');
-        return;
-      }
-      const orderJson = await orderRes.json();
-      setOrder(orderJson.data as Order);
-      if (ridersRes.ok) {
-        const ridersJson = await ridersRes.json();
-        setRiders(ridersJson.data);
-      }
-    } catch {
-      setError('Error al cargar el pedido');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [selectedRider, setSelectedRider] = useState<string>('');
 
   useEffect(() => {
+    // Simular fetch del pedido
+    const fetchOrder = async () => {
+      try {
+        // En una app real, aquí iría la llamada a la API
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (params.id === '001') {
+          setOrder(sampleOrder);
+        } else {
+          setError('Pedido no encontrado');
+        }
+      } catch (err) {
+        setError('Error al cargar el pedido');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchOrder();
   }, [params.id]);
 
   useEffect(() => {
     if (!order) return;
+
     const updateElapsedTime = () => {
-      const diff = Date.now() - new Date(order.createdAt).getTime();
-      const minutes = Math.floor(diff / 60000);
+      const now = new Date();
+      const diff = now.getTime() - order.createdAt.getTime();
+      const minutes = Math.floor(diff / (1000 * 60));
       const hours = Math.floor(minutes / 60);
-      setElapsedTime(hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes}m`);
+      if (hours > 0) {
+        setElapsedTime(`${hours}h ${minutes % 60}m`);
+      } else {
+        setElapsedTime(`${minutes}m`);
+      }
     };
+
     updateElapsedTime();
-    const interval = setInterval(updateElapsedTime, 60000);
+    const interval = setInterval(updateElapsedTime, 60000); // Actualizar cada minuto
     return () => clearInterval(interval);
   }, [order]);
 
@@ -134,31 +138,118 @@ export default function OperatorOrderDetailPage({ params }: { params: { id: stri
     setShowConfirmModal(true);
   };
 
-  const confirmAction = async () => {
+  const confirmAction = () => {
     if (!pendingAction || !order) return;
-    setUpdating(true);
-    try {
-      const body: Record<string, unknown> = { status: pendingAction.newStatus };
-      if (pendingAction.action === 'assign_rider' && selectedRider) {
-        body.riderId = selectedRider;
+
+    // Simular cambio de estado
+    setOrder({ ...order, status: pendingAction.newStatus });
+    setShowConfirmModal(false);
+    setPendingAction(null);
+
+    // Si es asignar repartidor, asignar el seleccionado
+    if (pendingAction.action === 'assign_rider' && selectedRider) {
+      const rider = sampleRiders.find(r => r.id === selectedRider);
+      if (rider) {
+        setOrder({ ...order, status: 'ready', rider: { ...rider, status: 'en_route' } });
       }
-      const res = await fetch(`/api/operator/orders/${order.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error('Failed to update');
-      const json = await res.json();
-      setOrder(json.data as Order);
-      if (pendingAction.action === 'assign_rider' && selectedRider) {
-        setSelectedRider('');
-      }
-      setShowConfirmModal(false);
-      setPendingAction(null);
-    } catch (err) {
-      console.error('Error updating order:', err);
-    } finally {
-      setUpdating(false);
+    }
+  };
+
+  const getStatusBadge = (status: OrderStatus) => {
+    const badges = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      confirmed: 'bg-blue-100 text-blue-800',
+      cooking: 'bg-orange-100 text-orange-800',
+      ready: 'bg-green-100 text-green-800',
+      delivered: 'bg-gray-100 text-gray-800',
+      cancelled: 'bg-red-100 text-red-800',
+    };
+    const labels = {
+      pending: 'Pendiente',
+      confirmed: 'Confirmado',
+      cooking: 'Cocinando',
+      ready: 'Listo',
+      delivered: 'Entregado',
+      cancelled: 'Cancelado',
+    };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${badges[status]}`}>
+        {labels[status]}
+      </span>
+    );
+  };
+
+  const getActionButtons = () => {
+    if (!order) return null;
+
+    switch (order.status) {
+      case 'pending':
+        return (
+          <div className="flex gap-3">
+            <button
+              onClick={() => handleAction('confirm', 'confirmed')}
+              className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700"
+            >
+              Confirmar Pedido
+            </button>
+            <button
+              onClick={() => handleAction('reject', 'cancelled')}
+              className="flex-1 border border-red-300 text-red-600 py-3 px-4 rounded-lg font-medium hover:bg-red-50"
+            >
+              Rechazar
+            </button>
+          </div>
+        );
+      case 'confirmed':
+        return (
+          <button
+            onClick={() => handleAction('start_cooking', 'cooking')}
+            className="w-full bg-orange-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-orange-700"
+          >
+            Iniciar Preparación
+          </button>
+        );
+      case 'cooking':
+        return (
+          <button
+            onClick={() => handleAction('mark_ready', 'ready')}
+            className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700"
+          >
+            Marcar como Listo
+          </button>
+        );
+      case 'ready':
+        return (
+          <div className="space-y-3">
+            <select
+              value={selectedRider}
+              onChange={(e) => setSelectedRider(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            >
+              <option value="">Seleccionar repartidor</option>
+              {sampleRiders.filter(r => r.status === 'available').map(rider => (
+                <option key={rider.id} value={rider.id}>{rider.name}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => handleAction('assign_rider', 'ready')}
+              disabled={!selectedRider}
+              className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Asignar Repartidor
+            </button>
+            {order.type === 'dine_in' && (
+              <button
+                onClick={() => handleAction('deliver_table', 'delivered')}
+                className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700"
+              >
+                Entregar en Mesa
+              </button>
+            )}
+          </div>
+        );
+      default:
+        return null;
     }
   };
 
@@ -166,20 +257,23 @@ export default function OperatorOrderDetailPage({ params }: { params: { id: stri
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Cargando pedido...</p>
         </div>
       </div>
     );
   }
 
-  if (error || !order) {
+  if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <FontAwesomeIcon icon={faTriangleExclamation} className="text-brand-500 text-xl mb-4" />
-          <p className="text-gray-800 font-medium">{error || 'Pedido no encontrado'}</p>
-          <button onClick={() => window.history.back()} className="mt-4 text-blue-600 hover:text-blue-800">
+          <div className="text-red-600 text-xl mb-4">⚠️</div>
+          <p className="text-gray-800 font-medium">{error}</p>
+          <button
+            onClick={() => window.history.back()}
+            className="mt-4 text-blue-600 hover:text-blue-800"
+          >
             ← Volver
           </button>
         </div>
@@ -187,172 +281,173 @@ export default function OperatorOrderDetailPage({ params }: { params: { id: stri
     );
   }
 
-  const nextAction = getNextAction(order);
-  const isDelivery = order.serviceType === 'DELIVERY';
+  if (!order) return null;
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="flex items-center justify-between">
-          <button onClick={() => window.history.back()} className="flex items-center text-gray-600 hover:text-gray-800">
-            <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 mr-2" />
+          <button
+            onClick={() => window.history.back()}
+            className="flex items-center text-gray-600 hover:text-gray-800"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
             Volver
           </button>
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">{order.number}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">#{order.id}</h1>
             <div className="flex items-center justify-center gap-2 mt-1">
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusConfig[order.status]?.color || 'bg-gray-100 text-gray-800'}`}>
-                {statusConfig[order.status]?.label || order.status}
-              </span>
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${isDelivery ? 'bg-yellow-100 text-yellow-800' : 'bg-brand-100 text-brand-700'}`}>
-                {isDelivery ? <><FontAwesomeIcon icon={faMotorcycle} className="mr-1" /> Delivery</> : <><FontAwesomeIcon icon={faUtensils} className="mr-1" /> Mesa {order.tableNumber || ''}</>}
-              </span>
+              {getStatusBadge(order.status)}
               <div className="flex items-center text-sm text-gray-500">
-                <FontAwesomeIcon icon={faClock} className="w-4 h-4 mr-1" />
+                <Clock className="w-4 h-4 mr-1" />
                 {elapsedTime}
               </div>
             </div>
           </div>
-          <button onClick={() => window.print()} className="flex items-center text-gray-600 hover:text-gray-800">
-            <FontAwesomeIcon icon={faPrint} className="w-5 h-5" />
+          <button
+            onClick={() => window.print()}
+            className="flex items-center text-gray-600 hover:text-gray-800"
+          >
+            <Printer className="w-5 h-5" />
           </button>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+        {/* Datos del Cliente */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Datos del Cliente</h2>
           <div className="space-y-3">
-            <p className="text-gray-900 font-medium">{order.client.name}</p>
+            <p className="text-gray-900 font-medium">{order.customer.name}</p>
             <div className="flex items-center text-gray-600">
-              <FontAwesomeIcon icon={faPhone} className="w-4 h-4 mr-2" />
-              <a href={`tel:${order.client.phone}`} className="hover:text-blue-600">{order.client.phone}</a>
+              <Phone className="w-4 h-4 mr-2" />
+              <a href={`tel:${order.customer.phone}`} className="hover:text-blue-600">
+                {order.customer.phone}
+              </a>
             </div>
-            {isDelivery && order.deliveryAddress && (
+            {order.type === 'delivery' && order.customer.address && (
               <div className="flex items-start text-gray-600">
-                <FontAwesomeIcon icon={faMapPin} className="w-4 h-4 mr-2 mt-0.5" />
-                <span>{order.deliveryAddress}</span>
+                <MapPin className="w-4 h-4 mr-2 mt-0.5" />
+                <span>{order.customer.address}</span>
               </div>
             )}
-            {!isDelivery && order.tableNumber && (
-              <p className="text-gray-600 font-semibold">Mesa: {order.tableNumber}</p>
+            {order.type === 'dine_in' && order.customer.table && (
+              <p className="text-gray-600">Mesa: {order.customer.table}</p>
             )}
           </div>
         </div>
 
+        {/* Pedido */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Pedido</h2>
           <div className="space-y-4">
-            {order.items.map((item) => (
+            {order.items.map(item => (
               <div key={item.id} className="flex justify-between items-start">
                 <div className="flex-1">
-                  <p className="text-gray-900 font-medium">{item.quantity}x {item.menuItem.name}</p>
+                  <p className="text-gray-900 font-medium">
+                    {item.quantity}x {item.name}
+                  </p>
+                  {item.notes && (
+                    <p className="text-sm text-gray-500 mt-1">Nota: {item.notes}</p>
+                  )}
                 </div>
                 <div className="text-right">
-                  <p className="text-gray-900">{formatPrice(item.menuItem.price)}</p>
-                  <p className="text-sm text-gray-500">{formatPrice(item.quantity * item.menuItem.price)}</p>
+                  <p className="text-gray-900">${item.price.toFixed(2)}</p>
+                  <p className="text-sm text-gray-500">${(item.quantity * item.price).toFixed(2)}</p>
                 </div>
               </div>
             ))}
             <div className="border-t border-gray-200 pt-4 space-y-2">
-              <div className="flex justify-between text-xl font-bold text-gray-900">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Subtotal</span>
+                <span>${order.subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Impuestos</span>
+                <span>${order.tax.toFixed(2)}</span>
+              </div>
+              {order.discount > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Descuento</span>
+                  <span>-${order.discount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t border-gray-200">
                 <span>TOTAL</span>
-                <span>{formatPrice(order.total)}</span>
+                <span>${order.total.toFixed(2)}</span>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Pago */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Pago</h2>
-          <div className="flex items-center">
-            <FontAwesomeIcon icon={faCreditCard} className="w-5 h-5 mr-3 text-gray-400" />
-            <span className="text-gray-900 capitalize">{order.paymentMethod}</span>
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <CreditCard className="w-5 h-5 mr-3 text-gray-400" />
+              <span className="text-gray-900 capitalize">{order.paymentMethod}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Estado</span>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                order.paymentStatus === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {order.paymentStatus === 'confirmed' ? 'Confirmado' : 'Pendiente'}
+              </span>
+            </div>
+            {order.paymentReference && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Referencia</span>
+                <span className="text-gray-900">{order.paymentReference}</span>
+              </div>
+            )}
           </div>
         </div>
 
+        {/* Repartidor */}
         {order.rider && (
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Repartidor</h2>
-            <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center mr-3">
-                <span className="text-brand-500 font-bold text-sm">
-                  {order.rider.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
-                </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <img
+                  src={order.rider.photo}
+                  alt={order.rider.name}
+                  className="w-10 h-10 rounded-full mr-3"
+                />
+                <div>
+                  <p className="text-gray-900 font-medium">{order.rider.name}</p>
+                  <p className="text-sm text-gray-500 capitalize">{order.rider.status.replace('_', ' ')}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-gray-900 font-medium">{order.rider.name}</p>
-                <p className="text-sm text-gray-500">{order.rider.phone}</p>
-              </div>
+              <button className="flex items-center text-blue-600 hover:text-blue-800">
+                <MapPin className="w-4 h-4 mr-1" />
+                Ver mapa
+              </button>
             </div>
-          </div>
-        )}
-
-        {order.notes && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Notas</h2>
-            <p className="text-gray-600">{order.notes}</p>
           </div>
         )}
       </div>
 
-      {nextAction && !['DELIVERED', 'CANCELLED'].includes(order.status) && (
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4">
-          {nextAction.action === 'assign_rider' ? (
-            <div className="space-y-3">
-              <select
-                value={selectedRider}
-                onChange={(e) => setSelectedRider(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              >
-                <option value="">Seleccionar repartidor</option>
-                {riders.filter((r) => r.status === 'available').map((rider) => (
-                  <option key={rider.id} value={rider.id}>{rider.name}</option>
-                ))}
-              </select>
-              <button
-                onClick={() => handleAction('assign_rider', 'DELIVERING')}
-                disabled={!selectedRider}
-                className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Asignar Repartidor
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleAction(nextAction.action, nextAction.status)}
-                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700"
-              >
-                {nextAction.action === 'confirm' && 'Confirmar Pedido'}
-                {nextAction.action === 'start_cooking' && 'Iniciar Preparación'}
-                {nextAction.action === 'mark_ready' && 'Marcar como Listo'}
-                {nextAction.action === 'deliver_table' && 'Entregar en Mesa'}
-              </button>
-              {order.status === 'PENDING' && (
-                <button
-                  onClick={() => handleAction('reject', 'CANCELLED')}
-                  className="flex-1 border border-red-300 text-brand-500 py-3 px-4 rounded-lg font-medium hover:bg-brand-50"
-                >
-                  Rechazar
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      {/* Acciones Sticky */}
+      <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4">
+        {getActionButtons()}
+      </div>
 
+      {/* Modal de Confirmación */}
       {showConfirmModal && pendingAction && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">¿Estás seguro?</h3>
             <p className="text-gray-600 mb-6">
-              {pendingAction.action === 'confirm' ? '¿Quieres confirmar este pedido?' :
-               pendingAction.action === 'reject' ? '¿Quieres rechazar este pedido?' :
-               pendingAction.action === 'start_cooking' ? '¿Quieres iniciar la preparación?' :
-               pendingAction.action === 'mark_ready' ? '¿Quieres marcar como listo?' :
-               pendingAction.action === 'deliver_table' ? '¿Quieres entregar en mesa?' :
-               '¿Quieres realizar esta acción?'}
+              ¿Quieres {pendingAction.action === 'confirm' ? 'confirmar' :
+                       pendingAction.action === 'reject' ? 'rechazar' :
+                       pendingAction.action === 'start_cooking' ? 'iniciar la preparación' :
+                       pendingAction.action === 'mark_ready' ? 'marcar como listo' :
+                       pendingAction.action === 'assign_rider' ? 'asignar el repartidor' :
+                       'entregar en mesa'} este pedido?
             </p>
             <div className="flex gap-3">
               <button
@@ -363,10 +458,9 @@ export default function OperatorOrderDetailPage({ params }: { params: { id: stri
               </button>
               <button
                 onClick={confirmAction}
-                disabled={updating}
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
               >
-                {updating ? 'Actualizando...' : 'Confirmar'}
+                Confirmar
               </button>
             </div>
           </div>
