@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
         where: { id: item.menuItemId },
       });
       if (menuItem) {
-        totalPrice += menuItem.price * item.quantity;
+        totalPrice += Number(menuItem.price) * item.quantity;
       }
     }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,7 +24,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (user.pin !== pin) {
+    // Comprobar PIN de forma segura utilizando bcryptjs
+    const isPinValid = await bcrypt.compare(pin, user.pin || "");
+    if (!isPinValid) {
       return NextResponse.json(
         { success: false, message: "PIN incorrecto" },
         { status: 401 }
