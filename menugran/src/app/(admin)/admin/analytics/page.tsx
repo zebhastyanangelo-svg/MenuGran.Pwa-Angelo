@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMoneyBillWave, faBell, faChartLine, faStar } from '@fortawesome/free-solid-svg-icons';
 
 type AnalyticsData = {
   metrics: {
@@ -40,7 +38,27 @@ export default function AnalyticsPage() {
   const [error, setError] = useState('');
   const [data, setData] = useState<AnalyticsData | null>(null);
 
-  const fetchAnalytics = async () => {
+useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+    async function load() {
+      try {
+        const res = await fetch('/api/admin/analytics');
+        if (!res.ok) throw new Error('Error al cargar');
+        const json = await res.json();
+        if (!cancelled) setData(json);
+      } catch {
+        if (!cancelled) setError('No se pudo cargar los datos. Intenta de nuevo.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const refetch = async () => {
     setLoading(true);
     setError('');
     try {
@@ -54,10 +72,6 @@ export default function AnalyticsPage() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchAnalytics();
-  }, []);
 
   const totalSales = useMemo(
     () => (data ? data.salesByDay.reduce((sum, item) => sum + item.amount, 0) : 0),
@@ -248,7 +262,7 @@ export default function AnalyticsPage() {
           <p className="mt-2">{error}</p>
           <button
             type="button"
-            onClick={fetchAnalytics}
+            onClick={refetch}
             className="btn-primary btn-md mt-4"
           >
             Reintentar

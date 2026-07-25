@@ -40,7 +40,8 @@ export default function ActiveRidersPage() {
       setLoading(false);
       return;
     }
-    fetch(`/api/rider/orders?riderId=${session.user.id}&status=DELIVERING`)
+    setLoading(true);
+    fetch(`/api/rider/orders?status=DELIVERING`)
       .then((res) => res.json())
       .then((data) => {
         setActiveDeliveries(data.orders || []);

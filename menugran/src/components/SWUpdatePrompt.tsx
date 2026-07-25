@@ -48,7 +48,7 @@ export default function SWUpdatePrompt() {
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 p-4 md:p-6">
+    <div className="fixed inset-x-0 bottom-20 z-50 p-4 md:bottom-6 md:p-6">
       <div className="mx-auto max-w-md rounded-xl border border-brand-200 bg-white p-4 shadow-elevated">
         <p className="text-sm font-semibold text-ink">
           Nueva version disponible

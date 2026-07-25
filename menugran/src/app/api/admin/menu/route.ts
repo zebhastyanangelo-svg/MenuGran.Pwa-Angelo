@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import sharp from "sharp";
+import { withAuth } from "@/lib/api-auth";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "menu");
 
@@ -29,6 +30,9 @@ async function saveImage(file: File): Promise<string> {
 }
 
 export async function GET(req: NextRequest) {
+  const session = await withAuth({ requiredRole: ["ADMIN", "SUPERADMIN"] });
+  if (session instanceof NextResponse) return session;
+
   try {
     const { searchParams } = new URL(req.url);
     const restaurantId = searchParams.get("restaurantId");
@@ -71,6 +75,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await withAuth({ requiredRole: ["ADMIN", "SUPERADMIN"] });
+  if (session instanceof NextResponse) return session;
+
   try {
     const contentType = req.headers.get("content-type") || "";
 

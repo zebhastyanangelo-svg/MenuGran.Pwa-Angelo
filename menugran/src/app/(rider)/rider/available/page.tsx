@@ -36,7 +36,7 @@ export default function RiderAvailableOrdersPage() {
     setError(null);
 
     try {
-      const res = await fetch('/api/rider/orders');
+      const res = await fetch('/api/rider/orders?view=available');
       if (!res.ok) throw new Error('Error al cargar');
       const data = await res.json();
       const mapped: AvailableOrder[] = (data.orders || []).map((o: any) => ({

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHouse, faUtensils, faMotorcycle } from '@fortawesome/free-solid-svg-icons';
+import { faUtensils, faMotorcycle } from '@fortawesome/free-solid-svg-icons';
 
 interface Order {
   id: string;
@@ -39,12 +39,6 @@ const formatTotal = (value: number) =>
     minimumFractionDigits: 0,
   }).format(value);
 
-const formatTimeAgo = (dateStr: string) => {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
-  if (diff < 1) return 'Hace segundos';
-  return `Hace ${diff} min`;
-};
-
 const getBadge = (method: string) => {
   const map: Record<string, string> = {
     CASH: 'Efectivo',
@@ -64,28 +58,27 @@ const getNextStatus = (status: string): OrderStatus => {
 
 const activeStatuses: OrderStatus[] = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY'];
 
-const playNotificationSound = () => {
-  try {
-    const context = new AudioContext();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.type = 'sine';
-    oscillator.frequency.value = 620;
-    gain.gain.value = 0.08;
-    oscillator.connect(gain);
-    gain.connect(context.destination);
-    oscillator.start();
-    oscillator.stop(context.currentTime + 0.12);
-  } catch {
-    // silencio si no es posible
-  }
-};
-
 export default function OperatorOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterOption>('Todos');
   const [activeColumn, setActiveColumn] = useState<OrderStatus>('PENDING');
+  const [elapsedTimes, setElapsedTimes] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const updateElapsed = () => {
+      const now = Date.now();
+      const times: Record<string, string> = {};
+      orders.forEach((order) => {
+        const diff = Math.floor((now - new Date(order.createdAt).getTime()) / 60000);
+        times[order.id] = diff < 1 ? 'Hace segundos' : `Hace ${diff} min`;
+      });
+      setElapsedTimes(times);
+    };
+    updateElapsed();
+    const interval = setInterval(updateElapsed, 60000);
+    return () => clearInterval(interval);
+  }, [orders]);
 
   const fetchOrders = async () => {
     try {
@@ -149,8 +142,8 @@ export default function OperatorOrdersPage() {
   };
 
   const renderCard = (order: Order) => {
-    const timeAgo = formatTimeAgo(order.createdAt);
-    const isLate = order.status === 'PENDING' && (Date.now() - new Date(order.createdAt).getTime()) / 60000 > 15;
+    const timeAgo = elapsedTimes[order.id] || 'Hace segundos';
+    const isLate = order.status === 'PENDING' && (elapsedTimes[order.id] ? parseInt(elapsedTimes[order.id]) > 15 : false);
     const isDelivery = order.serviceType === 'DELIVERY';
     return (
       <Link

@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-auth";
 
 export async function PUT(req: NextRequest) {
   try {
+    const session = await withAuth();
+    if (session instanceof NextResponse) return session;
+
     const { id, name, phone } = await req.json();
 
     if (!id) {
       return NextResponse.json(
         { success: false, message: "ID de usuario requerido" },
         { status: 400 }
+      );
+    }
+
+    // Users can only update their own profile
+    if (session.user.id !== id) {
+      return NextResponse.json(
+        { success: false, message: "No autorizado" },
+        { status: 403 }
       );
     }
 

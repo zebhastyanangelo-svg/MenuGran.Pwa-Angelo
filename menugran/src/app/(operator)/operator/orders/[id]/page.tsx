@@ -86,8 +86,9 @@ export default function OperatorOrderDetailPage({ params }: { params: { id: stri
   const [updating, setUpdating] = useState(false);
 
   const fetchOrder = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
       const [orderRes, ridersRes] = await Promise.all([
         fetch(`/api/operator/orders/${params.id}`),
         fetch('/api/operator/riders'),
@@ -294,7 +295,7 @@ export default function OperatorOrderDetailPage({ params }: { params: { id: stri
       </div>
 
       {nextAction && !['DELIVERED', 'CANCELLED'].includes(order.status) && (
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4">
+        <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 p-4">
           {nextAction.action === 'assign_rider' ? (
             <div className="space-y-3">
               <select

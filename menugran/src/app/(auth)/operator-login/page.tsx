@@ -53,7 +53,7 @@ export default function OperatorLoginPage() {
       }
 
       router.push('/operator');
-    } catch (err) {
+    } catch {
       setError('Error de conexión. Intenta de nuevo.');
       setIsLoading(false);
     }

@@ -9,17 +9,20 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = req.nextUrl;
-    const riderId = searchParams.get("riderId");
     const status = searchParams.get("status");
+    const view = searchParams.get("view"); // "assigned" or "available"
 
-    if (riderId) {
-      const validStatus = status && Object.values(OrderStatus).includes(status as OrderStatus)
-        ? (status as OrderStatus)
-        : undefined;
+    const validStatus = status && Object.values(OrderStatus).includes(status as OrderStatus)
+      ? (status as OrderStatus)
+      : undefined;
 
+    // "available" view: orders ready for pickup (no rider assigned, DELIVERY type)
+    if (view === "available") {
       const orders = await prisma.order.findMany({
         where: {
-          riderId,
+          status: OrderStatus.READY,
+          riderId: null,
+          serviceType: ServiceType.DELIVERY,
           ...(validStatus ? { status: validStatus } : {}),
         },
         include: {
@@ -43,11 +46,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ orders });
     }
 
+    // Default: rider's own assigned orders
     const orders = await prisma.order.findMany({
       where: {
-        status: OrderStatus.READY,
-        riderId: null,
-        serviceType: ServiceType.DELIVERY,
+        riderId: session.user.id,
+        ...(validStatus ? { status: validStatus } : {}),
       },
       include: {
         client: {

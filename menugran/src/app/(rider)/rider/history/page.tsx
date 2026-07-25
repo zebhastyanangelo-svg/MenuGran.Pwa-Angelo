@@ -44,7 +44,8 @@ export default function RiderHistoryPage() {
       setLoading(false);
       return;
     }
-    fetch(`/api/rider/orders?riderId=${session.user.id}&status=DELIVERED`)
+    setLoading(true);
+    fetch(`/api/rider/orders?status=DELIVERED`)
       .then((res) => res.json())
       .then((data) => {
         const mapped: DeliveryRecord[] = (data.orders || []).map((o: any) => ({

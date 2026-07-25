@@ -70,8 +70,8 @@ export default function RiderPage() {
       if (!riderId) return;
       try {
         const [deliveringRes, deliveredRes] = await Promise.all([
-          fetch(`/api/rider/orders?riderId=${riderId}&status=DELIVERING`),
-          fetch(`/api/rider/orders?riderId=${riderId}&status=DELIVERED`),
+          fetch(`/api/rider/orders?status=DELIVERING`),
+          fetch(`/api/rider/orders?status=DELIVERED`),
         ]);
         const deliveringData = await deliveringRes.json();
         const deliveredData = await deliveredRes.json();
@@ -81,7 +81,7 @@ export default function RiderPage() {
         ]);
       } catch {}
     };
-    if (riderId) fetchDeliveries();
+    fetchDeliveries();
   }, [riderId]);
 
   const handleAcceptOrder = async (orderId: string) => {
@@ -100,7 +100,9 @@ export default function RiderPage() {
         }
         setSelectedOrder(null);
       }
-    } catch {}
+    } catch {
+      // Ignored: order acceptance failed silently
+    }
   };
 
   return (
@@ -115,9 +117,11 @@ export default function RiderPage() {
           </div>
           <button
             onClick={() => setIsAvailable(!isAvailable)}
-            className={`relative w-14 h-7 rounded-full transition-colors ${
-              isAvailable ? 'bg-success-500' : 'bg-neutral-300'
-            }`}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsAvailable(!isAvailable); } }}
+            className={`relative w-14 h-7 rounded-full transition-colors ${isAvailable ? 'bg-success-500' : 'bg-neutral-300'}`}
+            role="switch"
+            aria-checked={isAvailable}
+            aria-label={isAvailable ? 'Disponible - clic para cambiar a no disponible' : 'No disponible - clic para cambiar a disponible'}
           >
             <span
               className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
@@ -143,7 +147,11 @@ export default function RiderPage() {
                 <div
                   key={order.id}
                   onClick={() => setSelectedOrder(order)}
-                  className="bg-white rounded-xl shadow-soft border border-neutral-200 p-4 cursor-pointer hover:border-brand-300 transition"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOrder(order); } }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Ver pedido ${shortId(order.id)} de ${order.restaurant.name}`}
+                  className="bg-white rounded-xl shadow-soft border border-neutral-200 p-4 cursor-pointer hover:border-brand-300 transition focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-bold text-ink">{shortId(order.id)}</span>
@@ -190,7 +198,12 @@ export default function RiderPage() {
       ) : (
         <div className="space-y-2">
           {myDeliveries.map((delivery) => (
-            <div key={delivery.id} className="bg-white rounded-xl shadow-soft border border-neutral-200 p-4">
+            <div
+              key={delivery.id}
+              className="bg-white rounded-xl shadow-soft border border-neutral-200 p-4"
+              role="article"
+              aria-label={`Entrega ${shortId(delivery.id)} - ${statusLabel(delivery.status)}`}
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">

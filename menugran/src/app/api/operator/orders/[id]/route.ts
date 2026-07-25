@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-auth";
 import { OrderStatus, ServiceType } from "@prisma/client";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await withAuth({ requiredRole: ["OPERATOR", "ADMIN", "SUPERADMIN"] });
+  if (session instanceof NextResponse) return session;
+
   try {
     const order = await prisma.order.findUnique({
       where: { id: params.id },
@@ -68,6 +72,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await withAuth({ requiredRole: ["OPERATOR", "ADMIN", "SUPERADMIN"] });
+  if (session instanceof NextResponse) return session;
+
   try {
     const body = await req.json();
     const { status: rawStatus, riderId, riderName } = body;

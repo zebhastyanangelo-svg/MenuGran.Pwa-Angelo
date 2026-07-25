@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { MapPin, Phone, Package, User, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import { MapPin, Phone, Package, User, ArrowLeft, CheckCircle, XCircle, Navigation } from 'lucide-react';
 
 interface OrderDetail {
   id: string;
@@ -39,6 +39,9 @@ export default function RiderActiveOrderPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [locationActive, setLocationActive] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const watchIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!orderId) return;
@@ -52,6 +55,60 @@ export default function RiderActiveOrderPage() {
       .finally(() => setLoading(false));
   }, [orderId]);
 
+  // Share rider location during delivery
+  const sendLocation = useCallback(async (lat: number, lng: number) => {
+    try {
+      await fetch('/api/rider/location', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latitude: lat, longitude: lng }),
+      });
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!order || order.status !== 'DELIVERING') return;
+
+    if (!navigator.geolocation) {
+      setLocationError('Tu navegador no soporta geolocalizacion');
+      return;
+    }
+
+    const startWatching = () => {
+      const id = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          sendLocation(latitude, longitude);
+          setLocationActive(true);
+          setLocationError(null);
+        },
+        (err) => {
+          setLocationActive(false);
+          if (err.code === err.PERMISSION_DENIED) {
+            setLocationError('Permiso de ubicacion denegado');
+          } else {
+            setLocationError('Error al obtener ubicacion');
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 5000,
+        }
+      );
+      watchIdRef.current = id;
+    };
+
+    startWatching();
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
+  }, [order?.status, sendLocation]);
+
   const updateStatus = async (status: string) => {
     setUpdating(true);
     try {
@@ -64,6 +121,11 @@ export default function RiderActiveOrderPage() {
         const data = await res.json();
         setOrder(data.order);
         if (status === 'DELIVERED') {
+          // Stop sharing location
+          if (watchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+            watchIdRef.current = null;
+          }
           setTimeout(() => router.push('/rider/active'), 1500);
         }
       }
@@ -123,6 +185,39 @@ export default function RiderActiveOrderPage() {
         </div>
         {statusBadge(order.status)}
       </div>
+
+      {/* Location sharing status */}
+      {order.status === 'DELIVERING' && (
+        <div className={`flex items-center gap-3 rounded-xl p-4 border ${
+          locationActive
+            ? 'bg-success-50 border-success-200'
+            : locationError
+            ? 'bg-danger-50 border-danger-200'
+            : 'bg-warning-50 border-warning-200'
+        }`}>
+          <Navigation className={`h-5 w-5 ${
+            locationActive ? 'text-success-600' : locationError ? 'text-danger-600' : 'text-warning-600'
+          }`} />
+          <div>
+            <p className={`text-sm font-medium ${
+              locationActive ? 'text-success-800' : locationError ? 'text-danger-800' : 'text-warning-800'
+            }`}>
+              {locationActive
+                ? 'Compartiendo ubicacion con el cliente'
+                : locationError || 'Iniciando seguimiento...'}
+            </p>
+            <p className={`text-xs ${
+              locationActive ? 'text-success-600' : locationError ? 'text-danger-600' : 'text-warning-600'
+            }`}>
+              {locationActive
+                ? 'El cliente puede ver tu posicion en tiempo real'
+                : locationError
+                ? 'Activa la ubicacion en tu navegador'
+                : 'Obteniendo tu ubicacion...'}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white border border-neutral-200 rounded-xl p-5 space-y-4 shadow-soft">
         <h2 className="font-semibold text-ink">Restaurante</h2>

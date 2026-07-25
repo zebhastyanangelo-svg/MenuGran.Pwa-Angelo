@@ -1,0 +1,589 @@
+
+> menugran@0.1.0 lint
+> next lint
+
+
+ ⚠ The Next.js plugin was not detected in your ESLint configuration. See https://nextjs.org/docs/basic-features/eslint#migrating-existing-config
+
+./src/app/(admin)/admin/analytics/page.tsx
+4:10  Error: 'FontAwesomeIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+5:10  Error: 'faMoneyBillWave' is defined but never used.  @typescript-eslint/no-unused-vars
+5:27  Error: 'faBell' is defined but never used.  @typescript-eslint/no-unused-vars
+5:35  Error: 'faChartLine' is defined but never used.  @typescript-eslint/no-unused-vars
+5:48  Error: 'faStar' is defined but never used.  @typescript-eslint/no-unused-vars
+59:5  Error: Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(admin)/admin/analytics/page.tsx:59:5
+  57 |
+  58 |   useEffect(() => {
+> 59 |     fetchAnalytics();
+     |     ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  60 |   }, []);
+  61 |
+  62 |   const totalSales = useMemo(  react-hooks/set-state-in-effect
+
+./src/app/(admin)/admin/layout.tsx
+30:7  Error: Visible, non-interactive elements with click handlers must have at least one keyboard listener.  jsx-a11y/click-events-have-key-events
+30:7  Error: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+
+./src/app/(admin)/admin/menu/page.tsx
+62:5  Error: Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(admin)/admin/menu/page.tsx:62:5
+  60 |
+  61 |   useEffect(() => {
+> 62 |     fetchData();
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  63 |   }, []);
+  64 |
+  65 |   const filteredDishes = useMemo(() => {  react-hooks/set-state-in-effect
+508:15  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+516:15  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+563:17  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+571:17  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+581:17  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+589:17  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+602:17  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+
+./src/app/(admin)/admin/page.tsx
+4:48  Error: 'Store' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(admin)/admin/staff/page.tsx
+51:5  Error: Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(admin)/admin/staff/page.tsx:51:5
+  49 |
+  50 |   useEffect(() => {
+> 51 |     fetchStaff();
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  52 |   }, []);
+  53 |
+  54 |   const selectedRole = roles[activeTab];  react-hooks/set-state-in-effect
+292:17  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+302:17  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+312:17  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+
+./src/app/(auth)/admin-login/page.tsx
+56:14  Error: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(auth)/forgot-pin/page.tsx
+63:15  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+
+./src/app/(auth)/login/page.tsx
+53:14  Error: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+73:15  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+92:15  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+
+./src/app/(auth)/operator-login/page.tsx
+56:14  Error: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(auth)/register/page.tsx
+85:14  Error: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(auth)/superadmin-login/page.tsx
+7:8  Error: 'Link' is defined but never used.  @typescript-eslint/no-unused-vars
+56:14  Error: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(client)/client/layout.tsx
+7:30  Error: Unable to resolve path to module '@/modules/cart/store'.  import/no-unresolved
+8:24  Error: Unable to resolve path to module '@/modules/cart/CartDrawer'.  import/no-unresolved
+
+./src/app/(client)/client/orders/page.tsx
+84:28  Error: Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(client)/client/orders/page.tsx:84:28
+  82 |
+  83 |   useEffect(() => {
+> 84 |     if (session?.user?.id) fetchOrders(session.user.id);
+     |                            ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  85 |   }, [session?.user?.id]);
+  86 |
+  87 |   const visibleOrders = useMemo(() => {  react-hooks/set-state-in-effect
+
+./src/app/(client)/client/page.tsx
+43:16  Error: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(client)/client/profile/page.tsx
+17:7  Error: Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(client)/client/profile/page.tsx:17:7
+  15 |   useEffect(() => {
+  16 |     if (user) {
+> 17 |       setName(user.name || '');
+     |       ^^^^^^^ Avoid calling setState() directly within an effect
+  18 |       setPhone(user.phone || '');
+  19 |     }
+  20 |   }, [user?.id]);  react-hooks/set-state-in-effect
+20:6  Warning: React Hook useEffect has a missing dependency: 'user'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+38:13  Error: Empty block statement.  no-empty
+78:13  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+90:13  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+102:13  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+
+./src/app/(client)/client/r/[slug]/[id]/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+31:12  Error: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(client)/client/r/[slug]/page.tsx
+6:30  Error: Unable to resolve path to module '@/modules/cart/store'.  import/no-unresolved
+62:16  Error: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+83:34  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/(operator)/operator/layout.tsx
+20:7  Error: Visible, non-interactive elements with click handlers must have at least one keyboard listener.  jsx-a11y/click-events-have-key-events
+20:7  Error: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+
+./src/app/(operator)/operator/orders/[id]/page.tsx
+113:5  Error: Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(operator)/operator/orders/[id]/page.tsx:113:5
+  111 |
+  112 |   useEffect(() => {
+> 113 |     fetchOrder();
+      |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  114 |   }, [params.id]);
+  115 |
+  116 |   useEffect(() => {  react-hooks/set-state-in-effect
+114:6  Warning: React Hook useEffect has a missing dependency: 'fetchOrder'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/(operator)/operator/orders/page.tsx
+6:10  Error: 'faHouse' is defined but never used.  @typescript-eslint/no-unused-vars
+67:7  Error: 'playNotificationSound' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+105:5  Error: Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(operator)/operator/orders/page.tsx:105:5
+  103 |
+  104 |   useEffect(() => {
+> 105 |     fetchOrders();
+      |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  106 |     const interval = setInterval(fetchOrders, 15000);
+  107 |     return () => clearInterval(interval);
+  108 |   }, []);  react-hooks/set-state-in-effect
+153:51  Error: Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(operator)/operator/orders/page.tsx:153:51
+  151 |   const renderCard = (order: Order) => {
+  152 |     const timeAgo = formatTimeAgo(order.createdAt);
+> 153 |     const isLate = order.status === 'PENDING' && (Date.now() - new Date(order.createdAt).getTime()) / 60000 > 15;
+      |                                                   ^^^^^^^^^^ Cannot call impure function
+  154 |     const isDelivery = order.serviceType === 'DELIVERY';
+  155 |     return (
+  156 |       <Link  react-hooks/purity
+
+./src/app/(operator)/operator/page.tsx
+70:15  Error: Empty block statement.  no-empty
+102:13  Error: Empty block statement.  no-empty
+115:13  Error: Empty block statement.  no-empty
+263:9  Error: Visible, non-interactive elements with click handlers must have at least one keyboard listener.  jsx-a11y/click-events-have-key-events
+263:9  Error: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+264:11  Error: Visible, non-interactive elements with click handlers must have at least one keyboard listener.  jsx-a11y/click-events-have-key-events
+264:11  Error: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+
+./src/app/(operator)/operator/riders/page.tsx
+73:5  Error: Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(operator)/operator/riders/page.tsx:73:5
+  71 |
+  72 |   useEffect(() => {
+> 73 |     fetchData();
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  74 |   }, []);
+  75 |
+  76 |   const filteredRiders = riders.filter((rider) => {  react-hooks/set-state-in-effect
+268:10  Error: Visible, non-interactive elements with click handlers must have at least one keyboard listener.  jsx-a11y/click-events-have-key-events
+268:10  Error: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+269:12  Error: Visible, non-interactive elements with click handlers must have at least one keyboard listener.  jsx-a11y/click-events-have-key-events
+269:12  Error: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+285:22  Error: Visible, non-interactive elements with click handlers must have at least one keyboard listener.  jsx-a11y/click-events-have-key-events
+285:22  Error: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+
+./src/app/(public)/page.tsx
+15:3  Error: 'faCheck' is defined but never used.  @typescript-eslint/no-unused-vars
+279:21  Error: The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+280:21  Error: The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+281:21  Error: The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+./src/app/(rider)/rider/active/[orderId]/page.tsx
+70:13  Error: Empty block statement.  no-empty
+
+./src/app/(rider)/rider/active/page.tsx
+40:7  Error: Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(rider)/rider/active/page.tsx:40:7
+  38 |   useEffect(() => {
+  39 |     if (!session?.user?.id) {
+> 40 |       setLoading(false);
+     |       ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  41 |       return;
+  42 |     }
+  43 |     fetch(`/api/rider/orders?riderId=${session.user.id}&status=DELIVERING`)  react-hooks/set-state-in-effect
+62:13  Error: Empty block statement.  no-empty
+
+./src/app/(rider)/rider/available/page.tsx
+42:68  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+48:32  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+55:14  Error: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+64:5  Error: Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(rider)/rider/available/page.tsx:64:5
+  62 |
+  63 |   useEffect(() => {
+> 64 |     fetchOrders();
+     |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  65 |     const interval = setInterval(fetchOrders, 30000);
+  66 |     return () => clearInterval(interval);
+  67 |   }, []);  react-hooks/set-state-in-effect
+
+./src/app/(rider)/rider/history/page.tsx
+44:7  Error: Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(rider)/rider/history/page.tsx:44:7
+  42 |   useEffect(() => {
+  43 |     if (!session?.user?.id) {
+> 44 |       setLoading(false);
+     |       ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  45 |       return;
+  46 |     }
+  47 |     fetch(`/api/rider/orders?riderId=${session.user.id}&status=DELIVERED`)  react-hooks/set-state-in-effect
+50:70  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/(rider)/rider/page.tsx
+5:39  Error: 'Phone' is defined but never used.  @typescript-eslint/no-unused-vars
+60:13  Error: Empty block statement.  no-empty
+64:5  Error: Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(rider)/rider/page.tsx:64:5
+  62 |
+  63 |   useEffect(() => {
+> 64 |     fetchAvailable();
+     |     ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  65 |   }, [fetchAvailable]);
+  66 |
+  67 |   useEffect(() => {  react-hooks/set-state-in-effect
+82:15  Error: Empty block statement.  no-empty
+103:13  Error: Empty block statement.  no-empty
+143:17  Error: Visible, non-interactive elements with click handlers must have at least one keyboard listener.  jsx-a11y/click-events-have-key-events
+143:17  Error: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+215:9  Error: Visible, non-interactive elements with click handlers must have at least one keyboard listener.  jsx-a11y/click-events-have-key-events
+215:9  Error: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+216:11  Error: Visible, non-interactive elements with click handlers must have at least one keyboard listener.  jsx-a11y/click-events-have-key-events
+216:11  Error: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+
+./src/app/(superadmin)/sa/businesses/page.tsx
+54:5  Error: Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(superadmin)/sa/businesses/page.tsx:54:5
+  52 |
+  53 |   useEffect(() => {
+> 54 |     fetchBusinesses();
+     |     ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  55 |   }, []);
+  56 |
+  57 |   const filteredBusinesses = useMemo(() => {  react-hooks/set-state-in-effect
+348:15  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+358:15  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+365:15  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+372:15  Error: A form label must be associated with a control.  jsx-a11y/label-has-associated-control
+
+./src/app/(superadmin)/sa/layout.tsx
+35:7  Error: Visible, non-interactive elements with click handlers must have at least one keyboard listener.  jsx-a11y/click-events-have-key-events
+35:7  Error: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+
+./src/app/(superadmin)/sa/page.tsx
+99:11  Error: 'dayOrders' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+105:9  Error: 'maxRevenue' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(superadmin)/sa/users/page.tsx
+4:50  Error: 'Shield' is defined but never used.  @typescript-eslint/no-unused-vars
+4:58  Error: 'UserCircle' is defined but never used.  @typescript-eslint/no-unused-vars
+57:5  Error: Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/src/app/(superadmin)/sa/users/page.tsx:57:5
+  55 |
+  56 |   useEffect(() => {
+> 57 |     fetchUsers();
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  58 |   }, []);
+  59 |
+  60 |   const toggleActive = async (userId: string, currentActive: boolean) => {  react-hooks/set-state-in-effect
+74:13  Error: Empty block statement.  no-empty
+
+./src/app/api/admin/analytics/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+18:27  Error: '_req' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/admin/dashboard/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+3:26  Error: Unable to resolve path to module '@/lib/api-auth'.  import/no-unresolved
+
+./src/app/api/admin/menu/dishes/[id]/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+
+./src/app/api/admin/menu/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+3:10  Error: 'writeFile' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/admin/restaurant/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+
+./src/app/api/admin/staff/[id]/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+
+./src/app/api/admin/staff/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+3:25  Error: Unable to resolve path to module '@/lib/crypto'.  import/no-unresolved
+55:19  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/api/auth/[...nextauth]/route.ts
+1:26  Error: Unable to resolve path to module '@/lib/auth-next'.  import/no-unresolved
+
+./src/app/api/auth/forgot-pin/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+3:27  Error: Unable to resolve path to module '@/lib/crypto'.  import/no-unresolved
+
+./src/app/api/auth/login/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+3:27  Error: Unable to resolve path to module '@/lib/crypto'.  import/no-unresolved
+
+./src/app/api/auth/profile/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+
+./src/app/api/auth/register/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+3:25  Error: Unable to resolve path to module '@/lib/crypto'.  import/no-unresolved
+
+./src/app/api/operator/orders/[id]/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+73:41  Error: 'riderName' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/operator/orders/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+
+./src/app/api/operator/riders/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+
+./src/app/api/operator/stats/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+
+./src/app/api/orders/[id]/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+
+./src/app/api/orders/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+3:26  Error: Unable to resolve path to module '@/lib/api-auth'.  import/no-unresolved
+4:22  Error: Unable to resolve path to module '@/lib/auth-next'.  import/no-unresolved
+7:30  Error: Unable to resolve path to module '@/lib/constants'.  import/no-unresolved
+178:74  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/api/restaurants/[id]/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+
+./src/app/api/restaurants/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+22:12  Error: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/rider/location/route.ts
+2:55  Error: Unable to resolve path to module '@/modules/delivery/services'.  import/no-unresolved
+3:22  Error: Unable to resolve path to module '@/lib/auth-next'.  import/no-unresolved
+
+./src/app/api/rider/orders/[id]/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+3:26  Error: Unable to resolve path to module '@/lib/api-auth'.  import/no-unresolved
+
+./src/app/api/rider/orders/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+3:26  Error: Unable to resolve path to module '@/lib/api-auth'.  import/no-unresolved
+
+./src/app/api/superadmin/businesses/[id]/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+32:12  Error: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+49:12  Error: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/superadmin/businesses/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+35:12  Error: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+58:12  Error: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/superadmin/dashboard/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+83:12  Error: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/superadmin/metrics/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+112:12  Error: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/superadmin/users/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+3:26  Error: Unable to resolve path to module '@/lib/api-auth'.  import/no-unresolved
+
+./src/app/api/test-db/route.ts
+2:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+
+./src/app/layout.tsx
+3:29  Error: Unable to resolve path to module '@/components/providers/SessionProvider'.  import/no-unresolved
+4:28  Error: Unable to resolve path to module '@/components/SWUpdatePrompt'.  import/no-unresolved
+
+./src/components/shared/index.ts
+1:35  Error: Unable to resolve path to module './Header'.  import/no-unresolved
+2:43  Error: Unable to resolve path to module './LoadingSpinner'.  import/no-unresolved
+3:33  Error: Unable to resolve path to module './Card'.  import/no-unresolved
+4:40  Error: Unable to resolve path to module './StatusBadge'.  import/no-unresolved
+
+./src/components/ui/index.ts
+1:35  Error: Unable to resolve path to module './Button'.  import/no-unresolved
+2:34  Error: Unable to resolve path to module './Input'.  import/no-unresolved
+
+./src/lib/api-auth.ts
+1:22  Error: Unable to resolve path to module '@/lib/auth-next'.  import/no-unresolved
+
+./src/lib/auth-next.ts
+3:24  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+4:27  Error: Unable to resolve path to module '@/lib/crypto'.  import/no-unresolved
+
+./src/lib/auth.ts
+1:20  Error: Unable to resolve path to module './db'.  import/no-unresolved
+58:38  Error: Unable to resolve path to module '@/lib/crypto'.  import/no-unresolved
+
+./src/middleware.ts
+1:22  Error: Unable to resolve path to module '@/lib/auth-next'.  import/no-unresolved
+45:9  Error: 'isPage' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/modules/auth/actions.ts
+3:20  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+4:44  Error: Unable to resolve path to module '@/lib/auth'.  import/no-unresolved
+5:25  Error: Unable to resolve path to module '@/lib/crypto'.  import/no-unresolved
+65:41  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/modules/auth/index.ts
+1:15  Error: Unable to resolve path to module './types'.  import/no-unresolved
+2:15  Error: Unable to resolve path to module './utils'.  import/no-unresolved
+3:15  Error: Unable to resolve path to module './actions'.  import/no-unresolved
+
+./src/modules/cart/CartDrawer.tsx
+9:43  Error: Unable to resolve path to module '@/modules/cart/store'.  import/no-unresolved
+10:30  Error: Unable to resolve path to module '@/modules/cart/ServiceTypeModal'.  import/no-unresolved
+66:9  Error: Visible, non-interactive elements with click handlers must have at least one keyboard listener.  jsx-a11y/click-events-have-key-events
+66:9  Error: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+
+./src/modules/cart/ServiceTypeModal.tsx
+111:15  Error: The autoFocus prop should not be used, as it can reduce usability and accessibility for users.  jsx-a11y/no-autofocus
+129:15  Error: The autoFocus prop should not be used, as it can reduce usability and accessibility for users.  jsx-a11y/no-autofocus
+
+./src/modules/delivery/index.ts
+1:15  Error: Unable to resolve path to module './types'.  import/no-unresolved
+2:15  Error: Unable to resolve path to module './services'.  import/no-unresolved
+
+./src/modules/delivery/services.ts
+1:20  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+2:57  Error: Unable to resolve path to module '@/lib/geo'.  import/no-unresolved
+
+./src/modules/menu/index.ts
+1:15  Error: Unable to resolve path to module './types'.  import/no-unresolved
+2:15  Error: Unable to resolve path to module './services'.  import/no-unresolved
+
+./src/modules/menu/services.ts
+1:20  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+23:18  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/modules/orders/index.ts
+1:15  Error: Unable to resolve path to module './types'.  import/no-unresolved
+2:15  Error: Unable to resolve path to module './services'.  import/no-unresolved
+
+./src/modules/orders/services.ts
+1:20  Error: Unable to resolve path to module '@/lib/db'.  import/no-unresolved
+49:46  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+91:33  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/pwa/sw.ts
+1:30  Error: Unable to resolve path to module '@serwist/next/worker'.  import/no-unresolved
+8:8  Warning: '/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/node_modules/serwist/dist/index.js' imported multiple times.  import/no-duplicates
+9:59  Warning: '/home/angelo/Escritorio/MenuGran.Pwa-Angelo/menugran/node_modules/serwist/dist/index.js' imported multiple times.  import/no-duplicates
+73:29  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules

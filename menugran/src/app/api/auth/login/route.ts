@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyPin } from "@/lib/crypto";
+import { withAuth } from "@/lib/api-auth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -58,12 +59,25 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    const session = await withAuth();
+    if (session instanceof NextResponse) return session;
+
     const { id, name, phone } = await req.json();
 
     if (!id) {
       return NextResponse.json(
         { success: false, message: "ID de usuario requerido" },
         { status: 400 }
+      );
+    }
+
+    // Users can only update their own profile (unless privileged)
+    const role = session.user.role;
+    const isPrivileged = role === "ADMIN" || role === "OPERATOR" || role === "SUPERADMIN";
+    if (!isPrivileged && session.user.id !== id) {
+      return NextResponse.json(
+        { success: false, message: "No autorizado" },
+        { status: 403 }
       );
     }
 

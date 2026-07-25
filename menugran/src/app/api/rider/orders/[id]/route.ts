@@ -57,6 +57,11 @@ export async function PATCH(
         return NextResponse.json({ error: "riderId is required" }, { status: 400 });
       }
 
+      // Riders can only accept orders as themselves
+      if (riderId !== session.user.id) {
+        return NextResponse.json({ error: "No puedes aceptar pedidos para otro repartidor" }, { status: 403 });
+      }
+
       const order = await prisma.order.update({
         where: { id: params.id },
         data: {
@@ -87,6 +92,16 @@ export async function PATCH(
       const validStatuses = [OrderStatus.DELIVERING, OrderStatus.DELIVERED, OrderStatus.CANCELLED];
       if (!validStatuses.includes(status)) {
         return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+      }
+
+      // Verify the order is assigned to this rider
+      const existingOrder = await prisma.order.findUnique({
+        where: { id: params.id },
+        select: { riderId: true },
+      });
+
+      if (!existingOrder || existingOrder.riderId !== session.user.id) {
+        return NextResponse.json({ error: "No autorizado" }, { status: 403 });
       }
 
       const order = await prisma.order.update({

@@ -50,7 +50,7 @@ export default function LoginPage() {
       else if (role === 'ADMIN') router.push('/admin');
       else if (role === 'SUPERADMIN') router.push('/sa');
       else router.push('/client');
-    } catch (err) {
+    } catch {
       setError('Error de conexion');
       setLoading(false);
     }
@@ -70,7 +70,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">
+              <label htmlFor="cedula" className="block text-sm font-medium text-ink mb-1">
                 Cedula
               </label>
               <div className="relative">
@@ -78,6 +78,7 @@ export default function LoginPage() {
                   <User className="h-5 w-5 text-neutral-400" />
                 </div>
                 <input
+                  id="cedula"
                   type="text"
                   value={cedula}
                   onChange={(e) => setCedula(e.target.value.replace(/\D/g, ''))}
@@ -89,7 +90,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">
+              <label htmlFor="pin" className="block text-sm font-medium text-ink mb-1">
                 PIN
               </label>
               <div className="relative">
@@ -97,6 +98,7 @@ export default function LoginPage() {
                   <Lock className="h-5 w-5 text-neutral-400" />
                 </div>
                 <input
+                  id="pin"
                   type="password"
                   maxLength={4}
                   value={pin}

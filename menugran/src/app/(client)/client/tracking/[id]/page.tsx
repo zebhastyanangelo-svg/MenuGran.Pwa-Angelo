@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faMapPin, faStore, faCheckCircle, faBox, faCircleXmark, faTruck } from '@fortawesome/free-solid-svg-icons';
+
+const RiderTracker = dynamic(() => import('@/components/map/RiderTracker'), { ssr: false });
 
 const statusOrder = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERING', 'DELIVERED'];
 const statusLabels: Record<string, string> = {
@@ -19,8 +22,11 @@ const statusLabels: Record<string, string> = {
 interface OrderData {
   id: string;
   status: string;
+  serviceType: string;
   totalPrice: number;
   deliveryAddress: string | null;
+  lat: number | null;
+  lng: number | null;
   notes: string | null;
   paymentMethod: string;
   createdAt: string;
@@ -181,6 +187,28 @@ export default function ClientTrackingPage() {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Mapa de ubicacion del rider - solo para DELIVERY en camino */}
+      {order.serviceType === 'DELIVERY' && order.rider && order.status === 'DELIVERING' && (
+        <div className="mb-6">
+          <Suspense
+            fallback={
+              <div className="h-[350px] rounded-2xl bg-neutral-100 flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            }
+          >
+            <RiderTracker
+              orderId={order.id}
+              deliveryLat={order.lat}
+              deliveryLng={order.lng}
+              deliveryAddress={order.deliveryAddress}
+              riderName={order.rider.name}
+              pollInterval={5000}
+            />
+          </Suspense>
         </div>
       )}
 

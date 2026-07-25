@@ -64,7 +64,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
     <>
       <div className={`fixed inset-0 z-40 ${open ? 'pointer-events-auto' : 'pointer-events-none'}`}>
         <div
-          className={`absolute inset-0 bg-black/30 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 bg-black/20 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`}
           onClick={() => onClose()}
         />
         <aside className={`absolute right-0 top-0 h-full w-full max-w-md transform bg-white shadow-popover transition-transform duration-300 ${open ? 'translate-x-0' : 'translate-x-full'}`}>

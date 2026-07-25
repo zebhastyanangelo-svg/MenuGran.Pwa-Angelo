@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-auth";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await withAuth({ requiredRole: ["ADMIN", "SUPERADMIN"] });
+  if (session instanceof NextResponse) return session;
+
   try {
     const { id } = await params;
     const body = await req.json();

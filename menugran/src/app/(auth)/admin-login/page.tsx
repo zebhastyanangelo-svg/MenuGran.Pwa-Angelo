@@ -53,7 +53,7 @@ export default function AdminLoginPage() {
       }
 
       router.push('/admin');
-    } catch (err) {
+    } catch {
       setError('Error de conexión. Intenta de nuevo.');
       setIsLoading(false);
     }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { TrendingUp, Package, LayoutDashboard, Store } from 'lucide-react';
+import { TrendingUp, Package, LayoutDashboard } from 'lucide-react';
 
 type DashboardData = {
   metrics: { salesToday: number; ordersToday: number; avgTicket: number };

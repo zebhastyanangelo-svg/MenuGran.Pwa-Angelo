@@ -1,22 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-auth";
 
 const PAYMENT_LABELS: Record<string, string> = {
   CASH: "Efectivo",
-  MOBILE_PAYMENT: "Wallet",
+  CARD: "Tarjeta",
   TRANSFER: "Transferencia",
 };
 
 const PAYMENT_COLORS: Record<string, string> = {
   CASH: "#f97316",
-  MOBILE_PAYMENT: "#64748b",
+  CARD: "#64748b",
   TRANSFER: "#3b82f6",
 };
 
-const DAY_NAMES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+const DAY_NAMES = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
 
 export async function GET(_req: NextRequest) {
+  const session = await withAuth({ requiredRole: ["ADMIN", "SUPERADMIN"] });
+  if (session instanceof NextResponse) return session;
+
   try {
+    // Find the restaurant managed by this admin
+    const restaurant = await prisma.restaurant.findFirst({
+      where: { adminId: session.user.id },
+      select: { id: true },
+    });
+
+    if (!restaurant) {
+      return NextResponse.json({ error: "No se encontro restaurante para este admin" }, { status: 404 });
+    }
+
+    const restaurantId = restaurant.id;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -27,7 +43,7 @@ export async function GET(_req: NextRequest) {
     todayEnd.setHours(23, 59, 59, 999);
 
     const allOrdersToday = await prisma.order.findMany({
-      where: { createdAt: { gte: today, lte: todayEnd } },
+      where: { restaurantId, createdAt: { gte: today, lte: todayEnd } },
       select: { totalPrice: true },
     });
 
@@ -36,7 +52,7 @@ export async function GET(_req: NextRequest) {
     const avgTicket = ordersTodayCount > 0 ? Math.round(salesToday / ordersTodayCount) : 0;
 
     const weekOrders = await prisma.order.findMany({
-      where: { createdAt: { gte: sevenDaysAgo } },
+      where: { restaurantId, createdAt: { gte: sevenDaysAgo } },
       select: { totalPrice: true, createdAt: true },
     });
 
@@ -57,6 +73,7 @@ export async function GET(_req: NextRequest) {
 
     const paymentGroups = await prisma.order.groupBy({
       by: ["paymentMethod"],
+      where: { restaurantId },
       _count: true,
     });
     const totalPayOrders = paymentGroups.reduce((s, g) => s + g._count, 0);
@@ -71,30 +88,29 @@ export async function GET(_req: NextRequest) {
       _sum: { quantity: true },
       orderBy: { _sum: { quantity: "desc" } },
       take: 5,
+      where: { order: { restaurantId } },
     });
 
-    const topDishes = await Promise.all(
-      topDishesRaw.map(async (item, idx) => {
-        const menuItem = await prisma.menuItem.findUnique({
-          where: { id: item.menuItemId },
-          include: { category: { select: { name: true } } },
-        });
+    const topDishIds = topDishesRaw.map((item) => item.menuItemId);
+    const menuItems = await prisma.menuItem.findMany({
+      where: { id: { in: topDishIds } },
+      include: { category: { select: { name: true } } },
+    });
+    const menuItemMap = new Map(menuItems.map((m) => [m.id, m]));
 
-        const orderItemsForDish = await prisma.orderItem.findMany({
-          where: { menuItemId: item.menuItemId },
-          select: { price: true, quantity: true },
-        });
-        const totalSold = orderItemsForDish.reduce((s, oi) => s + Number(oi.price), 0);
+    const topDishes = topDishesRaw.map((item, idx) => {
+      const menuItem = menuItemMap.get(item.menuItemId);
+      const quantity = item._sum.quantity ?? 0;
+      const price = menuItem?.price ? Number(menuItem.price) : 0;
 
-        return {
-          rank: idx + 1,
-          name: menuItem?.name ?? "Unknown",
-          category: menuItem?.category.name ?? "Unknown",
-          times: item._sum.quantity ?? 0,
-          total: Math.round(totalSold),
-        };
-      })
-    );
+      return {
+        rank: idx + 1,
+        name: menuItem?.name ?? "Unknown",
+        category: menuItem?.category.name ?? "Unknown",
+        times: quantity,
+        total: Math.round(price * quantity),
+      };
+    });
 
     const topDishName = topDishes[0]?.name ?? "N/A";
 

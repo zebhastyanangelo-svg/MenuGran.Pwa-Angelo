@@ -3,15 +3,27 @@ import { prisma } from "@/lib/db";
 import { withAuth } from "@/lib/api-auth";
 
 export async function GET() {
-  const session = await withAuth({ requiredRole: "ADMIN" });
+  const session = await withAuth({ requiredRole: ["ADMIN", "SUPERADMIN"] });
   if (session instanceof NextResponse) return session;
 
   try {
+    // Find the restaurant managed by this admin
+    const restaurant = await prisma.restaurant.findFirst({
+      where: { adminId: session.user.id },
+      select: { id: true },
+    });
+
+    if (!restaurant) {
+      return NextResponse.json({ error: "No se encontro restaurante para este admin" }, { status: 404 });
+    }
+
+    const restaurantId = restaurant.id;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const ordersToday = await prisma.order.findMany({
-      where: { createdAt: { gte: today } },
+      where: { restaurantId, createdAt: { gte: today } },
       include: { items: true, client: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
       take: 10,
@@ -21,6 +33,7 @@ export async function GET() {
 
     const statusCounts = await prisma.order.groupBy({
       by: ["status"],
+      where: { restaurantId },
       _count: true,
     });
 
@@ -28,6 +41,7 @@ export async function GET() {
     statusCounts.forEach((s) => { byStatus[s.status] = s._count; });
 
     const allOrders = await prisma.order.findMany({
+      where: { restaurantId },
       include: {
         items: { include: { menuItem: { select: { name: true } } } },
         client: { select: { name: true } },

@@ -82,7 +82,7 @@ export default function RegisterPage() {
       });
 
       router.push('/client');
-    } catch (err) {
+    } catch {
       setError('Error de conexión. Intenta de nuevo.');
       setIsLoading(false);
     }

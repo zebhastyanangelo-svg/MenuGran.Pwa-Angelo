@@ -32,23 +32,24 @@ export default function StaffPage() {
   const [pin, setPin] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const fetchStaff = async () => {
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     setError('');
-    try {
-      const res = await fetch('/api/admin/staff');
-      if (!res.ok) throw new Error('Error al cargar');
-      const data = await res.json();
-      setMembers(data);
-    } catch {
-      setError('No se pudo cargar el personal. Intenta de nuevo.');
-    } finally {
-      setLoading(false);
+    async function load() {
+      try {
+        const res = await fetch('/api/admin/staff');
+        if (!res.ok) throw new Error('Error al cargar');
+        const data = await res.json();
+        if (!cancelled) setMembers(data);
+      } catch {
+        if (!cancelled) setError('No se pudo cargar el personal. Intenta de nuevo.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
-  };
-
-  useEffect(() => {
-    fetchStaff();
+    load();
+    return () => { cancelled = true; };
   }, []);
 
   const selectedRole = roles[activeTab];
@@ -289,8 +290,9 @@ export default function StaffPage() {
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <div className="space-y-4">
-                <label className="block text-sm font-semibold text-neutral-700">Nombre</label>
+                <label htmlFor="staff-name" className="block text-sm font-semibold text-neutral-700">Nombre</label>
                 <input
+                  id="staff-name"
                   type="text"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
@@ -299,8 +301,9 @@ export default function StaffPage() {
                 />
               </div>
               <div className="space-y-4">
-                <label className="block text-sm font-semibold text-neutral-700">Cédula</label>
+                <label htmlFor="staff-cedula" className="block text-sm font-semibold text-neutral-700">Cédula</label>
                 <input
+                  id="staff-cedula"
                   type="text"
                   value={cedula}
                   onChange={(event) => setCedula(event.target.value.replace(/\D/g, ''))}
@@ -309,8 +312,9 @@ export default function StaffPage() {
                 />
               </div>
               <div className="space-y-4">
-                <label className="block text-sm font-semibold text-neutral-700">Teléfono</label>
+                <label htmlFor="staff-phone" className="block text-sm font-semibold text-neutral-700">Teléfono</label>
                 <input
+                  id="staff-phone"
                   type="tel"
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
@@ -319,10 +323,11 @@ export default function StaffPage() {
                 />
               </div>
               <div className="space-y-4">
-                <label className="block text-sm font-semibold text-neutral-700">
+                <label htmlFor="staff-pin" className="block text-sm font-semibold text-neutral-700">
                   PIN {selectedMember && '(dejar vacío para mantener actual)'}
                 </label>
                 <input
+                  id="staff-pin"
                   type="password"
                   value={pin}
                   onChange={(event) => setPin(event.target.value.replace(/\D/g, ''))}

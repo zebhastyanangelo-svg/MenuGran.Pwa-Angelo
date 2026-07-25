@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { withAuth } from '@/lib/api-auth';
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await withAuth({ requiredRole: "SUPERADMIN" });
+  if (session instanceof NextResponse) return session;
+
   try {
     const { id } = params;
     const body = await req.json();
@@ -35,6 +39,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await withAuth({ requiredRole: "SUPERADMIN" });
+  if (session instanceof NextResponse) return session;
+
   try {
     const { id } = params;
 
