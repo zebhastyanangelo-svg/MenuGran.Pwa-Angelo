@@ -44,8 +44,6 @@ export default function MenuPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError('');
     async function load() {
       try {
         const res = await fetch('/api/admin/menu');

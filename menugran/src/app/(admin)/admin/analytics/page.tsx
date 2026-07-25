@@ -38,10 +38,8 @@ export default function AnalyticsPage() {
   const [error, setError] = useState('');
   const [data, setData] = useState<AnalyticsData | null>(null);
 
-useEffect(() => {
+  useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError('');
     async function load() {
       try {
         const res = await fetch('/api/admin/analytics');

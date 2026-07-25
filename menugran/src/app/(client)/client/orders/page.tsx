@@ -65,23 +65,32 @@ export default function ClientOrdersPage() {
   const [pullMessage, setPullMessage] = useState('Desliza para actualizar');
 
   const fetchOrders = async (userId: string) => {
+    let cancelled = false;
+    setLoading(true);
+    setError('');
     try {
       const res = await fetch(`/api/orders?userId=${userId}`);
       const data = await res.json();
-      if (data.success) {
-        setOrders(data.data);
-      } else {
-        setError('No fue posible cargar tus pedidos. Intenta de nuevo.');
+      if (!cancelled) {
+        if (data.success) {
+          setOrders(data.data);
+        } else {
+          setError('No fue posible cargar tus pedidos. Intenta de nuevo.');
+        }
       }
     } catch {
-      setError('No fue posible cargar tus pedidos. Intenta de nuevo.');
+      if (!cancelled) setError('No fue posible cargar tus pedidos. Intenta de nuevo.');
     } finally {
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (session?.user?.id) fetchOrders(session.user.id);
+    let cancelled = false;
+    if (session?.user?.id) {
+      fetchOrders(session.user.id);
+    }
+    return () => { cancelled = true; };
   }, [session?.user?.id]);
 
   const visibleOrders = useMemo(() => {

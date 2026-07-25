@@ -34,8 +34,6 @@ export default function StaffPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError('');
     async function load() {
       try {
         const res = await fetch('/api/admin/staff');
