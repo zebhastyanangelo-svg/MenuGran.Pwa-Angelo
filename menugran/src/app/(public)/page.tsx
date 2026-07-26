@@ -21,12 +21,12 @@ export default function PublicLandingPage() {
 
             <div className="flex items-center space-x-4">
               <Link href="/login">
-                <button className="text-red-600 border border-red-600 px-4 py-2 rounded-lg hover:bg-red-50 transition-colors">
+                <button type="button" className="text-red-600 border border-red-600 px-4 py-2 rounded-lg hover:bg-red-50 transition-colors">
                   Iniciar Sesión
                 </button>
               </Link>
               <Link href="/register">
-                <button className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                <button type="button" className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
                   Registrarme
                 </button>
               </Link>
@@ -48,8 +48,8 @@ export default function PublicLandingPage() {
                 Menú digital, pedidos en tiempo real y seguimiento de tu entrega
               </p>
               <Link href="#restaurantes">
-                <button className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-red-700 transform hover:scale-105 transition-all duration-200 shadow-lg">
-                  Buscar Restaurantes
+                <button type="button" className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-red-700 transform hover:scale-105 transition-transform duration-200 shadow-lg">
+                  Buscar Menús
                 </button>
               </Link>
             </div>

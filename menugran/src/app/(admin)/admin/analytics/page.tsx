@@ -65,12 +65,13 @@ const periodOptions = ['Hoy', 'Esta semana', 'Este mes'] as const;
 
 type PeriodOption = (typeof periodOptions)[number];
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-  }).format(value);
+const currencyFormatter = new Intl.NumberFormat('es-CO', {
+  style: 'currency',
+  currency: 'COP',
+  minimumFractionDigits: 0,
+});
+
+const formatCurrency = (value: number) => currencyFormatter.format(value);
 
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState<PeriodOption>('Hoy');
@@ -177,7 +178,7 @@ export default function AnalyticsPage() {
                   return (
                     <div key={bar.day} className="flex flex-col items-center gap-3 text-center">
                       <div
-                        className="flex h-56 w-12 items-end overflow-hidden rounded-3xl bg-gradient-to-t from-red-600 to-red-400 transition-all hover:shadow-md"
+                        className="flex h-56 w-12 items-end overflow-hidden rounded-3xl bg-gradient-to-t from-red-600 to-red-400 transition-transform hover:shadow-md"
                         style={{ height: `${height}px` }}
                       />
                       <p className="text-xs font-semibold text-slate-700">{bar.day}</p>

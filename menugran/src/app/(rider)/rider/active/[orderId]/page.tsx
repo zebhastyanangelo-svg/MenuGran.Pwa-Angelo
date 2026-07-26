@@ -1,11 +1,13 @@
-export default function RiderActivePage({
+export default async function RiderActivePage({
   params,
 }: {
-  params: { orderId: string };
+  params: Promise<{ orderId: string }>;
 }) {
+  const { orderId } = await params;
+  
   return (
     <div>
-      <h1>Pedido Activo: {params.orderId}</h1>
+      <h1>Pedido Activo: {orderId}</h1>
     </div>
   );
 }

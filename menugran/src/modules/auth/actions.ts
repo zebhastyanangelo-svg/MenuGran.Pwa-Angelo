@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/db';
 import { getUserByCedula, verifyPIN } from '@/lib/auth';
+import { auth } from '@/app/api/auth/[...nextauth]/route';
 
 export async function loginWithCredentials(cedula: string, pin: string) {
   try {
@@ -48,6 +49,12 @@ export async function registerUser(data: {
   role?: string;
   pin: string;
 }) {
+  // Check if user is authenticated
+  const session = await auth();
+  if (!session?.user) {
+    return { success: false, error: 'No autenticado' };
+  }
+
   try {
     const existingUser = await getUserByCedula(data.cedula);
     if (existingUser) {

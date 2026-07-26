@@ -223,7 +223,7 @@ export default function SuperAdminMetricsPage() {
                 return (
                   <div key={entry.day} className="flex-1 min-w-[44px] text-center">
                     <div className="mx-auto mb-2 h-[160px] w-full rounded-3xl bg-slate-200">
-                      <div style={{ height }} className="rounded-3xl bg-red-600 transition-all" />
+                      <div style={{ height }} className="rounded-3xl bg-red-600 transition-transform" />
                     </div>
                     <p className="text-sm font-semibold text-slate-900">{entry.value}</p>
                     <p className="text-xs text-slate-500">{entry.day}</p>

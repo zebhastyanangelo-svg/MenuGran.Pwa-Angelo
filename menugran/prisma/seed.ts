@@ -9,83 +9,89 @@ async function main() {
   // USUARIOS CON PIN
   // ──────────────────────────────────────
 
-  const superadmin = await prisma.user.upsert({
-    where: { cedula: "00000001" },
-    update: {},
-    create: {
-      name: "Angelo Superadmin",
-      cedula: "00000001",
-      pin: "1111",
-      role: "SUPERADMIN",
-      phone: "04120000001",
-      active: true,
-    },
-  });
-
-  const admin = await prisma.user.upsert({
-    where: { cedula: "12345678" },
-    update: {},
-    create: {
-      name: "María Dueña",
-      cedula: "12345678",
-      pin: "2222",
-      role: "ADMIN",
-      phone: "04121234567",
-      active: true,
-    },
-  });
-
-  const operator = await prisma.user.upsert({
-    where: { cedula: "23456789" },
-    update: {},
-    create: {
-      name: "Carlos Operador",
-      cedula: "23456789",
-      pin: "3333",
-      role: "OPERATOR",
-      phone: "04129876543",
-      active: true,
-    },
-  });
-
-  const rider = await prisma.user.upsert({
-    where: { cedula: "34567890" },
-    update: {},
-    create: {
-      name: "Pedro Repartidor",
-      cedula: "34567890",
-      pin: "4444",
-      role: "RIDER",
-      phone: "04121112233",
-      active: true,
-    },
-  });
-
-  const client1 = await prisma.user.upsert({
-    where: { cedula: "11111111" },
-    update: {},
-    create: {
-      name: "Juan Cliente",
-      cedula: "11111111",
-      pin: "5555",
-      role: "CLIENT",
-      phone: "04141111111",
-      active: true,
-    },
-  });
-
-  const client2 = await prisma.user.upsert({
-    where: { cedula: "22222222" },
-    update: {},
-    create: {
-      name: "Ana García",
-      cedula: "22222222",
-      pin: "6666",
-      role: "CLIENT",
-      phone: "04142222222",
-      active: true,
-    },
-  });
+  const [superadmin, admin, operator, rider, client1, client2, business] = await Promise.all([
+    prisma.user.upsert({
+      where: { cedula: "00000001" },
+      update: {},
+      create: {
+        name: "Angelo Superadmin",
+        cedula: "00000001",
+        pin: "1111",
+        role: "SUPERADMIN",
+        phone: "04120000001",
+        active: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { cedula: "12345678" },
+      update: {},
+      create: {
+        name: "María Dueña",
+        cedula: "12345678",
+        pin: "2222",
+        role: "ADMIN",
+        phone: "04121234567",
+        active: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { cedula: "23456789" },
+      update: {},
+      create: {
+        name: "Carlos Operador",
+        cedula: "23456789",
+        pin: "3333",
+        role: "OPERATOR",
+        phone: "04129876543",
+        active: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { cedula: "34567890" },
+      update: {},
+      create: {
+        name: "Pedro Repartidor",
+        cedula: "34567890",
+        pin: "4444",
+        role: "RIDER",
+        phone: "04121112233",
+        active: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { cedula: "11111111" },
+      update: {},
+      create: {
+        name: "Juan Cliente",
+        cedula: "11111111",
+        pin: "5555",
+        role: "CLIENT",
+        phone: "04141111111",
+        active: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { cedula: "22222222" },
+      update: {},
+      create: {
+        name: "Ana García",
+        cedula: "22222222",
+        pin: "6666",
+        role: "CLIENT",
+        phone: "04142222222",
+        active: true,
+      },
+    }),
+    prisma.business.upsert({
+      where: { slug: "grupo-vargas" },
+      update: {},
+      create: {
+        name: "Grupo Gastronómico Vargas",
+        slug: "grupo-vargas",
+        description: "Los mejores restaurantes de la ciudad",
+      },
+    }),
+  ]);
 
   // ──────────────────────────────────────
   // NEGOCIO

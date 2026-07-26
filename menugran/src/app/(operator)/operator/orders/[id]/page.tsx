@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Phone, MapPin, CreditCard, Printer, Clock } from 'lucide-react';
+import { useParams } from 'next/navigation';
 
 // Tipos basados en la estructura existente
 type OrderStatus = 'pending' | 'confirmed' | 'cooking' | 'ready' | 'delivered' | 'cancelled';
@@ -81,7 +84,8 @@ const sampleRiders: Rider[] = [
   { id: 'r3', name: 'Pedro Martínez', photo: '/rider3.jpg', status: 'busy' },
 ];
 
-export default function OperatorOrderDetailPage({ params }: { params: { id: string } }) {
+export default function OperatorOrderDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +100,7 @@ export default function OperatorOrderDetailPage({ params }: { params: { id: stri
       try {
         // En una app real, aquí iría la llamada a la API
         await new Promise(resolve => setTimeout(resolve, 1000));
-        if (params.id === '001') {
+        if (id === '001') {
           setOrder(sampleOrder);
         } else {
           setError('Pedido no encontrado');
@@ -109,7 +113,7 @@ export default function OperatorOrderDetailPage({ params }: { params: { id: stri
     };
 
     fetchOrder();
-  }, [params.id]);
+  }, [id]);
 
   useEffect(() => {
     if (!order) return;

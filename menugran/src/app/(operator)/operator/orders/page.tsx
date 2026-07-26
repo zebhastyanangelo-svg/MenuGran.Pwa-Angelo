@@ -119,12 +119,13 @@ type FilterOption = (typeof filterOptions)[number];
 type OrderType = 'delivery' | 'local';
 type OrderStatus = 'pending' | 'confirmed' | 'cooking' | 'ready';
 
-const formatTotal = (value: number) =>
-  new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-  }).format(value);
+const currencyFormatter = new Intl.NumberFormat('es-CO', {
+  style: 'currency',
+  currency: 'COP',
+  minimumFractionDigits: 0,
+});
+
+const formatTotal = (value: number) => currencyFormatter.format(value);
 
 const formatTimeAgo = (date: Date) => {
   const diff = Math.floor((Date.now() - date.getTime()) / 60000);

@@ -3,11 +3,12 @@ import { prisma } from "@/lib/db";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const restaurant = await prisma.restaurant.findFirst({
-      where: { id: params.id, active: true },
+      where: { id: id, active: true },
       include: {
         categories: {
           orderBy: { order: 'asc' },

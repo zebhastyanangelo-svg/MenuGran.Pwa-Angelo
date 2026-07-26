@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useCartStore } from '@/modules/cart/store';
 
 interface Restaurant {
@@ -35,7 +36,8 @@ const formatPrice = (value: number) =>
     minimumFractionDigits: 0,
   }).format(value);
 
-export default function RestaurantMenuPage({ params }: { params: { slug: string } }) {
+export default function RestaurantMenuPage() {
+  const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [activeCategory, setActiveCategory] = useState('');
@@ -48,7 +50,7 @@ export default function RestaurantMenuPage({ params }: { params: { slug: string 
   useEffect(() => {
     const fetchRestaurant = async () => {
       try {
-        const res = await fetch(`/api/restaurants/${params.slug}`);
+        const res = await fetch(`/api/restaurants/${slug}`);
         const data = await res.json();
         
         if (data.success) {
@@ -67,7 +69,7 @@ export default function RestaurantMenuPage({ params }: { params: { slug: string 
     };
 
     fetchRestaurant();
-  }, [params.slug]);
+  }, [slug]);
 
   const categories = useMemo(() => {
     if (!restaurant) return [];

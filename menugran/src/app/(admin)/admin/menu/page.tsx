@@ -104,12 +104,13 @@ export default function MenuPage() {
     [categories]
   );
 
-  const formatPrice = (value: number) =>
-    new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-    }).format(value);
+  const currencyFormatter = useMemo(() => new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+  }), []);
+
+  const formatPrice = (value: number) => currencyFormatter.format(value);
 
   const openCategoryModal = (category?: Category) => {
     setSelectedCategory(category ?? null);
