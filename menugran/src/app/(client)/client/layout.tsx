@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Home, Package, Search, ShoppingCart, User, X } from 'lucide-react';
-import { useCartStore } from '@/modules/cart/store';
+import { useCartStore, selectTotal } from '@/modules/cart/store';
 
 export default function ClientLayout({
   children,
@@ -12,7 +12,7 @@ export default function ClientLayout({
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const items = useCartStore((state) => state.items);
-  const total = useCartStore((state) => state.total);
+  const total = useCartStore(selectTotal);
   const removeItem = useCartStore((state) => state.removeItem);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const clearCart = useCartStore((state) => state.clearCart);
