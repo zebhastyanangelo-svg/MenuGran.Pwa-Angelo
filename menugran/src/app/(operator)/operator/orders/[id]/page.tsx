@@ -5,7 +5,7 @@ import { ArrowLeft, Phone, MapPin, CreditCard, Printer, Clock } from 'lucide-rea
 import { useParams } from 'next/navigation';
 
 // Tipos basados en la estructura existente
-type OrderStatus = 'pending' | 'confirmed' | 'cooking' | 'ready' | 'delivered' | 'cancelled';
+type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
 
 interface OrderItem {
   id: string;
@@ -29,6 +29,15 @@ interface Rider {
   status: 'available' | 'busy' | 'en_route' | 'delivered';
 }
 
+interface RiderOption {
+  id: string;
+  name: string;
+  phone: string | null;
+  status: 'available' | 'busy' | 'en_route' | 'delivered';
+  deliveredToday: number;
+  avgDeliveryTime: number;
+}
+
 interface Order {
   id: string;
   status: OrderStatus;
@@ -49,7 +58,7 @@ interface Order {
 // Datos de muestra
 const sampleOrder: Order = {
   id: '001',
-  status: 'confirmed',
+  status: 'CONFIRMED',
   customer: {
     name: 'María García',
     phone: '+1234567890',
@@ -96,43 +105,26 @@ export default function OperatorOrderDetailPage() {
   const [riders, setRiders] = useState<RiderOption[]>([]);
   const [updating, setUpdating] = useState(false);
 
-  const fetchOrder = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [orderRes, ridersRes] = await Promise.all([
-        fetch(`/api/operator/orders/${params.id}`),
-        fetch('/api/operator/riders'),
-      ]);
-      if (!orderRes.ok) {
-        setError('Pedido no encontrado');
-        return;
-      }
-      const orderJson = await orderRes.json();
-      setOrder(orderJson.data as Order);
-      if (ridersRes.ok) {
-        const ridersJson = await ridersRes.json();
-        setRiders(ridersJson.data);
-      }
-    } catch {
-      setError('Error al cargar el pedido');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    // Simular fetch del pedido
     const fetchOrder = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        // En una app real, aquí iría la llamada a la API
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        if (id === '001') {
-          setOrder(sampleOrder);
-        } else {
+        const [orderRes, ridersRes] = await Promise.all([
+          fetch(`/api/operator/orders/${id}`),
+          fetch('/api/operator/riders'),
+        ]);
+        if (!orderRes.ok) {
           setError('Pedido no encontrado');
+          return;
         }
-      } catch (err) {
+        const orderJson = await orderRes.json();
+        setOrder(orderJson.data as Order);
+        if (ridersRes.ok) {
+          const ridersJson = await ridersRes.json();
+          setRiders(ridersJson.data);
+        }
+      } catch {
         setError('Error al cargar el pedido');
       } finally {
         setLoading(false);
@@ -179,27 +171,29 @@ export default function OperatorOrderDetailPage() {
     if (pendingAction.action === 'assign_rider' && selectedRider) {
       const rider = sampleRiders.find(r => r.id === selectedRider);
       if (rider) {
-        setOrder({ ...order, status: 'ready', rider: { ...rider, status: 'en_route' } });
+        setOrder({ ...order, status: 'READY', rider: { ...rider, status: 'en_route' } });
       }
     }
   };
 
   const getStatusBadge = (status: OrderStatus) => {
-    const badges = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      confirmed: 'bg-blue-100 text-blue-800',
-      cooking: 'bg-orange-100 text-orange-800',
-      ready: 'bg-green-100 text-green-800',
-      delivered: 'bg-gray-100 text-gray-800',
-      cancelled: 'bg-red-100 text-red-800',
+    const badges: Record<OrderStatus, string> = {
+      PENDING: 'bg-yellow-100 text-yellow-800',
+      CONFIRMED: 'bg-blue-100 text-blue-800',
+      PREPARING: 'bg-orange-100 text-orange-800',
+      READY: 'bg-green-100 text-green-800',
+      DELIVERED: 'bg-gray-100 text-gray-800',
+      CANCELLED: 'bg-red-100 text-red-800',
+      DELIVERING: 'bg-purple-100 text-purple-800',
     };
-    const labels = {
-      pending: 'Pendiente',
-      confirmed: 'Confirmado',
-      cooking: 'Cocinando',
-      ready: 'Listo',
-      delivered: 'Entregado',
-      cancelled: 'Cancelado',
+    const labels: Record<OrderStatus, string> = {
+      PENDING: 'Pendiente',
+      CONFIRMED: 'Confirmado',
+      PREPARING: 'Cocinando',
+      READY: 'Listo',
+      DELIVERED: 'Entregado',
+      CANCELLED: 'Cancelado',
+      DELIVERING: 'En camino',
     };
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${badges[status]}`}>
@@ -212,42 +206,42 @@ export default function OperatorOrderDetailPage() {
     if (!order) return null;
 
     switch (order.status) {
-      case 'pending':
+      case 'PENDING':
         return (
           <div className="flex gap-3">
             <button
-              onClick={() => handleAction('confirm', 'confirmed')}
+              onClick={() => handleAction('confirm', 'CONFIRMED')}
               className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700"
             >
               Confirmar Pedido
             </button>
             <button
-              onClick={() => handleAction('reject', 'cancelled')}
+              onClick={() => handleAction('reject', 'CANCELLED')}
               className="flex-1 border border-red-300 text-red-600 py-3 px-4 rounded-lg font-medium hover:bg-red-50"
             >
               Rechazar
             </button>
           </div>
         );
-      case 'confirmed':
+      case 'CONFIRMED':
         return (
           <button
-            onClick={() => handleAction('start_cooking', 'cooking')}
+            onClick={() => handleAction('start_cooking', 'PREPARING')}
             className="w-full bg-orange-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-orange-700"
           >
             Iniciar Preparación
           </button>
         );
-      case 'cooking':
+      case 'PREPARING':
         return (
           <button
-            onClick={() => handleAction('mark_ready', 'ready')}
+            onClick={() => handleAction('mark_ready', 'READY')}
             className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700"
           >
             Marcar como Listo
           </button>
         );
-      case 'ready':
+      case 'READY':
         return (
           <div className="space-y-3">
             <select
@@ -261,7 +255,7 @@ export default function OperatorOrderDetailPage() {
               ))}
             </select>
             <button
-              onClick={() => handleAction('assign_rider', 'ready')}
+              onClick={() => handleAction('assign_rider', 'READY')}
               disabled={!selectedRider}
               className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -269,7 +263,7 @@ export default function OperatorOrderDetailPage() {
             </button>
             {order.type === 'dine_in' && (
               <button
-                onClick={() => handleAction('deliver_table', 'delivered')}
+                onClick={() => handleAction('deliver_table', 'DELIVERED')}
                 className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700"
               >
                 Entregar en Mesa
@@ -459,52 +453,6 @@ export default function OperatorOrderDetailPage() {
           </div>
         )}
       </div>
-
-      {nextAction && !['DELIVERED', 'CANCELLED'].includes(order.status) && (
-        <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 p-4">
-          {nextAction.action === 'assign_rider' ? (
-            <div className="space-y-3">
-              <select
-                value={selectedRider}
-                onChange={(e) => setSelectedRider(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              >
-                <option value="">Seleccionar repartidor</option>
-                {riders.filter((r) => r.status === 'available').map((rider) => (
-                  <option key={rider.id} value={rider.id}>{rider.name}</option>
-                ))}
-              </select>
-              <button
-                onClick={() => handleAction('assign_rider', 'DELIVERING')}
-                disabled={!selectedRider}
-                className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Asignar Repartidor
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleAction(nextAction.action, nextAction.status)}
-                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700"
-              >
-                {nextAction.action === 'confirm' && 'Confirmar Pedido'}
-                {nextAction.action === 'start_cooking' && 'Iniciar Preparación'}
-                {nextAction.action === 'mark_ready' && 'Marcar como Listo'}
-                {nextAction.action === 'deliver_table' && 'Entregar en Mesa'}
-              </button>
-              {order.status === 'PENDING' && (
-                <button
-                  onClick={() => handleAction('reject', 'CANCELLED')}
-                  className="flex-1 border border-red-300 text-brand-500 py-3 px-4 rounded-lg font-medium hover:bg-brand-50"
-                >
-                  Rechazar
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Modal de Confirmación */}
       {showConfirmModal && pendingAction && (
