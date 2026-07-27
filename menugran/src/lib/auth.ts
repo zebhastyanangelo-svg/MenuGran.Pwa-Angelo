@@ -49,12 +49,16 @@ export async function getUserByCedula(cedula: string) {
   });
 }
 
+import bcrypt from "bcryptjs";
+
 export async function verifyPIN(userId: string, pin: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { pin: true },
   });
-  return user?.pin === pin;
+  if (!user?.pin) return false;
+  const { verifyPin } = await import('@/lib/crypto');
+  return verifyPin(pin, user.pin);
 }
 
 export function canAccessAdminPanel(role: string): boolean {

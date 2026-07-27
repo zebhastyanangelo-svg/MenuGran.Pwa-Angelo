@@ -81,17 +81,24 @@ export default function MenuPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      if (Math.random() < 0.08) {
-        setError('No se pudo cargar los datos. Intenta de nuevo.');
-      } else {
-        setCategories(initialCategories);
-        setDishes(initialDishes);
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch('/api/admin/menu');
+        if (!res.ok) throw new Error('Error al cargar datos');
+        const data = await res.json();
+        if (!cancelled) {
+          setCategories(data.categories ?? []);
+          setDishes(data.dishes ?? []);
+        }
+      } catch {
+        if (!cancelled) setError('No se pudo cargar los datos. Intenta de nuevo.');
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
-    }, 700);
-
-    return () => window.clearTimeout(timer);
+    }
+    load();
+    return () => { cancelled = true; };
   }, []);
 
   const filteredDishes = useMemo(() => {
@@ -447,16 +454,18 @@ export default function MenuPage() {
               </button>
             </div>
             <div className="mt-6 space-y-4">
-              <label className="block text-sm font-semibold text-slate-700">Nombre</label>
+              <label htmlFor="category-name" className="block text-sm font-semibold text-neutral-700">Nombre</label>
               <input
+                id="category-name"
                 value={categoryName}
                 onChange={(event) => setCategoryName(event.target.value)}
                 placeholder="Ej. Postres"
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
               />
 
-              <label className="block text-sm font-semibold text-slate-700">Orden</label>
+              <label htmlFor="category-order" className="block text-sm font-semibold text-neutral-700">Orden</label>
               <input
+                id="category-order"
                 value={categoryOrder}
                 onChange={(event) => setCategoryOrder(event.target.value.replace(/\D/g, ''))}
                 placeholder="1"
@@ -502,16 +511,18 @@ export default function MenuPage() {
             </div>
             <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1fr]">
               <div className="space-y-4">
-                <label className="block text-sm font-semibold text-slate-700">Nombre</label>
+                <label htmlFor="dish-name" className="block text-sm font-semibold text-neutral-700">Nombre</label>
                 <input
+                  id="dish-name"
                   value={dishName}
                   onChange={(event) => setDishName(event.target.value)}
                   placeholder="Nombre del plato"
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
                 />
 
-                <label className="block text-sm font-semibold text-slate-700">Descripción</label>
+                <label htmlFor="dish-description" className="block text-sm font-semibold text-neutral-700">Descripción</label>
                 <textarea
+                  id="dish-description"
                   value={dishDescription}
                   onChange={(event) => setDishDescription(event.target.value)}
                   placeholder="Descripción corta"
@@ -520,16 +531,18 @@ export default function MenuPage() {
               </div>
 
               <div className="space-y-4">
-                <label className="block text-sm font-semibold text-slate-700">Precio</label>
+                <label htmlFor="dish-price" className="block text-sm font-semibold text-neutral-700">Precio</label>
                 <input
+                  id="dish-price"
                   value={dishPrice}
                   onChange={(event) => setDishPrice(event.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="12500"
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
                 />
 
-                <label className="block text-sm font-semibold text-slate-700">Categoría</label>
+                <label htmlFor="dish-category" className="block text-sm font-semibold text-neutral-700">Categoría</label>
                 <select
+                  id="dish-category"
                   value={dishCategoryId}
                   onChange={(event) => setDishCategoryId(event.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
@@ -541,8 +554,9 @@ export default function MenuPage() {
                   ))}
                 </select>
 
-                <label className="block text-sm font-semibold text-slate-700">Imagen</label>
+                <label htmlFor="dish-image" className="block text-sm font-semibold text-neutral-700">Imagen</label>
                 <input
+                  id="dish-image"
                   type="file"
                   accept="image/*"
                   onChange={handleImageChange}

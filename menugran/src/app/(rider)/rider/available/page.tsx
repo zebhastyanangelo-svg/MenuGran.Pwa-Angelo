@@ -71,8 +71,22 @@ export default function RiderAvailableOrdersPage() {
     setError(null);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 900));
-      setOrders(sampleOrders);
+      const res = await fetch('/api/rider/orders?view=available');
+      if (!res.ok) throw new Error('Error al cargar');
+      const data = await res.json();
+      const mapped: AvailableOrder[] = (data.orders || []).map((o: any) => ({
+        id: o.id,
+        restaurant: o.restaurant.name,
+        pickup: o.restaurant.address,
+        delivery: o.deliveryAddress || 'No especificada',
+        total: o.totalPrice,
+        items: o.items.map((i: any) => ({
+          name: i.menuItem.name,
+          qty: i.quantity,
+          price: i.price,
+        })),
+      }));
+      setOrders(mapped);
     } catch (err) {
       setError('Error al cargar los pedidos disponibles');
     } finally {

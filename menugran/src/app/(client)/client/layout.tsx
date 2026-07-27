@@ -59,7 +59,7 @@ export default function ClientLayout({
         </div>
       </header>
 
-      <main className="mx-auto min-h-[calc(100vh-180px)] max-w-6xl px-4 py-6 md:px-6">
+      <main className="mx-auto min-h-[calc(100vh-180px)] max-w-6xl px-4 py-6 pb-24 md:px-6 md:pb-6">
         {children}
       </main>
 

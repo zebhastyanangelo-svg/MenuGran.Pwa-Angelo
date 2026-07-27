@@ -495,3 +495,47 @@ Proyecto privado - Todos los derechos reservados © 2026
 ---
 
 **Versión**: 0.1.0 | **Última actualización**: 29 de Abril, 2026
+
+## 🎨 Mejoras de Diseño Implementadas (Rama Diseño)
+
+### Sistema de Colores Distintivo
+- **Marca**: Amarillo dorado cálido inspirado en especias y ingredientes frescos
+- **Secundario**: Verde hierba vibrante inspirado en vegetales y hierbas frescas
+- **Acento**: Naranja terracota inspirado en cerámica artesanal
+- **Fondo**: Tonos neutros inspirados en materiales naturales
+
+### Tipografía Característica
+- **Display**: Cormorant Garamond para títulos memorables y elegantes
+- **Cuerpo**: Inter var para máxima legibilidad en interfaces
+- **UI**: Inter var para elementos interactivos y controles
+- **Mono**: IBM Plex Mono para códigos y datos técnicos
+
+### Espaciado y Proporciones Naturales
+- Sistema de espaciado basado en la secuencia de Fibonacci (1, 2, 3, 5, 8, 13, 21, 34)
+- Proporciones orgánicas que mejoran la jerarquía visual
+
+### Animaciones Significativas
+- **prep-pulse**: Pulso sutil para indicar preparación activa
+- **delivery-progress**: Barra de progreso para seguimiento de entrega
+- **notify-pulse**: Notificación discreta para actualizaciones
+- Transiciones suaves y significativas entre estados
+
+### Borde y Sombra con Personalidad
+- Bordes orgánicos con radios variables según el elemento
+- Sombras distintivas que añaden profundidad sin sobrecargar
+- Efecto glassmorphism en elementos destacados
+
+## 🚀 Nuevos Componentes
+
+### OrderTimeIndicator
+- Indicador distintivo de tiempo de espera de pedidos
+- Visualización circular de progreso estilo cuenta regresiva
+- Animaciones específicas según el estado del pedido
+- Integración de iconos significativos por estado
+- Barra de progreso adicional para estados de preparación
+
+### OrderCard
+- Tarjeta de pedido mejorada con jerarquía visual clara
+- Uso del OrderTimeIndicator como elemento signature
+- Diseño enfocado en la legibilidad y escaneabilidad
+- Estados visuales distintos según el progreso del pedido

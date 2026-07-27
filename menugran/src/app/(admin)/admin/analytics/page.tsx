@@ -77,17 +77,40 @@ export default function AnalyticsPage() {
   const [period, setPeriod] = useState<PeriodOption>('Hoy');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [data, setData] = useState<AnalyticsData | null>(null);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      if (Math.random() < 0.08) {
-        setError('No se pudo cargar los datos. Intenta de nuevo.');
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch('/api/admin/analytics');
+        if (!res.ok) throw new Error('Error al cargar');
+        const json = await res.json();
+        if (!cancelled) setData(json);
+      } catch {
+        if (!cancelled) setError('No se pudo cargar los datos. Intenta de nuevo.');
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
-    }, 650);
-
-    return () => window.clearTimeout(timer);
+    }
+    load();
+    return () => { cancelled = true; };
   }, []);
+
+  const refetch = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/analytics');
+      if (!res.ok) throw new Error('Error al cargar');
+      const json = await res.json();
+      setData(json);
+    } catch {
+      setError('No se pudo cargar los datos. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const totalSales = useMemo(
     () => salesLast7Days.reduce((sum, item) => sum + item.amount, 0),
@@ -264,12 +287,8 @@ export default function AnalyticsPage() {
           <p className="mt-2">{error}</p>
           <button
             type="button"
-            onClick={() => {
-              setLoading(true);
-              setError('');
-              window.location.reload();
-            }}
-            className="mt-4 rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
+            onClick={refetch}
+            className="btn-primary btn-md mt-4"
           >
             Reintentar
           </button>

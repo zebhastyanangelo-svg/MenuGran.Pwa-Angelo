@@ -92,7 +92,34 @@ export default function OperatorOrderDetailPage() {
   const [elapsedTime, setElapsedTime] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ action: string; newStatus: OrderStatus } | null>(null);
-  const [selectedRider, setSelectedRider] = useState<string>('');
+  const [selectedRider, setSelectedRider] = useState('');
+  const [riders, setRiders] = useState<RiderOption[]>([]);
+  const [updating, setUpdating] = useState(false);
+
+  const fetchOrder = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [orderRes, ridersRes] = await Promise.all([
+        fetch(`/api/operator/orders/${params.id}`),
+        fetch('/api/operator/riders'),
+      ]);
+      if (!orderRes.ok) {
+        setError('Pedido no encontrado');
+        return;
+      }
+      const orderJson = await orderRes.json();
+      setOrder(orderJson.data as Order);
+      if (ridersRes.ok) {
+        const ridersJson = await ridersRes.json();
+        setRiders(ridersJson.data);
+      }
+    } catch {
+      setError('Error al cargar el pedido');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Simular fetch del pedido
@@ -433,10 +460,51 @@ export default function OperatorOrderDetailPage() {
         )}
       </div>
 
-      {/* Acciones Sticky */}
-      <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4">
-        {getActionButtons()}
-      </div>
+      {nextAction && !['DELIVERED', 'CANCELLED'].includes(order.status) && (
+        <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 p-4">
+          {nextAction.action === 'assign_rider' ? (
+            <div className="space-y-3">
+              <select
+                value={selectedRider}
+                onChange={(e) => setSelectedRider(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              >
+                <option value="">Seleccionar repartidor</option>
+                {riders.filter((r) => r.status === 'available').map((rider) => (
+                  <option key={rider.id} value={rider.id}>{rider.name}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => handleAction('assign_rider', 'DELIVERING')}
+                disabled={!selectedRider}
+                className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Asignar Repartidor
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleAction(nextAction.action, nextAction.status)}
+                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700"
+              >
+                {nextAction.action === 'confirm' && 'Confirmar Pedido'}
+                {nextAction.action === 'start_cooking' && 'Iniciar Preparación'}
+                {nextAction.action === 'mark_ready' && 'Marcar como Listo'}
+                {nextAction.action === 'deliver_table' && 'Entregar en Mesa'}
+              </button>
+              {order.status === 'PENDING' && (
+                <button
+                  onClick={() => handleAction('reject', 'CANCELLED')}
+                  className="flex-1 border border-red-300 text-brand-500 py-3 px-4 rounded-lg font-medium hover:bg-brand-50"
+                >
+                  Rechazar
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modal de Confirmación */}
       {showConfirmModal && pendingAction && (
@@ -444,8 +512,8 @@ export default function OperatorOrderDetailPage() {
           <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">¿Estás seguro?</h3>
             <p className="text-gray-600 mb-6">
-              ¿Quieres {pendingAction.action === 'confirm' ? 'confirmar' : 
-                       pendingAction.action === 'reject' ? 'rechazar' : 
+              ¿Quieres {pendingAction.action === 'confirm' ? 'confirmar' :
+                       pendingAction.action === 'reject' ? 'rechazar' :
                        pendingAction.action === 'start_cooking' ? 'iniciar la preparación' :
                        pendingAction.action === 'mark_ready' ? 'marcar como listo' :
                        pendingAction.action === 'assign_rider' ? 'asignar el repartidor' :

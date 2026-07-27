@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface DeliveryRecord {
   id: string;
@@ -58,15 +59,32 @@ const deliverySummary = {
 };
 
 export default function RiderHistoryPage() {
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
   const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([]);
 
   useEffect(() => {
-    const load = async () => {
-      await new Promise(resolve => setTimeout(resolve, 900));
-      setDeliveries(sampleDeliveries);
+    if (!session?.user?.id) {
       setLoading(false);
-    };
+      return;
+    }
+    setLoading(true);
+    fetch(`/api/rider/orders?status=DELIVERED`)
+      .then((res) => res.json())
+      .then((data) => {
+        const mapped: DeliveryRecord[] = (data.orders || []).map((o: any) => ({
+          id: o.id,
+          restaurant: o.restaurant.name,
+          customer: o.client.name,
+          deliveredAt: o.updatedAt || o.createdAt,
+          earnings: o.totalPrice,
+          date: formatDateGroup(o.updatedAt || o.createdAt),
+        }));
+        setDeliveries(mapped);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [session?.user?.id]);
 
     load();
   }, []);

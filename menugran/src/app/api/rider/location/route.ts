@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateRiderLocation, findNearbyRiders } from "@/modules/delivery/services";
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { auth } from "@/lib/auth-next";
+import { withAuth } from "@/lib/api-auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,6 +34,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const session = await withAuth({ requiredRole: ["ADMIN", "OPERATOR", "SUPERADMIN", "RIDER"] });
+  if (session instanceof NextResponse) return session;
+
   try {
     const searchParams = req.nextUrl.searchParams;
     const latitude = searchParams.get("latitude");

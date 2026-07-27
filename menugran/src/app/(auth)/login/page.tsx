@@ -27,32 +27,29 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cedula: cedula.trim(), pin }),
+      const result = await signIn('credentials', {
+        cedula: cedula.trim(),
+        pin,
+        redirect: false,
       });
 
-      const data = await res.json();
-
-      if (!data.success) {
-        setError(data.message || 'Error al iniciar sesion');
+      if (!result?.ok || result?.error) {
+        setError('Cédula o PIN incorrectos');
         setLoading(false);
         return;
       }
 
-      // Guardar usuario en localStorage
-      localStorage.setItem('user', JSON.stringify(data.user));
+      const sessionRes = await fetch('/api/auth/session');
+      const session = await sessionRes.json();
+      const role = session?.user?.role;
 
-      // Redirigir segun rol
-      const role = data.user.role;
       if (role === 'CLIENT') router.push('/client');
+      else if (role === 'RIDER') router.push('/rider');
       else if (role === 'OPERATOR') router.push('/operator');
       else if (role === 'ADMIN') router.push('/admin');
-      else if (role === 'RIDER') router.push('/rider');
       else if (role === 'SUPERADMIN') router.push('/sa');
       else router.push('/client');
-    } catch (err) {
+    } catch {
       setError('Error de conexion');
       setLoading(false);
     }
@@ -72,7 +69,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="cedula" className="block text-sm font-medium text-ink mb-1">
                 Cedula
               </label>
               <div className="relative">
@@ -80,6 +77,7 @@ export default function LoginPage() {
                   <User className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
+                  id="cedula"
                   type="text"
                   value={cedula}
                   onChange={(e) => setCedula(e.target.value.replace(/\D/g, ''))}
@@ -91,7 +89,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="pin" className="block text-sm font-medium text-ink mb-1">
                 PIN
               </label>
               <div className="relative">
@@ -99,6 +97,7 @@ export default function LoginPage() {
                   <Lock className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
+                  id="pin"
                   type="password"
                   maxLength={4}
                   value={pin}

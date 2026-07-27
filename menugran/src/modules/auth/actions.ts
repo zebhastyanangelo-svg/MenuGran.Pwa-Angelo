@@ -3,6 +3,7 @@
 import prisma from '@/lib/db';
 import { getUserByCedula, verifyPIN } from '@/lib/auth';
 import { auth } from '@/app/api/auth/[...nextauth]/route';
+import { hashPin } from '@/lib/crypto';
 
 export async function loginWithCredentials(cedula: string, pin: string) {
   try {
@@ -67,7 +68,7 @@ export async function registerUser(data: {
         email: data.email,
         cedula: data.cedula,
         phone: data.phone,
-        pin: data.pin,
+        pin: await hashPin(data.pin),
         role: data.role ? (data.role as any) : 'CLIENT',
       },
     });

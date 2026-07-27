@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MapPin, Phone, Clock, CheckCircle } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { MapPin, Phone, Clock, CheckCircle, Package } from 'lucide-react';
+import Link from 'next/link';
 
 interface ActiveDelivery {
   id: string;
@@ -15,14 +17,24 @@ interface ActiveDelivery {
 }
 
 export default function ActiveRidersPage() {
-  const [activeDeliveries, setActiveDeliveries] = useState<ActiveDelivery[]>([]);
+  const { data: session } = useSession();
+  const [activeDeliveries, setActiveDeliveries] = useState<ActiveOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock data for now - connect to real API
-    setActiveDeliveries([]);
-    setLoading(false);
-  }, []);
+    if (!session?.user?.id) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    fetch(`/api/rider/orders?status=DELIVERING`)
+      .then((res) => res.json())
+      .then((data) => {
+        setActiveDeliveries(data.orders || []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [session?.user?.id]);
 
   return (
     <div className="space-y-6">

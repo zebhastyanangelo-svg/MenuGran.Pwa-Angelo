@@ -29,28 +29,30 @@ export default function OperatorLoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cedula: cedula.trim(), pin }),
+      const result = await signIn('credentials', {
+        cedula: cedula.trim(),
+        pin,
+        redirect: false,
       });
-      const data = await response.json();
 
-      if (!data.success) {
-        setError(data.message || 'Error al iniciar sesión');
+      if (!result?.ok || result?.error) {
+        setError('Cédula o PIN incorrectos');
         setIsLoading(false);
         return;
       }
 
-      if (data.user.role !== 'OPERATOR') {
+      const sessionRes = await fetch('/api/auth/session');
+      const session = await sessionRes.json();
+      const role = session?.user?.role;
+
+      if (role !== 'OPERATOR') {
         setError('No tienes permisos de operador');
         setIsLoading(false);
         return;
       }
 
-      window.localStorage.setItem('menugran-user', JSON.stringify(data.user));
       router.push('/operator');
-    } catch (err) {
+    } catch {
       setError('Error de conexión. Intenta de nuevo.');
       setIsLoading(false);
     }

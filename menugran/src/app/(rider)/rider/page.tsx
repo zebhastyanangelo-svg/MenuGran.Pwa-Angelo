@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { MapPin, Package, Bike, Clock, User, Phone, CheckCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import { MapPin, Package, Bike, User, Phone, CheckCircle } from 'lucide-react';
 
 const availableOrders = [
   { id: '1', number: '#001', restaurant: 'La Parrilla de Juan', pickupAddress: 'Av. Principal, CC Plaza Mayor', deliveryAddress: 'Calle 72 #10-34', distance: '2.5 km', total: 45000, clientName: 'Juan Perez', clientPhone: '04121111111', items: 3 },
@@ -18,27 +19,65 @@ const todayDeliveries = [
 const formatPrice = (v: number) => '$' + v.toLocaleString('es-CO');
 
 export default function RiderPage() {
+  const { data: session } = useSession();
+  const riderId = session?.user?.id ?? null;
   const [isAvailable, setIsAvailable] = useState(true);
-  const [orders, setOrders] = useState(availableOrders);
-  const [selectedOrder, setSelectedOrder] = useState<typeof availableOrders[0] | null>(null);
-  const [myDeliveries, setMyDeliveries] = useState(todayDeliveries);
+  const [availableOrders, setAvailableOrders] = useState<ApiOrder[]>([]);
+  const [myDeliveries, setMyDeliveries] = useState<ApiOrder[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<ApiOrder | null>(null);
 
-  const handleAcceptOrder = (orderId: string) => {
-    const order = orders.find((o) => o.id === orderId);
-    if (order) {
-      setOrders((prev) => prev.filter((o) => o.id !== orderId));
-      setMyDeliveries((prev) => [
-        {
-          id: order.id,
-          number: order.number,
-          client: order.clientName,
-          total: order.total,
-          time: 'Ahora',
-          status: 'En camino',
-        },
-        ...prev,
-      ]);
-      setSelectedOrder(null);
+  const fetchAvailable = useCallback(async () => {
+    try {
+      const res = await fetch('/api/rider/orders');
+      if (res.ok) {
+        const data = await res.json();
+        setAvailableOrders(data.orders || []);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    fetchAvailable();
+  }, [fetchAvailable]);
+
+  useEffect(() => {
+    if (!riderId) return;
+    const fetchDeliveries = async () => {
+      if (!riderId) return;
+      try {
+        const [deliveringRes, deliveredRes] = await Promise.all([
+          fetch(`/api/rider/orders?status=DELIVERING`),
+          fetch(`/api/rider/orders?status=DELIVERED`),
+        ]);
+        const deliveringData = await deliveringRes.json();
+        const deliveredData = await deliveredRes.json();
+        setMyDeliveries([
+          ...(deliveringData.orders || []),
+          ...(deliveredData.orders || []),
+        ]);
+      } catch {}
+    };
+    fetchDeliveries();
+  }, [riderId]);
+
+  const handleAcceptOrder = async (orderId: string) => {
+    if (!riderId) return;
+    try {
+      const res = await fetch(`/api/rider/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'accept', riderId }),
+      });
+      if (res.ok) {
+        const order = availableOrders.find((o) => o.id === orderId);
+        setAvailableOrders((prev) => prev.filter((o) => o.id !== orderId));
+        if (order) {
+          setMyDeliveries((prev) => [{ ...order, status: 'DELIVERING' }, ...prev]);
+        }
+        setSelectedOrder(null);
+      }
+    } catch {
+      // Ignored: order acceptance failed silently
     }
   };
 
@@ -55,9 +94,11 @@ export default function RiderPage() {
           </div>
           <button
             onClick={() => setIsAvailable(!isAvailable)}
-            className={`relative w-14 h-7 rounded-full transition-colors ${
-              isAvailable ? 'bg-green-500' : 'bg-gray-300'
-            }`}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsAvailable(!isAvailable); } }}
+            className={`relative w-14 h-7 rounded-full transition-colors ${isAvailable ? 'bg-success-500' : 'bg-neutral-300'}`}
+            role="switch"
+            aria-checked={isAvailable}
+            aria-label={isAvailable ? 'Disponible - clic para cambiar a no disponible' : 'No disponible - clic para cambiar a disponible'}
           >
             <span
               className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
@@ -84,7 +125,11 @@ export default function RiderPage() {
                 <div
                   key={order.id}
                   onClick={() => setSelectedOrder(order)}
-                  className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 cursor-pointer hover:border-gray-300 transition"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOrder(order); } }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Ver pedido ${shortId(order.id)} de ${order.restaurant.name}`}
+                  className="bg-white rounded-xl shadow-soft border border-neutral-200 p-4 cursor-pointer hover:border-brand-300 transition focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-bold text-gray-900">{order.number}</span>
@@ -135,7 +180,12 @@ export default function RiderPage() {
       ) : (
         <div className="space-y-2">
           {myDeliveries.map((delivery) => (
-            <div key={delivery.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <div
+              key={delivery.id}
+              className="bg-white rounded-xl shadow-soft border border-neutral-200 p-4"
+              role="article"
+              aria-label={`Entrega ${shortId(delivery.id)} - ${statusLabel(delivery.status)}`}
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">

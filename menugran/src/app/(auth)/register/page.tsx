@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import { UserPlus, User, Phone, Lock } from 'lucide-react';
 import Link from 'next/link';
 
@@ -74,9 +75,14 @@ export default function RegisterPage() {
         return;
       }
 
-      window.localStorage.setItem('menugran-user', JSON.stringify(data.user));
+      await signIn('credentials', {
+        cedula: formData.cedula,
+        pin: formData.pin,
+        redirect: false,
+      });
+
       router.push('/client');
-    } catch (err) {
+    } catch {
       setError('Error de conexión. Intenta de nuevo.');
       setIsLoading(false);
     }

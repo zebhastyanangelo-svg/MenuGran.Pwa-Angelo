@@ -15,6 +15,26 @@ enum UserRole {
   SUPERADMIN
 }
 
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  DELIVERING
+  DELIVERED
+  CANCELLED
+
+  @@map("order_status")
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+
+  @@map("payment_method")
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String
@@ -134,7 +154,7 @@ model MenuItem {
   categoryId   String  @map("category_id")
   name         String
   description  String? @db.Text
-  price        Float
+  price        Decimal @db.Decimal(10, 2)
   image        String?
   available    Boolean @default(true)
   createdAt    DateTime @default(now())
@@ -164,12 +184,12 @@ enum PaymentMethod {
 }
 
 model Order {
-  id              String        @id @default(cuid())
-  clientId        String        @map("client_id")
-  restaurantId    String        @map("restaurant_id")
-  riderId         String?       @map("rider_id")
+  id              String   @id @default(cuid())
+  clientId        String   @map("client_id")
+  restaurantId    String   @map("restaurant_id")
+  riderId         String?  @map("rider_id")
   status          OrderStatus   @default(PENDING)
-  totalPrice      Float         @map("total_price")
+  totalPrice      Decimal       @db.Decimal(10, 2) @map("total_price")
   paymentMethod   PaymentMethod @default(CASH) @map("payment_method")
   reference       String?
   deliveryAddress String?       @map("delivery_address")
@@ -194,7 +214,7 @@ model OrderItem {
   orderId    String   @map("order_id")
   menuItemId String   @map("menu_item_id")
   quantity   Int
-  price      Float
+  price      Decimal  @db.Decimal(10, 2)
   createdAt  DateTime @default(now())
 
   order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)

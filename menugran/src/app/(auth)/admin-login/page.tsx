@@ -26,7 +26,33 @@ export default function AdminLoginPage() {
 
     // Simular envío a API
     setIsLoading(true);
-    setTimeout(() => {
+
+    try {
+      const result = await signIn('credentials', {
+        cedula: cedula.trim(),
+        pin,
+        redirect: false,
+      });
+
+      if (!result?.ok || result?.error) {
+        setError('Cédula o PIN incorrectos');
+        setIsLoading(false);
+        return;
+      }
+
+      const sessionRes = await fetch('/api/auth/session');
+      const session = await sessionRes.json();
+      const role = session?.user?.role;
+
+      if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+        setError('No tienes permisos de administrador');
+        setIsLoading(false);
+        return;
+      }
+
+      router.push('/admin');
+    } catch {
+      setError('Error de conexión. Intenta de nuevo.');
       setIsLoading(false);
       console.log('Login admin exitoso - redirigir a /admin');
       // Aquí iría la redirección: router.push('/admin');
