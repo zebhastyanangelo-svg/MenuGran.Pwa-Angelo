@@ -1,6 +1,23 @@
 import { OrderTimeIndicator } from '@/components/ui/order-time-indicator/OrderTimeIndicator';
 
-export const OrderCard = ({ order }) => {
+interface OrderCardOrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  notes?: string;
+}
+
+interface OrderCardOrder {
+  id: string;
+  status: string;
+  items: OrderCardOrderItem[];
+  totalPrice: number;
+  estimatedMinutes?: number;
+  elapsedMinutes?: number;
+}
+
+export const OrderCard = ({ order }: { order: OrderCardOrder }) => {
   return (
     <div className="bg-white rounded-xl shadow-md border border-neutral-100 hover:shadow-lg transition-shadow duration-300">
       <div className="p-4">
@@ -25,8 +42,8 @@ export const OrderCard = ({ order }) => {
         </div>
 
         <div className="space-y-2">
-          {order.items.map((item, index) => (
-            <div key={index} className="flex items-start space-x-2 text-sm text-neutral-600">
+          {order.items.map((item: OrderCardOrderItem, index: number) => (
+            <div key={item.id} className="flex items-start space-x-2 text-sm text-neutral-600">
               <span className="flex-shrink-0">•</span>
               <span className="flex-1">
                 {item.quantity}x {item.name}
