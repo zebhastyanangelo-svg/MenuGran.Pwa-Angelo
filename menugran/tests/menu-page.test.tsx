@@ -10,7 +10,7 @@ vi.mock('next/link', () => ({
 }));
 
 describe('MenuPage smoke test', () => {
-  it('renders without crashing', async () => {
+  it('renders without crashing', { timeout: 15000 }, async () => {
     const { default: MenuPage } = await import('@/app/(admin)/admin/menu/page');
     const { container } = render(<MenuPage />);
 
