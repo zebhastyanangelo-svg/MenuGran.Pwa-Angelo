@@ -25,8 +25,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Comprobar PIN de forma segura utilizando bcryptjs
-    const isPinValid = await bcrypt.compare(pin, user.pin || "");
+    // Comprobar PIN de forma segura utilizando bcryptjs vía verifyPin
+    const isPinValid = await verifyPin(pin, user.pin || "");
     if (!isPinValid) {
       return NextResponse.json(
         { success: false, message: "PIN incorrecto" },

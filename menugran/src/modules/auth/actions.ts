@@ -2,7 +2,7 @@
 
 import prisma from '@/lib/db';
 import { getUserByCedula, verifyPIN } from '@/lib/auth';
-import { auth } from '@/app/api/auth/[...nextauth]/route';
+import { auth } from '@/lib/auth-next';
 import { hashPin } from '@/lib/crypto';
 
 export async function loginWithCredentials(cedula: string, pin: string) {
