@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import { User, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminLoginPage() {
+  const router = useRouter();
   const [cedula, setCedula] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -54,9 +57,7 @@ export default function AdminLoginPage() {
     } catch {
       setError('Error de conexión. Intenta de nuevo.');
       setIsLoading(false);
-      console.log('Login admin exitoso - redirigir a /admin');
-      // Aquí iría la redirección: router.push('/admin');
-    }, 1500);
+    }
   };
 
   return (

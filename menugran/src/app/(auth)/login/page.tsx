@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Lock, LogIn, Store } from 'lucide-react';
 import Link from 'next/link';
+import { signIn } from 'next-auth/react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,6 +41,7 @@ export default function LoginPage() {
       }
 
       const sessionRes = await fetch('/api/auth/session');
+      if (!sessionRes.ok) throw new Error('Error al obtener la sesión');
       const session = await sessionRes.json();
       const role = session?.user?.role;
 
