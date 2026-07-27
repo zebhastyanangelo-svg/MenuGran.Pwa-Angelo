@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { User, Phone, CreditCard, LogOut, Save } from 'lucide-react';
+import { asAppSession } from '@/lib/session-helpers';
 
 export default function ClientProfilePage() {
-  const { data: session, update } = useSession();
+  const { data: rawSession, update } = useSession();
+  const session = asAppSession(rawSession);
   const user = session?.user;
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -18,28 +20,6 @@ export default function ClientProfilePage() {
       setPhone(user.phone || '');
     }
   }, [user?.id, user?.name, user?.phone]);
-
-  const handleSave = async () => {
-    if (!user?.id) return;
-    setSaving(true);
-    setSaved(false);
-    try {
-      const res = await fetch('/api/auth/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: user.id, name, phone }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        await update();
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
-      }
-    } catch {
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleSave = async () => {
     if (!user?.id) return;
