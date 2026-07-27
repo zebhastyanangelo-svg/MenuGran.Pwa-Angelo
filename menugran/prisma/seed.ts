@@ -97,15 +97,7 @@ async function main() {
   // NEGOCIO
   // ──────────────────────────────────────
 
-  const business = await prisma.business.upsert({
-    where: { slug: "grupo-vargas" },
-    update: {},
-    create: {
-      name: "Grupo Gastronómico Vargas",
-      slug: "grupo-vargas",
-      description: "Los mejores restaurantes de la ciudad",
-    },
-  });
+  // `business` ya está en el scope desde el Promise.all de arriba
 
   // ──────────────────────────────────────
   // RESTAURANTE 1: La Parrilla de Juan
