@@ -9,6 +9,7 @@ import { faCartShopping, faXmark, faMoneyBillWave, faMobileScreen } from '@forta
 import { useCartStore, selectTotal } from '@/modules/cart/store';
 import ServiceTypeModal from '@/modules/cart/ServiceTypeModal';
 import type { ServiceType } from '@/types';
+import { asAppSession } from '@/lib/session-helpers';
 
 interface CartDrawerProps {
   open: boolean;
@@ -17,8 +18,9 @@ interface CartDrawerProps {
 
 export default function CartDrawer({ open, onClose }: CartDrawerProps) {
   const router = useRouter();
-  const { data: session } = useSession();
-  const userId = session?.user?.id;
+  const { data: rawSession } = useSession();
+  const session = asAppSession(rawSession);
+  const userId = session?.user.id;
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'MOBILE_PAYMENT'>('CASH');
   const [showServiceModal, setShowServiceModal] = useState(false);
   const items = useCartStore((state) => state.items);

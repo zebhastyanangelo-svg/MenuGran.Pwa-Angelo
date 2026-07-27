@@ -11,6 +11,8 @@ export type OrderStatus =
   | "DELIVERED" 
   | "CANCELLED";
 
+export type ServiceType = "MESA" | "DELIVERY";
+
 export interface User {
   id: string;
   email: string;
