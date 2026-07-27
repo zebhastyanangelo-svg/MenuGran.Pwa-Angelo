@@ -63,6 +63,9 @@ export async function GET(request: NextRequest) {
             },
           },
         },
+        table: {
+          select: { number: true },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
