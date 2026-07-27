@@ -14,7 +14,7 @@ interface OrderDetail {
   createdAt: string;
   restaurant: { id: string; name: string; address: string; phone?: string };
   client: { id: string; name: string; phone: string };
-  items: Array<{ menuItem: { name: string }; quantity: number; price: number }>;
+  items: Array<{ id?: string; menuItem: { name: string }; quantity: number; price: number }>;
 }
 
 const formatPrice = (v: number) =>
@@ -269,7 +269,7 @@ export default function RiderActiveOrderPage() {
         <h2 className="font-semibold text-ink">Items ({order.items.length})</h2>
         <div className="divide-y divide-neutral-100">
           {order.items.map((item, index) => (
-            <div key={index} className="flex justify-between py-2 text-sm">
+            <div key={item.id ?? index} className="flex justify-between py-2 text-sm">
               <span className="text-ink-light">
                 {item.quantity} x {item.menuItem.name}
               </span>

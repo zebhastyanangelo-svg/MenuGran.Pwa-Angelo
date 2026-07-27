@@ -1,8 +1,10 @@
-declare module "@auth/core/types" {
+type UserRole = "CLIENT" | "OPERATOR" | "ADMIN" | "RIDER" | "SUPERADMIN";
+
+declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      role: "CLIENT" | "OPERATOR" | "ADMIN" | "RIDER" | "SUPERADMIN";
+      role: UserRole;
       name?: string | null;
       email?: string | null;
       image?: string | null;
@@ -13,7 +15,28 @@ declare module "@auth/core/types" {
 
   interface User {
     id: string;
-    role: "CLIENT" | "OPERATOR" | "ADMIN" | "RIDER" | "SUPERADMIN";
+    role: UserRole;
+    phone?: string | null;
+    cedula?: string | null;
+  }
+}
+
+declare module "@auth/core/types" {
+  interface Session {
+    user: {
+      id: string;
+      role: UserRole;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      phone?: string | null;
+      cedula?: string | null;
+    };
+  }
+
+  interface User {
+    id: string;
+    role: UserRole;
     phone?: string | null;
     cedula?: string | null;
   }
@@ -22,7 +45,7 @@ declare module "@auth/core/types" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    role: "CLIENT" | "OPERATOR" | "ADMIN" | "RIDER" | "SUPERADMIN";
+    role: UserRole;
     phone?: string | null;
     cedula?: string | null;
   }

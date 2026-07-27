@@ -3,23 +3,41 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { MapPin, Package, Bike, User, Phone, CheckCircle } from 'lucide-react';
+import { asAppSession } from '@/lib/session-helpers';
 
-const availableOrders = [
-  { id: '1', number: '#001', restaurant: 'La Parrilla de Juan', pickupAddress: 'Av. Principal, CC Plaza Mayor', deliveryAddress: 'Calle 72 #10-34', distance: '2.5 km', total: 45000, clientName: 'Juan Perez', clientPhone: '04121111111', items: 3 },
-  { id: '2', number: '#002', restaurant: 'Arepas Dona Rosa', pickupAddress: 'Calle 72 #10-34, Maracaibo', deliveryAddress: 'Av. Libertador', distance: '1.8 km', total: 35000, clientName: 'Ana Garcia', clientPhone: '04122222222', items: 2 },
-  { id: '3', number: '#003', restaurant: 'Sushi Express', pickupAddress: 'Av. Libertador, CC Sambil', deliveryAddress: 'Carrera 15 #8-20', distance: '3.2 km', total: 62000, clientName: 'Carlos Lopez', clientPhone: '04123333333', items: 4 },
-];
-
-const todayDeliveries = [
-  { id: 'd1', number: '#010', client: 'Maria Diaz', total: 28000, time: '10:30 AM', status: 'Entregado' },
-  { id: 'd2', number: '#011', client: 'Pedro Ramos', total: 55000, time: '12:15 PM', status: 'Entregado' },
-  { id: 'd3', number: '#012', client: 'Rosa Martinez', total: 32000, time: '2:00 PM', status: 'Entregado' },
-];
+interface ApiOrder {
+  id: string;
+  number: string;
+  status: string;
+  total: number;
+  serviceType: string;
+  address: string;
+  deliveryAddress: string;
+  createdAt: string;
+  client: { id: string; name: string; phone: string } | null;
+  restaurant: { id: string; name: string; address: string; phone: string } | null;
+  items: { id?: string; quantity: number; price: number; menuItem: { name: string } }[];
+  distance?: string;
+}
 
 const formatPrice = (v: number) => '$' + v.toLocaleString('es-CO');
+const shortId = (id: string) => id.slice(-6);
+const statusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    PENDING: 'Pendiente',
+    CONFIRMED: 'Confirmado',
+    PREPARING: 'En cocina',
+    READY: 'Listo',
+    DELIVERING: 'En camino',
+    DELIVERED: 'Entregado',
+    CANCELLED: 'Cancelado',
+  };
+  return labels[status] ?? status;
+};
 
 export default function RiderPage() {
-  const { data: session } = useSession();
+  const { data: rawSession } = useSession();
+  const session = asAppSession(rawSession);
   const riderId = session?.user?.id ?? null;
   const [isAvailable, setIsAvailable] = useState(true);
   const [availableOrders, setAvailableOrders] = useState<ApiOrder[]>([]);
@@ -28,7 +46,7 @@ export default function RiderPage() {
 
   const fetchAvailable = useCallback(async () => {
     try {
-      const res = await fetch('/api/rider/orders');
+      const res = await fetch('/api/rider/orders?view=available');
       if (res.ok) {
         const data = await res.json();
         setAvailableOrders(data.orders || []);
@@ -113,7 +131,7 @@ export default function RiderPage() {
       {isAvailable && (
         <>
           <h3 className="text-lg font-semibold text-gray-900 mb-3">Pedidos disponibles</h3>
-          {orders.length === 0 ? (
+          {availableOrders.length === 0 ? (
             <div className="text-center py-8 bg-white rounded-xl border border-gray-100">
               <Package className="h-10 w-10 text-gray-300 mx-auto mb-2" />
               <p className="text-gray-500">No hay pedidos disponibles</p>
@@ -121,14 +139,14 @@ export default function RiderPage() {
             </div>
           ) : (
             <div className="space-y-3 mb-6">
-              {orders.map((order) => (
+              {availableOrders.map((order) => (
                 <div
                   key={order.id}
                   onClick={() => setSelectedOrder(order)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOrder(order); } }}
                   tabIndex={0}
                   role="button"
-                  aria-label={`Ver pedido ${shortId(order.id)} de ${order.restaurant.name}`}
+                  aria-label={`Ver pedido ${shortId(order.id)} de ${order.restaurant?.name ?? 'Restaurante'}`}
                   className="bg-white rounded-xl shadow-soft border border-neutral-200 p-4 cursor-pointer hover:border-brand-300 transition focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -140,7 +158,7 @@ export default function RiderPage() {
                   <div className="flex items-center gap-3 text-sm text-gray-500 mb-2">
                     <div className="flex items-center gap-1">
                       <Package className="h-3.5 w-3.5" />
-                      <span className="truncate max-w-[120px]">{order.restaurant}</span>
+                      <span className="truncate max-w-[120px]">{order.restaurant?.name ?? 'Restaurante'}</span>
                     </div>
                     <span>→</span>
                     <div className="flex items-center gap-1">
@@ -150,7 +168,7 @@ export default function RiderPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 text-xs text-gray-400">
-                      <span>{order.items} items</span>
+                      <span>{order.items.length} items</span>
                       <span>{formatPrice(order.total)}</span>
                     </div>
                     <button
@@ -190,14 +208,14 @@ export default function RiderPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-gray-900 text-sm">{delivery.number}</span>
-                    <span className="text-xs text-gray-400">{delivery.time}</span>
+                    <span className="text-xs text-gray-400">{new Date(delivery.createdAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">{delivery.client}</p>
+                  <p className="text-sm text-gray-500 mt-1">{delivery.client?.name ?? 'Cliente'}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-gray-900">{formatPrice(delivery.total)}</p>
                   <span className="text-xs text-green-600 flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3" /> {delivery.status}
+                    <CheckCircle className="h-3 w-3" /> {statusLabel(delivery.status)}
                   </span>
                 </div>
               </div>
@@ -220,8 +238,8 @@ export default function RiderPage() {
                 <Package className="h-4 w-4" />
                 <div>
                   <p className="text-xs text-gray-400">Recoger en</p>
-                  <p className="font-medium">{selectedOrder.restaurant}</p>
-                  <p className="text-xs text-gray-400">{selectedOrder.pickupAddress}</p>
+                  <p className="font-medium">{selectedOrder.restaurant?.name ?? 'Restaurante'}</p>
+                  <p className="text-xs text-gray-400">{selectedOrder.restaurant?.address ?? ''}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
@@ -234,13 +252,13 @@ export default function RiderPage() {
               <div className="flex items-center gap-2 text-gray-600">
                 <User className="h-4 w-4" />
                 <div>
-                  <p className="font-medium">{selectedOrder.clientName}</p>
-                  <p className="text-xs text-gray-400">{selectedOrder.clientPhone}</p>
+                  <p className="font-medium">{selectedOrder.client?.name ?? 'Cliente'}</p>
+                  <p className="text-xs text-gray-400">{selectedOrder.client?.phone ?? ''}</p>
                 </div>
               </div>
               <div className="flex justify-between pt-3 border-t border-gray-100">
                 <span className="text-gray-500">Items</span>
-                <span className="font-medium">{selectedOrder.items}</span>
+                <span className="font-medium">{selectedOrder.items.length}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Distancia</span>

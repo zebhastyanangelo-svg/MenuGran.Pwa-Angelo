@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { MapPin, Phone, Clock, CheckCircle, Package } from 'lucide-react';
 import Link from 'next/link';
+import { asAppSession } from '@/lib/session-helpers';
 
 interface ActiveDelivery {
   id: string;
@@ -17,8 +18,9 @@ interface ActiveDelivery {
 }
 
 export default function ActiveRidersPage() {
-  const { data: session } = useSession();
-  const [activeDeliveries, setActiveDeliveries] = useState<ActiveOrder[]>([]);
+  const { data: rawSession } = useSession();
+  const session = asAppSession(rawSession);
+  const [activeDeliveries, setActiveDeliveries] = useState<ActiveDelivery[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
