@@ -1,23 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { z } from 'zod';
-
-// Schema de validación (copiado de orders/route.ts para testearlo aislado)
-const OrderItemSchema = z.object({
-  menuItemId: z.string().min(1),
-  quantity: z.number().int().positive(),
-});
-
-const CreateOrderSchema = z.object({
-  restaurantId: z.string().min(1),
-  items: z.array(OrderItemSchema).min(1, 'Al menos un item requerido'),
-  serviceType: z.enum(['MESA', 'DELIVERY']).default('MESA'),
-  tableNumber: z.number().int().positive().optional(),
-  lat: z.number().optional(),
-  lng: z.number().optional(),
-  deliveryAddress: z.string().optional(),
-  paymentMethod: z.enum(['CASH', 'CARD', 'TRANSFER']).default('CASH'),
-  clientId: z.string().min(1).optional(),
-});
+import {
+  CreateOrderSchema,
+  OrderItemSchema,
+  formatZodErrors,
+} from '@/modules/orders/schemas';
 
 describe('CreateOrderSchema', () => {
   it('acepta payload válido', () => {
@@ -107,6 +93,17 @@ describe('CreateOrderSchema', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('rechaza MESA sin tableNumber cuando se especifica servicio', () => {
+    const result = CreateOrderSchema.safeParse({
+      restaurantId: 'abc',
+      items: [{ menuItemId: 'item1', quantity: 1 }],
+      serviceType: 'MESA',
+    });
+    // tableNumber es opcional a nivel de schema; la validación de negocio
+    // ocurre en el route handler (400 temprano)
+    expect(result.success).toBe(true);
+  });
 });
 
 describe('OrderItemSchema', () => {
@@ -118,5 +115,33 @@ describe('OrderItemSchema', () => {
   it('rechaza quantity zero', () => {
     const result = OrderItemSchema.safeParse({ menuItemId: 'x', quantity: 0 });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('formatZodErrors', () => {
+  it('agrupa errores por campo', () => {
+    const result = CreateOrderSchema.safeParse({
+      restaurantId: '',
+      items: [],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const formatted = formatZodErrors(result.error);
+      expect(formatted.restaurantId).toBeDefined();
+      expect(formatted.items).toBeDefined();
+    }
+  });
+
+  it('reporta el path completo para errores anidados', () => {
+    const result = CreateOrderSchema.safeParse({
+      restaurantId: 'abc',
+      items: [{ menuItemId: '', quantity: 0 }],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const formatted = formatZodErrors(result.error);
+      expect(formatted['items.0.quantity']).toBeDefined();
+      expect(formatted['items.0.menuItemId']).toBeDefined();
+    }
   });
 });

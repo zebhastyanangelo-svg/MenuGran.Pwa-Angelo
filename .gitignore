@@ -1,1 +1,29 @@
-.aider*
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+.vercel/
+.vercel_build_output/
+
+# Environment variables
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE configuration
+.vscode/
+.idea/
+
+# Backup files
+*~
+*.swp
+*.swo

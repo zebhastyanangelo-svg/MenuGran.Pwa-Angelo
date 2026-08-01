@@ -300,6 +300,18 @@ npm run type-check      # Verifica tipos TypeScript
 
 ## 👥 Roles y Permisos
 
+### Tabla de acceso por rol
+
+| Rol | Rutas de acceso | Endpoints API | Permisos específicos |
+|-----|-----------------|---------------|----------------------|
+| **Cliente** | `/client/*` | `GET/POST /api/orders` | Ver menú, crear pedidos, historial, seguimiento |
+| **Operador** | `/operator/*` | `GET /api/orders`, `GET/POST /api/orders` | Gestionar cola de pedidos, cambiar estados, asignar repartidor |
+| **Admin** | `/admin/*` | Todas + `/api/admin/*` | CRUD de menú, gestionar staff, reportes, configuración |
+| **Rider** | `/rider/*` | `GET /api/orders`, `POST /api/rider/location` | Ver pedidos asignados, compartir GPS, cambiar estados |
+| **Superadmin** | `/sa/*` | Todas | Gestión multi-negocio, usuarios, reportes globales |
+
+> En `POST /api/orders`, el `clientId` del body solo se respeta para roles privilegiados (ADMIN/OPERATOR/SUPERADMIN); el resto obtiene su id desde la sesión JWT.
+
 ### 🟢 Cliente
 - Ver menú disponible
 - Realizar pedidos

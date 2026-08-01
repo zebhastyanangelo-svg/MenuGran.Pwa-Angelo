@@ -2,28 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { withAuth } from "@/lib/api-auth";
 import { auth } from "@/lib/auth-next";
-import { z } from "zod";
 import { OrderStatus } from "@prisma/client";
 import { ORDER_STATUS } from "@/lib/constants";
-
-// --- Schemas de validación ---
-
-const OrderItemSchema = z.object({
-  menuItemId: z.string().min(1),
-  quantity: z.number().int().positive(),
-});
-
-const CreateOrderSchema = z.object({
-  restaurantId: z.string().min(1),
-  items: z.array(OrderItemSchema).min(1, "Al menos un item requerido"),
-  serviceType: z.enum(["MESA", "DELIVERY"]).default("MESA"),
-  tableNumber: z.number().int().positive().optional(),
-  lat: z.number().optional(),
-  lng: z.number().optional(),
-  deliveryAddress: z.string().optional(),
-  paymentMethod: z.enum(["CASH", "CARD", "TRANSFER"]).default("CASH"),
-  clientId: z.string().min(1).optional(), // solo ADMIN/OPERATOR
-});
+import { CreateOrderSchema, formatZodErrors } from "@/modules/orders/schemas";
 
 // --- Helpers ---
 
@@ -41,7 +22,7 @@ export async function GET(request: NextRequest) {
     const requestedUserId = searchParams.get("userId");
     const role = session.user.role;
 
-    // Fix #2 IDOR: solo roles privilegiados pueden filtrar por otro userId
+    // Seguridad IDOR: solo roles privilegiados pueden filtrar por otro userId
     const userId =
       requestedUserId && isPrivileged(role)
         ? requestedUserId
@@ -120,7 +101,10 @@ export async function POST(req: NextRequest) {
     const parsed = CreateOrderSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Datos invalidos", details: parsed.error.flatten() },
+        {
+          error: "Formato inválido en el body",
+          details: formatZodErrors(parsed.error),
+        },
         { status: 400 }
       );
     }
@@ -137,7 +121,7 @@ export async function POST(req: NextRequest) {
       clientId: requestedClientId,
     } = parsed.data;
 
-    // Fix #1: clientId seguro — nunca del body del cliente normal
+    // Seguridad: clientId nunca proviene del body del cliente normal
     const clientId =
       requestedClientId && isPrivileged(session?.user?.role ?? "")
         ? requestedClientId
@@ -152,7 +136,18 @@ export async function POST(req: NextRequest) {
 
     const service = serviceType;
 
-    // Fix #4: batch query en vez de N+1
+    // Validacion temprana: MESA requiere tableNumber
+    if (service === "MESA" && !tableNumber) {
+      return NextResponse.json(
+        {
+          error: "Formato inválido en el campo 'tableNumber'",
+          details: { tableNumber: ["tableNumber es requerido para servicio MESA"] },
+        },
+        { status: 400 }
+      );
+    }
+
+    // Batch query en vez de N+1
     const menuItems = await prisma.menuItem.findMany({
       where: {
         id: { in: items.map((i) => i.menuItemId) },
@@ -163,7 +158,7 @@ export async function POST(req: NextRequest) {
 
     const itemMap = new Map(menuItems.map((m) => [m.id, m]));
 
-    // Fix #3: precio server-side + validacion de stock
+    // Precio server-side (nunca del body) + validacion de stock
     const orderItems = items
       .map((i) => {
         const m = itemMap.get(i.menuItemId);
@@ -195,12 +190,11 @@ export async function POST(req: NextRequest) {
       0
     );
 
-    // Fix #5: transaccion para consistencia
+    // Transaccion para consistencia
     const order = await prisma.$transaction(async (tx) => {
-      // Mesa
+      // Mesa: reutilizar o crear
       let tableId: string | undefined;
-      if (service === "MESA") {
-        if (!tableNumber) throw new Error("tableNumber_required");
+      if (service === "MESA" && tableNumber) {
         const existing = await tx.table.findUnique({
           where: {
             restaurantId_number: { restaurantId, number: tableNumber },
