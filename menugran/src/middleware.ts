@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth-next';
+import { getToken } from 'next-auth/jwt';
 import { NextRequest, NextResponse } from 'next/server';
 
 const API_401 = NextResponse.json(
@@ -8,9 +8,11 @@ const API_401 = NextResponse.json(
 
 export default async function middleware(req: NextRequest) {
   const { nextUrl } = req;
-  const session = await auth();
-  const isLoggedIn = !!session?.user;
-  const role = session?.user?.role as string | undefined;
+  // getToken es Edge-safe (next-auth/next no lo es). El JWT guarda role/id
+  // directamente via el callback jwt de auth-next.ts.
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const isLoggedIn = !!token?.role;
+  const role = token?.role as string | undefined;
   const pathname = nextUrl.pathname;
 
   const isApi = pathname.startsWith('/api/');

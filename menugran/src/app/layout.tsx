@@ -67,7 +67,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
       </head>
-      <body className={`${inter.variable} bg-cream-50 text-ink font-sans`}>
+      <body className={`${inter.variable} bg-cream-50 text-ink font-sans`} suppressHydrationWarning>
         <SessionProvider>{children}</SessionProvider>
         <SWUpdatePrompt />
       </body>

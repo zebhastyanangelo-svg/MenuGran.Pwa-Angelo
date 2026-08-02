@@ -43,7 +43,9 @@ const nextConfig = {
               "img-src 'self' data: blob: https:",
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
               "style-src 'self' 'unsafe-inline'",
-              "script-src 'self' 'unsafe-eval'",
+              process.env.NODE_ENV === 'production'
+                ? "script-src 'self' 'unsafe-eval'"
+                : "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
               "frame-ancestors 'self'",
             ].join('; '),
           },

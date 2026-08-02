@@ -1,3 +1,5 @@
+export {};
+
 type UserRole = "CLIENT" | "OPERATOR" | "ADMIN" | "RIDER" | "SUPERADMIN";
 
 declare module "next-auth" {

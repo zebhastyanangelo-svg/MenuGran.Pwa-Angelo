@@ -2,7 +2,7 @@
 CREATE TYPE "order_status" AS ENUM ('PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERING', 'DELIVERED', 'CANCELLED');
 
 -- CreateEnum
-CREATE TYPE "payment_method" AS ENUM ('CASH', 'CARD', 'TRANSFER');
+CREATE TYPE "payment_method" AS ENUM ('CASH', 'MOBILE_PAYMENT', 'TRANSFER');
 
 -- AlterTable: status
 ALTER TABLE "orders"

@@ -5,14 +5,15 @@ import { OrderStatus } from "@prisma/client";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await withAuth({ requiredRole: "RIDER" });
   if (session instanceof NextResponse) return session;
+  const { id } = await params;
 
   try {
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         client: {
           select: { id: true, name: true, phone: true },
@@ -43,10 +44,11 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await withAuth({ requiredRole: "RIDER" });
   if (session instanceof NextResponse) return session;
+  const { id } = await params;
 
   try {
     const body = await req.json();
@@ -63,7 +65,7 @@ export async function PATCH(
       }
 
       const order = await prisma.order.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           riderId,
           status: OrderStatus.DELIVERING,
@@ -96,7 +98,7 @@ export async function PATCH(
 
       // Verify the order is assigned to this rider
       const existingOrder = await prisma.order.findUnique({
-        where: { id: params.id },
+        where: { id },
         select: { riderId: true },
       });
 
@@ -105,7 +107,7 @@ export async function PATCH(
       }
 
       const order = await prisma.order.update({
-        where: { id: params.id },
+        where: { id },
         data: { status },
         include: {
           client: {

@@ -29,7 +29,7 @@ enum OrderStatus {
 
 enum PaymentMethod {
   CASH
-  CARD
+  MOBILE_PAYMENT
   TRANSFER
 
   @@map("payment_method")
@@ -131,6 +131,7 @@ model Restaurant {
   categories MenuCategory[]
   menuItems  MenuItem[]
   orders     Order[]
+  tables     Table[]
 
   @@map("restaurants")
 }
@@ -167,45 +168,56 @@ model MenuItem {
   @@map("menu_items")
 }
 
-enum OrderStatus {
-  PENDING
-  CONFIRMED
-  PREPARING
-  READY
-  DELIVERING
-  DELIVERED
-  CANCELLED
+enum ServiceType {
+  MESA
+  DELIVERY
+
+  @@map("service_type")
 }
 
-enum PaymentMethod {
-  CASH
-  MOBILE_PAYMENT
-  TRANSFER
+model Table {
+  id           String   @id @default(cuid())
+  restaurantId String   @map("restaurant_id")
+  number       Int
+  qrCode       String?  @map("qr_code")
+  createdAt    DateTime @default(now())
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orders     Order[]
+
+  @@unique([restaurantId, number])
+  @@map("tables")
 }
 
 model Order {
-  id              String   @id @default(cuid())
-  clientId        String   @map("client_id")
-  restaurantId    String   @map("restaurant_id")
-  riderId         String?  @map("rider_id")
-  status          OrderStatus   @default(PENDING)
-  totalPrice      Decimal       @db.Decimal(10, 2) @map("total_price")
-  paymentMethod   PaymentMethod @default(CASH) @map("payment_method")
+  id              String         @id @default(cuid())
+  clientId        String         @map("client_id")
+  restaurantId    String         @map("restaurant_id")
+  riderId         String?        @map("rider_id")
+  status          OrderStatus    @default(PENDING)
+  totalPrice      Decimal        @db.Decimal(10, 2) @map("total_price")
+  paymentMethod   PaymentMethod  @default(CASH) @map("payment_method")
   reference       String?
-  deliveryAddress String?       @map("delivery_address")
+  deliveryAddress String?        @map("delivery_address")
   lat             Float?
   lng             Float?
-  notes           String?       @db.Text
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
+  notes           String?        @db.Text
+  serviceType     ServiceType    @default(MESA) @map("service_type")
+  tableId         String?        @map("table_id")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
 
   client     User        @relation("ClientOrders", fields: [clientId], references: [id])
   restaurant Restaurant  @relation(fields: [restaurantId], references: [id])
   rider      User?       @relation("RiderOrders", fields: [riderId], references: [id])
+  table      Table?      @relation(fields: [tableId], references: [id], onDelete: SetNull)
   items      OrderItem[]
   locations  Location[]
 
-  @@index([restaurantId, status, createdAt])
+  @@index([clientId, createdAt])
+  @@index([riderId, status])
+  @@index([restaurantId, serviceType, status, createdAt])
+  @@index([serviceType, status])
   @@map("orders")
 }
 

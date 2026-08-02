@@ -145,13 +145,31 @@ const getNextStatus = (status: OrderStatus): OrderStatus => {
   return 'ready';
 };
 
-const activeStatuses: OrderStatus[] = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY'];
+const activeStatuses: OrderStatus[] = ['pending', 'confirmed', 'cooking', 'ready'];
+
+type Order = (typeof sampleOrders)[number];
 
 export default function OperatorOrdersPage() {
+  const playNotificationSound = () => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    } catch {
+      // Audio no disponible: ignorar
+    }
+  };
+
   const [orders, setOrders] = useState(sampleOrders);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterOption>('Todos');
-  const [activeColumn, setActiveColumn] = useState<OrderStatus>('PENDING');
+  const [activeColumn, setActiveColumn] = useState<OrderStatus>('pending');
   const [elapsedTimes, setElapsedTimes] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -247,7 +265,7 @@ export default function OperatorOrdersPage() {
   const renderCard = (order: Order) => {
     const timeAgo = elapsedTimes[order.id] || 'Hace segundos';
     const isLate = order.status === 'PENDING' && (elapsedTimes[order.id] ? parseInt(elapsedTimes[order.id]) > 15 : false);
-    const isDelivery = order.serviceType === 'DELIVERY';
+    const isDelivery = order.type === 'delivery';
     return (
       <Link
         key={order.id}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { TrendingUp, Package, LayoutDashboard } from 'lucide-react';
+import { TrendingUp, Package, LayoutDashboard, Store } from 'lucide-react';
 
 export default function AdminDashboard() {
   const metrics = [

@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -118,6 +118,10 @@ export const OrderTimeIndicator: React.FC<OrderTimeIndicatorProps> = ({
 
   const { width, height, fontSize } = sizeConfig[size];
 
+// Tailwind v3 permite CSS vars custom via `--x` en el objeto de estilos;
+// CSSProperties no las tipa, por eso el cast.
+const withCssVars = (vars: Record<string, string>) => vars as CSSProperties;
+
   return (
     <div className={cn(
       "flex items-center space-x-2",
@@ -129,13 +133,13 @@ export const OrderTimeIndicator: React.FC<OrderTimeIndicatorProps> = ({
         "rounded-full",
         pulsing ? "animate-prep-pulse" : "",
         "transition-all duration-300"
-      )} style={{ '--size': `${width}px` }}>
+      )} style={withCssVars({ '--size': `${width}px` })}>
         <div className={cn(
           "absolute inset-0",
           "rounded-full",
           "bg-[var(--color)]",
           "opacity-20"
-        )} style={{ '--color': `hsl(var(--${getIndicatorColor()}))` }}></div>
+        )} style={withCssVars({ '--color': `hsl(var(--${getIndicatorColor()}))` })}></div>
         
         <div className={cn(
           "absolute inset-0",
@@ -143,10 +147,10 @@ export const OrderTimeIndicator: React.FC<OrderTimeIndicatorProps> = ({
           "bg-[var(--color)]",
           "opacity-100",
           "transition-all duration-500"
-        )} style={{
+        )} style={withCssVars({
           '--color': `hsl(var(--${getIndicatorColor()}))`,
           '--progress': `${progress * 100}%`
-        }}>
+        })}>
           <div className="absolute inset-0 rounded-full" 
             style={{
               background: `conic-gradient(
@@ -161,7 +165,7 @@ export const OrderTimeIndicator: React.FC<OrderTimeIndicatorProps> = ({
         <div className={cn(
           "flex h-[var(--size)] w-[var(--size)] items-center justify-center",
           "text-[var(--size)] font-bold"
-        )} style={{ '--size': `${width}px` }}>
+        )} style={withCssVars({ '--size': `${width}px` })}>
           {getIcon()}
         </div>
       </div>
@@ -180,10 +184,10 @@ export const OrderTimeIndicator: React.FC<OrderTimeIndicatorProps> = ({
               <div className={cn(
                 "h-1 rounded bg-[var(--color)] transition-all duration-500",
                 pulsing ? "animate-prep-pulse" : ""
-              )} style={{
+              )} style={withCssVars({
                 '--color': `hsl(var(--${getIndicatorColor()}))`,
                 'width': `${progress * 100}%`
-              }}></div>
+              })}></div>
             </div>
           )}
         </div>
@@ -191,16 +195,3 @@ export const OrderTimeIndicator: React.FC<OrderTimeIndicatorProps> = ({
     </div>
   );
 };
-
-// Añadir tipos de color a Tailwind
-declare module 'tailwindcss/types/config' {
-  interface ThemeConfig {
-    colors: {
-      brand: Record<string, string>;
-      herb: Record<string, string>;
-      ceramic: Record<string, string>;
-      base: Record<string, string>;
-      // ... otros colores existentes
-    };
-  }
-}

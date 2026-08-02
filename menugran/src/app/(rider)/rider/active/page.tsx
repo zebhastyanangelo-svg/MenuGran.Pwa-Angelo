@@ -54,7 +54,7 @@ export default function ActiveRidersPage() {
           <MapPin className="mx-auto mb-4 text-blue-600" size={32} />
           <p className="text-gray-700 font-medium">No hay entregas activas</p>
           <p className="text-gray-500 text-sm mt-2">
-            Dirígete a "Disponibles" para buscar entregas
+            Dirígete a &quot;Disponibles&quot; para buscar entregas
           </p>
         </div>
       ) : (

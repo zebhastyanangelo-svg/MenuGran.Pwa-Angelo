@@ -73,6 +73,13 @@ const currencyFormatter = new Intl.NumberFormat('es-CO', {
 
 const formatCurrency = (value: number) => currencyFormatter.format(value);
 
+type AnalyticsData = {
+  metrics: { salesToday: number; ordersToday: number; avgTicket: number; topDish: string };
+  salesByDay: { day: string; amount: number }[];
+  paymentMethods: { label: string; value: number; color: string }[];
+  topDishes: { rank: number; name: string; category: string; times: number; total: number }[];
+};
+
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState<PeriodOption>('Hoy');
   const [loading, setLoading] = useState(true);

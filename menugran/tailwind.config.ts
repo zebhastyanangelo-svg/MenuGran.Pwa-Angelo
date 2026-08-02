@@ -69,6 +69,7 @@ const config: Config = {
           50: "#fef2f2",
           500: "#ef4444",
           600: "#dc2626",
+          700: "#b91c1c",
         },
         warning: {
           50: "#fffbeb",
@@ -140,17 +141,6 @@ const config: Config = {
       },
       spacing: {
         safe: "var(--sal)",
-      },
-      fontSize: {
-        xs: ["12px", "16px"],
-        sm: ["14px", "20px"],
-        base: ["16px", "24px"],
-        lg: ["18px", "28px"],
-        xl: ["20px", "28px"],
-      },
-      borderRadius: {
-        lg: "12px",
-        xl: "16px",
       },
       height: {
         "safe-bottom": "calc(100% + var(--sab))",

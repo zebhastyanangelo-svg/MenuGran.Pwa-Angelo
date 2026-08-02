@@ -5,14 +5,15 @@ import { OrderStatus, ServiceType } from "@prisma/client";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await withAuth({ requiredRole: ["OPERATOR", "ADMIN", "SUPERADMIN"] });
   if (session instanceof NextResponse) return session;
+  const { id } = await params;
 
   try {
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         client: {
           select: { id: true, name: true, phone: true },
@@ -70,10 +71,11 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await withAuth({ requiredRole: ["OPERATOR", "ADMIN", "SUPERADMIN"] });
   if (session instanceof NextResponse) return session;
+  const { id } = await params;
 
   try {
     const body = await req.json();
@@ -84,7 +86,7 @@ export async function PATCH(
       : undefined;
 
     const current = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { serviceType: true },
     });
 
@@ -101,7 +103,7 @@ export async function PATCH(
     if (riderId) updateData.riderId = riderId;
 
     const order = await prisma.order.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         client: {

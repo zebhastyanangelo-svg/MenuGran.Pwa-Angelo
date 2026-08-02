@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["@dietrichgebert/ponytail"],
+  "mcp": {
+    "code-review-graph": {
+      "type": "local",
+      "command": [
+        "/home/angelo/.local/share/pipx/venvs/code-review-graph/bin/python",
+        "-m",
+        "code_review_graph",
+        "serve",
+        "--repo",
+        "/home/angelo/Escritorio/MenuGran.Pwa-Angelo"
+      ]
+    }
+  }
+}

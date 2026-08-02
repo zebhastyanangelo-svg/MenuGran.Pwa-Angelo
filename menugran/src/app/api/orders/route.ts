@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { withAuth } from "@/lib/api-auth";
 import { auth } from "@/lib/auth-next";
-import { OrderStatus } from "@prisma/client";
+import { OrderStatus, Prisma } from "@prisma/client";
 import { ORDER_STATUS } from "@/lib/constants";
 import { CreateOrderSchema, formatZodErrors } from "@/modules/orders/schemas";
 
@@ -169,7 +169,11 @@ export async function POST(req: NextRequest) {
           price: m.price,
         };
       })
-      .filter(Boolean) as { menuItemId: string; quantity: number; price: any }[];
+      .filter(Boolean) as {
+      menuItemId: string;
+      quantity: number;
+      price: Prisma.Decimal | number;
+    }[];
 
     if (orderItems.length !== items.length) {
       const missing = items.filter((i) => {

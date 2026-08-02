@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api-auth';
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await withAuth({ requiredRole: "SUPERADMIN" });
   if (session instanceof NextResponse) return session;
+  const { id } = await params;
 
   try {
-    const { id } = params;
     const body = await req.json();
 
     const existing = await prisma.business.findUnique({ where: { id } });
@@ -38,13 +38,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await withAuth({ requiredRole: "SUPERADMIN" });
   if (session instanceof NextResponse) return session;
+  const { id } = await params;
 
   try {
-    const { id } = params;
-
     const existing = await prisma.business.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 });

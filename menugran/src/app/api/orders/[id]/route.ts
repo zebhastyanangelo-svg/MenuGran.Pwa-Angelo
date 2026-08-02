@@ -10,14 +10,15 @@ const isPrivileged = (role: string) =>
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await withAuth();
   if (session instanceof NextResponse) return session;
+  const { id } = await params;
 
   try {
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         client: {
           select: { id: true, name: true, phone: true },
@@ -72,10 +73,11 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await withAuth({ requiredRole: ["ADMIN", "OPERATOR", "SUPERADMIN", "RIDER"] });
   if (session instanceof NextResponse) return session;
+  const { id } = await params;
 
   try {
     const body = await req.json();
@@ -91,7 +93,7 @@ export async function PATCH(
 
     // Verify order exists and user has access
     const existing = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { id: true, clientId: true, riderId: true, restaurantId: true },
     });
 
@@ -114,7 +116,7 @@ export async function PATCH(
     }
 
     const order = await prisma.order.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: validStatus },
       include: {
         client: {

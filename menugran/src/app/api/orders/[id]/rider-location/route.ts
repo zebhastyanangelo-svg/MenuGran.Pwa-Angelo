@@ -4,14 +4,15 @@ import { withAuth } from "@/lib/api-auth";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await withAuth();
   if (session instanceof NextResponse) return session;
+  const { id } = await params;
 
   try {
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { riderId: true, serviceType: true },
     });
 

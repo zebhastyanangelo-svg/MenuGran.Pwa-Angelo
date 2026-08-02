@@ -43,6 +43,12 @@ export default function OperatorRidersPage() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedRider, setSelectedRider] = useState<Rider | null>(null);
   const [selectedOrder, setSelectedOrder] = useState('');
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -264,7 +270,7 @@ export default function OperatorRidersPage() {
                         <div className="text-right">
                           <p className="font-medium text-gray-900">{formatPrice(order.total)}</p>
                           <p className="text-xs text-gray-400">
-                            Hace {Math.floor((Date.now() - order.createdAt.getTime()) / 60000)} min
+                            Hace {Math.floor((now - order.createdAt.getTime()) / 60000)} min
                           </p>
                         </div>
                       </div>
