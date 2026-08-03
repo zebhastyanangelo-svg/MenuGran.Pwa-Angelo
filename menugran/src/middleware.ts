@@ -45,27 +45,32 @@ export default async function middleware(req: NextRequest) {
 
   // Superadmin solo en /superadmin o /sa
   if (pathname.startsWith('/superadmin') || pathname.startsWith('/sa')) {
-    if (role !== 'SUPERADMIN') return deny();
+    if (role !== 'SUPER_ADMIN') return deny();
   }
 
   // Admin en /admin
   if (pathname.startsWith('/admin')) {
-    if (role !== 'ADMIN' && role !== 'SUPERADMIN') return deny();
+    if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') return deny();
   }
 
   // Operator en /operator
   if (pathname.startsWith('/operator')) {
-    if (role !== 'OPERATOR' && role !== 'ADMIN' && role !== 'SUPERADMIN') return deny();
+    if (role !== 'EMPLOYEE' && role !== 'ADMIN' && role !== 'SUPER_ADMIN') return deny();
   }
 
   // Rider en /rider o /api/rider
   if (pathname.startsWith('/rider') || pathname.startsWith('/api/rider')) {
-    if (role !== 'RIDER') return deny();
+    if (role !== 'EMPLOYEE') return deny();
+  }
+
+  // Merchant en /merchant-portal
+  if (pathname.startsWith('/merchant-portal')) {
+    if (role !== 'MERCHANT' && role !== 'ADMIN' && role !== 'SUPER_ADMIN') return deny();
   }
 
   // Client en /client o GET /api/orders
   if (pathname.startsWith('/client') || (pathname.startsWith('/api/orders') && req.method === 'GET')) {
-    if (role !== 'CLIENT' && role !== 'ADMIN' && role !== 'OPERATOR' && role !== 'SUPERADMIN') return deny();
+    if (role !== 'CUSTOMER' && role !== 'ADMIN' && role !== 'EMPLOYEE' && role !== 'SUPER_ADMIN') return deny();
   }
 
   return NextResponse.next();

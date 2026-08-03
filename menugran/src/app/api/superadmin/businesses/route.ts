@@ -4,7 +4,7 @@ import { OrderStatus } from '@prisma/client';
 import { withAuth } from '@/lib/api-auth';
 
 export async function GET() {
-  const session = await withAuth({ requiredRole: "SUPERADMIN" });
+  const session = await withAuth({ requiredRole: "SUPER_ADMIN" });
   if (session instanceof NextResponse) return session;
 
   try {
@@ -42,7 +42,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await withAuth({ requiredRole: "SUPERADMIN" });
+  const session = await withAuth({ requiredRole: "SUPER_ADMIN" });
   if (session instanceof NextResponse) return session;
 
   try {

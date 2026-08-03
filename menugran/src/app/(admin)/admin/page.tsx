@@ -1,9 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { TrendingUp, Package, LayoutDashboard, Store } from 'lucide-react';
+import { TrendingUp, Package, LayoutDashboard, Store, Users } from 'lucide-react';
 
 export default function AdminDashboard() {
+  const globalMetrics = [
+    { label: 'Usuarios Activos', value: '4,820', icon: Users, color: 'text-red-600' },
+    { label: 'Comercios Registrados', value: '356', icon: Store, color: 'text-green-600' },
+    { label: 'Tráfico Hoy', value: '3,420', icon: TrendingUp, color: 'text-blue-600' },
+  ];
+
   const metrics = [
     { label: 'Ventas Hoy', value: '$1,250,000', icon: TrendingUp, color: 'text-green-600' },
     { label: 'Pedidos Hoy', value: '24', icon: Package, color: 'text-blue-600' },
@@ -31,7 +37,22 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">Bienvenido, Admin</h1>
+      <p className="text-gray-500 mb-6">Resumen global de la plataforma MenuGran</p>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        {globalMetrics.map((metric) => (
+          <div key={metric.label} className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">{metric.label}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{metric.value}</p>
+              </div>
+              <metric.icon className={`h-8 w-8 ${metric.color}`} />
+            </div>
+          </div>
+        ))}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {metrics.map((metric) => (

@@ -27,7 +27,7 @@ const validBody = {
   items: [{ menuItemId: 'm1', quantity: 2 }],
 };
 
-const clientSession = { user: { id: 'client-1', role: 'CLIENT', name: 'X' } };
+const clientSession = { user: { id: 'client-1', role: 'CUSTOMER', name: 'X' } };
 const adminSession = { user: { id: 'admin-1', role: 'ADMIN', name: 'X' } };
 
 function jsonRequest(

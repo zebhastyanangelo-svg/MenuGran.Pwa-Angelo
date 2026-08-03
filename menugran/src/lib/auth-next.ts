@@ -20,9 +20,9 @@ interface AuthOptions {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const nextAuthCallable = NextAuth as unknown as (options: AuthOptions) => (req: NextApiRequest, res: NextApiResponse) => unknown;
 import { prisma } from '@/lib/db';
-import { verifyPin } from '@/lib/crypto';
+import { verifyPin, verifyPassword } from '@/lib/crypto';
 
-type Role = 'CLIENT' | 'ADMIN' | 'OPERATOR' | 'RIDER' | 'SUPERADMIN';
+type Role = 'CUSTOMER' | 'MERCHANT' | 'ADMIN' | 'EMPLOYEE' | 'SUPER_ADMIN';
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -30,29 +30,51 @@ export const authOptions: AuthOptions = {
       id: 'credentials',
       name: 'Credentials',
       credentials: {
+        email: { label: 'Email', type: 'text' },
+        password: { label: 'Contraseña', type: 'password' },
         cedula: { label: 'Cédula', type: 'text' },
         pin: { label: 'PIN', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.cedula || !credentials?.pin) return null;
+        if (!credentials) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { cedula: credentials.cedula as string },
-        });
+        // Staff legacy: cédula + PIN
+        if (credentials.cedula && credentials.pin) {
+          const user = await prisma.user.findUnique({
+            where: { cedula: credentials.cedula as string },
+          });
+          if (!user || !user.active) return null;
+          const pinOk = await verifyPin(credentials.pin as string, user.pin || '');
+          if (!pinOk) return null;
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role as Role,
+            cedula: user.cedula,
+            phone: user.phone,
+          };
+        }
 
-        if (!user || !user.active) return null;
+        // Cliente / Comercio: email + contraseña
+        if (credentials.email && credentials.password) {
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email as string },
+          });
+          if (!user || !user.active) return null;
+          const pwdOk = await verifyPassword(credentials.password as string, user.password || '');
+          if (!pwdOk) return null;
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role as Role,
+            cedula: user.cedula,
+            phone: user.phone,
+          };
+        }
 
-        const pinOk = await verifyPin(credentials.pin as string, user.pin || '');
-        if (!pinOk) return null;
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role as Role,
-          cedula: user.cedula,
-          phone: user.phone,
-        };
+        return null;
       },
     }),
   ],
@@ -61,7 +83,7 @@ export const authOptions: AuthOptions = {
     async jwt({ token, user }: { token: Record<string, unknown>; user?: Record<string, unknown> }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as { role: Role }).role || 'CLIENT';
+        token.role = (user as { role: Role }).role || 'CUSTOMER';
         token.cedula = (user as { cedula: string | null }).cedula ?? null;
         token.phone = (user as { phone: string | null }).phone ?? null;
       }
@@ -71,7 +93,7 @@ export const authOptions: AuthOptions = {
       if ((session as { user?: unknown }).user) {
         const u = (session as { user: Record<string, unknown> }).user;
         u.id = token.id as string;
-        u.role = (token.role as Role) || 'CLIENT';
+        u.role = (token.role as Role) || 'CUSTOMER';
         u.cedula = (token.cedula as string | null) ?? null;
         u.phone = (token.phone as string | null) ?? null;
       }

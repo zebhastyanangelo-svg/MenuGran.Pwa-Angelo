@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth-next";
 import { NextResponse } from "next/server";
 
-type Role = "CLIENT" | "ADMIN" | "OPERATOR" | "RIDER" | "SUPERADMIN";
+type Role = "CUSTOMER" | "ADMIN" | "EMPLOYEE" | "SUPER_ADMIN";
 
 interface WithAuthOptions {
   requiredRole?: Role | Role[];

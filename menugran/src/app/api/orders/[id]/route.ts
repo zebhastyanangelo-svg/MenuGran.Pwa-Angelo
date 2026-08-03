@@ -3,10 +3,10 @@ import { prisma } from "@/lib/db";
 import { withAuth } from "@/lib/api-auth";
 import { OrderStatus } from "@prisma/client";
 
-type Role = "CLIENT" | "ADMIN" | "OPERATOR" | "RIDER" | "SUPERADMIN";
+type Role = "CUSTOMER" | "ADMIN" | "EMPLOYEE" | "SUPER_ADMIN";
 
 const isPrivileged = (role: string) =>
-  role === "ADMIN" || role === "OPERATOR" || role === "SUPERADMIN";
+  role === "ADMIN" || role === "EMPLOYEE" || role === "SUPER_ADMIN";
 
 export async function GET(
   req: NextRequest,
@@ -48,14 +48,14 @@ export async function GET(
 
     // IDOR fix: clients can only see their own orders
     const role = session.user.role as Role;
-    if (!isPrivileged(role) && role !== "RIDER") {
+    if (!isPrivileged(role)) {
       if (order.clientId !== session.user.id) {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });
       }
     }
 
     // Riders can only see orders assigned to them
-    if (role === "RIDER" && order.riderId !== session.user.id) {
+    if (role === "EMPLOYEE" && order.riderId !== session.user.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
@@ -75,7 +75,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await withAuth({ requiredRole: ["ADMIN", "OPERATOR", "SUPERADMIN", "RIDER"] });
+  const session = await withAuth({ requiredRole: ["ADMIN", "EMPLOYEE", "SUPER_ADMIN", "EMPLOYEE"] });
   if (session instanceof NextResponse) return session;
   const { id } = await params;
 
@@ -104,7 +104,7 @@ export async function PATCH(
     const role = session.user.role as Role;
 
     // Riders can only update their own assigned orders
-    if (role === "RIDER") {
+    if (role === "EMPLOYEE") {
       if (existing.riderId !== session.user.id) {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });
       }

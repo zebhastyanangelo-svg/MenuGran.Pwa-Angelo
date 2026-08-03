@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Lock, LogIn, Store } from 'lucide-react';
+import { Mail, Lock, LogIn, Store } from 'lucide-react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [cedula, setCedula] = useState('');
-  const [pin, setPin] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -17,25 +17,25 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
 
-    if (!cedula.trim()) {
-      setError('Ingresa tu cedula');
+    if (!email.trim()) {
+      setError('Ingresa tu email');
       return;
     }
-    if (pin.length !== 4) {
-      setError('El PIN debe tener 4 digitos');
+    if (!password) {
+      setError('Ingresa tu contraseña');
       return;
     }
 
     setLoading(true);
     try {
       const result = await signIn('credentials', {
-        cedula: cedula.trim(),
-        pin,
+        email: email.trim().toLowerCase(),
+        password,
         redirect: false,
       });
 
       if (!result?.ok || result?.error) {
-        setError('Cédula o PIN incorrectos');
+        setError('Email o contraseña incorrectos');
         setLoading(false);
         return;
       }
@@ -45,12 +45,10 @@ export default function LoginPage() {
       const session = await sessionRes.json();
       const role = session?.user?.role;
 
-      if (role === 'CLIENT') router.push('/client');
-      else if (role === 'RIDER') router.push('/rider');
-      else if (role === 'OPERATOR') router.push('/operator');
-      else if (role === 'ADMIN') router.push('/admin');
-      else if (role === 'SUPERADMIN') router.push('/sa');
-      else router.push('/client');
+      if (role === 'SUPER_ADMIN' || role === 'ADMIN') router.push('/admin');
+      else if (role === 'MERCHANT' || role === 'EMPLOYEE') router.push('/merchant-portal/dashboard');
+      else if (role === 'CUSTOMER') router.push('/');
+      else router.push('/');
     } catch {
       setError('Error de conexion');
       setLoading(false);
@@ -71,41 +69,40 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="cedula" className="block text-sm font-medium text-ink mb-1">
-                Cedula
+              <label htmlFor="email" className="block text-sm font-medium text-ink mb-1">
+                Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                  <User className="h-5 w-5 text-gray-400" />
+                  <Mail className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="cedula"
-                  type="text"
-                  value={cedula}
-                  onChange={(e) => setCedula(e.target.value.replace(/\D/g, ''))}
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  placeholder="Ingresa tu cedula"
+                  placeholder="tucorreo@ejemplo.com"
                   disabled={loading}
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="pin" className="block text-sm font-medium text-ink mb-1">
-                PIN
+              <label htmlFor="password" className="block text-sm font-medium text-ink mb-1">
+                Contraseña
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
                   <Lock className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="pin"
+                  id="password"
                   type="password"
-                  maxLength={4}
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  placeholder="****"
+                  placeholder="••••••••"
                   disabled={loading}
                 />
               </div>
@@ -128,10 +125,6 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center space-y-3">
-            <Link href="/forgot-pin" className="text-sm text-gray-500 hover:text-red-600">
-              Olvidaste tu PIN?
-            </Link>
-
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200"></div>
@@ -147,6 +140,13 @@ export default function LoginPage() {
             >
               Crear cuenta nueva
             </Link>
+
+            <div className="text-sm text-gray-500 space-x-2">
+              <span>¿Personal del negocio?</span>
+              <Link href="/admin-login" className="text-red-600 hover:underline">
+                Acceso con cédula
+              </Link>
+            </div>
           </div>
         </div>
       </div>

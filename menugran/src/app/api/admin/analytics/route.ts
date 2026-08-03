@@ -28,7 +28,7 @@ const PERIOD_DAYS: Record<Period, number> = {
 };
 
 export async function GET(req: NextRequest) {
-  const session = await withAuth({ requiredRole: ["ADMIN", "SUPERADMIN"] });
+  const session = await withAuth({ requiredRole: ["ADMIN", "SUPER_ADMIN"] });
   if (session instanceof NextResponse) return session;
 
   try {

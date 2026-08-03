@@ -8,7 +8,7 @@ import { CreateOrderSchema, formatZodErrors } from "@/modules/orders/schemas";
 // --- Helpers ---
 
 const isPrivileged = (role: string) =>
-  role === "ADMIN" || role === "OPERATOR" || role === "SUPERADMIN";
+  role === "ADMIN" || role === "EMPLOYEE" || role === "SUPER_ADMIN";
 
 // --- GET /api/orders ---
 

@@ -39,7 +39,7 @@ describe('withAuth', () => {
 
   it('returns 403 when role does not match requiredRole', async () => {
     mockAuth.mockResolvedValueOnce({
-      user: { id: 'u1', role: 'CLIENT', name: 'X' },
+      user: { id: 'u1', role: 'CUSTOMER', name: 'X' },
     });
     const result = await withAuth({ requiredRole: 'ADMIN' });
     expect(result).toBeInstanceOf(NextResponse);
@@ -48,17 +48,17 @@ describe('withAuth', () => {
 
   it('returns session when role is one of the allowed array', async () => {
     mockAuth.mockResolvedValueOnce({
-      user: { id: 'u1', role: 'OPERATOR', name: 'X' },
+      user: { id: 'u1', role: 'EMPLOYEE', name: 'X' },
     });
-    const result = await withAuth({ requiredRole: ['ADMIN', 'OPERATOR'] });
-    expect(result).toEqual({ user: { id: 'u1', role: 'OPERATOR', name: 'X' } });
+    const result = await withAuth({ requiredRole: ['ADMIN', 'EMPLOYEE'] });
+    expect(result).toEqual({ user: { id: 'u1', role: 'EMPLOYEE', name: 'X' } });
   });
 
   it('returns session when single requiredRole matches', async () => {
     mockAuth.mockResolvedValueOnce({
-      user: { id: 'u1', role: 'RIDER', name: 'X' },
+      user: { id: 'u1', role: 'EMPLOYEE', name: 'X' },
     });
-    const result = await withAuth({ requiredRole: 'RIDER' });
-    expect(result).toEqual({ user: { id: 'u1', role: 'RIDER', name: 'X' } });
+    const result = await withAuth({ requiredRole: 'EMPLOYEE' });
+    expect(result).toEqual({ user: { id: 'u1', role: 'EMPLOYEE', name: 'X' } });
   });
 });

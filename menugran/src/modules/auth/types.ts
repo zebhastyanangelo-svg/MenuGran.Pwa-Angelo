@@ -2,7 +2,7 @@ export interface AuthUser {
   id: string;
   email: string | null;
   name: string;
-  role: 'CLIENT' | 'OPERATOR' | 'ADMIN' | 'RIDER' | 'SUPERADMIN';
+  role: 'CUSTOMER' | 'EMPLOYEE' | 'ADMIN' | 'SUPER_ADMIN';
   cedula?: string;
   phone?: string;
   image?: string;

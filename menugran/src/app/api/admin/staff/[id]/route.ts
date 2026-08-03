@@ -6,7 +6,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await withAuth({ requiredRole: ["ADMIN", "SUPERADMIN"] });
+  const session = await withAuth({ requiredRole: ["ADMIN", "SUPER_ADMIN"] });
   if (session instanceof NextResponse) return session;
 
   try {
@@ -28,7 +28,7 @@ export async function PATCH(
       name: user.name,
       cedula: user.cedula ?? "",
       phone: user.phone ?? "",
-      role: user.role === "OPERATOR" ? "Operador" : "Repartidor",
+      role: user.role === "EMPLOYEE" ? "Operador" : "Repartidor",
       active: user.active,
     });
   } catch (error) {

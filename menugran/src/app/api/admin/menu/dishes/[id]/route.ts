@@ -6,7 +6,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await withAuth({ requiredRole: ["ADMIN", "SUPERADMIN"] });
+  const session = await withAuth({ requiredRole: ["ADMIN", "SUPER_ADMIN"] });
   if (session instanceof NextResponse) return session;
 
   try {
@@ -22,7 +22,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await withAuth({ requiredRole: ["ADMIN", "SUPERADMIN"] });
+  const session = await withAuth({ requiredRole: ["ADMIN", "SUPER_ADMIN"] });
   if (session instanceof NextResponse) return session;
 
   try {

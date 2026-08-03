@@ -3,7 +3,7 @@
 
 export type AppSessionUser = {
   id: string;
-  role: 'CLIENT' | 'OPERATOR' | 'ADMIN' | 'RIDER' | 'SUPERADMIN';
+  role: 'CUSTOMER' | 'EMPLOYEE' | 'ADMIN' | 'SUPER_ADMIN';
   name?: string | null;
   email?: string | null;
   image?: string | null;
@@ -28,7 +28,7 @@ export function asAppSession(session: unknown): AppSession {
   return {
     user: {
       id: user.id,
-      role: (user.role as AppSessionUser['role']) || 'CLIENT',
+      role: (user.role as AppSessionUser['role']) || 'CUSTOMER',
       name: (user.name as string | null | undefined) ?? null,
       email: (user.email as string | null | undefined) ?? null,
       image: (user.image as string | null | undefined) ?? null,

@@ -69,7 +69,7 @@ export async function registerUser(data: {
         cedula: data.cedula,
         phone: data.phone,
         pin: await hashPin(data.pin),
-        role: data.role ? (data.role as any) : 'CLIENT',
+        role: data.role ? (data.role as any) : 'CUSTOMER',
       },
     });
 

@@ -15,6 +15,15 @@ export async function verifyPin(pin: string, hash: string): Promise<boolean> {
   return bcrypt.compare(pin, hash);
 }
 
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, SALT_ROUNDS);
+}
+
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  if (!hash || !password) return false;
+  return bcrypt.compare(password, hash);
+}
+
 export function maskPhone(phone: string | null | undefined): string {
   if (!phone) return "No registrado";
   if (phone.length < 4) return "*".repeat(phone.length);

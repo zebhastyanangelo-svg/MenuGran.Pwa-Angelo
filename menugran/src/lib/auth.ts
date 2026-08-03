@@ -62,19 +62,19 @@ export async function verifyPIN(userId: string, pin: string) {
 }
 
 export function canAccessAdminPanel(role: string): boolean {
-  return ['ADMIN', 'SUPERADMIN'].includes(role);
+  return ['ADMIN', 'SUPER_ADMIN'].includes(role);
 }
 
 export function canAccessOperatorPanel(role: string): boolean {
-  return ['OPERATOR', 'ADMIN', 'SUPERADMIN'].includes(role);
+  return ['EMPLOYEE', 'ADMIN', 'SUPER_ADMIN'].includes(role);
 }
 
 export function canAccessRiderPanel(role: string): boolean {
-  return ['RIDER', 'ADMIN', 'SUPERADMIN'].includes(role);
+  return ['EMPLOYEE', 'ADMIN', 'SUPER_ADMIN'].includes(role);
 }
 
 export function canAccessClientPanel(role: string): boolean {
-  return ['CLIENT', 'ADMIN', 'SUPERADMIN'].includes(role);
+  return ['CUSTOMER', 'ADMIN', 'SUPER_ADMIN'].includes(role);
 }
 
 

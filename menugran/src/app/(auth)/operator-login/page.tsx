@@ -47,13 +47,13 @@ export default function OperatorLoginPage() {
       const session = await sessionRes.json();
       const role = session?.user?.role;
 
-      if (role !== 'OPERATOR') {
+      if (role !== 'EMPLOYEE') {
         setError('No tienes permisos de operador');
         setIsLoading(false);
         return;
       }
 
-      router.push('/operator');
+      router.push('/merchant-portal/dashboard');
     } catch {
       setError('Error de conexión. Intenta de nuevo.');
       setIsLoading(false);

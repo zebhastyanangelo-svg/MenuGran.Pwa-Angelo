@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
       const session = await sessionRes.json();
       const role = session?.user?.role;
 
-      if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+      if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
         setError('No tienes permisos de administrador');
         setIsLoading(false);
         return;
