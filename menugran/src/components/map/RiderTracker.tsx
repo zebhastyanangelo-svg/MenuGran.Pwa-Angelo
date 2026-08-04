@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { supabase } from "@/lib/supabase";
 
 // Fix Leaflet default icon issue in Next.js
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -13,14 +14,20 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-const riderIcon = new L.Icon({
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
+const riderIcon = L.divIcon({
+  className: "mg-rider-icon",
+  html: `<div class="mg-rider-pin">🛵</div>`,
+  iconSize: [40, 40],
+  iconAnchor: [20, 40],
+  popupAnchor: [0, -36],
+});
+
+const customerIcon = L.divIcon({
+  className: "mg-customer-icon",
+  html: `<div class="mg-customer-pin">📍</div>`,
+  iconSize: [36, 36],
+  iconAnchor: [18, 36],
+  popupAnchor: [0, -32],
 });
 
 interface RiderLocation {
@@ -80,9 +87,58 @@ export default function RiderTracker({
     fetchLocation();
     intervalRef.current = setInterval(fetchLocation, pollInterval);
 
+    // ponytail: realtime subscription as primary update path; polling stays
+    // as fallback for when Supabase Realtime is unavailable / WS drops.
+    // Spec named a `deliveries` table; our schema uses `locations` filtered
+    // by order_id with latitude/longitude columns.
+    const channel = supabase
+      .channel(`rider-location-${orderId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "locations",
+          filter: `order_id=eq.${orderId}`,
+        },
+        (payload) => {
+          if (!isMounted) return;
+          const { latitude, longitude, timestamp } = payload.new as {
+            latitude: number;
+            longitude: number;
+            timestamp: string;
+          };
+          setRiderLocation({ latitude, longitude, timestamp });
+          setLastUpdate(new Date());
+          setError(null);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "locations",
+          filter: `order_id=eq.${orderId}`,
+        },
+        (payload) => {
+          if (!isMounted) return;
+          const { latitude, longitude, timestamp } = payload.new as {
+            latitude: number;
+            longitude: number;
+            timestamp: string;
+          };
+          setRiderLocation({ latitude, longitude, timestamp });
+          setLastUpdate(new Date());
+          setError(null);
+        }
+      )
+      .subscribe();
+
     return () => {
       isMounted = false;
       if (intervalRef.current) clearInterval(intervalRef.current);
+      supabase.removeChannel(channel);
     };
   }, [orderId, pollInterval]);
 
@@ -93,6 +149,15 @@ export default function RiderTracker({
       : deliveryLat && deliveryLng
       ? [deliveryLat, deliveryLng]
       : [7.1193, -73.1224];
+
+  // ponytail: live polyline drawing the rider→customer route as the rider moves.
+  const routeLine: [number, number][] | null =
+    riderLocation && deliveryLat && deliveryLng
+      ? [
+          [riderLocation.latitude, riderLocation.longitude],
+          [deliveryLat, deliveryLng],
+        ]
+      : null;
 
   return (
     <div className="rounded-2xl overflow-hidden border border-neutral-200 bg-white shadow-soft">
@@ -145,7 +210,7 @@ export default function RiderTracker({
           )}
 
           {deliveryLat && deliveryLng && (
-            <Marker position={[deliveryLat, deliveryLng]}>
+            <Marker position={[deliveryLat, deliveryLng]} icon={customerIcon}>
               <Popup>
                 <div className="text-center">
                   <p className="font-semibold text-sm">Destino</p>
@@ -155,6 +220,19 @@ export default function RiderTracker({
                 </div>
               </Popup>
             </Marker>
+          )}
+
+          {routeLine && (
+            <Polyline
+              positions={routeLine}
+              pathOptions={{
+                color: "#2563eb",
+                weight: 4,
+                opacity: 0.7,
+                dashArray: "8 6",
+                lineCap: "round",
+              }}
+            />
           )}
         </MapContainer>
 

@@ -2,6 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+
+// Leaflet must be client-only; load the map lazily once a rider is en route.
+const RiderTracker = dynamic(() => import('@/components/map/RiderTracker'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[350px] rounded-2xl bg-neutral-100 flex items-center justify-center">
+      <div className="h-8 w-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+    </div>
+  ),
+});
 
 type TrackerStatus =
   | 'PENDING'
@@ -21,8 +32,11 @@ interface OrderData {
   totalPrice: number;
   tableNumber: number | null;
   deliveryAddress: string | null;
+  lat: number | null;
+  lng: number | null;
   createdAt: string;
   restaurant: { name: string };
+  rider: { id: string; name: string } | null;
   items: Array<{ id: string; quantity: number; menuItem: { name: string } }>;
 }
 
@@ -69,6 +83,8 @@ export default function LiveOrderTracker({ orderId }: { orderId: string }) {
   }, [fetchOrder]);
 
   const isReady = status === 'READY' || status === 'DELIVERING' || status === 'DELIVERED';
+  const isDelivering = status === 'DELIVERING';
+  const isDeliveryType = order?.serviceType === 'DELIVERY';
   useEffect(() => {
     const prev = prevStatusRef.current;
     const now = status;
@@ -78,13 +94,14 @@ export default function LiveOrderTracker({ orderId }: { orderId: string }) {
     prevStatusRef.current = now;
   }, [status, isReady, muted]);
 
-  const stage = useMemo<'LOADING' | 'ERROR' | 'received' | 'cooking' | 'ready'>(() => {
+  const stage = useMemo<'LOADING' | 'ERROR' | 'received' | 'cooking' | 'ready' | 'delivering'>(() => {
     if (status === 'LOADING') return 'LOADING';
     if (status === 'ERROR' || status === 'CANCELLED') return 'ERROR';
+    if (isDelivering) return 'delivering';
     if (isReady) return 'ready';
     if (status === 'PREPARING') return 'cooking';
     return 'received';
-  }, [status, isReady]);
+  }, [status, isReady, isDelivering]);
 
   const items = order?.items ?? [];
   const short = items.map((i) => i.menuItem.name).slice(0, 3).join(', ');
@@ -142,6 +159,31 @@ export default function LiveOrderTracker({ orderId }: { orderId: string }) {
 
         {stage === 'cooking' && (
           <KitchenAnimation />
+        )}
+
+        {stage === 'delivering' && isDeliveryType && order && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="rounded-2xl bg-white border border-neutral-200 p-5 text-center shadow-card">
+              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-3xl">
+                🛵
+              </div>
+              <h2 className="font-display text-2xl font-bold text-ink">
+                {order.rider ? `${order.rider.name} va en camino` : 'Tu repartidor va en camino'}
+              </h2>
+              <p className="mt-1 text-sm text-neutral-500 font-body">
+                Sigue su ubicación en tiempo real en el mapa.
+              </p>
+            </div>
+
+            <RiderTracker
+              orderId={order.id}
+              deliveryLat={order.lat}
+              deliveryLng={order.lng}
+              deliveryAddress={order.deliveryAddress}
+              riderName={order.rider?.name ?? null}
+              pollInterval={5000}
+            />
+          </div>
         )}
 
         {stage === 'ready' && (

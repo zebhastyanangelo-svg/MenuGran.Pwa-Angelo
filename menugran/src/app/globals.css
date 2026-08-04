@@ -417,7 +417,23 @@
   .mg-anim-chop, .mg-anim-veggie, .mg-anim-pan, .mg-anim-pan-food,
   .mg-anim-steam, .mg-anim-steam-2, .mg-anim-steam-3, .mg-anim-plate,
   .mg-anim-garnish, .mg-anim-garnish-2, .mg-anim-bell, .mg-anim-confetti,
-  .mg-pulse-ring, .mg-pulse-ring-2, .mg-anim-fade-pop {
+  .mg-pulse-ring, .mg-pulse-ring-2, .mg-anim-fade-pop,
+  .mg-rider-pin {
     animation: none !important;
   }
+}
+
+/* Live rider / customer map markers (Leaflet div-icons) */
+.mg-rider-pin, .mg-customer-pin {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: 28px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+.mg-rider-pin { animation: mg-rider-bob 1.6s ease-in-out infinite; }
+@keyframes mg-rider-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
 }
