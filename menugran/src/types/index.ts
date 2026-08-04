@@ -1,6 +1,6 @@
 // Tipos para la aplicación MenuGran
 
-export type UserRole = "CLIENT" | "OPERATOR" | "ADMIN" | "RIDER" | "SUPERADMIN";
+export type UserRole = "CUSTOMER" | "EMPLOYEE" | "ADMIN" | "SUPER_ADMIN";
 
 export type OrderStatus = 
   | "PENDING" 

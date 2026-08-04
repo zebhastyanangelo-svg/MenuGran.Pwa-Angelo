@@ -4,12 +4,12 @@ import { hashPin } from "@/lib/crypto";
 import { withAuth } from "@/lib/api-auth";
 
 export async function GET() {
-  const session = await withAuth({ requiredRole: ["ADMIN", "SUPERADMIN"] });
+  const session = await withAuth({ requiredRole: ["ADMIN", "SUPER_ADMIN"] });
   if (session instanceof NextResponse) return session;
 
   try {
     const users = await prisma.user.findMany({
-      where: { role: { in: ["OPERATOR", "RIDER"] } },
+      where: { role: { in: ["EMPLOYEE"] } },
       orderBy: { createdAt: "desc" },
     });
 
@@ -19,7 +19,7 @@ export async function GET() {
         name: u.name,
         cedula: u.cedula ?? "",
         phone: u.phone ?? "",
-        role: u.role === "OPERATOR" ? "Operador" : "Repartidor",
+        role: u.role === "EMPLOYEE" ? "Operador" : "Repartidor",
         active: u.active,
       }))
     );
@@ -29,7 +29,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await withAuth({ requiredRole: ["ADMIN", "SUPERADMIN"] });
+  const session = await withAuth({ requiredRole: ["ADMIN", "SUPER_ADMIN"] });
   if (session instanceof NextResponse) return session;
 
   try {
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "PIN must be 4 digits" }, { status: 400 });
     }
 
-    const dbRole = role === "Operador" ? "OPERATOR" : "RIDER";
+    const dbRole = "EMPLOYEE";
     const hashedPin = await hashPin(pin);
 
     const user = await prisma.user.create({
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       name: user.name,
       cedula: user.cedula ?? "",
       phone: user.phone ?? "",
-      role: user.role === "OPERATOR" ? "Operador" : "Repartidor",
+      role: user.role === "EMPLOYEE" ? "Operador" : "Repartidor",
       active: user.active,
     }, { status: 201 });
   } catch (error: any) {

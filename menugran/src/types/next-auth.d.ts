@@ -1,6 +1,6 @@
 export {};
 
-type UserRole = "CLIENT" | "OPERATOR" | "ADMIN" | "RIDER" | "SUPERADMIN";
+type UserRole = "CUSTOMER" | "MERCHANT" | "EMPLOYEE" | "ADMIN" | "SUPER_ADMIN";
 
 declare module "next-auth" {
   interface Session {

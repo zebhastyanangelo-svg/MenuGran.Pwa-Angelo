@@ -7,7 +7,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await withAuth({ requiredRole: "RIDER" });
+  const session = await withAuth({ requiredRole: "EMPLOYEE" });
   if (session instanceof NextResponse) return session;
   const { id } = await params;
 
@@ -46,7 +46,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await withAuth({ requiredRole: "RIDER" });
+  const session = await withAuth({ requiredRole: "EMPLOYEE" });
   if (session instanceof NextResponse) return session;
   const { id } = await params;
 

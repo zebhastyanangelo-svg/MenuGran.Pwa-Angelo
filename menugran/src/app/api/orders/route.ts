@@ -3,13 +3,12 @@ import { prisma } from "@/lib/db";
 import { withAuth } from "@/lib/api-auth";
 import { auth } from "@/lib/auth-next";
 import { OrderStatus, Prisma } from "@prisma/client";
-import { ORDER_STATUS } from "@/lib/constants";
 import { CreateOrderSchema, formatZodErrors } from "@/modules/orders/schemas";
 
 // --- Helpers ---
 
 const isPrivileged = (role: string) =>
-  role === "ADMIN" || role === "OPERATOR" || role === "SUPERADMIN";
+  role === "ADMIN" || role === "EMPLOYEE" || role === "SUPER_ADMIN";
 
 // --- GET /api/orders ---
 
@@ -47,6 +46,9 @@ export async function GET(request: NextRequest) {
         table: {
           select: { number: true },
         },
+        rider: {
+          select: { id: true, name: true },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -65,7 +67,11 @@ export async function GET(request: NextRequest) {
         status: order.status,
         total: order.totalPrice,
         paymentMethod: order.paymentMethod,
-        paymentStatus: ORDER_STATUS.CONFIRMED,
+        paymentStatus:
+          order.status === "PENDING" ||
+          order.status === "CANCELLED"
+            ? "pending"
+            : "confirmed",
         clientName: order.client.name || "Sin nombre",
         clientPhone: order.client.phone || "Sin telefono",
         address:
@@ -77,7 +83,7 @@ export async function GET(request: NextRequest) {
         items: itemCount,
         createdAt: order.createdAt.toISOString(),
         riderId: order.riderId,
-        riderName: null,
+        riderName: order.rider?.name ?? null,
       };
     });
 
@@ -142,6 +148,17 @@ export async function POST(req: NextRequest) {
         {
           error: "Formato inválido en el campo 'tableNumber'",
           details: { tableNumber: ["tableNumber es requerido para servicio MESA"] },
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validacion temprana: DELIVERY requiere deliveryAddress
+    if (service === "DELIVERY" && !deliveryAddress) {
+      return NextResponse.json(
+        {
+          error: "Formato inválido en el campo 'deliveryAddress'",
+          details: { deliveryAddress: ["deliveryAddress es requerido para servicio DELIVERY"] },
         },
         { status: 400 }
       );

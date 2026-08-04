@@ -7,7 +7,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await withAuth({ requiredRole: ["OPERATOR", "ADMIN", "SUPERADMIN"] });
+  const session = await withAuth({ requiredRole: ["EMPLOYEE", "ADMIN", "SUPER_ADMIN"] });
   if (session instanceof NextResponse) return session;
   const { id } = await params;
 
@@ -73,7 +73,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await withAuth({ requiredRole: ["OPERATOR", "ADMIN", "SUPERADMIN"] });
+  const session = await withAuth({ requiredRole: ["EMPLOYEE", "ADMIN", "SUPER_ADMIN"] });
   if (session instanceof NextResponse) return session;
   const { id } = await params;
 

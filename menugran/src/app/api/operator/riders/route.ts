@@ -3,13 +3,13 @@ import { prisma } from "@/lib/db";
 import { withAuth } from "@/lib/api-auth";
 
 export async function GET() {
-  const session = await withAuth({ requiredRole: ["OPERATOR", "ADMIN", "SUPERADMIN"] });
+  const session = await withAuth({ requiredRole: ["EMPLOYEE", "ADMIN", "SUPER_ADMIN"] });
   if (session instanceof NextResponse) return session;
 
   try {
     const riders = await prisma.user.findMany({
       where: {
-        role: "RIDER",
+        role: "EMPLOYEE",
         active: true,
       },
       select: {

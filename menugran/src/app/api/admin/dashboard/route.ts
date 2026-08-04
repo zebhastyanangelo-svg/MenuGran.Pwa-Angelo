@@ -1,23 +1,30 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { withAuth } from "@/lib/api-auth";
 
-export async function GET() {
-  const session = await withAuth({ requiredRole: ["ADMIN", "SUPERADMIN"] });
+export async function GET(req: NextRequest) {
+  const session = await withAuth({ requiredRole: ["ADMIN", "SUPER_ADMIN"] });
   if (session instanceof NextResponse) return session;
 
   try {
-    // Find the restaurant managed by this admin
-    const restaurant = await prisma.restaurant.findFirst({
+    // Un admin puede gestionar varios restaurantes
+    const managedRestaurants = await prisma.restaurant.findMany({
       where: { adminId: session.user.id },
       select: { id: true },
     });
 
-    if (!restaurant) {
+    if (managedRestaurants.length === 0) {
       return NextResponse.json({ error: "No se encontro restaurante para este admin" }, { status: 404 });
     }
 
-    const restaurantId = restaurant.id;
+    const { searchParams } = new URL(req.url);
+    const requestedRestaurantId = searchParams.get("restaurantId");
+
+    const restaurantId =
+      requestedRestaurantId &&
+      managedRestaurants.some((r) => r.id === requestedRestaurantId)
+        ? requestedRestaurantId
+        : managedRestaurants[0].id;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);

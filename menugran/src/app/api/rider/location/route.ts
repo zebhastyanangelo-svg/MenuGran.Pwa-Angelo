@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await withAuth({ requiredRole: ["ADMIN", "OPERATOR", "SUPERADMIN", "RIDER"] });
+  const session = await withAuth({ requiredRole: ["ADMIN", "EMPLOYEE", "SUPER_ADMIN", "EMPLOYEE"] });
   if (session instanceof NextResponse) return session;
 
   try {

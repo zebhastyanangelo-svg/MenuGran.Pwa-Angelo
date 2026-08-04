@@ -73,7 +73,7 @@ export async function PUT(req: NextRequest) {
 
     // Users can only update their own profile (unless privileged)
     const role = session.user.role;
-    const isPrivileged = role === "ADMIN" || role === "OPERATOR" || role === "SUPERADMIN";
+    const isPrivileged = role === "ADMIN" || role === "EMPLOYEE" || role === "SUPER_ADMIN";
     if (!isPrivileged && session.user.id !== id) {
       return NextResponse.json(
         { success: false, message: "No autorizado" },

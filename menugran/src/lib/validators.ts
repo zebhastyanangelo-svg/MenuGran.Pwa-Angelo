@@ -4,7 +4,7 @@ export const UserSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email(),
   name: z.string().min(2).max(100),
-  role: z.enum(['CLIENT', 'OPERATOR', 'ADMIN', 'RIDER', 'SUPERADMIN']),
+  role: z.enum(['CUSTOMER', 'EMPLOYEE', 'ADMIN', 'SUPER_ADMIN']),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

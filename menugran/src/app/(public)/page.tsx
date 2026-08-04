@@ -146,6 +146,34 @@ export default function PublicLandingPage() {
         </div>
       </section>
 
+      {/* Registrar negocio */}
+      <section id="registrar-negocio" className="py-20 bg-red-600">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-6">
+            <Utensils className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            ¿Tienes un negocio?
+          </h2>
+          <p className="text-lg text-red-100 mb-8 max-w-2xl mx-auto">
+            Lleva tu menú digital, recibe pedidos y gestiona tu equipo desde un solo lugar.
+            Regístrate gratis y empieza hoy.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/register">
+              <button className="w-full sm:w-auto bg-white text-red-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-red-50 transition-colors">
+                Registrar mi Negocio
+              </button>
+            </Link>
+            <Link href="/login">
+              <button className="w-full sm:w-auto border-2 border-white/60 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white/10 transition-colors">
+                Ya tengo cuenta
+              </button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

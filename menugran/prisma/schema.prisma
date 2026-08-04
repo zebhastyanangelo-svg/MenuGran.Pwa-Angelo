@@ -7,12 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  CLIENT
-  OPERATOR
+enum Role {
+  SUPER_ADMIN
   ADMIN
-  RIDER
-  SUPERADMIN
+  MERCHANT
+  CUSTOMER
+  EMPLOYEE
 }
 
 enum OrderStatus {
@@ -41,10 +41,11 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
-  role          UserRole  @default(CLIENT)
+  role          Role      @default(CUSTOMER)
   phone         String?
   cedula        String?   @unique
-  pin           String?   // PIN de 4 dígitos para login
+  pin           String?   // PIN de 4 dígitos para login (staff)
+  password      String?   // Hash bcrypt para login email/contraseña (cliente/comercio)
   active        Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -55,6 +56,7 @@ model User {
   riderOrders        Order[]              @relation("RiderOrders")
   locations          Location[]
   managedRestaurants Restaurant[]         @relation("AdminRestaurant")
+  ownedBusinesses    Business[]           @relation("OwnedBusinesses")
 
   @@map("users")
 }
@@ -100,6 +102,7 @@ model VerificationToken {
 
 model Business {
   id          String   @id @default(cuid())
+  ownerId     String?  @map("owner_id")
   name        String
   slug        String   @unique
   description String?  @db.Text
@@ -108,8 +111,10 @@ model Business {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  owner       User?         @relation("OwnedBusinesses", fields: [ownerId], references: [id], onDelete: SetNull)
   restaurants Restaurant[]
 
+  @@index([ownerId])
   @@map("businesses")
 }
 

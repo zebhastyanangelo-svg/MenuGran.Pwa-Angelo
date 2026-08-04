@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api-auth';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await withAuth({ requiredRole: "SUPERADMIN" });
+  const session = await withAuth({ requiredRole: "SUPER_ADMIN" });
   if (session instanceof NextResponse) return session;
   const { id } = await params;
 
@@ -39,7 +39,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await withAuth({ requiredRole: "SUPERADMIN" });
+  const session = await withAuth({ requiredRole: "SUPER_ADMIN" });
   if (session instanceof NextResponse) return session;
   const { id } = await params;
 

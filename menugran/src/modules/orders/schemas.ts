@@ -8,19 +8,29 @@ export const OrderItemSchema = z.object({
     .positive("quantity debe ser mayor a 0"),
 });
 
-export const CreateOrderSchema = z.object({
-  restaurantId: z.string().min(1, "restaurantId es requerido"),
-  items: z
-    .array(OrderItemSchema)
-    .min(1, "Al menos un item requerido"),
-  serviceType: z.enum(["MESA", "DELIVERY"]).default("MESA"),
-  tableNumber: z.number().int().positive().optional(),
-  lat: z.number().optional(),
-  lng: z.number().optional(),
-  deliveryAddress: z.string().optional(),
-  paymentMethod: z.enum(["CASH", "MOBILE_PAYMENT", "TRANSFER"]).default("CASH"),
-  clientId: z.string().min(1).optional(), // solo ADMIN/OPERATOR
-});
+export const CreateOrderSchema = z
+  .object({
+    restaurantId: z.string().min(1, "restaurantId es requerido"),
+    items: z
+      .array(OrderItemSchema)
+      .min(1, "Al menos un item requerido"),
+    serviceType: z.enum(["MESA", "DELIVERY"]).default("MESA"),
+    tableNumber: z.number().int().positive().optional(),
+    lat: z.number().optional(),
+    lng: z.number().optional(),
+    deliveryAddress: z.string().optional(),
+    paymentMethod: z.enum(["CASH", "MOBILE_PAYMENT", "TRANSFER"]).default("CASH"),
+    clientId: z.string().min(1).optional(), // solo ADMIN/OPERATOR
+  })
+  .superRefine((data, ctx) => {
+    if (data.serviceType === "DELIVERY" && !data.deliveryAddress?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["deliveryAddress"],
+        message: "deliveryAddress es requerido para servicio DELIVERY",
+      });
+    }
+  });
 
 export type CreateOrderInput = z.infer<typeof CreateOrderSchema>;
 

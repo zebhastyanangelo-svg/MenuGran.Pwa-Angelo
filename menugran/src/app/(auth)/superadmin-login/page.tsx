@@ -42,14 +42,14 @@ export default function SuperadminLoginPage() {
         return;
       }
 
-      if (data.user.role !== 'SUPERADMIN') {
+      if (data.user.role !== 'SUPER_ADMIN') {
         setError('No tienes permisos de superadministrador');
         setIsLoading(false);
         return;
       }
 
       window.localStorage.setItem('menugran-user', JSON.stringify(data.user));
-      router.push('/sa');
+      router.push('/admin');
     } catch (err) {
       setError('Error de conexión. Intenta de nuevo.');
       setIsLoading(false);

@@ -6,66 +6,92 @@ const PAYMENT_LABELS: Record<string, string> = {
   CASH: "Efectivo",
   CARD: "Tarjeta",
   TRANSFER: "Transferencia",
+  MOBILE_PAYMENT: "Pago móvil",
 };
 
+// Paleta Okabe-Ito (segura para daltonismo / WCAG AA)
 const PAYMENT_COLORS: Record<string, string> = {
-  CASH: "#f97316",
-  CARD: "#64748b",
-  TRANSFER: "#3b82f6",
+  CASH: "#009e73",
+  CARD: "#e69f00",
+  TRANSFER: "#0072b2",
+  MOBILE_PAYMENT: "#cc79a7",
 };
 
 const DAY_NAMES = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
 
-export async function GET(_req: NextRequest) {
-  const session = await withAuth({ requiredRole: ["ADMIN", "SUPERADMIN"] });
+type Period = "hoy" | "semana" | "mes";
+
+const PERIOD_DAYS: Record<Period, number> = {
+  hoy: 0,
+  semana: 6,
+  mes: 29,
+};
+
+export async function GET(req: NextRequest) {
+  const session = await withAuth({ requiredRole: ["ADMIN", "SUPER_ADMIN"] });
   if (session instanceof NextResponse) return session;
 
   try {
-    // Find the restaurant managed by this admin
-    const restaurant = await prisma.restaurant.findFirst({
+    // Admin puede gestionar varios restaurantes
+    const managedRestaurants = await prisma.restaurant.findMany({
       where: { adminId: session.user.id },
       select: { id: true },
     });
 
-    if (!restaurant) {
-      return NextResponse.json({ error: "No se encontro restaurante para este admin" }, { status: 404 });
+    if (managedRestaurants.length === 0) {
+      return NextResponse.json(
+        { error: "No se encontro restaurante para este admin" },
+        { status: 404 }
+      );
     }
 
-    const restaurantId = restaurant.id;
+    const { searchParams } = new URL(req.url);
+    const requestedRestaurantId = searchParams.get("restaurantId");
+    const requestedPeriod = searchParams.get("period") as Period | null;
+
+    const restaurantId =
+      requestedRestaurantId &&
+      managedRestaurants.some((r) => r.id === requestedRestaurantId)
+        ? requestedRestaurantId
+        : managedRestaurants[0].id;
+
+    const period: Period =
+      requestedPeriod && requestedPeriod in PERIOD_DAYS ? requestedPeriod : "hoy";
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    const periodStart = new Date(today);
+    periodStart.setDate(today.getDate() - PERIOD_DAYS[period]);
 
     const todayEnd = new Date(today);
     todayEnd.setHours(23, 59, 59, 999);
 
-    const allOrdersToday = await prisma.order.findMany({
-      where: { restaurantId, createdAt: { gte: today, lte: todayEnd } },
-      select: { totalPrice: true },
-    });
-
-    const salesToday = allOrdersToday.reduce((s, o) => s + Number(o.totalPrice), 0);
-    const ordersTodayCount = allOrdersToday.length;
-    const avgTicket = ordersTodayCount > 0 ? Math.round(salesToday / ordersTodayCount) : 0;
-
-    const weekOrders = await prisma.order.findMany({
-      where: { restaurantId, createdAt: { gte: sevenDaysAgo } },
+    const allOrders = await prisma.order.findMany({
+      where: {
+        restaurantId,
+        createdAt: { gte: periodStart, lte: todayEnd },
+      },
       select: { totalPrice: true, createdAt: true },
     });
 
+    const sales = allOrders.reduce((s, o) => s + Number(o.totalPrice), 0);
+    const ordersCount = allOrders.length;
+    const avgTicket =
+      ordersCount > 0 ? Math.round(sales / ordersCount) : 0;
+
     const salesByDay: { day: string; amount: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
+    for (let i = PERIOD_DAYS[period]; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
-      const start = new Date(date);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(date);
-      end.setHours(23, 59, 59, 999);
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
 
-      const dayOrders = weekOrders.filter((o) => o.createdAt >= start && o.createdAt <= end);
+      const dayOrders = allOrders.filter(
+        (o) => o.createdAt >= startOfDay && o.createdAt <= endOfDay
+      );
       const amount = dayOrders.reduce((s, o) => s + Number(o.totalPrice), 0);
 
       salesByDay.push({ day: DAY_NAMES[date.getDay()], amount: Math.round(amount) });
@@ -73,13 +99,18 @@ export async function GET(_req: NextRequest) {
 
     const paymentGroups = await prisma.order.groupBy({
       by: ["paymentMethod"],
-      where: { restaurantId },
+      where: {
+        restaurantId,
+        createdAt: { gte: periodStart, lte: todayEnd },
+      },
       _count: true,
     });
     const totalPayOrders = paymentGroups.reduce((s, g) => s + g._count, 0);
     const paymentMethods = paymentGroups.map((g) => ({
       label: PAYMENT_LABELS[g.paymentMethod] || g.paymentMethod,
       value: totalPayOrders > 0 ? Math.round((g._count / totalPayOrders) * 100) : 0,
+      count: g._count,
+      total: totalPayOrders,
       color: PAYMENT_COLORS[g.paymentMethod] || "#64748b",
     }));
 
@@ -88,7 +119,12 @@ export async function GET(_req: NextRequest) {
       _sum: { quantity: true },
       orderBy: { _sum: { quantity: "desc" } },
       take: 5,
-      where: { order: { restaurantId } },
+      where: {
+        order: {
+          restaurantId,
+          createdAt: { gte: periodStart, lte: todayEnd },
+        },
+      },
     });
 
     const topDishIds = topDishesRaw.map((item) => item.menuItemId);
@@ -115,9 +151,11 @@ export async function GET(_req: NextRequest) {
     const topDishName = topDishes[0]?.name ?? "N/A";
 
     return NextResponse.json({
+      period,
+      restaurants: managedRestaurants.map((r) => ({ id: r.id })),
       metrics: {
-        salesToday: Math.round(salesToday),
-        ordersToday: ordersTodayCount,
+        sales: Math.round(sales),
+        orders: ordersCount,
         avgTicket,
         topDish: topDishName,
       },
@@ -126,6 +164,7 @@ export async function GET(_req: NextRequest) {
       topDishes,
     });
   } catch (error) {
+    console.error("[GET /api/admin/analytics]", error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }

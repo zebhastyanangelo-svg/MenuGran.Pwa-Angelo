@@ -4,7 +4,7 @@ import { withAuth } from "@/lib/api-auth";
 import { OrderStatus } from "@prisma/client";
 
 export async function GET() {
-  const session = await withAuth({ requiredRole: ["OPERATOR", "ADMIN", "SUPERADMIN"] });
+  const session = await withAuth({ requiredRole: ["EMPLOYEE", "ADMIN", "SUPER_ADMIN"] });
   if (session instanceof NextResponse) return session;
 
   try {

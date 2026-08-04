@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { withAuth } from "@/lib/api-auth";
 
 export async function GET(request: NextRequest) {
-  const session = await withAuth({ requiredRole: ["OPERATOR", "ADMIN", "SUPERADMIN"] });
+  const session = await withAuth({ requiredRole: ["EMPLOYEE", "ADMIN", "SUPER_ADMIN"] });
   if (session instanceof NextResponse) return session;
 
   try {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { User, Phone, CreditCard, LogOut, Save } from 'lucide-react';
+import { User, Phone, CreditCard, LogOut, Save, Headphones, Mail } from 'lucide-react';
 import { asAppSession } from '@/lib/session-helpers';
 
 export default function ClientProfilePage() {
@@ -126,6 +126,26 @@ export default function ClientProfilePage() {
           {saved && (
             <span className="text-sm font-semibold text-success-600">¡Guardado!</span>
           )}
+        </div>
+      </div>
+
+      <div className="mb-6 rounded-xl bg-white p-6 shadow-soft border border-neutral-200">
+        <h2 className="mb-5 text-lg font-semibold text-ink">Soporte</h2>
+        <div className="space-y-4 text-sm text-neutral-600">
+          <p className="flex items-center gap-2">
+            <Headphones className="h-4 w-4 text-brand-500" />
+            Atención al cliente de 8:00 a.m. a 10:00 p.m.
+          </p>
+          <p className="flex items-center gap-2">
+            <Mail className="h-4 w-4 text-brand-500" />
+            <a href="mailto:soporte@menugran.com" className="hover:text-brand-600 transition">
+              soporte@menugran.com
+            </a>
+          </p>
+          <p className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-brand-500" />
+            +57 300 123 4567
+          </p>
         </div>
       </div>
 
