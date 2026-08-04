@@ -56,7 +56,7 @@ const statusStyles: Record<string, string> = {
   Confirmado: 'bg-blue-100 text-blue-800',
   Cocinando: 'bg-orange-100 text-orange-800',
   'En camino': 'bg-violet-100 text-violet-800',
-  Entregado: 'bg-emerald-100 text-emerald-800',
+  Entregado: 'bg-sage-100 text-sage-800',
   Cancelado: 'bg-brand-100 text-brand-800',
 };
 
@@ -139,76 +139,40 @@ export default function ClientOrdersPage() {
 
   return (
     <div
-      className="min-h-screen bg-[#f9fafb] px-4 py-6 sm:px-6 md:px-8"
+      className="min-h-screen bg-cream-50 px-4 py-6 sm:px-6 md:px-8"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <div className="mb-4 rounded-3xl bg-white p-6 shadow-sm shadow-slate-200">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-ink-lighter">Mis Pedidos</p>
-            <h1 className="mt-2 text-3xl font-semibold text-ink">Historial y pedidos activos</h1>
-          </div>
-          <div className="rounded-3xl bg-cream-100 px-4 py-3 text-sm font-semibold text-ink-light">
-            {refreshing ? 'Actualizando...' : pullMessage}
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-6 rounded-3xl bg-white p-4 shadow-sm shadow-slate-200">
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => setActiveTab('activos')}
-            className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
-              activeTab === 'activos'
-                ? 'bg-brand-600 text-white shadow-sm'
-                : 'bg-cream-100 text-ink-light hover:bg-cream-200'
-            }`}
-          >
-            Activos
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('historial')}
-            className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
-              activeTab === 'historial'
-                ? 'bg-brand-600 text-white shadow-sm'
-                : 'bg-cream-100 text-ink-light hover:bg-cream-200'
-            }`}
-          >
-            Historial
-          </button>
-        </div>
-      </div>
+      <p className="section-eyebrow mb-4">Mis Pedidos</p>
+      <h1 className="font-display text-3xl font-bold text-ink mb-6">Historial y pedidos activos</h1>
 
       {loading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, index) => (
-            <div key={index} className="h-40 rounded-3xl bg-cream-100 animate-pulse" />
+            <div key={index} className="h-40 rounded-2xl bg-cream-100 animate-pulse" />
           ))}
         </div>
       ) : error ? (
-        <div className="rounded-3xl border border-brand-200 bg-brand-50 p-6 text-brand-700 shadow-sm shadow-red-100">
-          <p className="text-lg font-semibold">Error al cargar pedidos</p>
-          <p className="mt-3 text-sm">{error}</p>
+        <div className="rounded-2xl border border-brand-200 bg-brand-50 p-6 text-brand-700">
+          <p className="text-lg font-semibold font-display">Error al cargar pedidos</p>
+          <p className="mt-3 text-sm font-body">{error}</p>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="mt-5 rounded-3xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-700"
+            className="mt-5 rounded-2xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-700"
           >
             Reintentar
           </button>
         </div>
       ) : visibleOrders.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-neutral-300 bg-cream-50 p-10 text-center text-ink-lighter shadow-sm shadow-slate-200">
+        <div className="rounded-2xl border border-dashed border-neutral-300 bg-cream-50 p-10 text-center text-ink-lighter">
           <div className="mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-brand-100 text-4xl">📦</div>
-          <h2 className="text-xl font-semibold text-ink">No tienes pedidos activos</h2>
-          <p className="mt-2 text-sm text-ink-lighter">Cuando tengas pedidos en curso los verás aquí.</p>
+          <h2 className="font-display text-xl font-semibold text-ink">No tienes pedidos activos</h2>
+          <p className="mt-2 text-sm font-body text-ink-lighter">Cuando tengas pedidos en curso los verás aquí.</p>
           <Link
             href="/client"
-            className="mt-6 inline-flex rounded-3xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-700"
+            className="mt-6 inline-flex rounded-2xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-700"
           >
             Ver restaurantes
           </Link>
@@ -216,42 +180,44 @@ export default function ClientOrdersPage() {
       ) : (
         <div className="space-y-5">
           {visibleOrders.map((order) => (
-            <div key={order.id} className="rounded-3xl bg-white p-6 shadow-sm shadow-slate-200">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-cream-100 text-xl font-bold text-ink-light">
-                    {order.logo}
+            <div key={order.id} className="ticket receipt">
+              <div className="p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cream-100 text-xl font-bold text-ink-light">
+                      {order.logo}
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold text-ink font-display">{order.restaurant}</p>
+                      <p className="mt-1 text-sm text-ink-lighter font-body">{formatDateTime(order.datetime)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-lg font-semibold text-ink">{order.restaurant}</p>
-                    <p className="mt-1 text-sm text-ink-lighter">{formatDateTime(order.datetime)}</p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className={`rounded-full px-3 py-2 text-sm font-semibold font-body ${statusStyles[order.status]}`}>
+                      {order.status}
+                    </span>
+                    <span className="text-sm text-ink-lighter font-body">{order.items} items</span>
+                    <span className="text-sm font-semibold text-ink font-body">{formatTotal(order.total)}</span>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className={`rounded-full px-3 py-2 text-sm font-semibold ${statusStyles[order.status]}`}>
-                    {order.status}
-                  </span>
-                  <span className="text-sm text-ink-lighter">{order.items} items</span>
-                  <span className="text-sm font-semibold text-ink">{formatTotal(order.total)}</span>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  {['Pendiente', 'Confirmado', 'Cocinando', 'En camino'].includes(order.status) ? (
+                    <Link
+                      href={`/client/tracking/${order.id}`}
+                      className="rounded-2xl bg-cream-100 px-5 py-3 text-sm font-semibold text-ink-light transition hover:bg-cream-200 font-body"
+                    >
+                      Ver seguimiento
+                    </Link>
+                  ) : null}
+                  {order.status === 'Entregado' ? (
+                    <button
+                      type="button"
+                      className="rounded-2xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 font-body"
+                    >
+                      Volver a pedir
+                    </button>
+                  ) : null}
                 </div>
-              </div>
-              <div className="mt-5 flex flex-wrap gap-3">
-                {['Pendiente', 'Confirmado', 'Cocinando', 'En camino'].includes(order.status) ? (
-                  <Link
-                    href={`/client/tracking/${order.id}`}
-                    className="rounded-3xl bg-cream-100 px-5 py-3 text-sm font-semibold text-ink-light transition hover:bg-cream-200"
-                  >
-                    Ver seguimiento
-                  </Link>
-                ) : null}
-                {order.status === 'Entregado' ? (
-                  <button
-                    type="button"
-                    className="rounded-3xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-700"
-                  >
-                    Volver a pedir
-                  </button>
-                ) : null}
               </div>
             </div>
           ))}

@@ -19,12 +19,12 @@ interface OrderCardOrder {
 
 export const OrderCard = ({ order }: { order: OrderCardOrder }) => {
   return (
-    <div className="bg-white rounded-xl shadow-md border border-neutral-100 hover:shadow-lg transition-shadow duration-300">
+    <div className="ticket receipt">
       <div className="p-4">
         <div className="flex justify-between items-start mb-3">
           <div className="flex-1">
-              <h3 className="font-display text-lg font-semibold text-ink mb-1">
-              Pedido \#{order.id.slice(0, 8)}
+            <h3 className="font-display text-lg font-semibold text-ink mb-1">
+              Pedido #{order.id.slice(0, 8)}
             </h3>
             <p className="text-sm text-neutral-500">
               {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
@@ -44,7 +44,7 @@ export const OrderCard = ({ order }: { order: OrderCardOrder }) => {
         <div className="space-y-2">
           {order.items.map((item: OrderCardOrderItem, index: number) => (
             <div key={item.id} className="flex items-start space-x-2 text-sm text-neutral-600">
-              <span className="flex-shrink-0">•</span>
+              <span className="flex-shrink-0 text-sage-500">•</span>
               <span className="flex-1">
                 {item.quantity}x {item.name}
                 {item.notes && (
@@ -60,7 +60,7 @@ export const OrderCard = ({ order }: { order: OrderCardOrder }) => {
 
         <div className="mt-3 pt-3 border-t border-neutral-100">
           <div className="flex justify-between items-center text-base font-medium">
-            <span>Total:</span>
+            <span>Total</span>
             <span className="font-display text-brand-600">${order.totalPrice.toFixed(2)}</span>
           </div>
         </div>

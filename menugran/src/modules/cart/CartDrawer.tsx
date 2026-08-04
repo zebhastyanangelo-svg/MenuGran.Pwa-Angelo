@@ -70,10 +70,10 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
           onClick={() => onClose()}
         />
         <aside className={`absolute right-0 top-0 h-full w-full max-w-md transform bg-white shadow-popover transition-transform duration-300 ${open ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-5">
+          <div className="ticket-edge flex items-center justify-between border-b border-neutral-200 px-6 py-5">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-neutral-500">Tu Pedido</p>
-              <h2 className="mt-2 text-2xl font-semibold text-ink">Resumen</h2>
+              <p className="section-eyebrow">Tu Pedido</p>
+              <h2 className="mt-2 font-display text-2xl font-semibold text-ink">Resumen</h2>
             </div>
             <button
               type="button"
@@ -103,7 +103,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
               <>
                 <div className="space-y-4 overflow-y-auto pb-4">
                   {items.map((item) => (
-                    <div key={item.id} className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+                    <div key={item.id} className="ticket rounded-xl border border-neutral-200 bg-neutral-50 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-base font-semibold text-ink">{item.name}</p>
@@ -123,7 +123,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
                           className="rounded-full bg-neutral-100 px-3 py-2 text-ink-light transition hover:bg-neutral-200"
                         >
-                          -
+                          −
                         </button>
                         <span className="text-sm font-semibold text-ink">{item.quantity}</span>
                         <button
@@ -146,14 +146,14 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                 </div>
 
                 <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Metodo de pago</p>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Método de pago</p>
                   <div className="flex gap-3">
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('CASH')}
                       className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition ${
                         paymentMethod === 'CASH'
-                          ? 'bg-brand-500 text-white shadow-soft'
+                          ? 'bg-brand-600 text-white shadow-soft'
                           : 'bg-white text-ink-light hover:bg-neutral-100'
                       }`}
                     >
@@ -165,12 +165,12 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                       onClick={() => setPaymentMethod('MOBILE_PAYMENT')}
                       className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition ${
                         paymentMethod === 'MOBILE_PAYMENT'
-                          ? 'bg-brand-500 text-white shadow-soft'
+                          ? 'bg-brand-600 text-white shadow-soft'
                           : 'bg-white text-ink-light hover:bg-neutral-100'
                       }`}
                     >
                       <FontAwesomeIcon icon={faMobileScreen} className="h-4 w-4" />
-                      Pago Movil
+                      Pago Móvil
                     </button>
                   </div>
                 </div>

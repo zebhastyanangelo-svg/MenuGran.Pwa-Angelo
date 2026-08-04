@@ -11,13 +11,32 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        ink: {
+          DEFAULT: "#2A1B12",
+          light: "#5B4636",
+          lighter: "#8C7461",
+        },
+        cream: {
+          50: "#FDF9F2",
+          100: "#FAF2E4",
+          200: "#F2E4CC",
+          300: "#E9D5B5",
+          400: "#D9BE92",
+          500: "#C4A377",
+        },
+        surface: {
+          DEFAULT: "#FAF2E4",
+          50: "#FDF9F2",
+          100: "#FAF2E4",
+          200: "#F2E4CC",
+        },
         brand: {
           50: "#fbf1ec",
           100: "#f6e0d3",
           200: "#edc0a7",
           300: "#e09a76",
           400: "#d27045",
-          500: "#c4542a",
+          500: "#C4542A",
           600: "#a6411f",
           700: "#8a3419",
           800: "#6f2914",
@@ -35,30 +54,17 @@ const config: Config = {
           800: "#7A5723",
           900: "#5A3F19",
         },
-        cream: {
-          50: "#FDF9F2",
-          100: "#FAF2E4",
-          200: "#F2E4CC",
-          300: "#E9D5B5",
-          400: "#D9BE92",
-          500: "#C4A377",
-        },
-        ink: {
-          DEFAULT: "#2A1B12",
-          light: "#5B4636",
-          lighter: "#8C7461",
-        },
-        neutral: {
-          50: "#f8fafc",
-          100: "#f1f5f9",
-          200: "#e2e8f0",
-          300: "#cbd5e1",
-          400: "#94a3b8",
-          500: "#64748b",
-          600: "#475569",
-          700: "#334155",
-          800: "#1e293b",
-          900: "#0f172a",
+        sage: {
+          50: "#f4f6f0",
+          100: "#e8ece2",
+          200: "#d1d8c5",
+          300: "#b5c4a3",
+          400: "#8FA073",
+          500: "#6B7F5E",
+          600: "#55684A",
+          700: "#3F4D38",
+          800: "#2A3525",
+          900: "#1A211A",
         },
         success: {
           50: "#f0fdf4",
@@ -76,7 +82,7 @@ const config: Config = {
           500: "#f59e0b",
           600: "#d97706",
         },
-        slate: {
+        neutral: {
           50: "#f8fafc",
           100: "#f1f5f9",
           200: "#e2e8f0",
@@ -88,22 +94,12 @@ const config: Config = {
           800: "#1e293b",
           900: "#0f172a",
         },
-        orange: {
-          50: "#fff7ed",
-          100: "#ffedd5",
-          200: "#fed7aa",
-          300: "#fdba74",
-          400: "#fb923c",
-          500: "#f97316",
-          600: "#ea580c",
-          700: "#c2410c",
-          800: "#9a3412",
-          900: "#7c2d12",
-        },
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "-apple-system", "BlinkMacSystemFont", '"Segoe UI"', "Roboto", "sans-serif"],
-        display: ["var(--font-display)", "Georgia", "serif"],
+        sans: ["var(--font-outfit)", "system-ui", "-apple-system", "BlinkMacSystemFont", '"Segoe UI"', "Roboto", "sans-serif"],
+        display: ["var(--font-cormorant)", "Georgia", "serif"],
+        body: ["var(--font-outfit)", "system-ui", "sans-serif"],
+        mono: ["var(--font-inter)", "monospace"],
       },
       fontSize: {
         "2xs": ["0.625rem", "0.875rem"],
@@ -159,6 +155,13 @@ const config: Config = {
       },
       animation: {
         pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "prep-pulse": "prep-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+      },
+      keyframes: {
+        "prep-pulse": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.5" },
+        },
       },
     },
   },
