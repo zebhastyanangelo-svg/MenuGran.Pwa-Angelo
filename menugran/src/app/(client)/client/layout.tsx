@@ -2,8 +2,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Home, Package, Search, ShoppingCart, User, X } from 'lucide-react';
+import { Home, Package, Search, Map, User, Menu } from 'lucide-react';
+import { CartDrawer } from '@/modules/cart';
 import { useCartStore, selectTotal } from '@/modules/cart/store';
+
+const tabs = [
+  { label: 'Inicio', href: '/client', icon: Home },
+  { label: 'Pedidos', href: '/client/orders', icon: Package },
+  { label: 'Seguimiento', href: '/client/tracking', icon: Map },
+  { label: 'Perfil', href: '/client/profile', icon: User },
+];
 
 export default function ClientLayout({
   children,
@@ -11,30 +19,27 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const items = useCartStore((state) => state.items);
   const total = useCartStore(selectTotal);
-  const removeItem = useCartStore((state) => state.removeItem);
-  const updateQuantity = useCartStore((state) => state.updateQuantity);
-  const clearCart = useCartStore((state) => state.clearCart);
-
-  const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const cartCount = useCartStore((state) =>
+    state.items.reduce((sum, item) => sum + item.quantity, 0)
+  );
 
   return (
-    <div className="min-h-screen bg-[#f9fafb] text-slate-900">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-sm">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between">
+    <div className="min-h-screen bg-cream-50 text-ink">
+      <header className="sticky top-0 z-30 border-b border-neutral-200 bg-cream-50/95 backdrop-blur-md shadow-soft">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/client" className="text-2xl font-bold text-red-600">
+            <Link href="/client" className="font-display text-2xl font-bold text-brand-700">
               MenuGran
             </Link>
           </div>
 
-          <div className="flex flex-1 items-center justify-between gap-3 rounded-3xl bg-slate-100 px-4 py-3 shadow-sm md:mx-6 md:max-w-xl">
-            <Search className="h-4 w-4 text-slate-500" />
+          <div className="flex flex-1 items-center justify-between gap-3 rounded-2xl bg-white border border-neutral-200 px-4 py-3 shadow-soft md:mx-6 md:max-w-xl">
+            <Search className="h-4 w-4 text-neutral-400" />
             <input
               type="search"
               placeholder="Buscar restaurantes o platos"
-              className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+              className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-neutral-400"
             />
           </div>
 
@@ -42,17 +47,19 @@ export default function ClientLayout({
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 transition hover:bg-slate-200"
+              className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl bg-cream-100 text-ink-light transition hover:bg-cream-200"
               aria-label="Abrir carrito"
             >
-              <ShoppingCart className="h-5 w-5" />
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.35 2.7A1 1 0 006.55 17h10.9M7 13L5.4 5M17 17a2 2 0 100 4 2 2 0 000-4zm-8 0a2 2 0 100 4 2 2 0 000-4z" />
+              </svg>
               {cartCount > 0 ? (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-semibold text-white">
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-brand-600 px-1.5 text-xs font-semibold text-white">
                   {cartCount}
                 </span>
               ) : null}
             </button>
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-red-600 text-base font-semibold text-white">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-100 text-base font-semibold text-brand-700">
               A
             </div>
           </div>
@@ -63,127 +70,25 @@ export default function ClientLayout({
         {children}
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 p-3 shadow-lg md:hidden">
-        <nav className="mx-auto flex max-w-3xl items-center justify-between px-2">
-          <Link href="/client" className="flex flex-col items-center gap-1 text-slate-700 hover:text-red-600">
-            <Home className="h-5 w-5" />
-            <span className="text-[11px] font-semibold">Inicio</span>
-          </Link>
-          <Link href="/client/orders" className="flex flex-col items-center gap-1 text-slate-700 hover:text-red-600">
-            <Package className="h-5 w-5" />
-            <span className="text-[11px] font-semibold">Pedidos</span>
-          </Link>
-          <Link href="/client/profile" className="flex flex-col items-center gap-1 text-slate-700 hover:text-red-600">
-            <User className="h-5 w-5" />
-            <span className="text-[11px] font-semibold">Perfil</span>
-          </Link>
-        </nav>
-      </div>
+      <CartDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-      <div className={`fixed inset-0 z-40 ${drawerOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-        <div
-          className={`absolute inset-0 bg-black/30 transition-opacity duration-300 ${drawerOpen ? 'opacity-100' : 'opacity-0'}`}
-          onClick={() => setDrawerOpen(false)}
-        />
-        <aside className={`absolute right-0 top-0 h-full w-full max-w-md transform bg-white shadow-2xl transition-transform duration-300 ${drawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Tu Pedido</p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Resumen</h2>
-            </div>
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(false)}
-              className="rounded-2xl bg-slate-100 p-2 text-slate-700 transition hover:bg-slate-200"
-              aria-label="Cerrar carrito"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="flex h-full flex-col justify-between px-6 py-5">
-            {items.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center text-slate-600">
-                <div className="text-4xl">🛒</div>
-                <p className="text-lg font-semibold text-slate-900">Tu carrito está vacío</p>
-                <p className="max-w-xs text-sm text-slate-500">Agrega platos y regresa cuando estés listo para pedir.</p>
-                <Link
-                  href="/client"
-                  onClick={() => setDrawerOpen(false)}
-                  className="rounded-2xl bg-red-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
-                >
-                  Ver restaurantes
-                </Link>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-4 overflow-y-auto pb-4">
-                  {items.map((item) => (
-                    <div key={item.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-base font-semibold text-slate-900">{item.name}</p>
-                          <p className="mt-1 text-sm text-slate-500">{item.quantity} x ${item.price}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeItem(item.id)}
-                          className="rounded-2xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                      <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-white px-3 py-2">
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="rounded-full bg-slate-100 px-3 py-2 text-slate-700 transition hover:bg-slate-200"
-                        >
-                          -
-                        </button>
-                        <span className="text-sm font-semibold text-slate-900">{item.quantity}</span>
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="rounded-full bg-slate-100 px-3 py-2 text-slate-700 transition hover:bg-slate-200"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                  <div className="flex items-center justify-between text-sm text-slate-500">
-                    <span>Total</span>
-                    <span className="font-semibold text-slate-900">${total.toLocaleString('es-CO')}</span>
-                  </div>
-                </div>
-
-                <div className="mt-5 space-y-3">
-                  <button
-                    type="button"
-                    className="w-full rounded-3xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
-                  >
-                    Hacer Pedido
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      clearCart();
-                      setDrawerOpen(false);
-                    }}
-                    className="w-full rounded-3xl bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
-                  >
-                    Limpiar carrito
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </aside>
-      </div>
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-neutral-200 bg-cream-50/95 px-2 py-2 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] backdrop-blur md:hidden">
+        <div className="mx-auto flex max-w-lg items-center justify-around">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className="flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-[11px] font-semibold text-neutral-500 transition-colors hover:text-ink-light"
+              >
+                <Icon className="h-5 w-5" />
+                {tab.label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

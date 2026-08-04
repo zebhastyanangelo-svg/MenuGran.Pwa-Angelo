@@ -5,7 +5,7 @@ import { TrendingUp, Package, LayoutDashboard, Store, Users } from 'lucide-react
 
 export default function AdminDashboard() {
   const globalMetrics = [
-    { label: 'Usuarios Activos', value: '4,820', icon: Users, color: 'text-red-600' },
+    { label: 'Usuarios Activos', value: '4,820', icon: Users, color: 'text-brand-600' },
     { label: 'Comercios Registrados', value: '356', icon: Store, color: 'text-green-600' },
     { label: 'Tráfico Hoy', value: '3,420', icon: TrendingUp, color: 'text-blue-600' },
   ];
@@ -14,7 +14,7 @@ export default function AdminDashboard() {
     { label: 'Ventas Hoy', value: '$1,250,000', icon: TrendingUp, color: 'text-green-600' },
     { label: 'Pedidos Hoy', value: '24', icon: Package, color: 'text-blue-600' },
     { label: 'Ticket Promedio', value: '$52,000', icon: LayoutDashboard, color: 'text-purple-600' },
-    { label: 'Plato Estrella', value: 'Parrilla Mixta', icon: Store, color: 'text-red-600' },
+    { label: 'Plato Estrella', value: 'Parrilla Mixta', icon: Store, color: 'text-brand-600' },
   ];
 
   const recentOrders = [
@@ -37,16 +37,16 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Bienvenido, Admin</h1>
-      <p className="text-gray-500 mb-6">Resumen global de la plataforma MenuGran</p>
+      <h1 className="text-2xl font-bold text-ink mb-1">Bienvenido, Admin</h1>
+      <p className="text-ink-lighter mb-6">Resumen global de la plataforma MenuGran</p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {globalMetrics.map((metric) => (
-          <div key={metric.label} className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+          <div key={metric.label} className="bg-white rounded-xl shadow-sm p-5 border border-neutral-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">{metric.label}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{metric.value}</p>
+                <p className="text-sm text-ink-lighter">{metric.label}</p>
+                <p className="text-2xl font-bold text-ink mt-1">{metric.value}</p>
               </div>
               <metric.icon className={`h-8 w-8 ${metric.color}`} />
             </div>
@@ -56,11 +56,11 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {metrics.map((metric) => (
-          <div key={metric.label} className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+          <div key={metric.label} className="bg-white rounded-xl shadow-sm p-5 border border-neutral-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">{metric.label}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{metric.value}</p>
+                <p className="text-sm text-ink-lighter">{metric.label}</p>
+                <p className="text-2xl font-bold text-ink mt-1">{metric.value}</p>
               </div>
               <metric.icon className={`h-8 w-8 ${metric.color}`} />
             </div>
@@ -69,69 +69,69 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Ventas Ultimos 7 Dias</h2>
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-neutral-100">
+          <h2 className="text-lg font-semibold text-ink mb-4">Ventas Ultimos 7 Dias</h2>
           <div className="flex items-end justify-between h-48">
             {weekDays.map((day, i) => (
               <div key={day} className="flex flex-col items-center gap-2">
-                <span className="text-xs font-medium text-gray-900">
+                <span className="text-xs font-medium text-ink">
                   ${(salesData[i] / 1000).toFixed(0)}k
                 </span>
                 <div
-                  className="w-10 bg-red-500 rounded-t-lg hover:bg-red-600 transition"
+                  className="w-10 bg-brand-500 rounded-t-lg hover:bg-brand-600 transition"
                   style={{ height: `${(salesData[i] / maxSale) * 150}px` }}
                 />
-                <span className="text-xs text-gray-500">{day}</span>
+                <span className="text-xs text-ink-lighter">{day}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Pedidos por Estado</h2>
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-neutral-100">
+          <h2 className="text-lg font-semibold text-ink mb-4">Pedidos por Estado</h2>
           <div className="space-y-4">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Pendientes</span>
+              <span className="text-ink-lighter">Pendientes</span>
               <span className="font-semibold text-yellow-600">8</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Confirmados</span>
+              <span className="text-ink-lighter">Confirmados</span>
               <span className="font-semibold text-blue-600">5</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Cocinando</span>
+              <span className="text-ink-lighter">Cocinando</span>
               <span className="font-semibold text-orange-600">7</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Listos</span>
+              <span className="text-ink-lighter">Listos</span>
               <span className="font-semibold text-green-600">4</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Ultimos Pedidos</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-neutral-100">
+        <div className="p-6 border-b border-neutral-100">
+          <h2 className="text-lg font-semibold text-ink">Ultimos Pedidos</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-cream-50">
               <tr>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Pedido</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Items</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Total</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Estado</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-ink-lighter uppercase">Pedido</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-ink-lighter uppercase">Cliente</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-ink-lighter uppercase">Items</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-ink-lighter uppercase">Total</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-ink-lighter uppercase">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {recentOrders.map((order) => (
-                <tr key={order.number} className="hover:bg-gray-50">
-                  <td className="py-3 px-4 text-sm font-medium text-gray-900">{order.number}</td>
-                  <td className="py-3 px-4 text-sm text-gray-500">{order.client}</td>
-                  <td className="py-3 px-4 text-sm text-gray-500">{order.items}</td>
-                  <td className="py-3 px-4 text-sm font-medium text-gray-900">{order.total}</td>
+                <tr key={order.number} className="hover:bg-cream-50">
+                  <td className="py-3 px-4 text-sm font-medium text-ink">{order.number}</td>
+                  <td className="py-3 px-4 text-sm text-ink-lighter">{order.client}</td>
+                  <td className="py-3 px-4 text-sm text-ink-lighter">{order.items}</td>
+                  <td className="py-3 px-4 text-sm font-medium text-ink">{order.total}</td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>
                       {order.status}

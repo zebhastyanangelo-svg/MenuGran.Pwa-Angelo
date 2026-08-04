@@ -9,6 +9,16 @@
       ],
       "cwd": "/home/angelo/Escritorio/MenuGran.Pwa-Angelo",
       "type": "stdio"
+    },
+    "TestSprite": {
+      "command": "npx",
+      "args": [
+        "@testsprite/testsprite-mcp@latest"
+      ],
+      "env": {
+        "API_KEY": "sk-user-sf8Jcd7iWRj0UikBFmOvnIOiq67-H-iMq7PgldMor3MKX4M3OYHajR8IIw-LbJtst20wHC3w4q6NoEPnnehRK4CQ_S9KPbpeKiDSVDBRGSSXNeOmTPJfwnwjisgcD0aSHHE"
+      },
+      "type": "stdio"
     }
   }
 }

@@ -132,18 +132,18 @@ export default function RiderAvailableOrdersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
+    <div className="min-h-screen bg-cream-50 text-ink">
       <div
         className="min-h-screen"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10">
+        <div className="bg-white border-b border-neutral-200 px-4 py-4 sticky top-0 z-10">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-gray-500">Pedidos disponibles</p>
-              <h1 className="text-lg font-semibold text-gray-900">Pedidos disponibles para entrega</h1>
+              <p className="text-xs uppercase tracking-[0.24em] text-ink-lighter">Pedidos disponibles</p>
+              <h1 className="text-lg font-semibold text-ink">Pedidos disponibles para entrega</h1>
             </div>
             <button
               type="button"
@@ -154,29 +154,29 @@ export default function RiderAvailableOrdersPage() {
               Actualizar
             </button>
           </div>
-          {pullHint && <p className="mt-3 text-sm text-gray-500">{pullHint}</p>}
+          {pullHint && <p className="mt-3 text-sm text-ink-lighter">{pullHint}</p>}
         </div>
 
         {!available ? (
-          <div className="px-4 py-10 text-center text-gray-600">Esta pantalla solo está disponible cuando estás activo.</div>
+          <div className="px-4 py-10 text-center text-ink-lighter">Esta pantalla solo está disponible cuando estás activo.</div>
         ) : loading ? (
           <div className="px-4 py-20 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Cargando pedidos...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600 mx-auto"></div>
+            <p className="mt-4 text-ink-lighter">Cargando pedidos...</p>
           </div>
         ) : error ? (
-          <div className="px-4 py-20 text-center text-red-600">
+          <div className="px-4 py-20 text-center text-brand-600">
             <p className="font-semibold">{error}</p>
           </div>
         ) : orders.length === 0 ? (
           <div className="px-4 py-20 text-center">
-            <p className="text-2xl font-semibold text-gray-900">No hay pedidos disponibles 🎉</p>
-            <p className="mt-3 text-gray-600">Vuelve a intentar en unos minutos</p>
+            <p className="text-2xl font-semibold text-ink">No hay pedidos disponibles 🎉</p>
+            <p className="mt-3 text-ink-lighter">Vuelve a intentar en unos minutos</p>
           </div>
         ) : (
           <div className="space-y-4 px-4 py-5">
             {orders.map(order => (
-              <div key={order.id} className="rounded-3xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+              <div key={order.id} className="rounded-3xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setExpandedId(prev => (prev === order.id ? null : order.id))}
@@ -184,37 +184,37 @@ export default function RiderAvailableOrdersPage() {
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">{order.restaurant}</p>
-                      <p className="mt-2 text-sm text-gray-600 flex items-center gap-2">
+                      <p className="text-sm font-semibold text-ink">{order.restaurant}</p>
+                      <p className="mt-2 text-sm text-ink-lighter flex items-center gap-2">
                         <MapPin className="w-4 h-4" />
                         {order.pickup}
                       </p>
-                      <p className="mt-2 text-sm text-gray-600 flex items-center gap-2">
+                      <p className="mt-2 text-sm text-ink-lighter flex items-center gap-2">
                         <Home className="w-4 h-4" />
                         {order.delivery}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-semibold text-gray-900">${order.total.toFixed(2)}</p>
-                      <p className="text-sm text-gray-500">{order.distance}</p>
+                      <p className="text-lg font-semibold text-ink">${order.total.toFixed(2)}</p>
+                      <p className="text-sm text-ink-lighter">{order.distance}</p>
                     </div>
                   </div>
                 </button>
 
                 {expandedId === order.id && (
-                  <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-4">
+                  <div className="border-t border-neutral-200 bg-cream-50 p-4 space-y-4">
                     <div className="space-y-2">
-                      <p className="text-sm font-semibold text-gray-900">Detalles del pedido</p>
+                      <p className="text-sm font-semibold text-ink">Detalles del pedido</p>
                       {order.items.map((item, index) => (
-                        <div key={index} className="flex justify-between text-sm text-gray-700">
+                        <div key={index} className="flex justify-between text-sm text-ink-light">
                           <span>{item.qty} x {item.name}</span>
                           <span>${(item.qty * item.price).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm text-gray-600">Total</span>
-                      <span className="text-lg font-semibold text-gray-900">${order.total.toFixed(2)}</span>
+                      <span className="text-sm text-ink-lighter">Total</span>
+                      <span className="text-lg font-semibold text-ink">${order.total.toFixed(2)}</span>
                     </div>
                     <button
                       type="button"
@@ -222,7 +222,7 @@ export default function RiderAvailableOrdersPage() {
                     >
                       Aceptar Entrega
                     </button>
-                    <div className="flex items-center text-sm text-gray-500 gap-2">
+                    <div className="flex items-center text-sm text-ink-lighter gap-2">
                       {expandedId === order.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       <span>Ver menos detalles</span>
                     </div>

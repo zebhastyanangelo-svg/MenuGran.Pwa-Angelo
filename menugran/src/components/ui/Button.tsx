@@ -1,5 +1,3 @@
-// components/ui/Button.tsx - Componente de botón reutilizable
-
 import { ButtonHTMLAttributes, ReactNode } from 'react';
 import { clsx } from 'clsx';
 
@@ -19,29 +17,24 @@ export default function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const baseStyles = 'font-semibold rounded-lg transition-colors duration-200 focus:outline-none';
+  const baseStyles = 'font-semibold rounded-xl transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 select-none';
 
   const variantStyles = {
-    primary: 'bg-primary-600 text-white hover:bg-primary-700 disabled:bg-primary-300',
-    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 disabled:bg-gray-100',
-    danger: 'bg-danger-500 text-white hover:bg-danger-600 disabled:bg-danger-300',
+    primary: 'bg-brand-600 text-white hover:bg-brand-700 active:scale-[0.98] disabled:bg-brand-300 shadow-soft',
+    secondary: 'bg-white text-ink border border-neutral-300 hover:bg-cream-100 active:bg-cream-200',
+    danger: 'bg-danger-500 text-white hover:bg-danger-600 active:scale-[0.98] disabled:bg-danger-300',
   };
 
   const sizeStyles = {
-    sm: 'px-3 py-1 text-sm',
-    md: 'px-4 py-2 text-base',
+    sm: 'px-3 py-1.5 text-sm',
+    md: 'px-4 py-2.5 text-base',
     lg: 'px-6 py-3 text-lg',
   };
 
   return (
     <button
       disabled={disabled || isLoading}
-      className={clsx(
-        baseStyles,
-        variantStyles[variant],
-        sizeStyles[size],
-        className
-      )}
+      className={clsx(baseStyles, variantStyles[variant], sizeStyles[size], className)}
       {...props}
     >
       {isLoading ? 'Cargando...' : children}

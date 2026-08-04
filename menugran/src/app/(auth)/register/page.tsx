@@ -103,28 +103,27 @@ export default function RegisterPage() {
   };
 
   const inputClass =
-    'block w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100';
+    'block w-full rounded-2xl border border-cream-300 bg-cream-50 py-3 pl-10 pr-3 text-ink placeholder:text-ink-lighter focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 font-display';
 
   return (
     <div className="w-full max-w-md">
-      <div className="bg-white shadow-xl rounded-3xl p-8">
+      <div className="bg-cream-50 shadow-xl rounded-3xl p-8 border border-cream-200">
         <div className="text-center mb-8">
-          <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-red-100 text-red-600">
+          <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-brand-100 text-brand-600">
             <UserPlus className="h-8 w-8" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Crear Cuenta</h1>
-          <p className="text-sm text-slate-500">Únete a MenuGran</p>
+          <h1 className="text-2xl font-display font-bold text-ink mb-2">Crear Cuenta</h1>
+          <p className="text-sm text-ink-light font-display">Únete a MenuGran</p>
         </div>
 
-        {/* Selector de tipo de cuenta */}
         <div className="grid grid-cols-2 gap-3 mb-6">
           <button
             type="button"
             onClick={() => selectType('CUSTOMER')}
-            className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-4 transition ${
+            className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-4 transition font-display ${
               accountType === 'CUSTOMER'
-                ? 'border-red-600 bg-red-50 text-red-700'
-                : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                ? 'border-brand-600 bg-brand-50 text-brand-700'
+                : 'border-cream-300 text-ink-light hover:border-cream-400'
             }`}
           >
             <UserPlus className="h-6 w-6" />
@@ -133,10 +132,10 @@ export default function RegisterPage() {
           <button
             type="button"
             onClick={() => selectType('MERCHANT')}
-            className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-4 transition ${
+            className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-4 transition font-display ${
               accountType === 'MERCHANT'
-                ? 'border-red-600 bg-red-50 text-red-700'
-                : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                ? 'border-brand-600 bg-brand-50 text-brand-700'
+                : 'border-cream-300 text-ink-light hover:border-cream-400'
             }`}
           >
             <Store className="h-6 w-6" />
@@ -146,12 +145,12 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="nombre" className="block text-sm font-medium text-slate-700 mb-2">
+            <label htmlFor="nombre" className="block text-sm font-display font-medium text-ink mb-2">
               Nombre
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <UserPlus className="h-5 w-5 text-slate-400" />
+                <UserPlus className="h-5 w-5 text-ink-lighter" />
               </div>
               <input
                 id="nombre"
@@ -166,12 +165,12 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+            <label htmlFor="email" className="block text-sm font-display font-medium text-ink mb-2">
               Email
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-slate-400" />
+                <Mail className="h-5 w-5 text-ink-lighter" />
               </div>
               <input
                 id="email"
@@ -186,12 +185,12 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="telefono" className="block text-sm font-medium text-slate-700 mb-2">
+            <label htmlFor="telefono" className="block text-sm font-display font-medium text-ink mb-2">
               Teléfono
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Phone className="h-5 w-5 text-slate-400" />
+                <Phone className="h-5 w-5 text-ink-lighter" />
               </div>
               <input
                 id="telefono"
@@ -206,12 +205,12 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+            <label htmlFor="password" className="block text-sm font-display font-medium text-ink mb-2">
               Contraseña
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-slate-400" />
+                <Lock className="h-5 w-5 text-ink-lighter" />
               </div>
               <input
                 id="password"
@@ -229,12 +228,12 @@ export default function RegisterPage() {
           {accountType === 'MERCHANT' && (
             <>
               <div>
-                <label htmlFor="negocio" className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="negocio" className="block text-sm font-display font-medium text-ink mb-2">
                   Nombre del negocio
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Store className="h-5 w-5 text-slate-400" />
+                    <Store className="h-5 w-5 text-ink-lighter" />
                   </div>
                   <input
                     id="negocio"
@@ -249,12 +248,12 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="sector" className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="sector" className="block text-sm font-display font-medium text-ink mb-2">
                   Sector / Ubicación
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Store className="h-5 w-5 text-slate-400" />
+                    <Store className="h-5 w-5 text-ink-lighter" />
                   </div>
                   <input
                     id="sector"
@@ -276,16 +275,16 @@ export default function RegisterPage() {
               type="checkbox"
               checked={formData.aceptarTerminos}
               onChange={(e) => handleChange('aceptarTerminos', e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500"
+              className="h-4 w-4 rounded border-cream-300 text-brand-600 focus:ring-brand-500"
               disabled={isLoading}
             />
-            <label htmlFor="aceptarTerminos" className="text-sm text-slate-700">
+            <label htmlFor="aceptarTerminos" className="text-sm text-ink font-display">
               Acepto los términos y condiciones
             </label>
           </div>
 
           {error && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-2xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-700 font-display">
               {error}
             </div>
           )}
@@ -293,15 +292,15 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full rounded-2xl bg-red-600 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-2xl bg-brand-600 py-3 text-sm font-display font-semibold text-cream-50 transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? 'Registrando...' : accountType === 'MERCHANT' ? 'Registrar mi negocio' : 'Registrarme'}
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-slate-500">
+        <div className="mt-6 text-center text-sm text-ink-light font-display">
           ¿Ya tienes cuenta?{' '}
-          <Link href="/login" className="font-semibold text-red-600 hover:text-red-700">
+          <Link href="/login" className="font-semibold text-brand-600 hover:text-brand-700">
             Inicia Sesión
           </Link>
         </div>

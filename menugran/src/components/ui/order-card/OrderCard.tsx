@@ -23,7 +23,7 @@ export const OrderCard = ({ order }: { order: OrderCardOrder }) => {
       <div className="p-4">
         <div className="flex justify-between items-start mb-3">
           <div className="flex-1">
-            <h3 className="font-display text-lg font-semibold text-ink-dark mb-1">
+              <h3 className="font-display text-lg font-semibold text-ink mb-1">
               Pedido \#{order.id.slice(0, 8)}
             </h3>
             <p className="text-sm text-neutral-500">

@@ -270,22 +270,22 @@ export default function OperatorOrdersPage() {
       <Link
         key={order.id}
         href={`/operator/orders/${order.id}`}
-        className="group block rounded-3xl border border-slate-200 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-lg"
+        className="group block rounded-3xl border border-neutral-200 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-lg"
       >
         <div className="flex items-center justify-between gap-3">
-          <p className="font-semibold text-slate-900">{order.number}</p>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+          <p className="font-semibold text-ink">{order.number}</p>
+          <span className="rounded-full bg-cream-100 px-3 py-1 text-xs font-semibold text-ink-lighter">
             {order.type === 'delivery' ? '🏠 Delivery' : '🍽️ Local'}
           </span>
         </div>
-        <p className="mt-3 text-sm text-slate-500">{order.type === 'delivery' ? order.address : order.address}</p>
-        <div className="mt-4 flex items-center justify-between gap-3 text-sm text-slate-500">
-          <span className={isLate ? 'text-red-600 font-semibold' : ''}>{timeAgo}</span>
+        <p className="mt-3 text-sm text-ink-lighter">{order.type === 'delivery' ? order.address : order.address}</p>
+        <div className="mt-4 flex items-center justify-between gap-3 text-sm text-ink-lighter">
+          <span className={isLate ? 'text-brand-600 font-semibold' : ''}>{timeAgo}</span>
           <span>{order.items} items</span>
         </div>
         <div className="mt-4 flex items-center justify-between gap-3">
-          <span className="text-lg font-semibold text-slate-900">{formatTotal(order.total)}</span>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+          <span className="text-lg font-semibold text-ink">{formatTotal(order.total)}</span>
+          <span className="rounded-full bg-cream-100 px-3 py-1 text-xs font-semibold text-ink-lighter">
             {getBadge(order.paymentMethod)}
           </span>
         </div>
@@ -296,7 +296,7 @@ export default function OperatorOrdersPage() {
             event.stopPropagation();
             moveToNext(order.id);
           }}
-          className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+          className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
         >
           <span>→</span>
           {statusConfig.find((status) => status.key === order.status)?.buttonLabel ?? 'Siguiente'}
@@ -309,10 +309,10 @@ export default function OperatorOrdersPage() {
     return (
       <div className="min-h-screen bg-[#f5f5f5] px-4 py-6 sm:px-6 md:px-8">
         <div className="mb-6 rounded-3xl bg-white p-6 shadow-sm shadow-slate-200">
-          <div className="h-8 w-48 rounded-full bg-slate-200 animate-pulse" />
+          <div className="h-8 w-48 rounded-full bg-cream-200 animate-pulse" />
           <div className="mt-4 flex gap-3">
             {[...Array(4)].map((_, index) => (
-              <div key={index} className="h-10 w-28 rounded-full bg-slate-200 animate-pulse" />
+              <div key={index} className="h-10 w-28 rounded-full bg-cream-200 animate-pulse" />
             ))}
           </div>
         </div>
@@ -320,7 +320,7 @@ export default function OperatorOrdersPage() {
           {[...Array(4)].map((_, columnIndex) => (
             <div key={columnIndex} className="space-y-4 rounded-3xl bg-white p-4 shadow-sm shadow-slate-200">
               {[...Array(3)].map((_, index) => (
-                <div key={index} className="h-36 rounded-3xl bg-slate-100 animate-pulse" />
+                <div key={index} className="h-36 rounded-3xl bg-cream-100 animate-pulse" />
               ))}
             </div>
           ))}
@@ -334,8 +334,8 @@ export default function OperatorOrdersPage() {
       <div className="mb-6 rounded-3xl bg-white p-6 shadow-sm shadow-slate-200">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Pedidos operativos</p>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Vista Kanban</h1>
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-ink-lighter">Pedidos operativos</p>
+            <h1 className="mt-2 text-3xl font-semibold text-ink">Vista Kanban</h1>
           </div>
           <div className="flex flex-wrap gap-3">
             {filterOptions.map((option) => (
@@ -345,8 +345,8 @@ export default function OperatorOrdersPage() {
                 onClick={() => setActiveFilter(option)}
                 className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                   activeFilter === option
-                    ? 'bg-red-600 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-cream-100 text-ink-light hover:bg-cream-200'
                 }`}
               >
                 {option}
@@ -365,8 +365,8 @@ export default function OperatorOrdersPage() {
               onClick={() => setActiveColumn(column.key)}
               className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                 activeColumn === column.key
-                  ? 'bg-red-600 text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'bg-cream-100 text-ink-light hover:bg-cream-200'
               }`}
             >
               {column.label} ({counts[column.key]})
@@ -376,26 +376,26 @@ export default function OperatorOrdersPage() {
       </div>
 
       {filteredOrders.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-slate-600 shadow-sm shadow-slate-200">
-          <div className="mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-red-100 text-4xl">🎉</div>
-          <h2 className="text-xl font-semibold text-slate-900">No hay pedidos pendientes</h2>
+        <div className="rounded-3xl border border-dashed border-neutral-300 bg-cream-50 p-10 text-center text-ink-lighter shadow-sm shadow-slate-200">
+          <div className="mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-brand-100 text-4xl">🎉</div>
+          <h2 className="text-xl font-semibold text-ink">No hay pedidos pendientes</h2>
           <p className="mt-2 text-sm">Todo está al día por ahora.</p>
         </div>
       ) : (
         <div className="space-y-4">
           <div className="hidden md:grid md:grid-cols-4 md:gap-4">
             {columns.map((column) => (
-              <div key={column.key} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <div key={column.key} className="rounded-3xl border border-neutral-200 bg-cream-50 p-4">
                 <div className="mb-5 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-slate-700">{column.label}</p>
-                    <p className="mt-1 text-3xl font-bold text-slate-900">{counts[column.key]}</p>
+                    <p className="text-sm font-semibold text-ink-light">{column.label}</p>
+                    <p className="mt-1 text-3xl font-bold text-ink">{counts[column.key]}</p>
                   </div>
                   <span className={`${column.color} rounded-full px-3 py-1 text-xs font-semibold`}>{counts[column.key]}</span>
                 </div>
                 <div className="space-y-4">
                   {column.items.length === 0 ? (
-                    <div className="rounded-3xl bg-white p-4 text-center text-sm text-slate-500">Sin pedidos</div>
+                    <div className="rounded-3xl bg-white p-4 text-center text-sm text-ink-lighter">Sin pedidos</div>
                   ) : (
                     column.items.map((order) => renderCard(order))
                   )}
@@ -407,17 +407,17 @@ export default function OperatorOrdersPage() {
           <div className="md:hidden">
             {columns.map((column) =>
               column.key === activeColumn ? (
-                <div key={column.key} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div key={column.key} className="rounded-3xl border border-neutral-200 bg-cream-50 p-4">
                   <div className="mb-5 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-slate-700">{column.label}</p>
-                      <p className="mt-1 text-3xl font-bold text-slate-900">{counts[column.key]}</p>
+                      <p className="text-sm font-semibold text-ink-light">{column.label}</p>
+                      <p className="mt-1 text-3xl font-bold text-ink">{counts[column.key]}</p>
                     </div>
                     <span className={`${column.color} rounded-full px-3 py-1 text-xs font-semibold`}>{counts[column.key]}</span>
                   </div>
                   <div className="space-y-4">
                     {column.items.length === 0 ? (
-                      <div className="rounded-3xl bg-white p-4 text-center text-sm text-slate-500">Sin pedidos</div>
+                      <div className="rounded-3xl bg-white p-4 text-center text-sm text-ink-lighter">Sin pedidos</div>
                     ) : (
                       column.items.map((order) => renderCard(order))
                     )}

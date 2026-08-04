@@ -242,9 +242,9 @@ export default function MenuPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm shadow-slate-200 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Administración de menú</p>
-          <h2 className="mt-2 text-3xl font-semibold text-slate-900">Gestión de cocina</h2>
-          <p className="mt-2 max-w-2xl text-sm text-slate-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-ink-lighter">Administración de menú</p>
+          <h2 className="mt-2 text-3xl font-semibold text-ink">Gestión de cocina</h2>
+          <p className="mt-2 max-w-2xl text-sm text-ink-lighter">
             Organiza categorías, platos y controla la disponibilidad de tu carta desde un solo panel.
           </p>
         </div>
@@ -252,14 +252,14 @@ export default function MenuPage() {
           <button
             type="button"
             onClick={() => openCategoryModal()}
-            className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-200"
+            className="rounded-2xl bg-cream-100 px-4 py-3 text-sm font-semibold text-ink transition hover:bg-cream-200"
           >
             Agregar categoría
           </button>
           <button
             type="button"
             onClick={() => openDishModal()}
-            className="rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
+            className="rounded-2xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-700"
           >
             Agregar plato
           </button>
@@ -267,15 +267,15 @@ export default function MenuPage() {
       </div>
 
       <div className="rounded-3xl bg-white p-4 shadow-sm shadow-slate-200">
-        <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 border-b border-neutral-200 pb-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setActiveTab('categories')}
               className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                 activeTab === 'categories'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ? 'bg-brand-600 text-white'
+                  : 'bg-cream-100 text-ink-light hover:bg-cream-200'
               }`}
             >
               Categorías
@@ -285,8 +285,8 @@ export default function MenuPage() {
               onClick={() => setActiveTab('dishes')}
               className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                 activeTab === 'dishes'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ? 'bg-brand-600 text-white'
+                  : 'bg-cream-100 text-ink-light hover:bg-cream-200'
               }`}
             >
               Platos
@@ -300,7 +300,7 @@ export default function MenuPage() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Buscar platos por nombre"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 md:w-80"
+                className="w-full rounded-2xl border border-neutral-200 bg-cream-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-red-100 md:w-80"
               />
             </div>
           ) : null}
@@ -310,18 +310,18 @@ export default function MenuPage() {
           {loading ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, index) => (
-                <div key={index} className="animate-pulse rounded-3xl bg-slate-100 p-6" />
+                <div key={index} className="animate-pulse rounded-3xl bg-cream-100 p-6" />
               ))}
             </div>
           ) : error ? (
-            <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-700">
+            <div className="rounded-3xl border border-brand-200 bg-brand-50 p-6 text-brand-700">
               <p className="font-semibold">Error al cargar</p>
               <p className="mt-2 text-sm">{error}</p>
             </div>
           ) : activeTab === 'categories' ? (
             <div className="space-y-4">
               {categories.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
+                <div className="rounded-3xl border border-dashed border-neutral-300 bg-cream-50 p-8 text-center text-ink-lighter">
                   No hay categorías creadas. Agrega tu primera categoría para comenzar.
                 </div>
               ) : (
@@ -329,20 +329,20 @@ export default function MenuPage() {
                   {categories.map((category) => (
                     <div
                       key={category.id}
-                      className="flex flex-col justify-between gap-4 rounded-3xl border border-slate-200 bg-slate-50 p-5 sm:flex-row sm:items-center"
+                      className="flex flex-col justify-between gap-4 rounded-3xl border border-neutral-200 bg-cream-50 p-5 sm:flex-row sm:items-center"
                     >
                       <div>
-                        <p className="text-lg font-semibold text-slate-900">{category.name}</p>
-                        <p className="mt-1 text-sm text-slate-500">{category.dishCount} platos</p>
+                        <p className="text-lg font-semibold text-ink">{category.name}</p>
+                        <p className="mt-1 text-sm text-ink-lighter">{category.dishCount} platos</p>
                       </div>
                       <div className="flex items-center gap-3 self-start sm:self-auto">
-                        <span className="rounded-full bg-slate-200 px-3 py-1 text-sm text-slate-700">
+                        <span className="rounded-full bg-cream-200 px-3 py-1 text-sm text-ink-light">
                           Orden {category.order}
                         </span>
                         <button
                           type="button"
                           onClick={() => openCategoryModal(category)}
-                          className="rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
+                          className="rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-ink-light shadow-sm transition hover:bg-cream-100"
                         >
                           Editar
                         </button>
@@ -355,8 +355,8 @@ export default function MenuPage() {
           ) : (
             <div>
               {filteredDishes.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-slate-600">
-                  <p className="text-xl font-semibold text-slate-900">Agrega tu primer plato 🍽️</p>
+                <div className="rounded-3xl border border-dashed border-neutral-300 bg-cream-50 p-10 text-center text-ink-lighter">
+                  <p className="text-xl font-semibold text-ink">Agrega tu primer plato 🍽️</p>
                   <p className="mt-2 text-sm">Aún no hay platos que coincidan con tu búsqueda.</p>
                 </div>
               ) : (
@@ -364,12 +364,12 @@ export default function MenuPage() {
                   <table className="min-w-full border-separate border-spacing-y-3 text-left">
                     <thead>
                       <tr>
-                        <th className="px-4 py-3 text-sm font-semibold text-slate-500">Imagen</th>
-                        <th className="px-4 py-3 text-sm font-semibold text-slate-500">Nombre</th>
-                        <th className="px-4 py-3 text-sm font-semibold text-slate-500">Categoría</th>
-                        <th className="px-4 py-3 text-sm font-semibold text-slate-500">Precio</th>
-                        <th className="px-4 py-3 text-sm font-semibold text-slate-500">Disponible</th>
-                        <th className="px-4 py-3 text-sm font-semibold text-slate-500">Acciones</th>
+                        <th className="px-4 py-3 text-sm font-semibold text-ink-lighter">Imagen</th>
+                        <th className="px-4 py-3 text-sm font-semibold text-ink-lighter">Nombre</th>
+                        <th className="px-4 py-3 text-sm font-semibold text-ink-lighter">Categoría</th>
+                        <th className="px-4 py-3 text-sm font-semibold text-ink-lighter">Precio</th>
+                        <th className="px-4 py-3 text-sm font-semibold text-ink-lighter">Disponible</th>
+                        <th className="px-4 py-3 text-sm font-semibold text-ink-lighter">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -382,13 +382,13 @@ export default function MenuPage() {
                               className="h-10 w-10 rounded-full object-cover"
                             />
                           </td>
-                          <td className="px-4 py-4 align-middle text-sm font-semibold text-slate-900">
+                          <td className="px-4 py-4 align-middle text-sm font-semibold text-ink">
                             {dish.name}
                           </td>
-                          <td className="px-4 py-4 align-middle text-sm text-slate-600">
+                          <td className="px-4 py-4 align-middle text-sm text-ink-lighter">
                             {dish.categoryName}
                           </td>
-                          <td className="px-4 py-4 align-middle text-sm text-slate-900">
+                          <td className="px-4 py-4 align-middle text-sm text-ink">
                             {formatPrice(dish.price)}
                           </td>
                           <td className="px-4 py-4 align-middle">
@@ -411,7 +411,7 @@ export default function MenuPage() {
                               <button
                                 type="button"
                                 onClick={() => openDishModal(dish)}
-                                className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 text-slate-700 transition hover:bg-slate-200"
+                                className="inline-flex items-center gap-2 rounded-2xl bg-cream-100 px-3 py-2 text-ink-light transition hover:bg-cream-200"
                               >
                                 <span>✏️</span>
                                 Editar
@@ -419,7 +419,7 @@ export default function MenuPage() {
                               <button
                                 type="button"
                                 onClick={() => deleteDish(dish.id)}
-                                className="inline-flex items-center gap-2 rounded-2xl bg-red-50 px-3 py-2 text-red-700 transition hover:bg-red-100"
+                                className="inline-flex items-center gap-2 rounded-2xl bg-brand-50 px-3 py-2 text-brand-700 transition hover:bg-brand-100"
                               >
                                 <span>🗑️</span>
                                 Eliminar
@@ -442,13 +442,13 @@ export default function MenuPage() {
           <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">{selectedCategory ? 'Editar' : 'Nueva'} categoría</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900">{selectedCategory ? selectedCategory.name : 'Agregar categoría'}</h3>
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-ink-lighter">{selectedCategory ? 'Editar' : 'Nueva'} categoría</p>
+                <h3 className="mt-2 text-2xl font-semibold text-ink">{selectedCategory ? selectedCategory.name : 'Agregar categoría'}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setCategoryModalOpen(false)}
-                className="text-slate-400 transition hover:text-slate-700"
+                className="text-neutral-400 transition hover:text-ink-light"
               >
                 ✕
               </button>
@@ -460,7 +460,7 @@ export default function MenuPage() {
                 value={categoryName}
                 onChange={(event) => setCategoryName(event.target.value)}
                 placeholder="Ej. Postres"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                className="w-full rounded-2xl border border-neutral-200 bg-cream-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-red-100"
               />
 
               <label htmlFor="category-order" className="block text-sm font-semibold text-neutral-700">Orden</label>
@@ -469,14 +469,14 @@ export default function MenuPage() {
                 value={categoryOrder}
                 onChange={(event) => setCategoryOrder(event.target.value.replace(/\D/g, ''))}
                 placeholder="1"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                className="w-full rounded-2xl border border-neutral-200 bg-cream-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-red-100"
               />
             </div>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => setCategoryModalOpen(false)}
-                className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+                className="rounded-2xl bg-cream-100 px-4 py-3 text-sm font-semibold text-ink-light transition hover:bg-cream-200"
               >
                 Cancelar
               </button>
@@ -484,7 +484,7 @@ export default function MenuPage() {
                 type="button"
                 onClick={saveCategory}
                 disabled={saving}
-                className="rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+                className="rounded-2xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300"
               >
                 {saving ? 'Guardando...' : 'Guardar categoría'}
               </button>
@@ -498,13 +498,13 @@ export default function MenuPage() {
           <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">{selectedDish ? 'Editar' : 'Nuevo'} plato</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900">{selectedDish ? selectedDish.name : 'Agregar nuevo plato'}</h3>
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-ink-lighter">{selectedDish ? 'Editar' : 'Nuevo'} plato</p>
+                <h3 className="mt-2 text-2xl font-semibold text-ink">{selectedDish ? selectedDish.name : 'Agregar nuevo plato'}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setDishModalOpen(false)}
-                className="text-slate-400 transition hover:text-slate-700"
+                className="text-neutral-400 transition hover:text-ink-light"
               >
                 ✕
               </button>
@@ -517,7 +517,7 @@ export default function MenuPage() {
                   value={dishName}
                   onChange={(event) => setDishName(event.target.value)}
                   placeholder="Nombre del plato"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                  className="w-full rounded-2xl border border-neutral-200 bg-cream-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-red-100"
                 />
 
                 <label htmlFor="dish-description" className="block text-sm font-semibold text-neutral-700">Descripción</label>
@@ -526,7 +526,7 @@ export default function MenuPage() {
                   value={dishDescription}
                   onChange={(event) => setDishDescription(event.target.value)}
                   placeholder="Descripción corta"
-                  className="min-h-[120px] w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                  className="min-h-[120px] w-full rounded-3xl border border-neutral-200 bg-cream-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-red-100"
                 />
               </div>
 
@@ -537,7 +537,7 @@ export default function MenuPage() {
                   value={dishPrice}
                   onChange={(event) => setDishPrice(event.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="12500"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                  className="w-full rounded-2xl border border-neutral-200 bg-cream-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-red-100"
                 />
 
                 <label htmlFor="dish-category" className="block text-sm font-semibold text-neutral-700">Categoría</label>
@@ -545,7 +545,7 @@ export default function MenuPage() {
                   id="dish-category"
                   value={dishCategoryId}
                   onChange={(event) => setDishCategoryId(event.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                  className="w-full rounded-2xl border border-neutral-200 bg-cream-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-red-100"
                 >
                   {categoryOptions.map((category) => (
                     <option key={category.id} value={category.id}>
@@ -560,14 +560,14 @@ export default function MenuPage() {
                   type="file"
                   accept="image/*"
                   onChange={handleImageChange}
-                  className="w-full text-sm text-slate-600"
+                  className="w-full text-sm text-ink-lighter"
                 />
                 {dishImagePreview ? (
-                  <div className="mt-3 flex h-36 items-center justify-center overflow-hidden rounded-3xl bg-slate-100">
+                  <div className="mt-3 flex h-36 items-center justify-center overflow-hidden rounded-3xl bg-cream-100">
                     <img src={dishImagePreview} alt="Preview" className="h-full object-cover" />
                   </div>
                 ) : (
-                  <div className="mt-3 flex h-36 items-center justify-center rounded-3xl bg-slate-100 text-sm text-slate-500">
+                  <div className="mt-3 flex h-36 items-center justify-center rounded-3xl bg-cream-100 text-sm text-ink-lighter">
                     Previsualización de imagen
                   </div>
                 )}
@@ -577,7 +577,7 @@ export default function MenuPage() {
               <button
                 type="button"
                 onClick={() => setDishModalOpen(false)}
-                className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+                className="rounded-2xl bg-cream-100 px-4 py-3 text-sm font-semibold text-ink-light transition hover:bg-cream-200"
               >
                 Cancelar
               </button>
@@ -585,7 +585,7 @@ export default function MenuPage() {
                 type="button"
                 onClick={saveDish}
                 disabled={saving}
-                className="rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+                className="rounded-2xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300"
               >
                 {saving ? 'Guardando...' : selectedDish ? 'Guardar cambios' : 'Guardar plato'}
               </button>

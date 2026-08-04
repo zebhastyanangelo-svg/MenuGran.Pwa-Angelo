@@ -41,8 +41,8 @@ export default function ActiveRidersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Entregas Activas</h1>
-        <p className="text-gray-600 mt-2">Gestiona tus entregas en progreso</p>
+        <h1 className="text-3xl font-bold text-ink">Entregas Activas</h1>
+        <p className="text-ink-lighter mt-2">Gestiona tus entregas en progreso</p>
       </div>
 
       {loading ? (
@@ -52,8 +52,8 @@ export default function ActiveRidersPage() {
       ) : activeDeliveries.length === 0 ? (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
           <MapPin className="mx-auto mb-4 text-blue-600" size={32} />
-          <p className="text-gray-700 font-medium">No hay entregas activas</p>
-          <p className="text-gray-500 text-sm mt-2">
+          <p className="text-ink-light font-medium">No hay entregas activas</p>
+          <p className="text-ink-lighter text-sm mt-2">
             Dirígete a &quot;Disponibles&quot; para buscar entregas
           </p>
         </div>
@@ -62,14 +62,14 @@ export default function ActiveRidersPage() {
           {activeDeliveries.map((delivery) => (
             <div
               key={delivery.id}
-              className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition"
+              className="bg-white border border-neutral-200 rounded-lg p-6 hover:shadow-md transition"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 text-lg">
+                  <h3 className="font-semibold text-ink text-lg">
                     {delivery.clientName}
                   </h3>
-                  <div className="mt-3 space-y-2 text-sm text-gray-600">
+                  <div className="mt-3 space-y-2 text-sm text-ink-lighter">
                     <div className="flex items-center gap-2">
                       <MapPin size={16} />
                       <span>{delivery.deliveryAddress}</span>

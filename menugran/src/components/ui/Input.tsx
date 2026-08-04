@@ -1,5 +1,3 @@
-// components/ui/Input.tsx - Componente de input reutilizable
-
 import { InputHTMLAttributes } from 'react';
 import { clsx } from 'clsx';
 
@@ -19,17 +17,15 @@ export default function Input({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-ink-light mb-1">
           {label}
         </label>
       )}
       <input
         disabled={disabled}
         className={clsx(
-          'w-full px-4 py-2 border border-gray-300 rounded-lg',
-          'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent',
-          'disabled:bg-gray-100 disabled:cursor-not-allowed',
-          error && 'border-danger-500 focus:ring-danger-500',
+          'w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-xl text-ink placeholder:text-neutral-400 text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 disabled:bg-neutral-50 disabled:text-neutral-400 disabled:cursor-not-allowed',
+          error && 'border-danger-500 focus:ring-danger-500/20 focus:border-danger-500',
           className
         )}
         {...props}

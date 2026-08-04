@@ -17,7 +17,6 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setError('');
 
-    // Validación
     if (!cedula.trim()) {
       setError('Por favor ingresa tu cédula');
       return;
@@ -27,7 +26,6 @@ export default function AdminLoginPage() {
       return;
     }
 
-    // Simular envío a API
     setIsLoading(true);
 
     try {
@@ -62,28 +60,30 @@ export default function AdminLoginPage() {
 
   return (
     <div className="w-full max-w-md">
-      <div className="bg-white shadow-xl rounded-2xl p-8">
+      <div className="bg-cream-50 shadow-xl rounded-2xl p-8 border border-cream-200">
         <div className="text-center mb-8">
-          <div className="text-6xl mb-4">🏪</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Panel de Administrador</h1>
-          <p className="text-gray-500">Acceso exclusivo para dueños de restaurante</p>
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 rounded-full mb-4">
+            <User className="h-8 w-8 text-brand-600" />
+          </div>
+          <h1 className="text-2xl font-display font-bold text-ink mb-2">Panel de Administrador</h1>
+          <p className="text-ink-light font-display">Acceso exclusivo para dueños de restaurante</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="cedula" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="cedula" className="block text-sm font-display font-medium text-ink mb-2">
               Cédula
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-gray-400" />
+                <User className="h-5 w-5 text-ink-lighter" />
               </div>
               <input
                 id="cedula"
                 type="text"
                 value={cedula}
                 onChange={(e) => setCedula(e.target.value.replace(/\D/g, ''))}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-900 placeholder-gray-500"
+                className="block w-full pl-10 pr-3 py-3 border border-cream-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-cream-50 text-ink placeholder:text-ink-lighter font-display"
                 placeholder="Ingresa tu cédula"
                 disabled={isLoading}
               />
@@ -91,12 +91,12 @@ export default function AdminLoginPage() {
           </div>
 
           <div>
-            <label htmlFor="pin" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="pin" className="block text-sm font-display font-medium text-ink mb-2">
               PIN
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
+                <Lock className="h-5 w-5 text-ink-lighter" />
               </div>
               <input
                 id="pin"
@@ -104,7 +104,7 @@ export default function AdminLoginPage() {
                 maxLength={4}
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-900 placeholder-gray-500"
+                className="block w-full pl-10 pr-3 py-3 border border-cream-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-cream-50 text-ink placeholder:text-ink-lighter font-display"
                 placeholder="****"
                 disabled={isLoading}
               />
@@ -112,7 +112,7 @@ export default function AdminLoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-danger-50 border border-danger-200 text-danger-700 px-4 py-3 rounded-lg text-sm font-display">
               {error}
             </div>
           )}
@@ -120,14 +120,14 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-red-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full bg-brand-600 text-cream-50 py-3 px-4 rounded-lg font-display font-medium hover:bg-brand-700 focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isLoading ? 'Cargando...' : 'Ingresar al Panel'}
           </button>
         </form>
 
         <div className="mt-6 text-center">
-          <Link href="/login" className="text-sm text-gray-600 hover:text-red-600 transition-colors">
+          <Link href="/login" className="text-sm text-ink-light hover:text-brand-600 transition-colors font-display">
             ¿Eres cliente? Inicia sesión aquí
           </Link>
         </div>

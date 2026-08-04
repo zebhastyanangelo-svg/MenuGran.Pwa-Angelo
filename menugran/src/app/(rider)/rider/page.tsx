@@ -102,11 +102,11 @@ export default function RiderPage() {
   return (
     <div>
       {/* Toggle Disponibilidad */}
-      <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 mb-4">
+      <div className="bg-white rounded-xl shadow-sm p-4 border border-neutral-100 mb-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-semibold text-gray-900">Estado</h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="font-semibold text-ink">Estado</h2>
+            <p className="text-sm text-ink-lighter">
               {isAvailable ? 'Estas disponible para recibir pedidos' : 'No estas disponible'}
             </p>
           </div>
@@ -130,12 +130,12 @@ export default function RiderPage() {
       {/* Pedidos Disponibles */}
       {isAvailable && (
         <>
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">Pedidos disponibles</h3>
+          <h3 className="text-lg font-semibold text-ink mb-3">Pedidos disponibles</h3>
           {availableOrders.length === 0 ? (
-            <div className="text-center py-8 bg-white rounded-xl border border-gray-100">
-              <Package className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500">No hay pedidos disponibles</p>
-              <p className="text-sm text-gray-400 mt-1">Vuelve a intentar en unos minutos</p>
+            <div className="text-center py-8 bg-white rounded-xl border border-neutral-100">
+              <Package className="h-10 w-10 text-neutral-300 mx-auto mb-2" />
+              <p className="text-ink-lighter">No hay pedidos disponibles</p>
+              <p className="text-sm text-neutral-400 mt-1">Vuelve a intentar en unos minutos</p>
             </div>
           ) : (
             <div className="space-y-3 mb-6">
@@ -150,12 +150,12 @@ export default function RiderPage() {
                   className="bg-white rounded-xl shadow-soft border border-neutral-200 p-4 cursor-pointer hover:border-brand-300 transition focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-gray-900">{order.number}</span>
-                    <span className="text-sm text-gray-400 flex items-center gap-1">
+                    <span className="font-bold text-ink">{order.number}</span>
+                    <span className="text-sm text-neutral-400 flex items-center gap-1">
                       <MapPin className="h-3 w-3" /> {order.distance}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-gray-500 mb-2">
+                  <div className="flex items-center gap-3 text-sm text-ink-lighter mb-2">
                     <div className="flex items-center gap-1">
                       <Package className="h-3.5 w-3.5" />
                       <span className="truncate max-w-[120px]">{order.restaurant?.name ?? 'Restaurante'}</span>
@@ -167,7 +167,7 @@ export default function RiderPage() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <div className="flex items-center gap-3 text-xs text-neutral-400">
                       <span>{order.items.length} items</span>
                       <span>{formatPrice(order.total)}</span>
                     </div>
@@ -176,7 +176,7 @@ export default function RiderPage() {
                         e.stopPropagation();
                         handleAcceptOrder(order.id);
                       }}
-                      className="px-4 py-1.5 bg-red-600 text-white rounded-full text-xs font-medium hover:bg-red-700 transition"
+                      className="px-4 py-1.5 bg-brand-600 text-white rounded-full text-xs font-medium hover:bg-brand-700 transition"
                     >
                       Aceptar
                     </button>
@@ -189,11 +189,11 @@ export default function RiderPage() {
       )}
 
       {/* Historial del Dia */}
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">Mis entregas de hoy</h3>
+      <h3 className="text-lg font-semibold text-ink mb-3">Mis entregas de hoy</h3>
       {myDeliveries.length === 0 ? (
-        <div className="text-center py-6 bg-white rounded-xl border border-gray-100">
-          <Bike className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-          <p className="text-gray-500">Aun no has hecho entregas hoy</p>
+        <div className="text-center py-6 bg-white rounded-xl border border-neutral-100">
+          <Bike className="h-10 w-10 text-neutral-300 mx-auto mb-2" />
+          <p className="text-ink-lighter">Aun no has hecho entregas hoy</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -207,13 +207,13 @@ export default function RiderPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-gray-900 text-sm">{delivery.number}</span>
-                    <span className="text-xs text-gray-400">{new Date(delivery.createdAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="font-bold text-ink text-sm">{delivery.number}</span>
+                    <span className="text-xs text-neutral-400">{new Date(delivery.createdAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">{delivery.client?.name ?? 'Cliente'}</p>
+                  <p className="text-sm text-ink-lighter mt-1">{delivery.client?.name ?? 'Cliente'}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-gray-900">{formatPrice(delivery.total)}</p>
+                  <p className="font-semibold text-ink">{formatPrice(delivery.total)}</p>
                   <span className="text-xs text-green-600 flex items-center gap-1">
                     <CheckCircle className="h-3 w-3" /> {statusLabel(delivery.status)}
                   </span>
@@ -229,50 +229,50 @@ export default function RiderPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setSelectedOrder(null)}>
           <div className="bg-white rounded-xl max-w-sm w-full p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">{selectedOrder.number}</h2>
-              <button onClick={() => setSelectedOrder(null)} className="text-gray-400 text-lg">×</button>
+              <h2 className="text-lg font-bold text-ink">{selectedOrder.number}</h2>
+              <button onClick={() => setSelectedOrder(null)} className="text-neutral-400 text-lg">×</button>
             </div>
 
             <div className="space-y-3 text-sm">
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 text-ink-lighter">
                 <Package className="h-4 w-4" />
                 <div>
-                  <p className="text-xs text-gray-400">Recoger en</p>
+                  <p className="text-xs text-neutral-400">Recoger en</p>
                   <p className="font-medium">{selectedOrder.restaurant?.name ?? 'Restaurante'}</p>
-                  <p className="text-xs text-gray-400">{selectedOrder.restaurant?.address ?? ''}</p>
+                  <p className="text-xs text-neutral-400">{selectedOrder.restaurant?.address ?? ''}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 text-ink-lighter">
                 <MapPin className="h-4 w-4" />
                 <div>
-                  <p className="text-xs text-gray-400">Entregar en</p>
+                  <p className="text-xs text-neutral-400">Entregar en</p>
                   <p className="font-medium">{selectedOrder.deliveryAddress}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 text-ink-lighter">
                 <User className="h-4 w-4" />
                 <div>
                   <p className="font-medium">{selectedOrder.client?.name ?? 'Cliente'}</p>
-                  <p className="text-xs text-gray-400">{selectedOrder.client?.phone ?? ''}</p>
+                  <p className="text-xs text-neutral-400">{selectedOrder.client?.phone ?? ''}</p>
                 </div>
               </div>
-              <div className="flex justify-between pt-3 border-t border-gray-100">
-                <span className="text-gray-500">Items</span>
+              <div className="flex justify-between pt-3 border-t border-neutral-100">
+                <span className="text-ink-lighter">Items</span>
                 <span className="font-medium">{selectedOrder.items.length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Distancia</span>
+                <span className="text-ink-lighter">Distancia</span>
                 <span className="font-medium">{selectedOrder.distance}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Total</span>
+                <span className="text-ink-lighter">Total</span>
                 <span className="font-bold text-base">{formatPrice(selectedOrder.total)}</span>
               </div>
             </div>
 
             <button
               onClick={() => handleAcceptOrder(selectedOrder.id)}
-              className="w-full mt-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition"
+              className="w-full mt-4 py-2.5 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition"
             >
               Aceptar Entrega
             </button>
