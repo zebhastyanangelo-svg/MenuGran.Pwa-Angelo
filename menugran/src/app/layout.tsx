@@ -1,27 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Inter, Outfit } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import SessionProvider from "@/components/providers/SessionProvider";
 import SWUpdatePrompt from "@/components/SWUpdatePrompt";
 import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
   display: "swap",
   variable: "--font-inter",
 });
 
-const outfit = Outfit({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
+  weight: ["700", "800"],
   display: "swap",
-  variable: "--font-outfit",
-});
-
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  style: ["normal", "italic"],
-  display: "swap",
-  variable: "--font-cormorant",
+  variable: "--font-jakarta",
 });
 
 export const viewport: Viewport = {
@@ -32,8 +26,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   colorScheme: "light dark",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8f9ff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b1c30" },
+    { media: "(prefers-color-scheme: light)", color: "#F5F6F8" },
+    { media: "(prefers-color-scheme: dark)", color: "#1A1D20" },
   ],
 };
 
@@ -77,11 +71,11 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="MenuGran" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#f8f9ff" />
+        <meta name="theme-color" content="#F5F6F8" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
       </head>
-      <body className={`${inter.variable} ${outfit.variable} ${cormorant.variable} bg-cream-50 text-ink font-sans`} suppressHydrationWarning>
+      <body className={`${inter.variable} ${jakarta.variable} bg-cream-50 text-ink font-sans`} suppressHydrationWarning>
         <SessionProvider>{children}</SessionProvider>
         <SWUpdatePrompt />
       </body>

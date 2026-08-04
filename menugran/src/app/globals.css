@@ -10,7 +10,30 @@
     --sar: env(safe-area-inset-right);
     --sab: env(safe-area-inset-bottom);
     --sal: env(safe-area-inset-left);
-    --ticket-bg: #FDF9F2;
+    --ticket-bg: #F5F6F8;
+
+    /* Brand Colors */
+    --mg-primary: #E6193A;
+    --mg-primary-hover: #CF1331;
+    --mg-accent-gold: #FFB800;
+
+    /* Neutrals & UI Backgrounds */
+    --mg-text-main: #1A1D20;
+    --mg-text-muted: #6C757D;
+    --mg-bg-app: #F5F6F8;
+    --mg-surface: #FFFFFF;
+    --mg-border: #E9ECEF;
+
+    /* Typography */
+    --mg-font-heading: "Plus Jakarta Sans", -apple-system, sans-serif;
+    --mg-font-body: "Inter", -apple-system, sans-serif;
+
+    /* UI Specs */
+    --mg-radius-sm: 8px;
+    --mg-radius-md: 12px;
+    --mg-radius-lg: 16px;
+    --mg-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+    --mg-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
   }
 
   html {
@@ -21,12 +44,13 @@
 
   body {
     @apply text-ink bg-cream-50 antialiased;
-    font-family: var(--font-outfit), system-ui, -apple-system, BlinkMacSystemFont,
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont,
       "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-cormorant), Georgia, serif;
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: var(--font-jakarta), -apple-system, sans-serif;
+    font-weight: 700;
   }
 
   *:focus-visible {
@@ -227,19 +251,8 @@
     @apply bg-white rounded-2xl border border-neutral-200 p-6 relative;
   }
 
-  .receipt::before {
-    content: "";
-    position: absolute;
-    left: 1.5rem;
-    right: 1.5rem;
-    top: 0;
-    bottom: 0;
-    border-left: 2px dashed cream-200;
-    pointer-events: none;
-  }
-
   .section-eyebrow {
-    @apply text-xs font-semibold uppercase tracking-[0.2em] text-sage-600;
+    @apply text-xs font-semibold uppercase tracking-[0.2em] text-gold-700;
   }
 
   .section-title {
@@ -248,5 +261,55 @@
 
   .section-subtitle {
     @apply text-ink-light mt-2 font-body;
+  }
+
+  /* --- MenuGram spec components --- */
+
+  .btn-mg-primary {
+    background-color: var(--mg-primary);
+    color: #FFFFFF;
+    font-family: var(--mg-font-body);
+    font-weight: 600;
+    padding: 12px 20px;
+    border-radius: var(--mg-radius-md);
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-mg-primary:hover {
+    background-color: var(--mg-primary-hover);
+  }
+
+  .btn-mg-primary:active {
+    transform: scale(0.98);
+  }
+
+  .mg-card {
+    background-color: var(--mg-surface);
+    border-radius: var(--mg-radius-lg);
+    border: 1px solid var(--mg-border);
+    box-shadow: var(--mg-shadow-sm);
+    padding: 16px;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+  }
+
+  .mg-card:hover {
+    box-shadow: var(--mg-shadow-md);
+  }
+
+  .mg-badge-promo {
+    background-color: var(--mg-accent-gold);
+    color: var(--mg-text-main);
+    font-weight: 700;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: var(--mg-radius-sm);
+    text-transform: uppercase;
   }
 }
