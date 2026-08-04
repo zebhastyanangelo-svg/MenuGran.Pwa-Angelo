@@ -1,1 +1,14 @@
-{}
+{
+  "name": "menugran-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "cd menugran && npm ci && npm run build",
+    "start": "cd menugran && npm run start"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.15.0",
+    "@testsprite/testsprite-mcp": "^0.0.39",
+    "prisma": "^5.15.0"
+  }
+}
