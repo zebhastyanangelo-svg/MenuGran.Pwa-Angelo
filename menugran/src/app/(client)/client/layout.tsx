@@ -2,13 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Home, Package, Search, Map, User, Menu } from 'lucide-react';
+import { Home, Search, Map, User } from 'lucide-react';
 import { CartDrawer } from '@/modules/cart';
 import { useCartStore, selectTotal } from '@/modules/cart/store';
 
 const tabs = [
   { label: 'Inicio', href: '/client', icon: Home },
-  { label: 'Pedidos', href: '/client/orders', icon: Package },
   { label: 'Seguimiento', href: '/client/tracking', icon: Map },
   { label: 'Perfil', href: '/client/profile', icon: User },
 ];

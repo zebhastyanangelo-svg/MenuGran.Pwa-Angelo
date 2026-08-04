@@ -99,10 +99,10 @@ export default function ClientTrackingPage() {
       <div className="px-4 py-20 text-center">
         <p className="text-lg font-semibold text-brand-500">{error || 'Pedido no encontrado'}</p>
         <button
-          onClick={() => router.push('/client/orders')}
+          onClick={() => router.push('/client')}
           className="mt-5 btn-primary btn-md"
         >
-          Volver a mis pedidos
+          Volver al inicio
         </button>
       </div>
     );
@@ -114,11 +114,11 @@ export default function ClientTrackingPage() {
   return (
     <div className="px-4 py-6 sm:px-6 md:px-8 animate-fade-in">
       <button
-        onClick={() => router.push('/client/orders')}
+        onClick={() => router.push('/client')}
         className="mb-6 flex items-center gap-2 text-sm font-semibold text-ink-light transition hover:text-ink"
       >
         <FontAwesomeIcon icon={faArrowLeft} className="h-4 w-4" />
-        Mis pedidos
+        Inicio
       </button>
 
       <div className="mb-6 rounded-xl bg-white p-6 shadow-soft border border-neutral-200">

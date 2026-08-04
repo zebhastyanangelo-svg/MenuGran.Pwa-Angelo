@@ -54,9 +54,10 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
+          const newOrderId = (data.data as { id?: string } | undefined)?.id;
           clearCart();
           onClose();
-          router.push('/client/orders');
+          router.push(newOrderId ? `/order-status/${newOrderId}` : '/client');
         }
       })
       .catch(console.error);

@@ -263,6 +263,23 @@
     @apply text-ink-light mt-2 font-body;
   }
 
+  /* Hand-drawn wiggle for food icons / SVGs / loader art (Excalidraw feel). */
+  @keyframes food-wiggle {
+    0%   { transform: translate(0, 0) rotate(0deg)   scale(1); }
+    20%  { transform: translate(-0.5px, -0.5px) rotate(-1.5deg) scale(1.02); }
+    40%  { transform: translate(0.5px, 0.5px) rotate(1.2deg)  scale(0.99); }
+    60%  { transform: translate(-0.5px, 0.5px) rotate(-0.8deg) scale(1.01); }
+    80%  { transform: translate(0.5px, -0.5px) rotate(1.5deg)  scale(1.02); }
+    100% { transform: translate(0, 0) rotate(0deg)   scale(1); }
+  }
+
+  .animated-food {
+    display: inline-block;
+    transform-origin: 50% 50%;
+    animation: food-wiggle 0.9s ease-in-out infinite;
+    will-change: transform;
+  }
+
   /* --- MenuGram spec components --- */
 
   .btn-mg-primary {
@@ -311,5 +328,96 @@
     padding: 4px 8px;
     border-radius: var(--mg-radius-sm);
     text-transform: uppercase;
+  }
+}
+
+/* ===== Live Order Tracker kitchen animations ===== */
+
+@keyframes mg-chop {
+  0%, 100% { transform: rotate(-22deg) translateY(0); }
+  25%      { transform: rotate(8deg)  translateY(-2px); }
+  50%      { transform: rotate(-22deg) translateY(1px); }
+  75%      { transform: rotate(8deg)  translateY(-2px); }
+}
+.mg-anim-chop { transform-origin: 50% 90%; animation: mg-chop 0.85s ease-in-out infinite; }
+
+@keyframes mg-veggie-bounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25%      { transform: translateY(-3px) rotate(-6deg); }
+  75%      { transform: translateY(2px) rotate(6deg); }
+}
+.mg-anim-veggie { animation: mg-veggie-bounce 0.85s ease-in-out infinite; transform-origin: 50% 100%; }
+
+@keyframes mg-pan-toss {
+  0%, 100% { transform: rotate(-12deg) translate(0, 0); }
+  30%      { transform: rotate(10deg) translate(2px, -8px); }
+  60%      { transform: rotate(-4deg) translate(-1px, -3px); }
+}
+.mg-anim-pan { transform-origin: 50% 85%; animation: mg-pan-toss 1.4s ease-in-out infinite; }
+
+@keyframes mg-pan-food {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30%      { transform: translateY(-10px) scale(0.85); }
+  60%      { transform: translateY(-4px) scale(0.95); }
+}
+.mg-anim-pan-food { animation: mg-pan-food 1.4s ease-out infinite; }
+
+@keyframes mg-steam {
+  0%   { opacity: 0; transform: translateY(0) scaleX(1); }
+  40%  { opacity: 0.55; }
+  100% { opacity: 0; transform: translateY(-22px) scaleX(1.4); }
+}
+.mg-anim-steam { animation: mg-steam 2.4s ease-out infinite; transform-origin: 50% 100%; }
+.mg-anim-steam-2 { animation-delay: 0.8s; }
+.mg-anim-steam-3 { animation-delay: 1.6s; }
+
+@keyframes mg-plate-spin {
+  0%, 100% { transform: rotate(-4deg) translateY(0); }
+  50%      { transform: rotate(4deg) translateY(-2px); }
+}
+.mg-anim-plate { transform-origin: 50% 100%; animation: mg-plate-spin 1.6s ease-in-out infinite; }
+
+@keyframes mg-garnish-fall {
+  0%   { transform: translateY(-14px) rotate(0deg); opacity: 0; }
+  25%  { opacity: 1; }
+  100% { transform: translateY(8px) rotate(180deg); opacity: 0.9; }
+}
+.mg-anim-garnish { animation: mg-garnish-fall 2.2s ease-in-out infinite; transform-origin: 50% 50%; }
+.mg-anim-garnish-2 { animation-delay: 0.7s; }
+
+@keyframes mg-pulse-ring {
+  0%   { transform: scale(0.85); opacity: 0.8; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+.mg-pulse-ring { animation: mg-pulse-ring 1.8s ease-out infinite; transform-origin: 50% 50%; }
+.mg-pulse-ring-2 { animation-delay: 0.9s; }
+
+@keyframes mg-bell-ring {
+  0%, 100% { transform: rotate(0deg); }
+  20%      { transform: rotate(14deg); }
+  40%      { transform: rotate(-12deg); }
+  60%      { transform: rotate(8deg); }
+  80%      { transform: rotate(-4deg); }
+}
+.mg-anim-bell { transform-origin: 50% 10%; animation: mg-bell-ring 1.2s ease-in-out infinite; }
+
+@keyframes mg-confetti-fall {
+  0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(120px) rotate(540deg); opacity: 0; }
+}
+.mg-anim-confetti { animation: mg-confetti-fall linear forwards; transform-origin: 50% 50%; }
+
+@keyframes mg-fade-pop {
+  0%   { opacity: 0; transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.mg-anim-fade-pop { animation: mg-fade-pop 0.4s ease-out forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mg-anim-chop, .mg-anim-veggie, .mg-anim-pan, .mg-anim-pan-food,
+  .mg-anim-steam, .mg-anim-steam-2, .mg-anim-steam-3, .mg-anim-plate,
+  .mg-anim-garnish, .mg-anim-garnish-2, .mg-anim-bell, .mg-anim-confetti,
+  .mg-pulse-ring, .mg-pulse-ring-2, .mg-anim-fade-pop {
+    animation: none !important;
   }
 }
