@@ -45,8 +45,8 @@ export default function PublicLandingPage() {
                 <span className="text-sm font-body text-gold-700 uppercase tracking-wider">Cocina artesanal, pedido inteligente</span>
               </div>
               <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-ink mb-6 leading-tight">
-                Pide desde tu mesa,<br />
-                <span className="text-brand-600">sin apps</span>
+                Pide desde tu Telefono<br />
+                <span className="text-brand-600">y disfruta </span>
               </h1>
               <p className="text-xl text-ink-light mb-8 max-w-2xl font-body">
                 Menú digital, pedidos en tiempo real y seguimiento de tu entrega
