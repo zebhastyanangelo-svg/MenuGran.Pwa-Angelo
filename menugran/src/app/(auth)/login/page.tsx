@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, LogIn, Store } from 'lucide-react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('from');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -45,10 +47,15 @@ export default function LoginPage() {
       const session = await sessionRes.json();
       const role = session?.user?.role;
 
-      if (role === 'SUPER_ADMIN' || role === 'ADMIN') router.push('/admin');
-      else if (role === 'MERCHANT' || role === 'EMPLOYEE') router.push('/merchant-portal/dashboard');
-      else if (role === 'CUSTOMER') router.push('/');
-      else router.push('/');
+      if (redirectTo && redirectTo.startsWith('/')) {
+        router.push(redirectTo);
+      } else if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
+        router.push('/admin');
+      } else if (role === 'MERCHANT' || role === 'EMPLOYEE') {
+        router.push('/merchant-portal/dashboard');
+      } else {
+        router.push('/client');
+      }
     } catch {
       setError('Error de conexion');
       setLoading(false);

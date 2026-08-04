@@ -37,7 +37,10 @@ export default async function middleware(req: NextRequest) {
 
   // --- Sin sesion ---
   if (!isLoggedIn) {
-    return isApi ? API_401 : NextResponse.redirect(new URL('/login', nextUrl.origin));
+    if (isApi) return API_401;
+    const loginUrl = new URL('/login', nextUrl.origin);
+    loginUrl.searchParams.set('from', pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   // --- Con sesion: verificar rol por ruta ---
