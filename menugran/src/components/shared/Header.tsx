@@ -1,20 +1,22 @@
-// components/shared/Header.tsx - Header compartido
+import type { ReactNode } from 'react';
 
 interface HeaderProps {
   title: string;
   subtitle?: string;
+  action?: ReactNode;
 }
 
-export default function Header({ title, subtitle }: HeaderProps) {
+export default function Header({ title, subtitle, action }: HeaderProps) {
   return (
-    <header className="w-full bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 pt-safe px-4">
-      <div className="max-w-4xl mx-auto py-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {title}
-        </h1>
-        {subtitle && (
-          <p className="text-gray-600 dark:text-gray-400 mt-1">{subtitle}</p>
-        )}
+    <header className="border-b border-neutral-200 bg-cream-50 px-4 py-5 md:px-6">
+      <div className="mx-auto flex max-w-7xl items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow">{subtitle ?? 'Panel'}</p>
+          <h1 className="font-display text-2xl font-bold text-ink md:text-3xl">
+            {title}
+          </h1>
+        </div>
+        {action ? <div>{action}</div> : null}
       </div>
     </header>
   );

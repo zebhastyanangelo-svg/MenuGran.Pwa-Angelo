@@ -182,8 +182,8 @@ export default function OperatorOrderDetailPage() {
       CONFIRMED: 'bg-blue-100 text-blue-800',
       PREPARING: 'bg-orange-100 text-orange-800',
       READY: 'bg-green-100 text-green-800',
-      DELIVERED: 'bg-gray-100 text-gray-800',
-      CANCELLED: 'bg-red-100 text-red-800',
+      DELIVERED: 'bg-cream-100 text-ink',
+      CANCELLED: 'bg-brand-100 text-brand-800',
       DELIVERING: 'bg-purple-100 text-purple-800',
     };
     const labels: Record<OrderStatus, string> = {
@@ -217,7 +217,7 @@ export default function OperatorOrderDetailPage() {
             </button>
             <button
               onClick={() => handleAction('reject', 'CANCELLED')}
-              className="flex-1 border border-red-300 text-red-600 py-3 px-4 rounded-lg font-medium hover:bg-red-50"
+              className="flex-1 border border-brand-300 text-brand-600 py-3 px-4 rounded-lg font-medium hover:bg-brand-50"
             >
               Rechazar
             </button>
@@ -247,7 +247,7 @@ export default function OperatorOrderDetailPage() {
             <select
               value={selectedRider}
               onChange={(e) => setSelectedRider(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-neutral-300 rounded-lg px-3 py-2"
             >
               <option value="">Seleccionar repartidor</option>
               {sampleRiders.filter(r => r.status === 'available').map(rider => (
@@ -278,10 +278,10 @@ export default function OperatorOrderDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-cream-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando pedido...</p>
+          <p className="mt-4 text-ink-lighter">Cargando pedido...</p>
         </div>
       </div>
     );
@@ -289,10 +289,10 @@ export default function OperatorOrderDetailPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-cream-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-600 text-xl mb-4">⚠️</div>
-          <p className="text-gray-800 font-medium">{error}</p>
+          <div className="text-brand-600 text-xl mb-4">⚠️</div>
+          <p className="text-ink font-medium">{error}</p>
           <button
             onClick={() => window.history.back()}
             className="mt-4 text-blue-600 hover:text-blue-800"
@@ -307,22 +307,22 @@ export default function OperatorOrderDetailPage() {
   if (!order) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-cream-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-4">
+      <div className="bg-white border-b border-neutral-200 px-4 py-4">
         <div className="flex items-center justify-between">
           <button
             onClick={() => window.history.back()}
-            className="flex items-center text-gray-600 hover:text-gray-800"
+            className="flex items-center text-ink-lighter hover:text-ink"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             Volver
           </button>
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">#{order.id}</h1>
+            <h1 className="text-2xl font-bold text-ink">#{order.id}</h1>
             <div className="flex items-center justify-center gap-2 mt-1">
               {getStatusBadge(order.status)}
-              <div className="flex items-center text-sm text-gray-500">
+              <div className="flex items-center text-sm text-ink-lighter">
                 <Clock className="w-4 h-4 mr-1" />
                 {elapsedTime}
               </div>
@@ -330,7 +330,7 @@ export default function OperatorOrderDetailPage() {
           </div>
           <button
             onClick={() => window.print()}
-            className="flex items-center text-gray-600 hover:text-gray-800"
+            className="flex items-center text-ink-lighter hover:text-ink"
           >
             <Printer className="w-5 h-5" />
           </button>
@@ -340,53 +340,53 @@ export default function OperatorOrderDetailPage() {
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         {/* Datos del Cliente */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Datos del Cliente</h2>
+          <h2 className="text-lg font-semibold text-ink mb-4">Datos del Cliente</h2>
           <div className="space-y-3">
-            <p className="text-gray-900 font-medium">{order.customer.name}</p>
-            <div className="flex items-center text-gray-600">
+            <p className="text-ink font-medium">{order.customer.name}</p>
+            <div className="flex items-center text-ink-lighter">
               <Phone className="w-4 h-4 mr-2" />
               <a href={`tel:${order.customer.phone}`} className="hover:text-blue-600">
                 {order.customer.phone}
               </a>
             </div>
             {order.type === 'delivery' && order.customer.address && (
-              <div className="flex items-start text-gray-600">
+              <div className="flex items-start text-ink-lighter">
                 <MapPin className="w-4 h-4 mr-2 mt-0.5" />
                 <span>{order.customer.address}</span>
               </div>
             )}
             {order.type === 'dine_in' && order.customer.table && (
-              <p className="text-gray-600">Mesa: {order.customer.table}</p>
+              <p className="text-ink-lighter">Mesa: {order.customer.table}</p>
             )}
           </div>
         </div>
 
         {/* Pedido */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Pedido</h2>
+          <h2 className="text-lg font-semibold text-ink mb-4">Pedido</h2>
           <div className="space-y-4">
             {order.items.map(item => (
               <div key={item.id} className="flex justify-between items-start">
                 <div className="flex-1">
-                  <p className="text-gray-900 font-medium">
+                  <p className="text-ink font-medium">
                     {item.quantity}x {item.name}
                   </p>
                   {item.notes && (
-                    <p className="text-sm text-gray-500 mt-1">Nota: {item.notes}</p>
+                    <p className="text-sm text-ink-lighter mt-1">Nota: {item.notes}</p>
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="text-gray-900">${item.price.toFixed(2)}</p>
-                  <p className="text-sm text-gray-500">${(item.quantity * item.price).toFixed(2)}</p>
+                  <p className="text-ink">${item.price.toFixed(2)}</p>
+                  <p className="text-sm text-ink-lighter">${(item.quantity * item.price).toFixed(2)}</p>
                 </div>
               </div>
             ))}
-            <div className="border-t border-gray-200 pt-4 space-y-2">
-              <div className="flex justify-between text-sm text-gray-600">
+            <div className="border-t border-neutral-200 pt-4 space-y-2">
+              <div className="flex justify-between text-sm text-ink-lighter">
                 <span>Subtotal</span>
                 <span>${order.subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-sm text-gray-600">
+              <div className="flex justify-between text-sm text-ink-lighter">
                 <span>Impuestos</span>
                 <span>${order.tax.toFixed(2)}</span>
               </div>
@@ -396,7 +396,7 @@ export default function OperatorOrderDetailPage() {
                   <span>-${order.discount.toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t border-gray-200">
+              <div className="flex justify-between text-xl font-bold text-ink pt-2 border-t border-neutral-200">
                 <span>TOTAL</span>
                 <span>${order.total.toFixed(2)}</span>
               </div>
@@ -406,14 +406,14 @@ export default function OperatorOrderDetailPage() {
 
         {/* Pago */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Pago</h2>
+          <h2 className="text-lg font-semibold text-ink mb-4">Pago</h2>
           <div className="space-y-3">
             <div className="flex items-center">
-              <CreditCard className="w-5 h-5 mr-3 text-gray-400" />
-              <span className="text-gray-900 capitalize">{order.paymentMethod}</span>
+              <CreditCard className="w-5 h-5 mr-3 text-neutral-400" />
+              <span className="text-ink capitalize">{order.paymentMethod}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Estado</span>
+              <span className="text-ink-lighter">Estado</span>
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                 order.paymentStatus === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
               }`}>
@@ -422,8 +422,8 @@ export default function OperatorOrderDetailPage() {
             </div>
             {order.paymentReference && (
               <div className="flex justify-between">
-                <span className="text-gray-600">Referencia</span>
-                <span className="text-gray-900">{order.paymentReference}</span>
+                <span className="text-ink-lighter">Referencia</span>
+                <span className="text-ink">{order.paymentReference}</span>
               </div>
             )}
           </div>
@@ -432,7 +432,7 @@ export default function OperatorOrderDetailPage() {
         {/* Repartidor */}
         {order.rider && (
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Repartidor</h2>
+            <h2 className="text-lg font-semibold text-ink mb-4">Repartidor</h2>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <img
@@ -441,8 +441,8 @@ export default function OperatorOrderDetailPage() {
                   className="w-10 h-10 rounded-full mr-3"
                 />
                 <div>
-                  <p className="text-gray-900 font-medium">{order.rider.name}</p>
-                  <p className="text-sm text-gray-500 capitalize">{order.rider.status.replace('_', ' ')}</p>
+                  <p className="text-ink font-medium">{order.rider.name}</p>
+                  <p className="text-sm text-ink-lighter capitalize">{order.rider.status.replace('_', ' ')}</p>
                 </div>
               </div>
               <button className="flex items-center text-blue-600 hover:text-blue-800">
@@ -458,8 +458,8 @@ export default function OperatorOrderDetailPage() {
       {showConfirmModal && pendingAction && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">¿Estás seguro?</h3>
-            <p className="text-gray-600 mb-6">
+            <h3 className="text-lg font-semibold text-ink mb-4">¿Estás seguro?</h3>
+            <p className="text-ink-lighter mb-6">
               ¿Quieres {pendingAction.action === 'confirm' ? 'confirmar' :
                        pendingAction.action === 'reject' ? 'rechazar' :
                        pendingAction.action === 'start_cooking' ? 'iniciar la preparación' :
@@ -470,7 +470,7 @@ export default function OperatorOrderDetailPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConfirmModal(false)}
-                className="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50"
+                className="flex-1 border border-neutral-300 text-ink-light py-2 px-4 rounded-lg hover:bg-cream-50"
               >
                 Cancelar
               </button>

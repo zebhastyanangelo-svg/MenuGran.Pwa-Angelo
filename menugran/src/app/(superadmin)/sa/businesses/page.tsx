@@ -135,16 +135,16 @@ export default function SuperAdminBusinessesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 px-4 py-6">
+      <div className="min-h-screen bg-cream-100 px-4 py-6">
         <div className="overflow-hidden rounded-3xl bg-white p-6 shadow-sm">
           <div className="animate-pulse space-y-6">
-            <div className="h-8 w-1/3 rounded-lg bg-slate-200" />
+            <div className="h-8 w-1/3 rounded-lg bg-cream-200" />
             <div className="grid gap-4 xl:grid-cols-3">
               {[...Array(3)].map((_, idx) => (
-                <div key={idx} className="h-32 rounded-3xl bg-slate-200" />
+                <div key={idx} className="h-32 rounded-3xl bg-cream-200" />
               ))}
             </div>
-            <div className="h-96 rounded-3xl bg-slate-200" />
+            <div className="h-96 rounded-3xl bg-cream-200" />
           </div>
         </div>
       </div>
@@ -153,25 +153,25 @@ export default function SuperAdminBusinessesPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 px-4 py-6">
-        <div className="rounded-3xl border border-red-200 bg-white p-8 shadow-sm text-center">
-          <p className="text-red-600 text-lg font-semibold">{error}</p>
+      <div className="min-h-screen bg-cream-100 px-4 py-6">
+        <div className="rounded-3xl border border-brand-200 bg-white p-8 shadow-sm text-center">
+          <p className="text-brand-600 text-lg font-semibold">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 px-4 py-6 md:px-8">
+    <div className="min-h-screen bg-cream-100 px-4 py-6 md:px-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
         <div>
-          <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Control de franquicias</p>
+          <p className="text-sm uppercase tracking-[0.24em] text-ink-lighter">Control de franquicias</p>
           <h1 className="text-3xl font-semibold text-slate-950">Gestión de negocios</h1>
         </div>
         <button
           type="button"
           onClick={openCreateModal}
-          className="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-700 transition-colors"
+          className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
           Crear Nuevo Negocio
@@ -181,7 +181,7 @@ export default function SuperAdminBusinessesPage() {
       <div className="overflow-hidden rounded-3xl bg-white p-6 shadow-sm">
         <div className="mb-6 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
           <label className="relative block">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
             <input
               type="text"
               placeholder="Buscar negocios, slugs o dueños"
@@ -190,29 +190,29 @@ export default function SuperAdminBusinessesPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-full rounded-3xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+              className="w-full rounded-3xl border border-neutral-200 bg-cream-50 py-3 pl-11 pr-4 text-sm text-ink outline-none focus:border-brand-500 focus:ring-2 focus:ring-red-100"
             />
           </label>
 
-          <div className="flex items-center gap-2 rounded-3xl bg-slate-50 p-3">
+          <div className="flex items-center gap-2 rounded-3xl bg-cream-50 p-3">
             <button
               type="button"
               onClick={() => setFilter('all')}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${filter === 'all' ? 'bg-red-600 text-white' : 'text-slate-700 hover:bg-white'}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${filter === 'all' ? 'bg-brand-600 text-white' : 'text-ink-light hover:bg-white'}`}
             >
               Todos
             </button>
             <button
               type="button"
               onClick={() => setFilter('active')}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${filter === 'active' ? 'bg-red-600 text-white' : 'text-slate-700 hover:bg-white'}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${filter === 'active' ? 'bg-brand-600 text-white' : 'text-ink-light hover:bg-white'}`}
             >
               Activos
             </button>
             <button
               type="button"
               onClick={() => setFilter('inactive')}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${filter === 'inactive' ? 'bg-red-600 text-white' : 'text-slate-700 hover:bg-white'}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${filter === 'inactive' ? 'bg-brand-600 text-white' : 'text-ink-light hover:bg-white'}`}
             >
               Inactivos
             </button>
@@ -220,15 +220,15 @@ export default function SuperAdminBusinessesPage() {
         </div>
 
         {filteredBusinesses.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-12 text-center text-slate-600">
-            <p className="text-xl font-semibold text-slate-900">Aún no hay negocios para mostrar</p>
+          <div className="rounded-3xl border border-dashed border-neutral-200 bg-cream-50 p-12 text-center text-ink-lighter">
+            <p className="text-xl font-semibold text-ink">Aún no hay negocios para mostrar</p>
             <p className="mt-2">Crea un nuevo negocio para empezar a gestionar franquicias.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full border-separate border-spacing-y-3 text-left text-sm text-slate-700">
+            <table className="min-w-full border-separate border-spacing-y-3 text-left text-sm text-ink-light">
               <thead>
-                <tr className="text-slate-500">
+                <tr className="text-ink-lighter">
                   <th className="px-4 py-3">Nombre</th>
                   <th className="px-4 py-3">Slug</th>
                   <th className="px-4 py-3">Dueño</th>
@@ -240,24 +240,24 @@ export default function SuperAdminBusinessesPage() {
               <tbody>
                 {pagedBusinesses.map((business) => (
                   <tr key={business.id} className="rounded-3xl bg-white shadow-sm">
-                    <td className="px-4 py-4 font-semibold text-slate-900">{business.name}</td>
-                    <td className="px-4 py-4 text-slate-500">{business.slug}</td>
-                    <td className="px-4 py-4 text-slate-700">{business.owner}</td>
+                    <td className="px-4 py-4 font-semibold text-ink">{business.name}</td>
+                    <td className="px-4 py-4 text-ink-lighter">{business.slug}</td>
+                    <td className="px-4 py-4 text-ink-light">{business.owner}</td>
                     <td className="px-4 py-4">{business.restaurants}</td>
                     <td className="px-4 py-4">
-                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${business.active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${business.active ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-100 text-brand-700'}`}>
                         {business.active ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
                     <td className="px-4 py-4 space-x-2">
-                      <button className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                      <button className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-ink-light hover:bg-cream-50">
                         <Eye className="h-4 w-4" />
                         Ver restaurantes
                       </button>
                       <button
                         type="button"
                         onClick={() => openEditModal(business)}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                        className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-cream-50 px-3 py-2 text-xs font-semibold text-ink-light hover:bg-cream-100"
                       >
                         <Edit3 className="h-4 w-4" />
                         Editar
@@ -265,7 +265,7 @@ export default function SuperAdminBusinessesPage() {
                       <button
                         type="button"
                         onClick={() => setConfirmBusiness(business)}
-                        className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ${business.active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
+                        className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ${business.active ? 'bg-brand-100 text-brand-700 hover:bg-brand-200' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
                       >
                         <Power className="h-4 w-4" />
                         {business.active ? 'Desactivar' : 'Activar'}
@@ -278,7 +278,7 @@ export default function SuperAdminBusinessesPage() {
           </div>
         )}
 
-        <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between text-sm text-slate-500">
+        <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between text-sm text-ink-lighter">
           <p>
             Mostrando {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, filteredBusinesses.length)} de {filteredBusinesses.length} negocios
           </p>
@@ -287,7 +287,7 @@ export default function SuperAdminBusinessesPage() {
               type="button"
               onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
               disabled={page === 1}
-              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-ink-lighter disabled:cursor-not-allowed disabled:opacity-50"
             >
               Anterior
             </button>
@@ -295,7 +295,7 @@ export default function SuperAdminBusinessesPage() {
               type="button"
               onClick={() => setPage((prev) => Math.min(prev + 1, pageCount))}
               disabled={page === pageCount}
-              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-ink-lighter disabled:cursor-not-allowed disabled:opacity-50"
             >
               Siguiente
             </button>
@@ -309,12 +309,12 @@ export default function SuperAdminBusinessesPage() {
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-slate-950">{editingBusiness ? 'Editar negocio' : 'Crear negocio'}</h2>
-                <p className="text-sm text-slate-500">Completa los datos para administrar la franquicia.</p>
+                <p className="text-sm text-ink-lighter">Completa los datos para administrar la franquicia.</p>
               </div>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-700">Cerrar</button>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-neutral-400 hover:text-ink-light">Cerrar</button>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
-              <label className="block text-sm font-medium text-slate-700">Nombre del negocio</label>
+              <label className="block text-sm font-medium text-ink-light">Nombre del negocio</label>
               <input
                 type="text"
                 value={form.name}
@@ -322,34 +322,34 @@ export default function SuperAdminBusinessesPage() {
                   const name = e.target.value;
                   setForm({ ...form, name, slug: createSlug(name) });
                 }}
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                className="w-full rounded-3xl border border-neutral-200 bg-cream-50 px-4 py-3 text-sm text-ink outline-none focus:border-brand-500 focus:ring-2 focus:ring-red-100"
               />
-              <label className="block text-sm font-medium text-slate-700">Slug</label>
+              <label className="block text-sm font-medium text-ink-light">Slug</label>
               <input
                 type="text"
                 value={form.slug}
                 onChange={(e) => setForm({ ...form, slug: createSlug(e.target.value) })}
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                className="w-full rounded-3xl border border-neutral-200 bg-cream-50 px-4 py-3 text-sm text-ink outline-none focus:border-brand-500 focus:ring-2 focus:ring-red-100"
               />
-              <label className="block text-sm font-medium text-slate-700">Dueño</label>
+              <label className="block text-sm font-medium text-ink-light">Dueño</label>
               <select
                 value={form.owner}
                 onChange={(e) => setForm({ ...form, owner: e.target.value })}
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                className="w-full rounded-3xl border border-neutral-200 bg-cream-50 px-4 py-3 text-sm text-ink outline-none focus:border-brand-500 focus:ring-2 focus:ring-red-100"
               >
                 {sampleUsers.map((user) => (
                   <option key={user.id} value={user.name}>{user.name}</option>
                 ))}
               </select>
-              <label className="block text-sm font-medium text-slate-700">Logo</label>
-              <div className="flex h-16 items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
+              <label className="block text-sm font-medium text-ink-light">Logo</label>
+              <div className="flex h-16 items-center justify-center rounded-3xl border border-dashed border-neutral-300 bg-cream-50 text-sm text-ink-lighter">
                 Coloca aquí el logo
               </div>
-              <label className="block text-sm font-medium text-slate-700">Activo</label>
+              <label className="block text-sm font-medium text-ink-light">Activo</label>
               <button
                 type="button"
                 onClick={() => setForm((prev) => ({ ...prev, active: !prev.active }))}
-                className={`inline-flex items-center justify-center rounded-full px-4 py-3 text-sm font-semibold ${form.active ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}
+                className={`inline-flex items-center justify-center rounded-full px-4 py-3 text-sm font-semibold ${form.active ? 'bg-emerald-600 text-white' : 'bg-brand-600 text-white'}`}
               >
                 {form.active ? 'Activo' : 'Inactivo'}
               </button>
@@ -358,14 +358,14 @@ export default function SuperAdminBusinessesPage() {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-full border border-neutral-200 bg-white px-6 py-3 text-sm font-semibold text-ink-light hover:bg-cream-50"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={saveBusiness}
-                className="rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-700"
+                className="rounded-full bg-brand-600 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-700"
               >
                 Guardar
               </button>
@@ -378,7 +378,7 @@ export default function SuperAdminBusinessesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
             <h2 className="text-xl font-semibold text-slate-950">¿Estás seguro?</h2>
-            <p className="mt-3 text-sm text-slate-500">
+            <p className="mt-3 text-sm text-ink-lighter">
               {confirmBusiness.active
                 ? 'Desactivarás este negocio y sus restaurantes no estarán disponibles hasta nueva orden.'
                 : 'Activarás este negocio y sus restaurantes volverán a estar disponibles.'}
@@ -387,14 +387,14 @@ export default function SuperAdminBusinessesPage() {
               <button
                 type="button"
                 onClick={() => setConfirmBusiness(null)}
-                className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-full border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-ink-light hover:bg-cream-50"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={toggleBusinessStatus}
-                className={`rounded-full px-5 py-3 text-sm font-semibold text-white ${confirmBusiness.active ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                className={`rounded-full px-5 py-3 text-sm font-semibold text-white ${confirmBusiness.active ? 'bg-brand-600 hover:bg-brand-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
               >
                 {confirmBusiness.active ? 'Desactivar' : 'Activar'}
               </button>

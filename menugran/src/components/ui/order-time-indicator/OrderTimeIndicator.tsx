@@ -63,12 +63,12 @@ export const OrderTimeIndicator: React.FC<OrderTimeIndicatorProps> = ({
 
   // Determinar color basado en estado y progreso
   const getIndicatorColor = () => {
-    if (status === 'delivered') return 'herb-500';
-    if (status === 'ready') return 'herb-400';
+    if (status === 'delivered') return 'success-500';
+    if (status === 'ready') return 'success-400';
     if (status === 'preparing') {
-      if (progress >= 0.9) return 'ceramic-400';
-      if (progress >= 0.5) return 'ceramic-500';
-      return 'ceramic-600';
+      if (progress >= 0.9) return 'gold-400';
+      if (progress >= 0.5) return 'gold-500';
+      return 'gold-600';
     }
     if (status === 'pending') {
       if (progress >= 0.8) return 'brand-500';

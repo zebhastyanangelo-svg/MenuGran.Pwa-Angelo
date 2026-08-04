@@ -32,28 +32,28 @@ const metricCards = [
     value: '128',
     trend: '+8.3%',
     icon: Briefcase,
-    color: 'bg-slate-100 text-slate-900',
+    color: 'bg-cream-100 text-ink',
   },
   {
     label: 'Usuarios registrados',
     value: '9.4K',
     trend: '+5.9%',
     icon: Users,
-    color: 'bg-slate-100 text-slate-900',
+    color: 'bg-cream-100 text-ink',
   },
   {
     label: 'Pedidos del día',
     value: '4,720',
     trend: '+12.7%',
     icon: ShoppingBag,
-    color: 'bg-slate-100 text-slate-900',
+    color: 'bg-cream-100 text-ink',
   },
   {
     label: 'Ingresos del día',
     value: '$52.4K',
     trend: '+14.2%',
     icon: Wallet,
-    color: 'bg-slate-100 text-slate-900',
+    color: 'bg-cream-100 text-ink',
   },
 ];
 
@@ -115,16 +115,16 @@ export default function SuperAdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 px-4 py-6">
-        <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+      <div className="min-h-screen bg-cream-100 px-4 py-6">
+        <div className="rounded-3xl border border-neutral-200 bg-white p-8 shadow-sm">
           <div className="animate-pulse space-y-6">
-            <div className="h-8 w-1/3 rounded-lg bg-slate-200" />
+            <div className="h-8 w-1/3 rounded-lg bg-cream-200" />
             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               {[...Array(4)].map((_, idx) => (
-                <div key={idx} className="h-32 rounded-3xl bg-slate-200" />
+                <div key={idx} className="h-32 rounded-3xl bg-cream-200" />
               ))}
             </div>
-            <div className="h-96 rounded-3xl bg-slate-200" />
+            <div className="h-96 rounded-3xl bg-cream-200" />
           </div>
         </div>
       </div>
@@ -133,36 +133,36 @@ export default function SuperAdminDashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 px-4 py-6">
-        <div className="rounded-3xl border border-red-200 bg-white p-8 shadow-sm text-center">
-          <p className="text-red-600 text-lg font-semibold">{error}</p>
+      <div className="min-h-screen bg-cream-100 px-4 py-6">
+        <div className="rounded-3xl border border-brand-200 bg-white p-8 shadow-sm text-center">
+          <p className="text-brand-600 text-lg font-semibold">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 px-4 py-6 md:px-8">
+    <div className="min-h-screen bg-cream-100 px-4 py-6 md:px-8">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Visión general</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-ink-lighter">Visión general</p>
           <h1 className="text-3xl font-semibold text-slate-950">Dashboard principal</h1>
         </div>
         <div className="flex items-center gap-3">
           <button
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${period === 'today' ? 'bg-red-600 text-white' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'}`}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${period === 'today' ? 'bg-brand-600 text-white' : 'bg-white text-ink-light border border-neutral-200 hover:bg-cream-50'}`}
             onClick={() => setPeriod('today')}
           >
             Hoy
           </button>
           <button
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${period === 'week' ? 'bg-red-600 text-white' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'}`}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${period === 'week' ? 'bg-brand-600 text-white' : 'bg-white text-ink-light border border-neutral-200 hover:bg-cream-50'}`}
             onClick={() => setPeriod('week')}
           >
             Esta semana
           </button>
           <button
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${period === 'month' ? 'bg-red-600 text-white' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'}`}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${period === 'month' ? 'bg-brand-600 text-white' : 'bg-white text-ink-light border border-neutral-200 hover:bg-cream-50'}`}
             onClick={() => setPeriod('month')}
           >
             Este mes
@@ -174,13 +174,13 @@ export default function SuperAdminDashboardPage() {
         {metricCards.map((metric) => {
           const Icon = metric.icon;
           return (
-            <div key={metric.label} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div key={metric.label} className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-red-50 text-red-600">
+                <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-brand-50 text-brand-600">
                   <Icon className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-500">{metric.label}</p>
+                  <p className="text-sm font-medium text-ink-lighter">{metric.label}</p>
                   <p className="mt-3 text-3xl font-semibold text-slate-950">{metric.value}</p>
                 </div>
               </div>
@@ -194,13 +194,13 @@ export default function SuperAdminDashboardPage() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-slate-950">Ventas últimos 7 días</h2>
-              <p className="text-sm text-slate-500">Ingresos totales por día</p>
+              <p className="text-sm text-ink-lighter">Ingresos totales por día</p>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-cream-50 px-3 py-2 text-sm text-ink-lighter">
               <TrendingUp className="h-4 w-4" />
               {period === 'today' ? 'Últimas 24h' : period === 'week' ? 'Última semana' : 'Último mes'}
             </div>
@@ -210,12 +210,12 @@ export default function SuperAdminDashboardPage() {
               const width = Math.min(100, Math.round((day.amount / 62000) * 100));
               return (
                 <div key={day.day} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm text-slate-500">
+                  <div className="flex items-center justify-between text-sm text-ink-lighter">
                     <span>{day.day}</span>
                     <span>${(day.amount / 1000).toFixed(1)}K</span>
                   </div>
-                  <div className="h-3 rounded-full bg-slate-200">
-                    <div className="h-3 rounded-full bg-red-600" style={{ width: `${width}%` }} />
+                  <div className="h-3 rounded-full bg-cream-200">
+                    <div className="h-3 rounded-full bg-brand-600" style={{ width: `${width}%` }} />
                   </div>
                 </div>
               );
@@ -223,20 +223,20 @@ export default function SuperAdminDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold text-slate-950 mb-4">Actividad Reciente</h2>
           <div className="space-y-4">
             <div>
-              <p className="text-sm font-semibold text-slate-700 mb-3">Últimos pedidos</p>
+              <p className="text-sm font-semibold text-ink-light mb-3">Últimos pedidos</p>
               <div className="space-y-3">
                 {recentOrders.map((order) => (
-                  <div key={order.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between gap-3 text-sm text-slate-700">
+                  <div key={order.id} className="rounded-3xl border border-neutral-200 bg-cream-50 p-4">
+                    <div className="flex items-center justify-between gap-3 text-sm text-ink-light">
                       <span className="font-semibold">{order.id}</span>
                       <span>{order.time}</span>
                     </div>
-                    <p className="mt-2 text-base font-medium text-slate-900">{order.business}</p>
-                    <div className="mt-3 flex items-center justify-between text-sm text-slate-500">
+                    <p className="mt-2 text-base font-medium text-ink">{order.business}</p>
+                    <div className="mt-3 flex items-center justify-between text-sm text-ink-lighter">
                       <span>Monto</span>
                       <span>${order.amount.toFixed(2)}</span>
                     </div>
@@ -246,15 +246,15 @@ export default function SuperAdminDashboardPage() {
             </div>
 
             <div>
-              <p className="text-sm font-semibold text-slate-700 mb-3">Negocios creados</p>
+              <p className="text-sm font-semibold text-ink-light mb-3">Negocios creados</p>
               <div className="space-y-3">
                 {recentBusinesses.map((business) => (
-                  <div key={business.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between gap-3 text-sm text-slate-700">
+                  <div key={business.id} className="rounded-3xl border border-neutral-200 bg-cream-50 p-4">
+                    <div className="flex items-center justify-between gap-3 text-sm text-ink-light">
                       <span className="font-semibold">{business.name}</span>
                       <span>{business.createdAt}</span>
                     </div>
-                    <p className="mt-2 text-sm text-slate-500">Dueño: {business.owner}</p>
+                    <p className="mt-2 text-sm text-ink-lighter">Dueño: {business.owner}</p>
                   </div>
                 ))}
               </div>
@@ -263,21 +263,21 @@ export default function SuperAdminDashboardPage() {
         </div>
       </section>
 
-      <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="mt-6 rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
         <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-xl font-semibold text-slate-950">Top 10 negocios por ventas</h2>
-            <p className="text-sm text-slate-500">Métricas de rendimiento de los mejores negocios</p>
+            <p className="text-sm text-ink-lighter">Métricas de rendimiento de los mejores negocios</p>
           </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-cream-50 px-3 py-2 text-sm text-ink-lighter">
             <Bell className="h-4 w-4" />
             Actualizado en tiempo real
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm text-slate-700">
+          <table className="min-w-full text-left text-sm text-ink-light">
             <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
+              <tr className="border-b border-neutral-200 text-ink-lighter">
                 <th className="py-3 pr-6">#</th>
                 <th className="py-3 pr-6">Negocio</th>
                 <th className="py-3 pr-6">Dueño</th>
@@ -288,9 +288,9 @@ export default function SuperAdminDashboardPage() {
             </thead>
             <tbody className="divide-y divide-slate-200">
               {topBusinesses.map((business) => (
-                <tr key={business.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-4 pr-6 font-semibold text-slate-900">{business.id}</td>
-                  <td className="py-4 pr-6 font-medium text-slate-900">{business.name}</td>
+                <tr key={business.id} className="hover:bg-cream-50 transition-colors">
+                  <td className="py-4 pr-6 font-semibold text-ink">{business.id}</td>
+                  <td className="py-4 pr-6 font-medium text-ink">{business.name}</td>
                   <td className="py-4 pr-6">{business.owner}</td>
                   <td className="py-4 pr-6">{business.orders}</td>
                   <td className="py-4 pr-6">${business.revenue.toLocaleString()}</td>

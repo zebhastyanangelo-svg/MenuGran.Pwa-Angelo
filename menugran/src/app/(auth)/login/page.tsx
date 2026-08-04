@@ -56,32 +56,32 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-cream-100 to-cream-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white shadow-xl rounded-2xl p-8">
+        <div className="bg-cream-50 shadow-xl rounded-2xl p-8 border border-cream-200">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
-              <Store className="h-8 w-8 text-red-600" />
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 rounded-full mb-4">
+              <Store className="h-8 w-8 text-brand-600" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Iniciar Sesion</h1>
-            <p className="text-gray-500 mt-1">Ingresa a tu cuenta MenuGran</p>
+            <h1 className="text-2xl font-display font-bold text-ink">Iniciar Sesion</h1>
+            <p className="text-ink-light mt-1 font-display">Ingresa a tu cuenta MenuGran</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-ink mb-1">
+              <label htmlFor="email" className="block text-sm font-display font-medium text-ink mb-1">
                 Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                  <Mail className="h-5 w-5 text-gray-400" />
+                  <Mail className="h-5 w-5 text-ink-lighter" />
                 </div>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  className="block w-full pl-10 pr-3 py-3 border border-cream-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-cream-50 text-ink placeholder:text-ink-lighter"
                   placeholder="tucorreo@ejemplo.com"
                   disabled={loading}
                 />
@@ -89,19 +89,19 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-ink mb-1">
+              <label htmlFor="password" className="block text-sm font-display font-medium text-ink mb-1">
                 Contraseña
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                  <Lock className="h-5 w-5 text-gray-400" />
+                  <Lock className="h-5 w-5 text-ink-lighter" />
                 </div>
                 <input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  className="block w-full pl-10 pr-3 py-3 border border-cream-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-cream-50 text-ink placeholder:text-ink-lighter"
                   placeholder="••••••••"
                   disabled={loading}
                 />
@@ -109,7 +109,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-danger-50 border border-danger-200 text-danger-700 px-4 py-3 rounded-lg text-sm font-display">
                 {error}
               </div>
             )}
@@ -117,7 +117,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 transition"
+              className="w-full flex items-center justify-center gap-2 bg-brand-600 text-cream-50 py-3 rounded-lg font-display font-medium hover:bg-brand-700 disabled:opacity-50 transition"
             >
               <LogIn className="h-5 w-5" />
               {loading ? 'Ingresando...' : 'Ingresar'}
@@ -127,23 +127,23 @@ export default function LoginPage() {
           <div className="mt-6 text-center space-y-3">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
+                <div className="w-full border-t border-cream-300"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-400">o</span>
+                <span className="px-2 bg-cream-50 text-ink-lighter font-display">o</span>
               </div>
             </div>
 
             <Link
               href="/register"
-              className="block w-full text-center py-3 border border-red-600 text-red-600 rounded-lg font-medium hover:bg-red-50 transition"
+              className="block w-full text-center py-3 border border-brand-600 text-brand-600 rounded-lg font-display font-medium hover:bg-brand-50 transition"
             >
               Crear cuenta nueva
             </Link>
 
-            <div className="text-sm text-gray-500 space-x-2">
+            <div className="text-sm text-ink-lighter font-display space-x-2">
               <span>¿Personal del negocio?</span>
-              <Link href="/admin-login" className="text-red-600 hover:underline">
+              <Link href="/admin-login" className="text-brand-600 hover:underline">
                 Acceso con cédula
               </Link>
             </div>

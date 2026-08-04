@@ -21,10 +21,10 @@ interface TopDish {
 const businesses: string[] = ['Todos', 'La Casa del Sabor', 'Burger Factory', 'Sushi Express', 'Taco Loco'];
 
 const paymentMethods = [
-  { label: 'Tarjeta', percent: 56, color: 'bg-red-600' },
+  { label: 'Tarjeta', percent: 56, color: 'bg-brand-600' },
   { label: 'Efectivo', percent: 24, color: 'bg-emerald-600' },
   { label: 'Transferencia', percent: 12, color: 'bg-amber-500' },
-  { label: 'Otros', percent: 8, color: 'bg-slate-500' },
+  { label: 'Otros', percent: 8, color: 'bg-cream-500' },
 ];
 
 const topDishes: TopDish[] = [
@@ -82,20 +82,20 @@ export default function SuperAdminMetricsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 px-4 py-6 md:px-8">
+      <div className="min-h-screen bg-cream-100 px-4 py-6 md:px-8">
         <div className="rounded-3xl bg-white p-8 shadow-sm">
           <div className="animate-pulse space-y-6">
-            <div className="h-8 w-1/3 rounded-lg bg-slate-200" />
+            <div className="h-8 w-1/3 rounded-lg bg-cream-200" />
             <div className="grid gap-4 md:grid-cols-4">
               {[...Array(4)].map((_, idx) => (
-                <div key={idx} className="h-40 rounded-3xl bg-slate-200" />
+                <div key={idx} className="h-40 rounded-3xl bg-cream-200" />
               ))}
             </div>
             <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-              <div className="h-72 rounded-3xl bg-slate-200" />
+              <div className="h-72 rounded-3xl bg-cream-200" />
               <div className="space-y-4">
                 {[...Array(4)].map((_, idx) => (
-                  <div key={idx} className="h-20 rounded-3xl bg-slate-200" />
+                  <div key={idx} className="h-20 rounded-3xl bg-cream-200" />
                 ))}
               </div>
             </div>
@@ -107,26 +107,26 @@ export default function SuperAdminMetricsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 px-4 py-6 md:px-8">
-        <div className="rounded-3xl border border-red-200 bg-white p-8 shadow-sm text-center">
-          <p className="text-red-600 text-lg font-semibold">{error}</p>
+      <div className="min-h-screen bg-cream-100 px-4 py-6 md:px-8">
+        <div className="rounded-3xl border border-brand-200 bg-white p-8 shadow-sm text-center">
+          <p className="text-brand-600 text-lg font-semibold">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-      <div className="min-h-screen bg-gray-100 px-4 py-6 md:px-8">
+      <div className="min-h-screen bg-cream-100 px-4 py-6 md:px-8">
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Métricas globales</p>
+            <p className="text-sm uppercase tracking-[0.24em] text-ink-lighter">Métricas globales</p>
             <h1 className="text-3xl font-semibold text-slate-950">Rendimiento de la plataforma</h1>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <select
               value={selectedBusiness}
               onChange={(e) => setSelectedBusiness(e.target.value)}
-              className="rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm"
+              className="rounded-3xl border border-neutral-200 bg-white px-4 py-3 text-sm text-ink outline-none shadow-sm"
             >
               {businesses.map((business) => (
                 <option key={business} value={business}>{business}</option>
@@ -135,7 +135,7 @@ export default function SuperAdminMetricsPage() {
             <select
               value={selectedRange}
               onChange={(e) => setSelectedRange(e.target.value)}
-              className="rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm"
+              className="rounded-3xl border border-neutral-200 bg-white px-4 py-3 text-sm text-ink outline-none shadow-sm"
             >
               <option>Últimos 7 días</option>
               <option>Últimos 30 días</option>
@@ -143,7 +143,7 @@ export default function SuperAdminMetricsPage() {
             </select>
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-700 transition-colors"
+              className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition-colors"
             >
               <Download className="h-4 w-4" />
               Exportar Reporte
@@ -152,23 +152,23 @@ export default function SuperAdminMetricsPage() {
         </div>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-6">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm text-slate-500">Total pedidos</p>
+                <p className="text-sm text-ink-lighter">Total pedidos</p>
                 <p className="mt-3 text-3xl font-semibold text-slate-950">8.520</p>
               </div>
-              <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-red-50 text-red-600">
+              <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-brand-50 text-brand-600">
                 <BarChart3 className="h-6 w-6" />
               </div>
             </div>
             <p className="mt-4 text-sm text-emerald-700">+12.4% vs mes anterior</p>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm text-slate-500">Ticket promedio global</p>
+                <p className="text-sm text-ink-lighter">Ticket promedio global</p>
                 <p className="mt-3 text-3xl font-semibold text-slate-950">$23.80</p>
               </div>
               <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-amber-50 text-amber-600">
@@ -178,23 +178,23 @@ export default function SuperAdminMetricsPage() {
             <p className="mt-4 text-sm text-emerald-700">+6.8% vs mes anterior</p>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm text-slate-500">Tiempo promedio de entrega</p>
+                <p className="text-sm text-ink-lighter">Tiempo promedio de entrega</p>
                 <p className="mt-3 text-3xl font-semibold text-slate-950">26 min</p>
               </div>
-              <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-slate-100 text-slate-800">
+              <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-cream-100 text-ink">
                 <Clock className="h-6 w-6" />
               </div>
             </div>
             <p className="mt-4 text-sm text-emerald-700">-3.2% vs mes anterior</p>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm text-slate-500">Satisfacción</p>
+                <p className="text-sm text-ink-lighter">Satisfacción</p>
                 <p className="mt-3 text-3xl font-semibold text-slate-950">94%</p>
               </div>
               <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-emerald-50 text-emerald-600">
@@ -206,13 +206,13 @@ export default function SuperAdminMetricsPage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.5fr_1fr] mb-6">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-slate-950">Pedidos por día</h2>
-                <p className="text-sm text-slate-500">Últimos 14 días</p>
+                <p className="text-sm text-ink-lighter">Últimos 14 días</p>
               </div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-sm text-slate-600">
+              <div className="inline-flex items-center gap-2 rounded-full bg-cream-100 px-3 py-2 text-sm text-ink-lighter">
                 <ChevronUp className="h-4 w-4 text-emerald-600" />
                 Tendencia positiva
               </div>
@@ -222,33 +222,33 @@ export default function SuperAdminMetricsPage() {
                 const height = Math.max(24, (entry.value / 560) * 160);
                 return (
                   <div key={entry.day} className="flex-1 min-w-[44px] text-center">
-                    <div className="mx-auto mb-2 h-[160px] w-full rounded-3xl bg-slate-200">
-                      <div style={{ height }} className="rounded-3xl bg-red-600 transition-transform" />
+                    <div className="mx-auto mb-2 h-[160px] w-full rounded-3xl bg-cream-200">
+                      <div style={{ height }} className="rounded-3xl bg-brand-600 transition-transform" />
                     </div>
-                    <p className="text-sm font-semibold text-slate-900">{entry.value}</p>
-                    <p className="text-xs text-slate-500">{entry.day}</p>
+                    <p className="text-sm font-semibold text-ink">{entry.value}</p>
+                    <p className="text-xs text-ink-lighter">{entry.day}</p>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
             <div className="mb-5">
               <h2 className="text-xl font-semibold text-slate-950">Métodos de pago</h2>
-              <p className="text-sm text-slate-500">Distribución global</p>
+              <p className="text-sm text-ink-lighter">Distribución global</p>
             </div>
             <div className="space-y-4">
               {paymentMethods.map((method) => (
-                <div key={method.label} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div key={method.label} className="rounded-3xl border border-neutral-200 bg-cream-50 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">{method.label}</p>
-                      <p className="text-sm text-slate-500">{method.percent}%</p>
+                      <p className="text-sm font-semibold text-ink">{method.label}</p>
+                      <p className="text-sm text-ink-lighter">{method.percent}%</p>
                     </div>
-                    <div className="rounded-full bg-slate-200 px-3 py-1 text-sm font-semibold text-slate-950">{method.percent}%</div>
+                    <div className="rounded-full bg-cream-200 px-3 py-1 text-sm font-semibold text-slate-950">{method.percent}%</div>
                   </div>
-                  <div className="mt-3 h-2 rounded-full bg-slate-200">
+                  <div className="mt-3 h-2 rounded-full bg-cream-200">
                     <div className={`${method.color} h-2 rounded-full`} style={{ width: `${method.percent}%` }} />
                   </div>
                 </div>
@@ -258,49 +258,49 @@ export default function SuperAdminMetricsPage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr] mb-6">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-semibold text-slate-950 mb-4">Top 5 platos más vendidos</h2>
             <div className="space-y-4">
               {topDishes.map((dish, index) => (
-                <div key={dish.name} className="flex items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <div key={dish.name} className="flex items-center justify-between gap-4 rounded-3xl border border-neutral-200 bg-cream-50 px-4 py-4">
                   <div>
-                    <p className="font-semibold text-slate-900">{index + 1}. {dish.name}</p>
-                    <p className="text-sm text-slate-500">Vendidos: {dish.sold}</p>
+                    <p className="font-semibold text-ink">{index + 1}. {dish.name}</p>
+                    <p className="text-sm text-ink-lighter">Vendidos: {dish.sold}</p>
                   </div>
-                  <p className="text-sm font-semibold text-slate-900">${dish.revenue.toLocaleString()}</p>
+                  <p className="text-sm font-semibold text-ink">${dish.revenue.toLocaleString()}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-semibold text-slate-950 mb-4">Tendencias</h2>
             <div className="space-y-4">
-              <div className="rounded-3xl bg-red-50 p-4">
-                <p className="text-sm text-slate-500">Mayor crecimiento</p>
+              <div className="rounded-3xl bg-brand-50 p-4">
+                <p className="text-sm text-ink-lighter">Mayor crecimiento</p>
                 <p className="mt-2 text-lg font-semibold text-slate-950">La Casa del Sabor</p>
-                <p className="mt-1 text-sm text-slate-600">+18.2% en pedidos</p>
+                <p className="mt-1 text-sm text-ink-lighter">+18.2% en pedidos</p>
               </div>
-              <div className="rounded-3xl bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Más quejas</p>
+              <div className="rounded-3xl bg-cream-50 p-4">
+                <p className="text-sm text-ink-lighter">Más quejas</p>
                 <p className="mt-2 text-lg font-semibold text-slate-950">Taco Loco</p>
-                <p className="mt-1 text-sm text-slate-600">4.5% de quejas esta semana</p>
+                <p className="mt-1 text-sm text-ink-lighter">4.5% de quejas esta semana</p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-slate-950">Comparativa de negocios</h2>
-              <p className="text-sm text-slate-500">Estado actual por negocio</p>
+              <p className="text-sm text-ink-lighter">Estado actual por negocio</p>
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm text-slate-700">
+            <table className="min-w-full text-left text-sm text-ink-light">
               <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
+                <tr className="border-b border-neutral-200 text-ink-lighter">
                   <th className="py-3 pr-6">Negocio</th>
                   <th className="py-3 pr-6">Pedidos</th>
                   <th className="py-3 pr-6">Ingresos</th>
@@ -311,8 +311,8 @@ export default function SuperAdminMetricsPage() {
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {comparisonRows.map((row) => (
-                  <tr key={row.name} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-4 pr-6 font-medium text-slate-900">{row.name}</td>
+                  <tr key={row.name} className="hover:bg-cream-50 transition-colors">
+                    <td className="py-4 pr-6 font-medium text-ink">{row.name}</td>
                     <td className="py-4 pr-6">{row.orders}</td>
                     <td className="py-4 pr-6">${row.revenue.toLocaleString()}</td>
                     <td className="py-4 pr-6">{row.rating.toFixed(1)}</td>

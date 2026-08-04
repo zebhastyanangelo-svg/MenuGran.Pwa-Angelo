@@ -12,6 +12,13 @@
         "--repo",
         "/home/angelo/Escritorio/MenuGran.Pwa-Angelo"
       ]
+    },
+    "TestSprite": {
+      "type": "local",
+      "command": ["npx", "@testsprite/testsprite-mcp@latest"],
+      "env": {
+        "API_KEY": "sk-user-FZNOpZfnhYaH-4NZD3uQ1wXSAZqS02ZNppUhmjLGZ5hotx-hckKN75bKkjQidsBo-aWCNO4n4IvM0np_Vot7x25D7UbZ2jUhVMB1L96dgir4RHA7JXXCiNrnyAjWXZbwjOI"
+      }
     }
   }
 }

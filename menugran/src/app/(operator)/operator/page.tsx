@@ -59,28 +59,28 @@ export default function OperatorPage() {
     <div>
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-sm p-5 border border-neutral-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Pendientes</p>
+              <p className="text-sm text-ink-lighter">Pendientes</p>
               <p className="text-2xl font-bold text-yellow-600 mt-1">{pendingCount}</p>
             </div>
             <Clock className="h-8 w-8 text-yellow-500" />
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-sm p-5 border border-neutral-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">En Preparacion</p>
+              <p className="text-sm text-ink-lighter">En Preparacion</p>
               <p className="text-2xl font-bold text-orange-600 mt-1">{preparingCount}</p>
             </div>
             <ChefHat className="h-8 w-8 text-orange-500" />
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-sm p-5 border border-neutral-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Listos para Entregar</p>
+              <p className="text-sm text-ink-lighter">Listos para Entregar</p>
               <p className="text-2xl font-bold text-green-600 mt-1">{readyCount}</p>
             </div>
             <Package className="h-8 w-8 text-green-500" />
@@ -95,7 +95,7 @@ export default function OperatorPage() {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              filter === f ? 'bg-red-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              filter === f ? 'bg-brand-600 text-white' : 'bg-white text-ink-lighter border border-neutral-200 hover:bg-cream-50'
             }`}
           >
             {f === 'all' ? 'Todos' : f === 'pending' ? 'Pendientes' : f === 'preparing' ? 'En Cocina' : 'Listos'}
@@ -104,44 +104,44 @@ export default function OperatorPage() {
       </div>
 
       {/* Orders Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Pedidos Activos</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-neutral-100">
+        <div className="p-6 border-b border-neutral-100">
+          <h2 className="text-lg font-semibold text-ink">Pedidos Activos</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-cream-50">
               <tr>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Pedido</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Items</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Total</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Estado</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Accion</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-ink-lighter uppercase">Pedido</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-ink-lighter uppercase">Cliente</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-ink-lighter uppercase">Tipo</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-ink-lighter uppercase">Items</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-ink-lighter uppercase">Total</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-ink-lighter uppercase">Estado</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-ink-lighter uppercase">Accion</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50">
+                <tr key={order.id} className="hover:bg-cream-50">
                   <td className="py-3 px-4">
-                    <span className="font-medium text-gray-900 text-sm">{order.number}</span>
-                    <p className="text-xs text-gray-400">{order.time}</p>
+                    <span className="font-medium text-ink text-sm">{order.number}</span>
+                    <p className="text-xs text-neutral-400">{order.time}</p>
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-900">{order.clientName}</span>
+                      <User className="h-4 w-4 text-neutral-400" />
+                      <span className="text-sm text-ink">{order.clientName}</span>
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    <div className="flex items-center gap-1 text-sm text-gray-500">
+                    <div className="flex items-center gap-1 text-sm text-ink-lighter">
                       {order.type === 'delivery' ? <Bike className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
                       {order.type === 'delivery' ? 'Delivery' : 'Local'}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-sm text-gray-500">{order.items}</td>
-                  <td className="py-3 px-4 text-sm font-medium text-gray-900">{formatPrice(order.total)}</td>
+                  <td className="py-3 px-4 text-sm text-ink-lighter">{order.items}</td>
+                  <td className="py-3 px-4 text-sm font-medium text-ink">{formatPrice(order.total)}</td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>
                       {statusLabels[order.status]}
@@ -151,14 +151,14 @@ export default function OperatorPage() {
                     <div className="flex gap-1">
                       <button
                         onClick={() => setSelectedOrder(order)}
-                        className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                        className="px-3 py-1 text-xs font-medium text-ink-lighter bg-cream-100 rounded-lg hover:bg-cream-200"
                       >
                         Ver
                       </button>
                       {['PENDING', 'CONFIRMED', 'PREPARING'].includes(order.status) && (
                         <button
                           onClick={() => advanceOrder(order.id)}
-                          className="px-3 py-1 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 flex items-center gap-1"
+                          className="px-3 py-1 text-xs font-medium text-brand-600 bg-brand-50 rounded-lg hover:bg-brand-100 flex items-center gap-1"
                         >
                           <ArrowRight className="h-3 w-3" />
                         </button>
@@ -171,8 +171,8 @@ export default function OperatorPage() {
           </table>
           {filteredOrders.length === 0 && (
             <div className="text-center py-8">
-              <Package className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500">No hay pedidos en esta categoria</p>
+              <Package className="h-8 w-8 text-neutral-300 mx-auto mb-2" />
+              <p className="text-ink-lighter">No hay pedidos en esta categoria</p>
             </div>
           )}
         </div>
@@ -183,50 +183,50 @@ export default function OperatorPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setSelectedOrder(null)}>
           <div className="bg-white rounded-xl max-w-sm w-full p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">{selectedOrder.number}</h2>
-              <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-gray-600">
+              <h2 className="text-lg font-bold text-ink">{selectedOrder.number}</h2>
+              <button onClick={() => setSelectedOrder(null)} className="text-neutral-400 hover:text-ink-lighter">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">Cliente</span>
+              <div className="flex justify-between py-2 border-b border-neutral-100">
+                <span className="text-ink-lighter">Cliente</span>
                 <span className="font-medium">{selectedOrder.clientName}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">Telefono</span>
+              <div className="flex justify-between py-2 border-b border-neutral-100">
+                <span className="text-ink-lighter">Telefono</span>
                 <span className="font-medium flex items-center gap-1">
                   <Phone className="h-3.5 w-3.5" /> {selectedOrder.clientPhone}
                 </span>
               </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">Tipo</span>
+              <div className="flex justify-between py-2 border-b border-neutral-100">
+                <span className="text-ink-lighter">Tipo</span>
                 <span className="font-medium flex items-center gap-1">
                   {selectedOrder.type === 'delivery' ? <Bike className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
                   {selectedOrder.type === 'delivery' ? 'Delivery' : 'Local'}
                 </span>
               </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">Direccion</span>
+              <div className="flex justify-between py-2 border-b border-neutral-100">
+                <span className="text-ink-lighter">Direccion</span>
                 <span className="font-medium text-right max-w-[180px]">{selectedOrder.address}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">Items</span>
+              <div className="flex justify-between py-2 border-b border-neutral-100">
+                <span className="text-ink-lighter">Items</span>
                 <span className="font-medium">{selectedOrder.items}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">Total</span>
+              <div className="flex justify-between py-2 border-b border-neutral-100">
+                <span className="text-ink-lighter">Total</span>
                 <span className="font-bold text-base">{formatPrice(selectedOrder.total)}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">Pago</span>
+              <div className="flex justify-between py-2 border-b border-neutral-100">
+                <span className="text-ink-lighter">Pago</span>
                 <span className="font-medium flex items-center gap-1">
                   <CreditCard className="h-3.5 w-3.5" /> {selectedOrder.paymentMethod}
                 </span>
               </div>
               <div className="flex justify-between py-2">
-                <span className="text-gray-500">Estado</span>
+                <span className="text-ink-lighter">Estado</span>
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[selectedOrder.status]}`}>
                   {statusLabels[selectedOrder.status]}
                 </span>
@@ -237,7 +237,7 @@ export default function OperatorPage() {
               {['PENDING', 'CONFIRMED', 'PREPARING'].includes(selectedOrder.status) && (
                 <button
                   onClick={() => { advanceOrder(selectedOrder.id); setSelectedOrder(null); }}
-                  className="w-full py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition"
+                  className="w-full py-2.5 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition"
                 >
                   {selectedOrder.status === 'PENDING' ? 'Confirmar Pedido' :
                    selectedOrder.status === 'CONFIRMED' ? 'Iniciar Preparacion' : 'Marcar como Listo'}
@@ -246,7 +246,7 @@ export default function OperatorPage() {
 
               {selectedOrder.status === 'READY' && selectedOrder.type === 'delivery' && (
                 <div>
-                  <p className="text-xs text-gray-500 mb-2">Asignar repartidor disponible:</p>
+                  <p className="text-xs text-ink-lighter mb-2">Asignar repartidor disponible:</p>
                   {RIDERS.filter((r) => r.available).map((rider) => (
                     <button
                       key={rider.id}
