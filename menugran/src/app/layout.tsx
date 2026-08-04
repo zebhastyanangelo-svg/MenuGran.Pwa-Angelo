@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import { Cormorant_Garamond, Inter, Outfit } from "next/font/google";
 import SessionProvider from "@/components/providers/SessionProvider";
 import SWUpdatePrompt from "@/components/SWUpdatePrompt";
 import "./globals.css";
@@ -10,12 +10,18 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+const outfit = Outfit({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-outfit",
+});
+
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
   style: ["normal", "italic"],
   display: "swap",
-  variable: "--font-display",
+  variable: "--font-cormorant",
 });
 
 export const viewport: Viewport = {
@@ -75,7 +81,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
       </head>
-      <body className={`${inter.variable} ${cormorant.variable} bg-cream-50 text-ink font-sans`} suppressHydrationWarning>
+      <body className={`${inter.variable} ${outfit.variable} ${cormorant.variable} bg-cream-50 text-ink font-sans`} suppressHydrationWarning>
         <SessionProvider>{children}</SessionProvider>
         <SWUpdatePrompt />
       </body>

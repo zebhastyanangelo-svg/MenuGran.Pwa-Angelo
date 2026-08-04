@@ -52,7 +52,7 @@ export default function RestaurantMenuPage() {
       try {
         const res = await fetch(`/api/restaurants/${slug}`);
         const data = await res.json();
-        
+
         if (data.success) {
           setRestaurant(data.data);
           if (data.data.categories.length > 0) {
@@ -99,8 +99,8 @@ export default function RestaurantMenuPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-brand-200 border-t-red-600"></div>
-          <p className="text-ink-lighter">Cargando menú...</p>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600"></div>
+          <p className="text-ink-lighter font-body">Cargando menú...</p>
         </div>
       </div>
     );
@@ -110,9 +110,9 @@ export default function RestaurantMenuPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <h1 className="mb-4 text-2xl font-bold text-ink">Error</h1>
-          <p className="text-ink-lighter">{error || 'Restaurante no encontrado'}</p>
-          <Link href="/client" className="mt-4 inline-block text-brand-600 hover:text-brand-700">
+          <h1 className="mb-4 font-display text-2xl font-bold text-ink">Error</h1>
+          <p className="text-ink-lighter font-body">{error || 'Restaurante no encontrado'}</p>
+          <Link href="/client" className="mt-4 inline-block text-brand-600 hover:text-brand-700 font-body">
             Volver al inicio
           </Link>
         </div>
@@ -120,9 +120,9 @@ export default function RestaurantMenuPage() {
     );
   }
   return (
-    <div className="bg-[#f9fafb] pb-24">
+    <div className="bg-cream-50 pb-24">
       {toast ? (
-        <div className="fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-3xl bg-ink px-5 py-3 text-sm text-white shadow-xl shadow-slate-900/10">
+        <div className="fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-2xl bg-ink px-5 py-3 text-sm text-white shadow-xl shadow-slate-900/10 font-body">
           {toast}
         </div>
       ) : null}
@@ -145,16 +145,18 @@ export default function RestaurantMenuPage() {
       </div>
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 md:px-8">
-        <div className="rounded-[32px] bg-white p-6 shadow-sm shadow-slate-200">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold text-ink">{restaurant.name}</h1>
-              <p className="mt-2 text-sm text-ink-lighter">{restaurant.address}</p>
+        <div className="ticket receipt mb-6">
+          <div className="p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="font-display text-3xl font-semibold text-ink">{restaurant.name}</h1>
+                <p className="mt-2 text-sm text-ink-lighter font-body">{restaurant.address}</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 overflow-x-auto rounded-3xl bg-white p-4 shadow-sm shadow-slate-200">
+        <div className="mt-6 overflow-x-auto rounded-2xl bg-white p-4 shadow-sm">
           <div className="flex gap-3">
             {categories.map((category) => (
               <button
@@ -174,18 +176,18 @@ export default function RestaurantMenuPage() {
         </div>
 
         {activeItems.length === 0 ? (
-          <div className="mt-6 rounded-3xl border border-dashed border-neutral-300 bg-cream-50 p-10 text-center text-ink-lighter">
-            <p className="text-xl font-semibold text-ink">No hay platos en esta categoría</p>
-            <p className="mt-2 text-sm">Prueba otra categoría o vuelve más tarde.</p>
+          <div className="mt-6 rounded-2xl border border-dashed border-neutral-300 bg-cream-50 p-10 text-center text-ink-lighter">
+            <p className="text-xl font-semibold text-ink font-display">No hay platos en esta categoría</p>
+            <p className="mt-2 text-sm font-body">Prueba otra categoría o vuelve más tarde.</p>
           </div>
         ) : (
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {activeItems.map((item) => (
               <div
                 key={item.id}
-                className="group relative overflow-hidden rounded-[32px] border border-neutral-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg"
+                className="group ticket receipt hover:shadow-elevated transition-shadow"
               >
-                <div className="h-52 overflow-hidden rounded-t-[32px] bg-cream-100">
+                <div className="h-52 overflow-hidden rounded-t-2xl bg-cream-100">
                   <img
                     src={item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=80'}
                     alt={item.name}
@@ -195,12 +197,12 @@ export default function RestaurantMenuPage() {
                 <div className="space-y-3 p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h2 className="text-xl font-semibold text-ink">{item.name}</h2>
-                      <p className="mt-2 line-clamp-1 text-sm text-ink-lighter">{item.description}</p>
+                      <h2 className="font-display text-xl font-semibold text-ink">{item.name}</h2>
+                      <p className="mt-2 line-clamp-1 text-sm text-ink-lighter font-body">{item.description}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-lg font-semibold text-ink">{formatPrice(item.price)}</p>
+                    <p className="text-lg font-semibold text-ink font-display">{formatPrice(item.price)}</p>
                     <button
                       type="button"
                       onClick={() => handleAddToCart(item)}

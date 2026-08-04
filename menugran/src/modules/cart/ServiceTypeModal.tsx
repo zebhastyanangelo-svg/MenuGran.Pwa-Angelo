@@ -39,8 +39,8 @@ export default function ServiceTypeModal({ open, onClose, onSubmit }: ServiceTyp
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-elevated p-6 w-full max-w-md">
-        <h2 className="font-display text-xl font-semibold text-ink-dark mb-4">
+      <div className="receipt w-full max-w-md">
+        <h2 className="font-display text-xl font-semibold text-ink mb-4">
           Tipo de servicio
         </h2>
 
@@ -48,10 +48,10 @@ export default function ServiceTypeModal({ open, onClose, onSubmit }: ServiceTyp
           <button
             type="button"
             onClick={() => setServiceType('MESA')}
-            className={`flex-1 py-2 rounded-lg font-medium ${
+            className={`flex-1 py-2 rounded-lg font-medium transition ${
               serviceType === 'MESA'
-                ? 'bg-brand-500 text-white'
-                : 'bg-neutral-100 text-neutral-700'
+                ? 'bg-brand-600 text-white'
+                : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
             }`}
           >
             En mesa
@@ -59,10 +59,10 @@ export default function ServiceTypeModal({ open, onClose, onSubmit }: ServiceTyp
           <button
             type="button"
             onClick={() => setServiceType('DELIVERY')}
-            className={`flex-1 py-2 rounded-lg font-medium ${
+            className={`flex-1 py-2 rounded-lg font-medium transition ${
               serviceType === 'DELIVERY'
-                ? 'bg-brand-500 text-white'
-                : 'bg-neutral-100 text-neutral-700'
+                ? 'bg-brand-600 text-white'
+                : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
             }`}
           >
             Delivery
@@ -76,7 +76,7 @@ export default function ServiceTypeModal({ open, onClose, onSubmit }: ServiceTyp
               type="number"
               value={tableNumber}
               onChange={(e) => setTableNumber(e.target.value)}
-              className="w-full mt-1 px-3 py-2 border border-neutral-200 rounded-lg"
+              className="w-full mt-1 px-3 py-2 border border-neutral-200 rounded-lg input"
             />
           </label>
         ) : (
@@ -86,7 +86,7 @@ export default function ServiceTypeModal({ open, onClose, onSubmit }: ServiceTyp
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="w-full mt-1 px-3 py-2 border border-neutral-200 rounded-lg"
+              className="w-full mt-1 px-3 py-2 border border-neutral-200 rounded-lg input"
             />
           </label>
         )}
@@ -95,14 +95,14 @@ export default function ServiceTypeModal({ open, onClose, onSubmit }: ServiceTyp
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2 rounded-lg bg-neutral-100 text-neutral-700 font-medium"
+            className="flex-1 py-2 rounded-lg bg-neutral-100 text-neutral-700 font-medium transition hover:bg-neutral-200"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={handleConfirm}
-            className="flex-1 py-2 rounded-lg bg-brand-500 text-white font-medium"
+            className="flex-1 py-2 rounded-lg bg-brand-600 text-white font-medium transition hover:bg-brand-700"
           >
             Confirmar
           </button>

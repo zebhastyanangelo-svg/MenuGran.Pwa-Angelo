@@ -112,7 +112,7 @@ export default function SidebarShell({
               </button>
               <div>
                 {header.eyebrow && (
-                  <p className="eyebrow">{header.eyebrow}</p>
+                  <p className="section-eyebrow">{header.eyebrow}</p>
                 )}
                 <h1 className="font-display text-xl font-bold text-ink">
                   {header.title}

@@ -17,21 +17,21 @@ export default function Input({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-ink-light mb-1">
+        <label className="block text-sm font-medium text-ink mb-1 font-body">
           {label}
         </label>
       )}
       <input
         disabled={disabled}
         className={clsx(
-          'w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-xl text-ink placeholder:text-neutral-400 text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 disabled:bg-neutral-50 disabled:text-neutral-400 disabled:cursor-not-allowed',
+          'w-full px-4 py-3 bg-cream-50 border border-cream-300 rounded-xl text-ink placeholder:text-ink-lighter text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 disabled:bg-cream-100 disabled:text-ink-lighter disabled:cursor-not-allowed input',
           error && 'border-danger-500 focus:ring-danger-500/20 focus:border-danger-500',
           className
         )}
         {...props}
       />
       {error && (
-        <p className="mt-1 text-sm text-danger-500">{error}</p>
+        <p className="mt-1 text-sm text-danger-500 font-body">{error}</p>
       )}
     </div>
   );
