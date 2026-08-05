@@ -55,3 +55,8 @@ node_modules
 .next
 dist
 testsprite_tests/tmp/config.json
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/

@@ -1,21 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { Karla, Playfair_Display_SC } from "next/font/google";
 import SessionProvider from "@/components/providers/SessionProvider";
 import SWUpdatePrompt from "@/components/SWUpdatePrompt";
 import "./globals.css";
 
-const inter = Inter({
+const karla = Karla({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
-  variable: "--font-inter",
+  variable: "--font-karla",
 });
 
-const jakarta = Plus_Jakarta_Sans({
+const playfair = Playfair_Display_SC({
   subsets: ["latin"],
-  weight: ["700", "800"],
+  weight: ["400", "700"],
   display: "swap",
-  variable: "--font-jakarta",
+  variable: "--font-playfair",
 });
 
 export const viewport: Viewport = {
@@ -75,7 +75,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
       </head>
-      <body className={`${inter.variable} ${jakarta.variable} bg-cream-50 text-ink font-sans`} suppressHydrationWarning>
+      <body className={`${karla.variable} ${playfair.variable} bg-cream-50 text-ink font-sans`} suppressHydrationWarning>
         <SessionProvider>{children}</SessionProvider>
         <SWUpdatePrompt />
       </body>

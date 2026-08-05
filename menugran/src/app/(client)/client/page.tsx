@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { UtensilsCrossed, SearchX } from 'lucide-react';
+import BentoCard from '@/components/ui/BentoCard';
+import { useFilterStore } from '@/modules/filter';
 
 interface Restaurant {
   id: string;
@@ -26,6 +28,8 @@ export default function ClientPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const category = useFilterStore((state) => state.category);
+  const setCategory = useFilterStore((state) => state.setCategory);
 
   useEffect(() => {
     const fetchRestaurants = async () => {
@@ -50,14 +54,18 @@ export default function ClientPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <p className="section-eyebrow mb-4">Restaurantes cerca de ti</p>
-        <div className="animate-pulse space-y-6">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-200">
-              <div className="h-6 bg-cream-200 rounded w-3/4 mb-3"></div>
-              <div className="h-4 bg-cream-200 rounded w-1/2 mb-2"></div>
-              <div className="h-4 bg-cream-200 rounded w-1/3"></div>
+      <div className="space-y-6">
+        <div>
+          <p className="section-eyebrow mb-2">Restaurantes cerca de ti</p>
+          <h2 className="editorial-h2">Descubre tu próximo plato favorito</h2>
+        </div>
+        <div className="bento-grid">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className={`bento-card ${i < 2 ? 'bento-span-2 bento-row-2' : ''} animate-pulse`}
+            >
+              <div className="h-full bg-neutral-100" />
             </div>
           ))}
         </div>
@@ -67,13 +75,13 @@ export default function ClientPage() {
 
   if (error) {
     return (
-      <div className="p-6 text-center">
-        <div className="text-6xl mb-4">😕</div>
-        <h2 className="font-display text-xl font-semibold text-ink mb-2">Error</h2>
-        <p className="text-ink-lighter mb-4 font-body">{error}</p>
+      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+        <SearchX className="h-16 w-16 text-neutral-300" />
+        <h2 className="editorial-h2">Error</h2>
+        <p className="editorial-body">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="bg-brand-600 text-white px-6 py-2 rounded-lg hover:bg-brand-700 transition-colors font-body"
+          className="btn-primary btn-md"
         >
           Reintentar
         </button>
@@ -81,48 +89,72 @@ export default function ClientPage() {
     );
   }
 
+  const visibleRestaurants = category
+    ? restaurants.filter((restaurant) =>
+        restaurant.categories.some((cat) => cat.name === category)
+      )
+    : restaurants;
+
   if (restaurants.length === 0) {
     return (
-      <div className="p-6 text-center">
-        <div className="text-6xl mb-4">🍽️</div>
-        <h2 className="font-display text-xl font-semibold text-ink mb-2">No hay restaurantes</h2>
-        <p className="text-ink-lighter font-body">Vuelve pronto, estamos agregando nuevos restaurantes.</p>
+      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+        <UtensilsCrossed className="h-16 w-16 text-neutral-300" />
+        <h2 className="editorial-h2">No hay restaurantes</h2>
+        <p className="editorial-body">Vuelve pronto, estamos agregando nuevos restaurantes.</p>
+      </div>
+    );
+  }
+
+  if (visibleRestaurants.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+        <SearchX className="h-16 w-16 text-neutral-300" />
+        <h2 className="editorial-h2">Sin resultados</h2>
+        <p className="editorial-body">
+          No hay restaurantes en la categoría &quot;{category}&quot;.
+        </p>
+        <button onClick={() => setCategory(null)} className="btn-primary btn-md">
+          Ver todos
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <p className="section-eyebrow mb-4">Restaurantes cerca de ti</p>
+    <div className="space-y-6">
+      {/* Editorial header (spec: Editorial Typography) */}
+      <div>
+        <p className="section-eyebrow mb-2">Restaurantes cerca de ti</p>
+        <h2 className="editorial-h2">Descubre tu próximo plato favorito</h2>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {restaurants.map((restaurant) => (
-          <Link
-            key={restaurant.id}
-            href={`/client/r/${restaurant.id}`}
-            className="ticket receipt hover:shadow-elevated transition-shadow"
-          >
-            <div className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="font-display text-lg font-semibold text-ink">{restaurant.name}</h3>
-                <span className="text-gold-500 font-body text-sm">★ 4.5</span>
-              </div>
+      {/* Bento Grid (spec: Bento Grid Layout) */}
+      <div className="bento-grid">
+        {visibleRestaurants.map((restaurant, index) => {
+          const dishCount = restaurant.categories.reduce(
+            (total, cat) => total + cat.items.length,
+            0
+          );
+          const primaryCategory = restaurant.categories[0]?.name;
 
-              <p className="text-ink-lighter text-sm mb-3 font-body flex items-center gap-1">
-                {restaurant.address}
-              </p>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-neutral-400 font-body">
-                  {restaurant.categories.reduce((total, cat) => total + cat.items.length, 0)} platos disponibles
-                </span>
-                <span className="text-brand-600 text-sm font-semibold font-body">
-                  Ver menú →
-                </span>
-              </div>
-            </div>
-          </Link>
-        ))}
+          return (
+            <BentoCard
+              key={restaurant.id}
+              restaurant={{
+                id: restaurant.id,
+                name: restaurant.name,
+                address: restaurant.address,
+                dishCount,
+                category: primaryCategory,
+                featured: index < 2,
+                promo: index === 0 ? 'Destacado' : undefined,
+                rating: 4.5,
+                deliveryMin: 25 + (index % 4) * 5,
+              }}
+              index={index}
+            />
+          );
+        })}
       </div>
     </div>
   );
