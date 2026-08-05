@@ -1,9 +1,26 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Utensils, Search, Smartphone, Truck, Ticket } from 'lucide-react';
+import { Search, Smartphone, Truck, Ticket, Utensils } from 'lucide-react';
+import FoodOrbitCarousel from '@/components/hero/FoodOrbitCarousel';
+
+function useReducedMotion() {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mediaQuery.matches);
+    const handler = (event: MediaQueryListEvent) => setPrefersReducedMotion(event.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
+  return prefersReducedMotion;
+}
 
 export default function PublicLandingPage() {
+  const prefersReducedMotion = useReducedMotion();
   return (
     <div className="min-h-screen bg-cream-50" suppressHydrationWarning>
       <nav className="bg-cream-50/80 backdrop-blur-md border-b border-cream-200 sticky top-0 z-50">
@@ -59,9 +76,7 @@ export default function PublicLandingPage() {
             </div>
 
             <div className="text-center lg:text-right">
-              <div className="inline-flex items-center justify-center w-48 h-48 rounded-full border-[8px] border-dashed border-brand-300 bg-cream-100">
-                <Utensils className="w-20 h-20 text-brand-500" />
-              </div>
+              <FoodOrbitCarousel prefersReducedMotion={prefersReducedMotion} className="w-full" />
             </div>
           </div>
         </div>
