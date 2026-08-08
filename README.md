@@ -1,9 +1,39 @@
-# MenuGram - Progressive Web App (PWA)
+# MenuGram PWA
 
-Plataforma multi-tenant de menús digitales, gestión de comandas en tiempo real y rastreo de entregas a domicilio.
+Plataforma de menús digitales multi-tenant con gestión de pedidos en tiempo real y seguimiento de entregas.
 
-## Documentación Técnica
+## Stack
 
-* [01. Arquitectura y Stack Tecnológico](./docs/01-ARCHITECTURE-STACK.md)
-* [02. Requerimientos Funcionales y Roles](./docs/02-REQUIREMENTS-FEATURES.md)
-* [03. Esquema de Base de Datos PostgreSQL](./docs/03-DATABASE-SCHEMA.md)
+- **Frontend / PWA:** React 18+, TypeScript, Vite, Tailwind CSS, `vite-plugin-pwa`
+- **Backend API:** Node.js (Express) en Monolito Modular
+- **Base de Datos & Auth:** PostgreSQL vía Supabase (UUIDs, JSONB, RLS)
+- **Storage:** Cloudinary (imágenes) · Supabase Storage (capturas de pago)
+- **Mapas Realtime:** Leaflet.js + OpenStreetMap + Supabase Realtime
+
+## Desarrollo
+
+```bash
+npm install        # instalar dependencias
+npm run dev        # servidor de desarrollo
+npm run build      # build de producción (tsc + vite)
+npm test           # suite de tests (vitest)
+npm run lint       # linter (oxlint)
+```
+
+## Estructura
+
+```
+src/
+├── components/    # Componentes UI reutilizables
+├── pages/         # Vistas/páginas de la aplicación
+├── services/      # Clientes de API y servicios externos
+├── hooks/         # Custom hooks de React
+├── types/         # Tipos e interfaces TypeScript
+└── context/       # Contextos globales de estado
+```
+
+## Documentación
+
+- `docs/ARCHITECTURE-STACK.md` — stack tecnológico y flujo de datos
+- `docs/REQUIREMENTS-FEATURES.md` — roles RBAC y funcionalidades
+- `docs/DATABASE-SCHEMA.md` — esquema completo de PostgreSQL

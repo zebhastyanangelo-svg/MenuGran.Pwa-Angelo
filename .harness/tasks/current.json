@@ -1,0 +1,16 @@
+{
+  "task_id": "TASK-001",
+  "title": "Inicialización del proyecto Vite + React + TypeScript + Tailwind",
+  "assigned_agent": "Implementer",
+  "status": "in_progress",
+  "description": "Configurar la base del proyecto frontend PWA con React, TypeScript, Tailwind CSS y la estructura básica de carpetas.",
+  "deliverables": [
+    "Proyecto Vite funcional con TypeScript y React",
+    "Tailwind CSS v3 configurado y funcionando en index.css",
+    "Estructura de carpetas /src (components, pages, services, hooks, types, context)",
+    "Script npm run build ejecutándose sin errores de compilación"
+  ],
+  "rules_to_follow": [
+    ".harness/rules/architecture.md"
+  ]
+}

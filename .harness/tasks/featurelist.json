@@ -1,0 +1,16 @@
+{
+  "project": "Mi Proyecto con Arnés IA",
+  "version": "1.0.0",
+  "features": [
+    {
+      "id": "FEAT-001",
+      "title": "Configurar archivo de convenciones de código",
+      "description": "Redactar las convenciones básicas en .harness/rules/conventions.md",
+      "acceptance_criteria": [
+        "Definir estándares de nombres de variables",
+        "Establecer la estructura de carpetas deseada"
+      ],
+      "status": "pending"
+    }
+  ]
+}
