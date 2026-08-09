@@ -1,10 +1,10 @@
 {
-  "task_id": "FEAT-001",
+  "task_id": "TASK-004",
   "verification_checklist": {
     "linter_passed": true,
     "tests_passed": true,
     "no_secrets_exposed": true,
     "conventions_followed": true
   },
-  "summary": "Se implementó el módulo X sin romper los módulos existentes."
+  "summary": "AuthContext (AuthProvider + fetchProfile), hook useAuth y 7 tests. Escucha onAuthStateChange (INITIAL_SESSION/SIGNED_IN/TOKEN_REFRESHED/USER_UPDATED/SIGNED_OUT), consulta public.profiles para el rol y expone signInWithGoogle, signInWithPassword, signUpWithPassword y signOut. Tipos estrictos con src/types/database.ts (ProfileRow) y tipos de @supabase/supabase-js (Session, User, AuthChangeEvent, PostgrestError)."
 }

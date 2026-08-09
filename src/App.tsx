@@ -1,24 +1,39 @@
-import { useState } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { MarketplacePage } from './pages/MarketplacePage';
+import { MerchantDashboardPage } from './pages/MerchantDashboardPage';
+import { NotFoundPage } from './pages/NotFoundPage';
+import { Checkout } from './pages/Checkout';
 
-function App() {
-  const [count, setCount] = useState<number>(0)
-
+export function App() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gray-50 px-4 text-center">
-      <h1 className="text-3xl font-bold text-gray-900">MenuGram</h1>
-      <p className="max-w-md text-sm text-gray-600">
-        Menús digitales multi-tenant: pide desde tu móvil, sigue tu pedido en
-        tiempo real.
-      </p>
-      <button
-        type="button"
-        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
-        onClick={() => setCount((value) => value + 1)}
-      >
-        Contador: {count}
-      </button>
-    </main>
-  )
+    <AuthProvider>
+      <CartProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Navigate to="/marketplace" replace />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/marketplace" element={<MarketplacePage />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route
+              path="/merchant/dashboard"
+              element={
+                <ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}>
+                  <MerchantDashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </BrowserRouter>
+      </CartProvider>
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;
