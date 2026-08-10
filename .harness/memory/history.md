@@ -81,3 +81,11 @@
   - Desarrollo del componente `src/pages/OrderTracker.tsx` con barra de estado dinámica y detalle de productos.
   - Configuración de suscripciones en tiempo real con Supabase (`postgres_changes`) para cambios de estado en `orders`.
   - Configuración del CLI de Supabase (`supabase link --project-ref eeksewjxkkaasigjehat`) y creación del archivo `.mcp.json` para integración MCP.
+  ## [2026-08-10] - TASK-011: Configuración PWA, Manifest y Service Worker con vite-plugin-pwa
+- **Estado:** Completada (Commits `ac029fa`, `4e31d03`)
+- **Agente:** Implementer
+- **Logros:**
+  - Configuración exitosa de `vite-plugin-pwa` en `vite.config.ts` con opciones de manifest e iconografía completa (192x192, 512x512).
+  - Implementación del hook `usePwaUpdate.ts` y componente de alerta `ReloadPrompt.tsx` para notificar actualizaciones del Service Worker y habilitar modo offline.
+  - Resolución de errores de tipado en `useCart.ts` (`CartContextValue`) y corrección de dispatching de eventos `jsdom` en tests unitarios.
+  - Verificación exitosa de build PWA (`dist/sw.js`, `dist/manifest.webmanifest`) y 66/66 tests globales en verde con `init.sh` exit status 0.

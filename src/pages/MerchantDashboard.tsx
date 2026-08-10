@@ -3,11 +3,14 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { OrderRow, OrderStatus } from '../types/database';
 import { formatPrice } from '../types/cart';
+import { ProductManagement } from '../components/merchant/ProductManagement';
 
 const PAYMENT_PROOF_BUCKET = 'payment-proofs';
 
 export function MerchantDashboard() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'orders' | 'catalog'>('orders');
+  const [merchantIds, setMerchantIds] = useState<string[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,14 +57,16 @@ export function MerchantDashboard() {
   const fetchOrders = useCallback(async () => {
     if (!user) {
       setOrders([]);
+      setMerchantIds([]);
       setLoading(false);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const merchantIds = await getUserMerchantIds();
-      if (merchantIds.length === 0) {
+      const ids = await getUserMerchantIds();
+      setMerchantIds(ids);
+      if (ids.length === 0) {
         setOrders([]);
         setLoading(false);
         return;
@@ -70,7 +75,7 @@ export function MerchantDashboard() {
       const { data, error: ordersError } = await supabase
         .from(TABLE_NAMES.orders)
         .select('*')
-        .in('merchant_id', merchantIds)
+        .in('merchant_id', ids)
         .order('created_at', { ascending: false });
 
       if (ordersError) throw ordersError;
@@ -184,12 +189,48 @@ export function MerchantDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Panel de Comercio - Gestión de Pedidos
-          </h1>
-          <div className="flex items-center gap-3">
-            <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">
+        {/* Pestañas de Navegación del Comercio */}
+        <div className="flex border-b border-gray-200 mb-6 gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('orders')}
+            className={`py-3 px-6 font-semibold text-sm border-b-2 transition-colors ${
+              activeTab === 'orders'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Gestión de Pedidos
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('catalog')}
+            className={`py-3 px-6 font-semibold text-sm border-b-2 transition-colors ${
+              activeTab === 'catalog'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Catálogo
+          </button>
+        </div>
+
+        {activeTab === 'catalog' ? (
+          merchantIds.length > 0 ? (
+            <ProductManagement merchantId={merchantIds[0]} />
+          ) : (
+            <p className="text-center py-8 text-gray-500">
+              No tienes ningún comercio activo asociado para gestionar su catálogo.
+            </p>
+          )
+        ) : (
+          <>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+              <h1 className="text-2xl font-bold text-gray-900">
+                Panel de Comercio - Gestión de Pedidos
+              </h1>
+                <div className="flex items-center gap-3">
+                <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">
               Filtrar por estado:
             </label>
             <select
@@ -427,9 +468,10 @@ export function MerchantDashboard() {
             </div>
           </div>
         )}
+      </>
+        )}
       </div>
     </div>
   );
 }
-
 export const MerchantDashboardPage = MerchantDashboard;
