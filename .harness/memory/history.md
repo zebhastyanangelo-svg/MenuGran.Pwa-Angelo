@@ -57,3 +57,27 @@
   - Validación de restricción por comercio activo (`merchantId`) con alertas de mezcla de productos.
   - Creación del componente `CartDrawer.tsx` responsive con controles de cantidad y vaciado.
   - Suite de 14 tests específicos para el carrito (34 tests en verde a nivel global).
+  ## [2026-08-09] - TASK-008: Checkout de Pedido y Carga de Comprobante de Pago Móvil
+- **Estado:** Completada
+- **Agente:** Implementer
+- **Logros:**
+  - Desarrollo de la vista `Checkout.tsx` integrada con `useCart` y `useAuth`.
+  - Captura de datos de entrega y datos de Pago Móvil (banco origen y número de referencia).
+  - Integración de `imageCompressor.ts` para compresión previa del comprobante (<150 KB) y subida a Supabase Storage (`payment-proofs`).
+  - Creación de órdenes en la tabla `orders` con estado `payment_pending` e inserción de ítems en `order_items`.
+  - Limpieza automática del carrito tras el envío y corrección de mocks en Vitest (46/46 tests globales en verde).
+  ## [2026-08-09] - TASK-009: Panel del Comerciante y Validación de Comprobantes de Pago
+- **Estado:** Completada
+- **Agente:** Implementer
+- **Logros:**
+  - Desarrollo del panel en `src/pages/MerchantDashboard.tsx` para comerciantes y personal (*staff*).
+  - Filtrado de órdenes por estados (`payment_pending`, `confirmed`, `preparing`, `ready`, `on_the_way`, `delivered`, `cancelled`).
+  - Modal para visualización de comprobantes de Pago Móvil con generación de URLs firmadas (`createSignedUrl`) desde Supabase Storage.
+  - Flujo de transición de estados de orden y pruebas unitarias/integración (50/50 tests globales en verde).
+  ## [2026-08-09] - TASK-010: Seguimiento de Pedidos en Tiempo Real e Integración de CLI Supabase
+- **Estado:** Completada
+- **Agente:** Implementer / MCP
+- **Logros:**
+  - Desarrollo del componente `src/pages/OrderTracker.tsx` con barra de estado dinámica y detalle de productos.
+  - Configuración de suscripciones en tiempo real con Supabase (`postgres_changes`) para cambios de estado en `orders`.
+  - Configuración del CLI de Supabase (`supabase link --project-ref eeksewjxkkaasigjehat`) y creación del archivo `.mcp.json` para integración MCP.

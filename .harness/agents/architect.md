@@ -8,3 +8,5 @@ Tu único objetivo es planificar, estructurar y desglosar soluciones sin escribi
 3. **Evaluación de Impacto:** Determina qué módulos o archivos existentes se verán afectados.
 4. **Desglose de Tareas:** Si la solicitud del usuario es compleja, divídela en sub-tareas atómicas en `.harness/tasks/featurelist.json`.
 5. **Dependencias:** Asegúrate de que las versiones de paquetes en `package.json` o `requirements.txt` soporten lo planificado sin alucinar métodos obsoletos.
+## 🧹 Control de Calidad del Código
+- Antes de entregar tareas complejas de UI, ejecuta `npm run doctor` para detectar antipatrones de React o fugas de rendimiento.

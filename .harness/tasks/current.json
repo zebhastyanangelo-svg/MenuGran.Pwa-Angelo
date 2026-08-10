@@ -1,18 +1,19 @@
 {
-  "task_id": "TASK-008",
-  "title": "Checkout de Pedido y Carga de Comprobante de Pago Móvil",
-  "assigned_agent": "Implementer",
+  "id": "TASK-011",
+  "title": "Configuración PWA, Manifest y Service Worker con vite-plugin-pwa",
   "status": "in_progress",
-  "description": "Desarrollar la vista de Checkout (/checkout) donde el cliente ingresa datos de entrega, referencia de Pago Móvil y adjunta el comprobante (usando la compresión de imageCompressor a <150 KB) para crear la orden en Supabase en estado 'payment_pending'.",
+  "agent": "Implementer",
+  "assigned_at": "2026-08-09T20:00:00Z",
+  "description": "Convertir MenuGram en una Progressive Web App (PWA) fully-functional utilizando vite-plugin-pwa, configurando el Web App Manifest (iconos, colores de tema, modo standalone), el Service Worker para caché offline básico de assets estáticos y la alerta de actualización/instalación en la UI.",
   "deliverables": [
-    "Vista de Checkout en /src/pages/Checkout.tsx enlazada con useCart y useAuth",
-    "Formulario con datos del banco, número de referencia de Pago Móvil e input de archivo para la foto del comprobante",
-    "Integración de /src/utils/imageCompressor.ts para comprimir el comprobante antes de subirlo al bucket privado de Supabase Storage",
-    "Inserción de la orden en public.orders y los detalles en public.order_items",
-    "Limpieza del carrito tras la creación exitosa del pedido y redirección a la vista de confirmación/estado de orden",
-    "Tests unitarios/integración para el formulario de Checkout"
+    "Configuración de `vite-plugin-pwa` en `vite.config.ts` con opciones de manifest e iconografía.",
+    "Archivo de manifest estandarizado (nombre, short_name, icons 192x192 y 512x512, theme_color, background_color, display standalone).",
+    "Componente `ReloadPrompt.tsx` o banner UI para notificar actualizaciones del Service Worker y permitir reintento offline.",
+    "Verificación de compilar sin errores de TypeScript y mantener la suite de Vitest ejecutándose al 100% en verde."
   ],
-  "rules_to_follow": [
-    ".harness/rules/architecture.md"
+  "acceptance_criteria": [
+    "`npm run build` debe generar el SW (sw.js) y el manifest.webmanifest en la carpeta dist/ sin advertencias ni errores.",
+    "El linter oxlint y tsc -b deben pasar sin errores de tipado.",
+    "El script .harness/scripts/init.sh debe finalizar con exit code 0."
   ]
 }

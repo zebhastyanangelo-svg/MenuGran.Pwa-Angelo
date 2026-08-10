@@ -8,6 +8,7 @@ import { MarketplacePage } from './pages/MarketplacePage';
 import { MerchantDashboardPage } from './pages/MerchantDashboardPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { Checkout } from './pages/Checkout';
+import { OrderTracker } from './pages/OrderTracker';
 
 export function App() {
   return (
@@ -20,6 +21,7 @@ export function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/marketplace" element={<MarketplacePage />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route path="/orders/:id" element={<OrderTracker />} />
             <Route
               path="/merchant/dashboard"
               element={
