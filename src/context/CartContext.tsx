@@ -1,7 +1,7 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { CartItem, CartContextValue } from '../types/cart';
 import type { ProductRow } from '../types/database';
-import { formatPrice, loadCartFromStorage, saveCartToStorage } from '../types/cart';
+import { loadCartFromStorage, saveCartToStorage } from '../types/cart';
 
 export const CartContext = createContext<CartContextValue | null>(null);
 

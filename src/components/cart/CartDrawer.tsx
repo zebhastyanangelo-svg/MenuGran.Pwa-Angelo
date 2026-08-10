@@ -1,5 +1,4 @@
 import { X, ShoppingCart, Plus, Minus, Trash2, ArrowRight } from 'lucide-react';
-import type { ProductRow } from '../../types/database';
 import { useCart } from '../../hooks/useCart';
 import { useNavigate } from 'react-router-dom';
 import { formatPrice } from '../../types/cart';
@@ -14,10 +13,11 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     items,
     totalAmount,
     totalItems,
-    merchantId,
     validationError,
     canCheckout,
     clearCart,
+    updateQuantity,
+    removeItem,
   } = useCart();
   const navigate = useNavigate();
 

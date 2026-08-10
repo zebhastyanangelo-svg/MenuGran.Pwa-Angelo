@@ -19,22 +19,18 @@ vi.mock('../hooks/useAuth', () => ({
       storage: {
         from: vi.fn().mockReturnThis(),
         createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: 'https://example.com/signed-url.jpg' }, error: null })
-      }
+      },
+      from: vi.fn(),
     };
 
     // Mock data for our tests
     let mockMerchantsData = [{ id: 'm-1' }];
     let mockMerchantStaffData = [{ merchant_id: 'm-2' }];
     let mockOrdersData: any[] = [];
-    let mockUpdateError: Error | null = null;
 
-    // Track the last called table to return appropriate mock
-    let lastTableName = '';
-
-    const fromMock = vi.fn().mockImplementation((tableName) => {
-      lastTableName = tableName;
+    const fromMock = vi.fn().mockImplementation((_tableName) => {
       
-      if (tableName === 'merchants') {
+      if (_tableName === 'merchants') {
         // Return an object that mimics the chained calls for merchants query
         return {
           select: vi.fn().mockReturnThis(),
@@ -59,7 +55,7 @@ vi.mock('../hooks/useAuth', () => ({
             };
           })
         };
-      } else if (tableName === 'merchantStaff') {
+      } else if (_tableName === 'merchantStaff') {
         // Return an object that mimics the chained calls for merchantStaff query
         return {
           select: vi.fn().mockReturnThis(),
@@ -84,7 +80,7 @@ vi.mock('../hooks/useAuth', () => ({
             };
           })
         };
-      } else if (tableName === 'orders') {
+      } else if (_tableName === 'orders') {
         // Return an object that mimics the chained calls for orders query
         return {
           select: vi.fn().mockReturnThis(),
@@ -119,7 +115,7 @@ vi.mock('../hooks/useAuth', () => ({
       __setMockMerchantsData: (data: any) => { mockMerchantsData = data; },
       __setMockMerchantStaffData: (data: any) => { mockMerchantStaffData = data; },
       __setMockOrdersData: (data: any) => { mockOrdersData = data; },
-      __setMockUpdateError: (error: Error | null) => { mockUpdateError = error; }
+      __setMockUpdateError: (_error: Error | null) => undefined,
     };
   });
 
@@ -145,7 +141,6 @@ describe('MerchantDashboardPage', () => {
   const userEventInstance = userEvent.setup();
 
   let useAuthMock: any;
-  let supabaseMock: any;
   let supabaseModule: any;
 
   beforeEach(async () => {
@@ -153,7 +148,6 @@ describe('MerchantDashboardPage', () => {
     const useAuthModule = await import('../hooks/useAuth');
     const importedSupabaseModule = await import('../services/supabase');
     useAuthMock = useAuthModule.useAuth;
-    supabaseMock = importedSupabaseModule.supabase;
     supabaseModule = importedSupabaseModule;
 
     // Reset mock data using the helper methods from the supabaseModule

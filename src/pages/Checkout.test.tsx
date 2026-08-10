@@ -34,13 +34,13 @@ vi.mock('../utils/imageCompressor', () => ({
 
 vi.mock('../services/supabase', () => {
   const fromMock = vi.fn();
-  fromMock.mockImplementation((tableName) => {
-    const insertMock = vi.fn().mockImplementation((data) => {
+  fromMock.mockImplementation((_tableName) => {
+    const insertMock = vi.fn().mockImplementation((_data) => {
       return {
         single: vi.fn().mockResolvedValue({ data: { id: 'order-123' }, error: null })
       };
     });
-    const updateMock = vi.fn().mockImplementation((data) => {
+    const updateMock = vi.fn().mockImplementation((_data) => {
       return {
         eq: vi.fn().mockResolvedValue({ error: null })
       };
@@ -49,7 +49,7 @@ vi.mock('../services/supabase', () => {
   });
 
   const storageFromMock = vi.fn();
-  storageFromMock.mockImplementation((bucketName) => {
+  storageFromMock.mockImplementation((_bucketName) => {
     const uploadMock = vi.fn().mockResolvedValue({ error: null });
     const createSignedUrlMock = vi.fn().mockResolvedValue({ data: { signedUrl: 'https://example.com/signed-url.jpg' }, error: null });
     return { upload: uploadMock, createSignedUrl: createSignedUrlMock };
@@ -84,7 +84,6 @@ beforeAll(() => {
 describe('Checkout', () => {
   const user = userEvent.setup();
   let mockUseCart: any;
-  let mockUseAuth: any;
   let mockImageCompressor: any;
   let mockSupabase: any;
 
@@ -92,9 +91,6 @@ describe('Checkout', () => {
     const useCartModule = await import('../hooks/useCart');
     mockUseCart = vi.mocked(useCartModule);
     mockUseCart.useCart().clearCart.mockClear();
-    
-    const useAuthModule = await import('../hooks/useAuth');
-    mockUseAuth = vi.mocked(useAuthModule);
     
     const imageCompressorModule = await import('../utils/imageCompressor');
     mockImageCompressor = vi.mocked(imageCompressorModule);

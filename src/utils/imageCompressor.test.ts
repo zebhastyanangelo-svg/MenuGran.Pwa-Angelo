@@ -67,8 +67,8 @@ beforeEach(() => {
     let naturalWidthValue = 1024;
     let naturalHeightValue = 768;
     let srcValue = '';
-    let _onload = null;
-    let _onerror = null;
+    let _onload: (() => void) | null = null;
+    let _onerror: (() => void) | null = null;
 
     Object.defineProperty(img, 'naturalWidth', {
       get: () => naturalWidthValue,
@@ -87,13 +87,13 @@ beforeEach(() => {
       get: () => srcValue,
     });
     Object.defineProperty(img, 'onload', {
-      set: (fn: any) => {
+      set: (fn: (() => void) | null) => {
         _onload = fn;
       },
       get: () => _onload,
     });
     Object.defineProperty(img, 'onerror', {
-      set: (fn: any) => {
+      set: (fn: (() => void) | null) => {
         _onerror = fn;
       },
       get: () => _onerror,

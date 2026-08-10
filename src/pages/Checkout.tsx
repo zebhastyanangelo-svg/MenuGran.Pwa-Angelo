@@ -1,4 +1,4 @@
-import { useCallback, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -66,6 +66,9 @@ export function Checkout() {
           payment_reference: reference.trim(),
           payment_proof_url: '', // se actualizará después de la subida
           total_amount: totalAmount,
+          table_number: null,
+          delivery_location: null,
+          delivery_address_notes: null,
           // adaptar items del carrito a OrderItem[]
           items: items.map((i) => ({
             product_id: i.product.id,
@@ -75,10 +78,11 @@ export function Checkout() {
           })),
         };
 
-        const { data: order, error: orderError } = await supabase
-          .from(TABLE_NAMES.orders)
-          .insert(orderData)
-          .single();
+        const { data: order, error: orderError }: { data: OrderRow | null; error: unknown } =
+          await supabase
+            .from(TABLE_NAMES.orders)
+            .insert(orderData)
+            .single();
 
         if (orderError) throw orderError;
         if (!order) throw new Error('No se pudo crear la orden.');
@@ -97,7 +101,7 @@ export function Checkout() {
 
         // 4. Obtener URL firmada (válida 1 hora) para el comprobante
         const {
-          data: { signedUrl },
+          data: urlData,
           error: urlError,
         } = await supabase
           .storage
@@ -105,7 +109,8 @@ export function Checkout() {
           .createSignedUrl(fileName, 3600); // 1 hora en segundos
 
         if (urlError) throw urlError;
-        if (!signedUrl) throw new Error('No se pudo obtener la URL firmada del comprobante.');
+        if (!urlData) throw new Error('No se pudo obtener la URL firmada del comprobante.');
+        const signedUrl = urlData.signedUrl;
 
         // 5. Actualizar la orden con la URL del comprobante
         const { error: updateError } = await supabase

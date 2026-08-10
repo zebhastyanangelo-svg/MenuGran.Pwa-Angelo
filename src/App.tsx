@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ReloadPrompt } from './components/pwa/ReloadPrompt';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { MarketplacePage } from './pages/MarketplacePage';
@@ -32,6 +33,7 @@ export function App() {
             />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
+          <ReloadPrompt />
         </BrowserRouter>
       </CartProvider>
     </AuthProvider>

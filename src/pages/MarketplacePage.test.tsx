@@ -35,7 +35,7 @@ function buildMerchant(id: string, name: string): MerchantRow {
   };
 }
 
-function mockTableResults(results: Record<string, { data: unknown[]; error: unknown }>) {
+function mockTableResults(results: Record<string, { data: unknown[] | null; error: unknown }>) {
   authMocks.supabaseMock.from = vi.fn((table: string) => {
     const result = results[table] ?? { data: [], error: null };
     const query: any = {
