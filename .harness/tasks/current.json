@@ -1,7 +1,7 @@
 {
   "id": "TASK-011",
   "title": "Configuración PWA, Manifest y Service Worker con vite-plugin-pwa",
-  "status": "in_progress",
+  "status": "done",
   "agent": "Implementer",
   "assigned_at": "2026-08-09T20:00:00Z",
   "description": "Convertir MenuGram en una Progressive Web App (PWA) fully-functional utilizando vite-plugin-pwa, configurando el Web App Manifest (iconos, colores de tema, modo standalone), el Service Worker para caché offline básico de assets estáticos y la alerta de actualización/instalación en la UI.",
