@@ -71,6 +71,7 @@ CREATE TABLE public.merchants (
     status merchant_status DEFAULT 'pending_approval'::merchant_status NOT NULL,
     verification_docs JSONB DEFAULT '{}'::jsonb NOT NULL,
     is_active BOOLEAN DEFAULT TRUE NOT NULL,
+    location POINT,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 

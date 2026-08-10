@@ -89,3 +89,21 @@
   - Implementación del hook `usePwaUpdate.ts` y componente de alerta `ReloadPrompt.tsx` para notificar actualizaciones del Service Worker y habilitar modo offline.
   - Resolución de errores de tipado en `useCart.ts` (`CartContextValue`) y corrección de dispatching de eventos `jsdom` en tests unitarios.
   - Verificación exitosa de build PWA (`dist/sw.js`, `dist/manifest.webmanifest`) y 66/66 tests globales en verde con `init.sh` exit status 0.
+  ## [2026-08-10] - TASK-012: Gestión de Catálogo de Productos y Categorías por el Comerciante
+- **Estado:** Completada
+- **Agente:** Implementer
+- **Logros:**
+  - Implementación completa de `ProductManagement.tsx` y `ProductFormModal.tsx` para flujo CRUD de productos y categorías.
+  - Integración de servicio Cloudinary (`src/services/cloudinary.ts`) con compresión local previa y subida unsigned $0 costo.
+  - Validaciones estrictas de formularios en `src/utils/productForm.ts` (precios positivos, campos requeridos).
+  - Corrección de sintaxis JSX en `MerchantDashboard.tsx` (fragmentos y ternarios desbalanceados).
+  - Cobertura de pruebas unitarias (`productForm.test.ts`, `cloudinary.test.ts`, `ProductManagement.test.tsx`) dejando 82/82 tests globales en verde con `init.sh` exit status 0.
+  ## [2026-08-10] - TASK-013: Mapa Interactivo de Comercios Cercanos y Ubicación con Leaflet.js
+- **Estado:** Completada
+- **Agente:** Implementer
+- **Logros:**
+  - Instalación e integración de `leaflet` y `@types/leaflet` sin costo de API (OpenStreetMap).
+  - Extensión de `MerchantRow` en `src/types/database.ts` con el campo `location` (GeoPoint de PostGIS).
+  - Creación de componentes mapa `MapView.tsx` (vista de comercios en el Marketplace) y `LocationPicker.tsx` (captura de pin de entrega interactivo en `Checkout.tsx`).
+  - Implementación de la fórmula de Haversine en `src/utils/distance.ts` para ordenamiento de comercios por proximidad.
+  - Creación de mocks en Vitest para componentes de Leaflet dejando 97/97 tests en verde con `init.sh` exit status 0.

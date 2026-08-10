@@ -99,6 +99,7 @@ export interface MerchantRow {
   status: MerchantStatus;
   verification_docs: MerchantVerificationDocs;
   is_active: boolean;
+  location: GeoPoint | null;
   created_at: IsoTimestamp;
 }
 

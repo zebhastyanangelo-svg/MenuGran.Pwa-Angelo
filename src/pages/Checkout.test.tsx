@@ -32,6 +32,28 @@ vi.mock('../utils/imageCompressor', () => ({
   buildProofFileName: vi.fn().mockImplementation((orderId) => `${orderId}/proof.jpg`),
 }));
 
+vi.mock('../components/map/LocationPicker', () => {
+  return {
+    LocationPicker: ({ onLocationChange }: any) => {
+      const React = require('react');
+      React.useEffect(() => {
+        onLocationChange({ x: -99.1332, y: 19.4326 });
+      }, [onLocationChange]);
+
+      return (
+        <div data-testid="mock-location-picker">
+          <button
+            type="button"
+            onClick={() => onLocationChange({ x: -99.1332, y: 19.4326 })}
+          >
+            Seleccionar ubicación
+          </button>
+        </div>
+      );
+    },
+  };
+});
+
 vi.mock('../services/supabase', () => {
   const fromMock = vi.fn();
   fromMock.mockImplementation((_tableName) => {
@@ -173,6 +195,11 @@ describe('Checkout', () => {
     const fileInput = screen.getByLabelText(/Comprobante \(foto o PDF\):/i) as HTMLInputElement;
     const file = new File(['fake-image-content'], 'test.jpg', { type: 'image/jpeg' });
     await user.upload(fileInput, file);
+
+    const selectLocationBtn = screen.queryByRole('button', { name: /Seleccionar ubicación/i });
+    if (selectLocationBtn) {
+      await user.click(selectLocationBtn);
+    }
 
     // Get the form via the bank input
     const form = bankInput.closest('form');

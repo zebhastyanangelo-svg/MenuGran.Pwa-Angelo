@@ -1,21 +1,20 @@
 {
-  "id": "TASK-012",
-  "title": "Gestión de Catálogo de Productos y Categorías por el Comerciante",
+  "id": "TASK-013",
+  "title": "Mapa Interactivo de Comercios Cercanos y Ubicación con Leaflet.js",
   "status": "in_progress",
   "agent": "Implementer",
-  "assigned_at": "2026-08-10T13:40:00Z",
-  "description": "Desarrollar el módulo de administración de productos y categorías dentro del Panel del Comerciante. Permite a los dueños de negocios agregar productos con fotos (vía Cloudinary), editar detalles, ajustar precios, pausar/activar disponibilidad y gestionar categorías.",
+  "assigned_at": "2026-08-10T16:30:00Z",
+  "description": "Integrar Leaflet.js y OpenStreetMap ($0 costo API) para mostrar la ubicación de los comercios en el Marketplace y permitir a los compradores seleccionar su ubicación de entrega en el Checkout mediante un pin interactivo.",
   "deliverables": [
-    "Crear componente o pestaña `ProductManagement.tsx` dentro de `src/pages/MerchantDashboard.tsx` (o subcomercio).",
-    "Modal/Formulario interactivo para creación y edición de productos (nombre, descripción, precio, categoría, disponibilidad).",
-    "Integración con Cloudinary (unsigned upload preset) para la subida fluida de fotos de productos.",
-    "Toggle/Switch de activación rápida (`is_available`) para pausar productos agotados en tiempo real.",
-    "Suite de pruebas unitarias/integración en Vitest para la gestión de catálogo."
+    "Instalación e integración de `leaflet` y `@types/leaflet`.",
+    "Creación del componente reusable `MapView.tsx` (Soporte para marcadores de comercios con popups interactivos).",
+    "Creación del componente `LocationPicker.tsx` para la selección interactiva de coordenadas de entrega en el `Checkout.tsx`.",
+    "Utilidad de geolocalización o cálculo de distancia simple (fórmula de Haversine) para ordenar comercios por proximidad.",
+    "Suite de pruebas unitarias con mocks para Leaflet en Vitest."
   ],
   "acceptance_criteria": [
-    "El formulario debe validar tipos de datos (precios positivos, campos obligatorios).",
-    "Las imágenes subidas deben almacenarse correctamente en Cloudinary y guardar la URL resultante en la tabla `products`.",
-    "`tsc -b` y `oxlint` deben pasar sin ningún error.",
+    "No utilizar APIs de pago como Google Maps API (cumplir restricción $0 costo).",
+    "`tsc -b` y `oxlint` deben pasar sin ningún error de tipado o sintaxis.",
     "El script `.harness/scripts/init.sh` debe finalizar con exit code 0."
   ]
 }

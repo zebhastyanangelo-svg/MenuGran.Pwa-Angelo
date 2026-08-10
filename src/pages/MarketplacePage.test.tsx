@@ -30,6 +30,7 @@ function buildMerchant(id: string, name: string): MerchantRow {
     banner_url: null,
     status: 'active',
     verification_docs: {},
+    location: null,
     is_active: true,
     created_at: '2026-01-01T00:00:00.000Z',
   };

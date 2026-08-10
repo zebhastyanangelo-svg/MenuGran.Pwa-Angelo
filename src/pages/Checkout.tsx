@@ -3,7 +3,8 @@ import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase, TABLE_NAMES } from '../services/supabase';
-import type { OrderRow, OrderItem } from '../types/database';
+import type { OrderRow, OrderItem, GeoPoint } from '../types/database';
+import { LocationPicker } from '../components/map/LocationPicker';
 import { compressImage, PAYMENT_PROOF_MAX_BYTES, buildProofFileName } from '../utils/imageCompressor';
 import { formatPrice } from '../types/cart';
 
@@ -24,8 +25,9 @@ export function Checkout() {
   const [reference, setReference] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitSuccess, setIsSubmitSuccess] = useState(false);
+  const [deliveryLocation, setDeliveryLocation] = useState<GeoPoint | null>(null);
 
   // Validaciones
   const canSubmit =
@@ -65,10 +67,10 @@ export function Checkout() {
           payment_method: 'pago_movil',
           payment_reference: reference.trim(),
           payment_proof_url: '', // se actualizará después de la subida
-          total_amount: totalAmount,
-          table_number: null,
-          delivery_location: null,
-          delivery_address_notes: null,
+           total_amount: totalAmount,
+           table_number: null,
+           delivery_location: deliveryLocation,
+           delivery_address_notes: null,
           // adaptar items del carrito a OrderItem[]
           items: items.map((i) => ({
             product_id: i.product.id,
@@ -279,7 +281,21 @@ export function Checkout() {
             </div>
           </div>
 
-          {/* Estado de envío y errores */}
+           {/* Ubicación de entrega */}
+           <div className="space-y-2">
+             <h3 className="text-sm font-medium text-gray-700">
+               Ubicación de entrega
+             </h3>
+             <p className="text-xs text-gray-500">
+               Toca el mapa para colocar el pin de entrega.
+             </p>
+             <LocationPicker
+               initialLocation={deliveryLocation}
+               onLocationChange={setDeliveryLocation}
+             />
+           </div>
+
+           {/* Estado de envío y errores */}
           {isPending && (
             <div className="flex items-center justify-center py-4">
               <div className="flex items-center space-x-2">
