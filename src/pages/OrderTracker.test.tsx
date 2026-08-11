@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import { OrderTracker } from './OrderTracker';
 import { AuthProvider } from '../context/AuthContext';
 import { CartProvider } from '../context/CartContext';
+import { NotificationToastProvider } from '../components/pwa/NotificationToast';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
@@ -71,11 +72,13 @@ const createWrapper = () => ({
   wrapper: ({ children }: { children: React.ReactNode }) => (
     <AuthProvider>
       <CartProvider>
-        <MemoryRouter initialEntries={['/order/test-order-id']}>
-          <Routes>
-            <Route path="/order/:id" element={children} />
-          </Routes>
-        </MemoryRouter>
+        <NotificationToastProvider>
+          <MemoryRouter initialEntries={['/order/test-order-id']}>
+            <Routes>
+              <Route path="/order/:id" element={children} />
+            </Routes>
+          </MemoryRouter>
+        </NotificationToastProvider>
       </CartProvider>
     </AuthProvider>
   ),

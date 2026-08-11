@@ -1,8 +1,14 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import type { OrderRow, OrderStatus } from '../types/database';
 import { useAuth } from '../hooks/useAuth';
+import {
+  useNotifications,
+  buildOrderNotification,
+} from '../hooks/useNotifications';
+import { useNotificationToast } from '../components/pwa/NotificationToast';
+import { statusDisplayMap } from '../utils/statusDisplayMap';
 
 export function OrderTracker() {
   const { user, isLoading: authLoading } = useAuth();
@@ -12,6 +18,35 @@ export function OrderTracker() {
   const [order, setOrder] = useState<OrderRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { showToast } = useNotificationToast();
+  const { permission, showNotification } = useNotifications();
+  const previousStatusRef = useRef<OrderStatus | null>(null);
+
+  const handleStatusChange = useCallback(
+    (newStatus: OrderStatus): void => {
+      const notification = buildOrderNotification(newStatus);
+
+      if (permission === 'granted') {
+        showNotification(notification);
+      } else {
+        showToast({
+          title: notification.title,
+          message: notification.body,
+          variant:
+            newStatus === 'cancelled'
+              ? 'error'
+              : newStatus === 'delivered'
+                ? 'success'
+                : newStatus === 'ready'
+                  ? 'warning'
+                  : 'info',
+          durationMs: 6000,
+        });
+      }
+    },
+    [permission, showNotification, showToast],
+  );
 
   // Order status progression for visual stepper
   const orderStatusSteps: OrderStatus[] = [
@@ -23,17 +58,6 @@ export function OrderTracker() {
     'delivered',
     'cancelled'
   ];
-
-  // Map status to display text
-  const statusDisplayMap: Record<OrderStatus, string> = {
-    payment_pending: 'Pendiente de pago',
-    confirmed: 'Confirmado',
-    preparing: 'En preparación',
-    ready: 'Listo para recoger',
-    on_the_way: 'En camino',
-    delivered: 'Entregado',
-    cancelled: 'Cancelado'
-  };
 
   // Load order data
   const loadOrder = useCallback(async () => {
@@ -59,6 +83,7 @@ export function OrderTracker() {
       }
 
       setOrder(data);
+      previousStatusRef.current = data.status;
       setError(null);
     } catch (err) {
       console.error('Error loading order:', err);
@@ -76,26 +101,31 @@ export function OrderTracker() {
     // Subscribe to changes on the orders table
     const channel = supabase
       .channel(`order-changes-${orderId}`)
-      .on(
-        'postgres_changes',
-        { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'orders',
-          filter: `id=eq.${orderId}`
-        },
-        (payload) => {
-          // Update order with latest data
-          setOrder(payload.new as OrderRow);
-        }
-      )
+         .on(
+         'postgres_changes',
+         { 
+           event: 'UPDATE', 
+           schema: 'public', 
+           table: 'orders',
+           filter: `id=eq.${orderId}`
+         },
+         (payload) => {
+           const updatedOrder = payload.new as OrderRow;
+           setOrder(updatedOrder);
+
+           if (updatedOrder.status !== previousStatusRef.current) {
+             previousStatusRef.current = updatedOrder.status;
+             handleStatusChange(updatedOrder.status);
+           }
+         }
+       )
       .subscribe();
 
     // Clean up subscription on unmount
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [loadOrder, orderId]);
+  }, [loadOrder, orderId, handleStatusChange]);
 
   // Handle loading states
   if (authLoading) {

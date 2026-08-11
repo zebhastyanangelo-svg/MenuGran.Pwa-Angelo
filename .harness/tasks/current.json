@@ -1,19 +1,19 @@
 {
-  "id": "TASK-013",
-  "title": "Mapa Interactivo de Comercios Cercanos y Ubicación con Leaflet.js",
+  "id": "TASK-014",
+  "title": "Sistema de Notificaciones Push y Alertas de Estado de Pedido",
   "status": "in_progress",
   "agent": "Implementer",
-  "assigned_at": "2026-08-10T16:30:00Z",
-  "description": "Integrar Leaflet.js y OpenStreetMap ($0 costo API) para mostrar la ubicación de los comercios en el Marketplace y permitir a los compradores seleccionar su ubicación de entrega en el Checkout mediante un pin interactivo.",
+  "assigned_at": "2026-08-10T19:10:00Z",
+  "description": "Implementar un sistema de notificaciones locales y soporte para la Web Notification API en el PWA. Al recibir un cambio de estado en la orden mediante Supabase Realtime (ej: 'confirmado', 'en preparación', 'en camino'), el sistema dispara una notificación nativa del navegador/móvil.",
   "deliverables": [
-    "Instalación e integración de `leaflet` y `@types/leaflet`.",
-    "Creación del componente reusable `MapView.tsx` (Soporte para marcadores de comercios con popups interactivos).",
-    "Creación del componente `LocationPicker.tsx` para la selección interactiva de coordenadas de entrega en el `Checkout.tsx`.",
-    "Utilidad de geolocalización o cálculo de distancia simple (fórmula de Haversine) para ordenar comercios por proximidad.",
-    "Suite de pruebas unitarias con mocks para Leaflet en Vitest."
+    "Creación de la utilidad o hook `useNotifications.ts` para solicitar permisos de notificación nativos (`Notification.requestPermission`).",
+    "Integración en `OrderTracker.tsx` para lanzar notificaciones de fondo/pantalla cuando cambie el estado de la orden.",
+    "Componente UI de banner/toast fallback para entornos donde el usuario bloquee las notificaciones push o no sean soportadas.",
+    "Suite de pruebas unitarias simulando la Web Notification API con mocks en Vitest."
   ],
   "acceptance_criteria": [
-    "No utilizar APIs de pago como Google Maps API (cumplir restricción $0 costo).",
+    "Debe cumplir la restricción $0 costo (usar Notification API estándar y Web APIs nativas).",
+    "No romper la suscripción en tiempo real de Supabase existente en `OrderTracker`.",
     "`tsc -b` y `oxlint` deben pasar sin ningún error de tipado o sintaxis.",
     "El script `.harness/scripts/init.sh` debe finalizar con exit code 0."
   ]

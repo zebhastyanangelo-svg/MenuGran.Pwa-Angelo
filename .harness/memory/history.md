@@ -107,3 +107,12 @@
   - Creación de componentes mapa `MapView.tsx` (vista de comercios en el Marketplace) y `LocationPicker.tsx` (captura de pin de entrega interactivo en `Checkout.tsx`).
   - Implementación de la fórmula de Haversine en `src/utils/distance.ts` para ordenamiento de comercios por proximidad.
   - Creación de mocks en Vitest para componentes de Leaflet dejando 97/97 tests en verde con `init.sh` exit status 0.
+  ## [2026-08-10] - TASK-014: Sistema de Notificaciones Push y Alertas de Estado de Pedido
+- **Estado:** Completada
+- **Agente:** Implementer
+- **Logros:**
+  - Creación del hook `useNotifications.ts` para gestionar la Web Notification API nativa ($0 costo API).
+  - Creación del sistema UI de fallback `NotificationToast.tsx` (`NotificationToastProvider`, `NotificationToastList`) para mostrar alertas banner/toast cuando las notificaciones estén deshabilitadas.
+  - Integración en `OrderTracker.tsx` con las suscripciones de Supabase Realtime para emitir alertas en vivo al cambiar el estado del pedido.
+  - Creación del mapper reutilizable `statusDisplayMap.ts`.
+  - Cobertura de pruebas unitarias (`useNotifications.test.ts`, `NotificationToast.test.tsx`) elevando la suite a 119/119 tests en verde con `init.sh` exit status 0.
