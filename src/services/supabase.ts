@@ -8,6 +8,7 @@ import type {
   ProductRow,
   ProfileRow,
 } from '../types/database';
+import { validateRuntimeEnv } from '../utils/env';
 
 /**
  * Cliente singleton de Supabase para el frontend.
@@ -21,15 +22,7 @@ import type {
  * Ningún secreto del servidor debe terminar aquí.
  */
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error(
-    'Faltan variables de entorno de Supabase. ' +
-      'Copia .env.example a .env.local y rellena VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.',
-  );
-}
+const { supabaseUrl, supabaseAnonKey } = validateRuntimeEnv();
 
 const TABLE_NAMES = {
   profiles: 'profiles',
@@ -55,8 +48,8 @@ export interface DatabaseTables {
 }
 
 export const supabase: SupabaseClient = createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY,
+  supabaseUrl,
+  supabaseAnonKey,
 );
 
 export { TABLE_NAMES };

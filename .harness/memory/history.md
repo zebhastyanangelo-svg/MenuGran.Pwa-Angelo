@@ -141,3 +141,13 @@
   - Refactorización de `usePwaUpdate.ts` para la escucha directa de eventos nativos/personalizados (`pwa:need-refresh`, `pwa:offline-ready`) e invocación de `SKIP_WAITING`.
   - Configuración de tipos en `vite-env.d.ts` para dar soporte a `virtual:pwa-register`.
   - Creación y actualización de suites de pruebas (`usePwaUpdate.test.ts`, `ReloadPrompt.test.tsx`), alcanzando un total de 172/172 tests en verde con `init.sh` exit status 0.
+  ## [2026-08-11] - TASK-018: Hardening de Seguridad, Validación de Variables de Entorno y Production Build
+- **Estado:** Completada
+- **Agente:** Implementer
+- **Logros:**
+  - Implementación del módulo de validación en runtime `src/utils/env.ts` con la clase dedicada `EnvError` y funciones de validación para Supabase y Cloudinary.
+  - Corrección de aislamiento en `src/utils/env.test.ts` usando `vi.stubEnv`/`vi.unstubAllEnvs`, eliminando interferencias con `import.meta`.
+  - Corrección de referencias desestructuradas en `src/services/supabase.ts`.
+  - Actualización y estructuración de `.env.example` con marcadores claros de llaves obligatorias y opcionales.
+  - Extensión de `.harness/scripts/init.sh` para ejecutar `tsc -b`, `oxlint` y `npm run build`.
+  - Verificación exitosa del bundle de producción en `dist/` con 183/183 tests en verde (26 archivos) y exit code 0.
