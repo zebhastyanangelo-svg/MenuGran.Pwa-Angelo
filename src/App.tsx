@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { OfflineBanner } from './components/pwa/OfflineBanner';
 import { ReloadPrompt } from './components/pwa/ReloadPrompt';
 import { NotificationToastProvider, NotificationToastList } from './components/pwa/NotificationToast';
 import { LoginPage } from './pages/LoginPage';
@@ -36,12 +37,13 @@ export function App() {
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
             <ReloadPrompt />
-          </BrowserRouter>
-          <NotificationToastList />
-        </NotificationToastProvider>
-      </CartProvider>
-    </AuthProvider>
-  );
+           </BrowserRouter>
+           <NotificationToastList />
+         </NotificationToastProvider>
+         <OfflineBanner />
+       </CartProvider>
+     </AuthProvider>
+   );
 }
 
 export default App;

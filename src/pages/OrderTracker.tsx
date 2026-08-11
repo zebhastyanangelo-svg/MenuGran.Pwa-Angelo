@@ -3,6 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import type { OrderRow, OrderStatus } from '../types/database';
 import { useAuth } from '../hooks/useAuth';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import {
+  saveOrder,
+  getOrder,
+} from '../utils/offlineStorage';
 import {
   useNotifications,
   buildOrderNotification,
@@ -21,6 +26,7 @@ export function OrderTracker() {
 
   const { showToast } = useNotificationToast();
   const { permission, showNotification } = useNotifications();
+  const { isOnline } = useOnlineStatus();
   const previousStatusRef = useRef<OrderStatus | null>(null);
 
   const handleStatusChange = useCallback(
@@ -85,14 +91,34 @@ export function OrderTracker() {
       setOrder(data);
       previousStatusRef.current = data.status;
       setError(null);
+      saveOrder(data);
     } catch (err) {
       console.error('Error loading order:', err);
-      setError('Error al cargar la orden');
-      setOrder(null);
+
+      if (!isOnline) {
+        const cachedOrder = getOrder(orderId);
+        if (cachedOrder) {
+          setOrder(cachedOrder);
+          previousStatusRef.current = cachedOrder.status;
+          setError(null);
+          showToast({
+            title: 'Modo sin conexión',
+            message: 'Mostrando la última orden guardada localmente.',
+            variant: 'warning',
+            durationMs: 6000,
+          });
+        } else {
+          setError('Error al cargar la orden. Activa la conexión para ver tu orden.');
+          setOrder(null);
+        }
+      } else {
+        setError('Error al cargar la orden');
+        setOrder(null);
+      }
     } finally {
       setLoading(false);
     }
-  }, [orderId]);
+  }, [orderId, isOnline, showToast]);
 
   // Set up real-time subscription for order updates
   useEffect(() => {

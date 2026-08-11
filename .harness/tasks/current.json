@@ -1,19 +1,18 @@
 {
-  "id": "TASK-014",
-  "title": "Sistema de Notificaciones Push y Alertas de Estado de Pedido",
+  "id": "TASK-015",
+  "title": "Estrategia Offline y Persistencia Local para Órdenes y Carrito",
   "status": "in_progress",
   "agent": "Implementer",
-  "assigned_at": "2026-08-10T19:10:00Z",
-  "description": "Implementar un sistema de notificaciones locales y soporte para la Web Notification API en el PWA. Al recibir un cambio de estado en la orden mediante Supabase Realtime (ej: 'confirmado', 'en preparación', 'en camino'), el sistema dispara una notificación nativa del navegador/móvil.",
+  "assigned_at": "2026-08-10T20:30:00Z",
+  "description": "Implementar estrategia de almacenamiento local e indicador de conexión offline. Permitir que el carrito y el historial reciente de órdenes persistan localmente en IndexedDB/LocalStorage y mostrar una alerta visual no intrusiva de 'Modo sin conexión' cuando la red caiga.",
   "deliverables": [
-    "Creación de la utilidad o hook `useNotifications.ts` para solicitar permisos de notificación nativos (`Notification.requestPermission`).",
-    "Integración en `OrderTracker.tsx` para lanzar notificaciones de fondo/pantalla cuando cambie el estado de la orden.",
-    "Componente UI de banner/toast fallback para entornos donde el usuario bloquee las notificaciones push o no sean soportadas.",
-    "Suite de pruebas unitarias simulando la Web Notification API con mocks en Vitest."
+    "Creación del hook `useOnlineStatus.ts` para detectar eventos `online` / `offline` de la Window API.",
+    "Componente visual `OfflineBanner.tsx` que advierte amigablemente al usuario cuando está en modo sin conexión.",
+    "Estrategia de persistencia en `CartContext` y caché local para las órdenes recientes vistas en `OrderTracker`.",
+    "Suite de pruebas unitarias simulando desconexión de red en Vitest."
   ],
   "acceptance_criteria": [
-    "Debe cumplir la restricción $0 costo (usar Notification API estándar y Web APIs nativas).",
-    "No romper la suscripción en tiempo real de Supabase existente en `OrderTracker`.",
+    "Costo $0 operativo (utilizar Web APIs nativas e IndexedDB/LocalStorage).",
     "`tsc -b` y `oxlint` deben pasar sin ningún error de tipado o sintaxis.",
     "El script `.harness/scripts/init.sh` debe finalizar con exit code 0."
   ]

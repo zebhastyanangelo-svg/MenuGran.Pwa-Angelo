@@ -116,3 +116,12 @@
   - Integración en `OrderTracker.tsx` con las suscripciones de Supabase Realtime para emitir alertas en vivo al cambiar el estado del pedido.
   - Creación del mapper reutilizable `statusDisplayMap.ts`.
   - Cobertura de pruebas unitarias (`useNotifications.test.ts`, `NotificationToast.test.tsx`) elevando la suite a 119/119 tests en verde con `init.sh` exit status 0.
+  ## [2026-08-10] - TASK-015: Estrategia Offline y Persistencia Local para Órdenes y Carrito
+- **Estado:** Completada
+- **Agente:** Implementer
+- **Logros:**
+  - Creación del hook `useOnlineStatus.ts` para detección en tiempo real de conectividad (`navigator.onLine`).
+  - Implementación del componente `OfflineBanner.tsx` para feedback visual no intrusivo en la UI.
+  - Creación del módulo `offlineStorage.ts` para persistencia local de hasta 10 órdenes en `localStorage` con validación de schema y resiliencia ante JSON corrupto.
+  - Integración en `OrderTracker.tsx` con fallback automático a la caché local al detectar desconexión.
+  - Cobertura de pruebas unitarias (`offlineStorage.test.ts`, `useOnlineStatus.test.ts`, `OfflineBanner.test.tsx`) elevando la suite a 148/148 tests en verde con `init.sh` exit status 0.
