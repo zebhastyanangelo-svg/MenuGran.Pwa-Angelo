@@ -49,6 +49,7 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
           <img
             src={product.image_url}
             alt={product.title}
+            loading="lazy"
             className="h-full w-full object-cover"
           />
         ) : (

@@ -142,4 +142,36 @@ describe('ProductCard', () => {
 
     expect(screen.getByText(/Agotado/i)).toBeInTheDocument();
   });
+
+  it('aplica loading="lazy" a la imagen del producto', () => {
+    const product = buildProduct('p1', 'Hamburguesa', '12.50');
+    render(<ProductCard product={{ ...product, image_url: 'https://example.com/img.jpg' }} />);
+
+    const img = screen.getByRole('img', { name: 'Hamburguesa' });
+    expect(img).toHaveAttribute('loading', 'lazy');
+  });
+});
+
+describe('MerchantCard lazy image loading', () => {
+  it('aplica loading="lazy" al logo del comercio', () => {
+    const merchant = {
+      ...buildMerchant('m1', 'La Esquina', 'la-esquina'),
+      logo_url: 'https://example.com/logo.png',
+    };
+    render(<MerchantCard merchant={merchant} />);
+
+    const logoImg = screen.getByAltText('Logo de La Esquina');
+    expect(logoImg).toHaveAttribute('loading', 'lazy');
+  });
+
+  it('aplica loading="lazy" al banner del comercio', () => {
+    const merchant = {
+      ...buildMerchant('m1', 'La Esquina', 'la-esquina'),
+      banner_url: 'https://example.com/banner.png',
+    };
+    render(<MerchantCard merchant={merchant} />);
+
+    const bannerImg = screen.getByAltText('La Esquina');
+    expect(bannerImg).toHaveAttribute('loading', 'lazy');
+  });
 });

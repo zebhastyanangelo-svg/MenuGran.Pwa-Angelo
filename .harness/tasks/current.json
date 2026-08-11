@@ -1,18 +1,18 @@
 {
-  "id": "TASK-015",
-  "title": "Estrategia Offline y Persistencia Local para Órdenes y Carrito",
-  "status": "in_progress",
+  "id": "TASK-016",
+  "title": "Optimización de Rendimiento, Lazy Loading y Auditoría PWA",
+  "status": "completed",
   "agent": "Implementer",
-  "assigned_at": "2026-08-10T20:30:00Z",
-  "description": "Implementar estrategia de almacenamiento local e indicador de conexión offline. Permitir que el carrito y el historial reciente de órdenes persistan localmente en IndexedDB/LocalStorage y mostrar una alerta visual no intrusiva de 'Modo sin conexión' cuando la red caiga.",
+  "assigned_at": "2026-08-10T21:10:00Z",
+  "description": "Optimizar el tamaño del bundle JS/CSS mediante Code Splitting (React.lazy / React.Suspense) en las rutas principales, asegurar lazy loading de imágenes, y verificar la correcta registración del manifest y service worker para instalación PWA.",
   "deliverables": [
-    "Creación del hook `useOnlineStatus.ts` para detectar eventos `online` / `offline` de la Window API.",
-    "Componente visual `OfflineBanner.tsx` que advierte amigablemente al usuario cuando está en modo sin conexión.",
-    "Estrategia de persistencia en `CartContext` y caché local para las órdenes recientes vistas en `OrderTracker`.",
-    "Suite de pruebas unitarias simulando desconexión de red en Vitest."
+    "Implementación de `React.lazy` y `Suspense` con fallback visual/skeleton en la configuración de rutas de `App.tsx`.",
+    "Verificación de compresión y atributos `loading=\"lazy\"` en imágenes de productos y logos.",
+    "Comprobación de etiquetas meta PWA (`viewport`, `theme-color`, `apple-touch-icon`) en `index.html`.",
+    "Suite de pruebas de integración para rutas perezosas en Vitest."
   ],
   "acceptance_criteria": [
-    "Costo $0 operativo (utilizar Web APIs nativas e IndexedDB/LocalStorage).",
+    "Costo $0 operativo.",
     "`tsc -b` y `oxlint` deben pasar sin ningún error de tipado o sintaxis.",
     "El script `.harness/scripts/init.sh` debe finalizar con exit code 0."
   ]

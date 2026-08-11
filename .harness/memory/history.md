@@ -125,3 +125,11 @@
   - Creación del módulo `offlineStorage.ts` para persistencia local de hasta 10 órdenes en `localStorage` con validación de schema y resiliencia ante JSON corrupto.
   - Integración en `OrderTracker.tsx` con fallback automático a la caché local al detectar desconexión.
   - Cobertura de pruebas unitarias (`offlineStorage.test.ts`, `useOnlineStatus.test.ts`, `OfflineBanner.test.tsx`) elevando la suite a 148/148 tests en verde con `init.sh` exit status 0.
+  ## [2026-08-11] - TASK-016: Optimización de Rendimiento, Lazy Loading y Auditoría PWA
+- **Estado:** Completada
+- **Agente:** Implementer
+- **Logros:**
+  - Configuración de Code Splitting en `App.tsx` con `React.lazy` y `Suspense` utilizando el fallback `PageLoader.tsx`.
+  - Aplicación de `loading="lazy"` en las imágenes de tarjetas de comercio y catálogo de productos (`MerchantCard`, `ProductCard`).
+  - Configuración e integración de meta tags PWA de alta prioridad en `index.html` (`theme-color`, `apple-touch-icon`, `viewport`, etc.).
+  - Resolución del asincronismo en pruebas de enrutamiento diferido (`App.test.tsx`), alcanzando un total de 157/157 tests en verde con `init.sh` exit status 0.

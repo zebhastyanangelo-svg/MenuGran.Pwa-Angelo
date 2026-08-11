@@ -25,6 +25,7 @@ export function MerchantCard({ merchant, onClick }: MerchantCardProps) {
           <img
             src={merchant.banner_url}
             alt={merchant.name}
+            loading="lazy"
             className="h-full w-full object-cover"
           />
         ) : null}
@@ -37,6 +38,7 @@ export function MerchantCard({ merchant, onClick }: MerchantCardProps) {
               <img
                 src={merchant.logo_url}
                 alt={`Logo de ${merchant.name}`}
+                loading="lazy"
                 className="h-full w-full object-cover"
               />
             ) : (
