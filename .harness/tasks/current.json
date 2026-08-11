@@ -1,19 +1,20 @@
 {
-  "id": "TASK-018",
-  "title": "Hardening de Seguridad, Validación de Variables de Entorno y Production Build",
-  "status": "in_progress",
+  "id": "TASK-019",
+  "title": "Provisionamiento y validación de la base de datos Supabase remota",
+  "status": "completed",
   "agent": "Implementer",
-  "assigned_at": "2026-08-11T12:35:00Z",
-  "description": "Realizar la verificación final de seguridad del cliente. Validar el archivo `.env.example`, asegurar la correcta inyección de variables públicas de Supabase/Cloudinary con validación en runtime, y ejecutar la compilación de producción `npm run build` libre de errores.",
+  "assigned_at": "2026-08-11T16:00:00Z",
+  "completed_at": "2026-08-11T16:35:00Z",
+  "description": "Creación en Supabase remoto (proyecto menugram/eeksewjxkkaasigjehat) de todo el esquema definido en docs/DATABASE-SCHEMA.md y validación integral del flujo login → catálogo → orden contra el cliente real @supabase/supabase-js usado en src/services/supabase.ts.",
   "deliverables": [
-    "Módulo de validación de variables de entorno para runtime (`src/utils/env.ts` o equivalente).",
-    "Verificación y actualización de `.env.example` con instrucciones claras de despliegue.",
-    "Verificación del script de compilación `npm run build` (Vite) produciendo la carpeta `dist/` sin errores.",
-    "Ejecución integral de la suite de pruebas y scripts de verificación del arnés."
+    "supabase/migrations/20260811_0001_initial_schema.sql - Migración completa (enums, 7 tablas, triggers, índices, RLS, Storage, Realtime).",
+    "Fix de recursión RLS: funciones SECURITY DEFINER is_merchant_staff_or_owner e is_merchant_owner para romper el ciclo merchants↔merchant_staff.",
+    ".harness/tests/validate-remote.mjs - Test de integración reutilizable (13 checks) contra la BD remota.",
+    "Config remota: mailer_autoconfirm=true (registro sin confirmar email)."
   ],
   "acceptance_criteria": [
-    "Costo $0 operativo.",
-    "`tsc -b`, `oxlint` y `npm run build` deben finalizar exitosamente.",
-    "El script `.harness/scripts/init.sh` debe finalizar con exit code 0."
+    "Las 7 tablas + 6 enums + 30 políticas RLS creadas y verificadas en remoto.",
+    "Validación 13/13 OK: signUp con autoconfirm, trigger de perfil, catálogo público (filtros MarketplacePage), creación de orden (payload Checkout.tsx), RLS negativos.",
+    "bash .harness/scripts/init.sh con exit code 0 (tsc, lint, build, 183/183 tests)."
   ]
 }

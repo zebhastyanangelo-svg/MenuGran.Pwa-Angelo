@@ -151,3 +151,13 @@
   - Actualización y estructuración de `.env.example` con marcadores claros de llaves obligatorias y opcionales.
   - Extensión de `.harness/scripts/init.sh` para ejecutar `tsc -b`, `oxlint` y `npm run build`.
   - Verificación exitosa del bundle de producción en `dist/` con 183/183 tests en verde (26 archivos) y exit code 0.
+  ## [2026-08-11] - TASK-019: Conexión Remota, Verificación de Esquema SQL y Políticas RLS en Supabase
+- **Estado:** Completada
+- **Agente:** Implementer
+- **Logros:**
+  - Migración y verificación de 7 tablas, 6 enums, 30 políticas RLS y triggers en la instancia remota de Supabase.
+  - Corrección de recursión infinita en RLS (`merchants` ↔ `merchant_staff`) utilizando funciones `SECURITY DEFINER` (`is_merchant_staff_or_owner`, `is_merchant_owner`).
+  - Configuración del bucket de almacenamiento `payment-proofs` y suscripciones Realtime para `orders` y `deliveries`.
+  - Validación remota 13/13 (`.harness/tests/validate-remote.mjs`) incluyendo flujos de autenticación, catálogo, checkout y pruebas negativas de RLS.
+  - Identificación de discrepancia en serialización de `GeoPoint` de PostgREST para columnas `POINT` `(x,y)`.
+  - Ejecución limpia de `init.sh` con 183/183 tests pasando y build de producción en `dist/`.
