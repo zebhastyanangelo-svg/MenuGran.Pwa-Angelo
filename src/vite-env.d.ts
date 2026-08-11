@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 /// <reference types="vite-plugin-pwa/react" />
+/// <reference types="vite-plugin-pwa/vanillajs" />
 
 /**
  * Tipado estricto para variables de entorno expuestas a la app por Vite.

@@ -133,3 +133,11 @@
   - Aplicación de `loading="lazy"` en las imágenes de tarjetas de comercio y catálogo de productos (`MerchantCard`, `ProductCard`).
   - Configuración e integración de meta tags PWA de alta prioridad en `index.html` (`theme-color`, `apple-touch-icon`, `viewport`, etc.).
   - Resolución del asincronismo en pruebas de enrutamiento diferido (`App.test.tsx`), alcanzando un total de 157/157 tests en verde con `init.sh` exit status 0.
+  ## [2026-08-11] - TASK-017: Registro de Service Worker y Manejo de Actualizaciones PWA
+- **Estado:** Completada
+- **Agente:** Implementer
+- **Logros:**
+  - Configuración del registro del Service Worker en `main.tsx` usando `registerSW()` para conectividad de producción.
+  - Refactorización de `usePwaUpdate.ts` para la escucha directa de eventos nativos/personalizados (`pwa:need-refresh`, `pwa:offline-ready`) e invocación de `SKIP_WAITING`.
+  - Configuración de tipos en `vite-env.d.ts` para dar soporte a `virtual:pwa-register`.
+  - Creación y actualización de suites de pruebas (`usePwaUpdate.test.ts`, `ReloadPrompt.test.tsx`), alcanzando un total de 172/172 tests en verde con `init.sh` exit status 0.

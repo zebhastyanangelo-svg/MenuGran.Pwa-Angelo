@@ -1,18 +1,48 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-
-// Mockear el módulo virtual virtual:pwa-register/react antes de importar el hook
-vi.mock('virtual:pwa-register/react', () => ({
-  useRegisterSW: vi.fn().mockReturnValue({
-    offlineReady: [false, vi.fn()],
-    needRefresh: [false, vi.fn()],
-    updateServiceWorker: vi.fn().mockResolvedValue(undefined),
-  }),
-}));
-
 import { usePwaInstall, usePwaUpdate } from '../hooks/usePwaUpdate';
 
+function createMockRegistration(overrides: Partial<ServiceWorkerRegistration> = {}) {
+  return {
+    active: { state: 'activated' } as ServiceWorker,
+    waiting: null,
+    installing: null,
+    scope: '/',
+    update: vi.fn().mockResolvedValue(undefined),
+    unregister: vi.fn().mockResolvedValue(true),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    ...overrides,
+  } as unknown as ServiceWorkerRegistration;
+}
+
+function stubServiceWorker(registration: ServiceWorkerRegistration | undefined) {
+  const mock = {
+    register: vi.fn().mockResolvedValue(registration),
+    getRegistration: vi.fn().mockResolvedValue(registration),
+    ready: Promise.resolve(registration ?? createMockRegistration()),
+    controller: null as ServiceWorker | null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    oncontrollerchange: null,
+    onmessage: null,
+  };
+  Object.defineProperty(navigator, 'serviceWorker', {
+    value: mock,
+    configurable: true,
+    writable: true,
+  });
+}
+
 describe('usePwaUpdate', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('expone flags en false cuando no hay actualizaciones', () => {
     const { result } = renderHook(() => usePwaUpdate());
 
@@ -30,6 +60,13 @@ describe('usePwaUpdate', () => {
   it('closePrompt apaga needRefresh y offlineReady', async () => {
     const { result } = renderHook(() => usePwaUpdate());
 
+    act(() => {
+      window.dispatchEvent(new CustomEvent('pwa:need-refresh'));
+    });
+    act(() => {
+      window.dispatchEvent(new CustomEvent('pwa:offline-ready'));
+    });
+
     await act(async () => {
       result.current.closePrompt();
     });
@@ -38,26 +75,119 @@ describe('usePwaUpdate', () => {
     expect(result.current.isOfflineReady).toBe(false);
   });
 
-  it('updateServiceWorker delega en el virtual module', async () => {
+  it('activa needRefresh al recibir el evento pwa:need-refresh', () => {
+    const { result } = renderHook(() => usePwaUpdate());
+
+    expect(result.current.isUpdateAvailable).toBe(false);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('pwa:need-refresh'));
+    });
+
+    expect(result.current.isUpdateAvailable).toBe(true);
+  });
+
+  it('activa offlineReady al recibir el evento pwa:offline-ready', () => {
+    const { result } = renderHook(() => usePwaUpdate());
+
+    expect(result.current.isOfflineReady).toBe(false);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('pwa:offline-ready'));
+    });
+
+    expect(result.current.isOfflineReady).toBe(true);
+  });
+
+  it('llama al callback onNeedRefresh cuando se dispara el evento', () => {
+    const onNeedRefresh = vi.fn();
+    renderHook(() => usePwaUpdate({ onNeedRefresh }));
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('pwa:need-refresh'));
+    });
+
+    expect(onNeedRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('llama al callback onOfflineReady cuando se dispara el evento', () => {
+    const onOfflineReady = vi.fn();
+    renderHook(() => usePwaUpdate({ onOfflineReady }));
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('pwa:offline-ready'));
+    });
+
+    expect(onOfflineReady).toHaveBeenCalledTimes(1);
+  });
+
+  it('updateServiceWorker envía SKIP_WAITING cuando hay un SW en espera', async () => {
+    const waitingPostMessage = vi.fn();
+    const waitingSW = { postMessage: waitingPostMessage } as unknown as ServiceWorker;
+    const registration = createMockRegistration({ waiting: waitingSW });
+    stubServiceWorker(registration);
+
     const { result } = renderHook(() => usePwaUpdate());
 
     await act(async () => {
-      await result.current.updateServiceWorker(true);
+      await result.current.updateServiceWorker(false);
     });
 
-    const updateSW = result.current.updateServiceWorker;
-    expect(updateSW).toBeDefined();
-    expect(typeof updateSW).toBe('function');
+    expect(waitingPostMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+  });
+
+  it('updateServiceWorker es no-op cuando no hay Service Worker disponible', async () => {
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    });
+
+    const { result } = renderHook(() => usePwaUpdate());
+
+    await expect(
+      act(async () => {
+        await result.current.updateServiceWorker(false);
+      }),
+    ).resolves.not.toThrow();
+  });
+
+  it('updateServiceWorker completa sin error cuando no hay SW en espera', async () => {
+    const registration = createMockRegistration();
+    stubServiceWorker(registration);
+
+    const { result } = renderHook(() => usePwaUpdate());
+
+    await expect(
+      act(async () => {
+        await result.current.updateServiceWorker(false);
+      }),
+    ).resolves.not.toThrow();
+  });
+
+  it('limpia los event listeners al desmontar', () => {
+    const removeSpy = vi.spyOn(window, 'removeEventListener');
+    const { unmount } = renderHook(() => usePwaUpdate());
+
+    unmount();
+
+    expect(removeSpy).toHaveBeenCalledWith(
+      'pwa:need-refresh',
+      expect.any(Function),
+    );
+    expect(removeSpy).toHaveBeenCalledWith(
+      'pwa:offline-ready',
+      expect.any(Function),
+    );
   });
 
   it('acepta callbacks opcionales sin romper', () => {
-    const onRegistered = vi.fn();
-    const onRegisterError = vi.fn();
+    const onNeedRefresh = vi.fn();
     const onOfflineReady = vi.fn();
 
     expect(() =>
       renderHook(() =>
-        usePwaUpdate({ onRegistered, onRegisterError, onOfflineReady }),
+        usePwaUpdate({ onNeedRefresh, onOfflineReady }),
       ),
     ).not.toThrow();
   });
