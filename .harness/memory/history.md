@@ -161,3 +161,19 @@
   - Validación remota 13/13 (`.harness/tests/validate-remote.mjs`) incluyendo flujos de autenticación, catálogo, checkout y pruebas negativas de RLS.
   - Identificación de discrepancia en serialización de `GeoPoint` de PostgREST para columnas `POINT` `(x,y)`.
   - Ejecución limpia de `init.sh` con 183/183 tests pasando y build de producción en `dist/`.
+  ## [2026-08-11] - TASK-020: Sanitización de GeoPoint (POINT PostgREST) y Smoke Test E2E de Producción
+- **Estado:** Completada
+- **Agente:** Implementer
+- **Logros:**
+  - Implementación de utilitarios `formatGeoPoint` y `formatGeoPointOrNull` en `src/utils/distance.ts` para serializar coordenadas al formato PostgREST `(x,y)`.
+  - Actualización del tipo de escritura `DbPoint` en `src/types/database.ts` manteniendo la compatibilidad del modelo de lectura `GeoPoint`.
+  - Integración del formateo de `delivery_location` en el payload de creación de órdenes en `Checkout.tsx`.
+  - Adición de pruebas unitarias y de integración E2E en `distance.test.ts` y `Checkout.test.tsx` verificando la transmisión exacta de coordenadas.
+  - Ejecución limpia de `.harness/scripts/init.sh` con 188/188 tests pasando y build de producción verificado.
+  ## [2026-08-11] - TASK-020: Ajuste de Timeout en Checkout.test.tsx y Cierre Definitivo de Iteración
+- **Estado:** Completada
+- **Agente:** Implementer
+- **Logros:**
+  - Ajuste de timeout a 10000ms en el test de integración asíncrono de `src/pages/Checkout.test.tsx`.
+  - Verificación manual e integral mediante `.harness/scripts/init.sh` alcanzando 188/188 tests en verde a través de los 26 archivos del proyecto.
+  - Generación de bundle de producción en `dist/` verificado.

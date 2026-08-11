@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'logo.svg'],
       injectRegister: false,
       manifest: {
@@ -20,7 +20,7 @@ export default defineConfig({
         categories: ['food', 'shopping', 'business'],
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/marketplace',
+        start_url: '/',
         scope: '/',
         background_color: '#ffffff',
         theme_color: '#f97316',
@@ -46,6 +46,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         navigateFallback: '/index.html',
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,

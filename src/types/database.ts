@@ -60,6 +60,12 @@ export interface GeoPoint {
   readonly y: number;
 }
 
+/**
+ * Cadena POINT de PostgREST: formato `(x,y)` que la API exige al escribir
+ * (INSERT/UPDATE) columnas POINT de Postgres (ej. `orders.delivery_location`).
+ */
+export type DbPoint = string;
+
 /* ---------- JSONB CONTRACTS ---------- */
 
 export interface MerchantStaffPermissions {
@@ -201,17 +207,17 @@ export type OrderInsert = Pick<
       | 'payment_reference'
       | 'payment_proof_url'
       | 'table_number'
-      | 'delivery_location'
       | 'delivery_address_notes'
-    >
+    > & {
+      delivery_location?: DbPoint | null;
+    }
   >;
 
 export type DeliveryInsert = Pick<DeliveryRow, 'order_id'> &
   Partial<
-    Pick<
-      DeliveryRow,
-      'driver_id' | 'status' | 'current_location' | 'delivery_fee'
-    >
+    Pick<DeliveryRow, 'driver_id' | 'status' | 'delivery_fee'> & {
+      current_location?: DbPoint | null;
+    }
   >;
 
 /* ---------- UPDATE (todos los campos opcionales) ---------- */

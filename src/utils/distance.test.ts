@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { haversineDistance, sortByDistance } from './distance';
+import {
+  formatGeoPoint,
+  formatGeoPointOrNull,
+  haversineDistance,
+  sortByDistance,
+} from './distance';
 import type { GeoPoint } from '../types/database';
 
 describe('haversineDistance', () => {
@@ -62,5 +67,39 @@ describe('sortByDistance', () => {
     const result = sortByDistance(items, origin);
     expect(items).toHaveLength(2);
     expect(result).not.toBe(items);
+  });
+});
+
+describe('formatGeoPoint', () => {
+  it('convierte { x, y } a la cadena PostgREST "(x,y)"', () => {
+    const point: GeoPoint = { x: -99.1332, y: 19.4326 };
+    expect(formatGeoPoint(point)).toBe('(-99.1332,19.4326)');
+  });
+
+  it('respeta el orden (x=lng, y=lat)', () => {
+    const cdmx: GeoPoint = { x: -99.1332, y: 19.4326 };
+    const madrid: GeoPoint = { x: -3.70379, y: 40.416775 };
+    expect(formatGeoPoint(cdmx)).toBe('(-99.1332,19.4326)');
+    expect(formatGeoPoint(madrid)).toBe('(-3.70379,40.416775)');
+  });
+
+  it('lanza error para coordenadas no finitas', () => {
+    expect(() => formatGeoPoint({ x: NaN, y: 19.4326 })).toThrow(
+      /Coordenadas inválidas/,
+    );
+    expect(() => formatGeoPoint({ x: -99.1332, y: Infinity })).toThrow(
+      /Coordenadas inválidas/,
+    );
+  });
+});
+
+describe('formatGeoPointOrNull', () => {
+  it('propaga null cuando no hay ubicación', () => {
+    expect(formatGeoPointOrNull(null)).toBeNull();
+  });
+
+  it('formatea la ubicación cuando existe', () => {
+    const point: GeoPoint = { x: 2.3522, y: 48.8566 };
+    expect(formatGeoPointOrNull(point)).toBe('(2.3522,48.8566)');
   });
 });

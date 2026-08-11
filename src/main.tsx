@@ -4,7 +4,7 @@ import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App.tsx'
 
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+if ('serviceWorker' in navigator) {
   registerSW({
     onNeedRefresh() {
       window.dispatchEvent(new CustomEvent('pwa:need-refresh'))
@@ -14,6 +14,9 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     },
     onRegistered(registration: ServiceWorkerRegistration | undefined) {
       console.debug('[PWA] Service Worker registrado:', registration)
+      if (registration) {
+        void registration.update()
+      }
     },
     onRegisterError(error: unknown) {
       console.error('[PWA] Error al registrar el Service Worker:', error)

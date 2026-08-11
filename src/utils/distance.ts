@@ -11,6 +11,24 @@ export interface DistanceResult {
   m: number;
 }
 
+/**
+ * Convierte un GeoPoint `{ x, y }` (x=lng, y=lat) a la cadena `(x,y)` que
+ * PostgREST exige para las columnas POINT de Postgres.
+ */
+export function formatGeoPoint(point: GeoPoint): string {
+  if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+    throw new Error(
+      `Coordenadas inválidas: se esperaban números finitos, se recibió x=${point.x}, y=${point.y}.`,
+    );
+  }
+  return `(${point.x},${point.y})`;
+}
+
+/** Igual que formatGeoPoint pero propaga `null` para ubicaciones ausentes. */
+export function formatGeoPointOrNull(point: GeoPoint | null): string | null {
+  return point === null ? null : formatGeoPoint(point);
+}
+
 export function haversineDistance(a: GeoPoint, b: GeoPoint): DistanceResult {
   const lat1 = toRadians(a.y);
   const lat2 = toRadians(b.y);

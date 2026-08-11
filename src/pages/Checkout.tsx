@@ -3,8 +3,9 @@ import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase, TABLE_NAMES } from '../services/supabase';
-import type { OrderRow, OrderItem, GeoPoint } from '../types/database';
+import type { OrderRow, OrderItem, GeoPoint, DbPoint } from '../types/database';
 import { LocationPicker } from '../components/map/LocationPicker';
+import { formatGeoPointOrNull } from '../utils/distance';
 import { compressImage, PAYMENT_PROOF_MAX_BYTES, buildProofFileName } from '../utils/imageCompressor';
 import { formatPrice } from '../types/cart';
 
@@ -57,8 +58,12 @@ export function Checkout() {
         }
 
         // 2. Crear la orden primero para obtener su ID (necesario para el nombre del archivo)
-        const orderData: Omit<OrderRow, 'id' | 'created_at' | 'items'> & {
+        const orderData: Omit<
+          OrderRow,
+          'id' | 'created_at' | 'items' | 'delivery_location'
+        > & {
           items: OrderItem[];
+          delivery_location: DbPoint | null;
         } = {
           merchant_id: merchantId!,
           customer_id: profile.id,
@@ -69,7 +74,7 @@ export function Checkout() {
           payment_proof_url: '', // se actualizará después de la subida
            total_amount: totalAmount,
            table_number: null,
-           delivery_location: deliveryLocation,
+           delivery_location: formatGeoPointOrNull(deliveryLocation),
            delivery_address_notes: null,
           // adaptar items del carrito a OrderItem[]
           items: items.map((i) => ({

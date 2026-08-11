@@ -26,7 +26,7 @@ export function App() {
           <BrowserRouter>
             <Suspense fallback={<PageLoader message="Cargando página..." />}>
               <Routes>
-                <Route path="/" element={<Navigate to="/marketplace" replace />} />
+                <Route path="/" element={<Navigate to="/login" replace />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/marketplace" element={<MarketplacePage />} />

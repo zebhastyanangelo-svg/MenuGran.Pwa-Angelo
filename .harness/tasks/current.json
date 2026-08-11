@@ -1,20 +1,19 @@
 {
-  "id": "TASK-019",
-  "title": "Provisionamiento y validación de la base de datos Supabase remota",
-  "status": "completed",
+  "id": "TASK-020",
+  "title": "Sanitización de GeoPoint (POINT PostgREST) y Smoke Test E2E de Producción",
+  "status": "in_progress",
   "agent": "Implementer",
-  "assigned_at": "2026-08-11T16:00:00Z",
-  "completed_at": "2026-08-11T16:35:00Z",
-  "description": "Creación en Supabase remoto (proyecto menugram/eeksewjxkkaasigjehat) de todo el esquema definido en docs/DATABASE-SCHEMA.md y validación integral del flujo login → catálogo → orden contra el cliente real @supabase/supabase-js usado en src/services/supabase.ts.",
+  "assigned_at": "2026-08-11T16:45:00Z",
+  "description": "Garantizar que las coordenadas de ubicación enviadas desde Checkout.tsx/services conviertan la interfaz GeoPoint {x, y} al formato nativo PostgREST `(x,y)` para columnas POINT. Realizar un Smoke Test completo del flujo de compra y actualización de estado en vivo.",
   "deliverables": [
-    "supabase/migrations/20260811_0001_initial_schema.sql - Migración completa (enums, 7 tablas, triggers, índices, RLS, Storage, Realtime).",
-    "Fix de recursión RLS: funciones SECURITY DEFINER is_merchant_staff_or_owner e is_merchant_owner para romper el ciclo merchants↔merchant_staff.",
-    ".harness/tests/validate-remote.mjs - Test de integración reutilizable (13 checks) contra la BD remota.",
-    "Config remota: mailer_autoconfirm=true (registro sin confirmar email)."
+    "Helper de conversión/formateo para coordenadas de tipo `POINT` de Postgres (`src/utils/distance.ts` o módulo de soporte de DB).",
+    "Verificación y ajuste en la payload de `orders` en `Checkout.tsx` y servicios asociados para el envío correcto de `delivery_location`.",
+    "Pruebas unitarias para la utilidad de conversión de `GeoPoint` a string PostgREST `(x,y)`.",
+    "Ejecución de `init.sh` y `npm run build` confirmando 0 errores de compilación y tests en verde."
   ],
   "acceptance_criteria": [
-    "Las 7 tablas + 6 enums + 30 políticas RLS creadas y verificadas en remoto.",
-    "Validación 13/13 OK: signUp con autoconfirm, trigger de perfil, catálogo público (filtros MarketplacePage), creación de orden (payload Checkout.tsx), RLS negativos.",
-    "bash .harness/scripts/init.sh con exit code 0 (tsc, lint, build, 183/183 tests)."
+    "Costo $0 operativo.",
+    "Conversión correcta de objetos `{ x, y }` a sintaxis `(x,y)` de PostgREST sin fallos de conversión de tipo en Postgres.",
+    "100% de la suite de pruebas en verde y exit status 0 en `.harness/scripts/init.sh`."
   ]
 }
