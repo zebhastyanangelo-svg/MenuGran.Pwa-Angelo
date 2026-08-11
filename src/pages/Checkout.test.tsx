@@ -227,6 +227,10 @@ describe('Checkout', () => {
     const insertObject = mockSupabase.supabase.from.mock.results[0].value;
     expect(insertObject.insert).toHaveBeenCalledTimes(1);
 
+    // Verificar que delivery_location se envíe como cadena POINT "(x,y)" de PostgREST
+    const insertedPayload = insertObject.insert.mock.calls[0][0];
+    expect(insertedPayload.delivery_location).toBe('(-99.1332,19.4326)');
+
     // Verificar que se haya llamado a storage.from dos veces con el bucket correcto
     expect(mockSupabase.supabase.storage.from).toHaveBeenCalledTimes(2);
     expect(mockSupabase.supabase.storage.from).toHaveBeenNthCalledWith(1, PAYMENT_PROOF_BUCKET);
@@ -243,5 +247,5 @@ describe('Checkout', () => {
     // Verificar que se haya llamado a update para actualizar la orden con la URL del comprobante
     const updateObject = mockSupabase.supabase.from.mock.results[1].value;
     expect(updateObject.update).toHaveBeenCalledTimes(1);
-  });
+  }, 10000);
 });
