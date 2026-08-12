@@ -1,0 +1,16 @@
+{
+  "id": "TASK-022",
+  "title": "Rediseño Visual del Marketplace & Fichas de Comercios",
+  "description": "Refactorización visual del catálogo de productos, filtros de búsqueda y modales de detalles para mejorar la experiencia de navegación del usuario.",
+  "status": "completed",
+  "requirements": [
+    "Rediseñar las tarjetas de productos (`ProductCard`) agregando estados de carga (`SkeletonLoader`), insignias de precio y categoría.",
+    "Implementar barra de búsqueda interactiva y selectores de filtrado por categoría o comercio.",
+    "Crear o pulir la vista/modal de detalle del producto con selector de cantidad y controles de adición al carrito."
+  ],
+  "acceptance_criteria": [
+    "Grid de productos totalmente responsivo y accesible.",
+    "Filtros y búsqueda funcionando con actualización en tiempo real.",
+    "Suite de tests actualizada y pasando en verde."
+  ]
+}

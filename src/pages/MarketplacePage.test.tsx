@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import type { MerchantRow } from '../types/database';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import type { MerchantRow, ProductRow } from '../types/database';
 import { MarketplacePage } from './MarketplacePage';
+import { CartProvider } from '../context/CartContext';
 
 const authMocks = vi.hoisted(() => ({
   supabaseMock: { from: vi.fn() },
@@ -36,6 +37,20 @@ function buildMerchant(id: string, name: string): MerchantRow {
   };
 }
 
+function buildProduct(id: string, title: string, categoryId: string): ProductRow {
+  return {
+    id,
+    merchant_id: 'merchant-1',
+    category_id: categoryId,
+    title,
+    description: `Descripción de ${title}`,
+    price: '12.50',
+    image_url: null,
+    is_available: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+  };
+}
+
 function mockTableResults(results: Record<string, { data: unknown[] | null; error: unknown }>) {
   authMocks.supabaseMock.from = vi.fn((table: string) => {
     const result = results[table] ?? { data: [], error: null };
@@ -49,9 +64,32 @@ function mockTableResults(results: Record<string, { data: unknown[] | null; erro
   });
 }
 
+function renderWithProviders(ui: React.ReactNode) {
+  return render(<CartProvider>{ui}</CartProvider>);
+}
+
+const localStore: Record<string, string> = {};
+const localStorageMock = {
+  getItem: (key: string) => (key in localStore ? localStore[key] : null),
+  setItem: (key: string, value: string) => {
+    localStore[key] = String(value);
+  },
+  removeItem: (key: string) => {
+    delete localStore[key];
+  },
+  clear: () => {
+    for (const key of Object.keys(localStore)) delete localStore[key];
+  },
+};
+
 describe('MarketplacePage', () => {
   beforeEach(() => {
     authMocks.supabaseMock.from = vi.fn();
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: localStorageMock,
+      configurable: true,
+    });
+    localStorageMock.clear();
   });
 
   it('muestra los comercios tras cargar los datos', async () => {
@@ -61,7 +99,7 @@ describe('MarketplacePage', () => {
       products: { data: [], error: null },
     });
 
-    render(<MarketplacePage />);
+    renderWithProviders(<MarketplacePage />);
 
     expect(await screen.findByText('La Esquina')).toBeInTheDocument();
   });
@@ -73,7 +111,7 @@ describe('MarketplacePage', () => {
       products: { data: [], error: null },
     });
 
-    render(<MarketplacePage />);
+    renderWithProviders(<MarketplacePage />);
 
     expect(
       await screen.findByText(/No se encontraron comercios/i),
@@ -87,7 +125,7 @@ describe('MarketplacePage', () => {
       products: { data: null, error: { message: 'fallo de red' } },
     });
 
-    render(<MarketplacePage />);
+    renderWithProviders(<MarketplacePage />);
 
     expect(
       await screen.findByText(/Ocurrió un error al cargar la información/i),
@@ -95,5 +133,27 @@ describe('MarketplacePage', () => {
     expect(
       screen.getByRole('button', { name: /Reintentar/i }),
     ).toBeInTheDocument();
+  });
+
+  it('abre el detalle del producto, agrega al carrito y cierra el modal', async () => {
+    mockTableResults({
+      merchants: { data: [], error: null },
+      categories: { data: [{ id: 'cat-1', merchant_id: 'merchant-1', name: 'Platillos', sort_order: 1, created_at: '2026-01-01T00:00:00.000Z' }], error: null },
+      products: { data: [buildProduct('p1', 'Hamburguesa', 'cat-1')], error: null },
+    });
+
+    renderWithProviders(<MarketplacePage />);
+
+    fireEvent.click(await screen.findByRole('tab', { name: /Productos/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Ver producto Hamburguesa/i }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText('Platillos')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Agregar al carrito/i }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem('menugram_cart') ?? '[]').length).toBe(1);
   });
 });

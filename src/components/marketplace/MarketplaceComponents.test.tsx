@@ -7,6 +7,7 @@ import { SearchBar } from './SearchBar';
 import { CategoryFilter } from './CategoryFilter';
 import { MerchantCard } from './MerchantCard';
 import { ProductCard } from './ProductCard';
+import { ProductCardSkeleton } from './ProductCard';
 
 function buildMerchant(id: string, name: string, slug: string): MerchantRow {
   return {
@@ -87,9 +88,9 @@ describe('CategoryFilter', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: /Todas/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Entradas/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Bebidas/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Todas/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Entradas/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Bebidas/i })).toBeInTheDocument();
   });
 
   it('marca la categoría seleccionada', () => {
@@ -102,7 +103,7 @@ describe('CategoryFilter', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: /Entradas/i })).toHaveClass('bg-indigo-600');
+    expect(screen.getByRole('tab', { name: /Entradas/i })).toHaveClass('bg-brand-600');
   });
 });
 
@@ -149,6 +150,40 @@ describe('ProductCard', () => {
 
     const img = screen.getByRole('img', { name: 'Hamburguesa' });
     expect(img).toHaveAttribute('loading', 'lazy');
+  });
+
+  it('muestra la insignia de categoría cuando se proporciona', () => {
+    const product = buildProduct('p1', 'Hamburguesa', '12.50');
+    render(<ProductCard product={product} categoryName="Platillos" />);
+
+    expect(screen.getByText('Platillos')).toBeInTheDocument();
+  });
+
+  it('abre el detalle al pulsar la tarjeta', async () => {
+    const user = userEvent.setup();
+    const product = buildProduct('p1', 'Hamburguesa', '12.50');
+    const onSelect = vi.fn();
+    render(<ProductCard product={product} onSelect={onSelect} />);
+
+    await user.click(screen.getByRole('button', { name: /Ver producto Hamburguesa/i }));
+    expect(onSelect).toHaveBeenCalledWith(product);
+  });
+
+  it('activa el detalle con la tecla Enter', async () => {
+    const user = userEvent.setup();
+    const product = buildProduct('p1', 'Hamburguesa', '12.50');
+    const onSelect = vi.fn();
+    render(<ProductCard product={product} onSelect={onSelect} />);
+
+    await user.type(screen.getByRole('button', { name: /Ver producto Hamburguesa/i }), '{Enter}');
+    expect(onSelect).toHaveBeenCalledWith(product);
+  });
+});
+
+describe('ProductCardSkeleton', () => {
+  it('renderiza un marcador de carga accesible', () => {
+    const { container } = render(<ProductCardSkeleton />);
+    expect(container.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
   });
 });
 

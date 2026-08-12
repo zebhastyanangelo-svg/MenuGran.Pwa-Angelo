@@ -11,16 +11,19 @@ export function CategoryFilter({
   selectedCategoryId,
   onSelectCategory,
 }: CategoryFilterProps) {
+  const baseClass =
+    'whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500';
+  const activeClass = 'bg-brand-600 text-white shadow-sm';
+  const idleClass = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+
   return (
-    <div className="no-scrollbar flex w-full gap-2 overflow-x-auto py-2">
+    <div className="no-scrollbar flex w-full gap-2 overflow-x-auto py-2" role="tablist" aria-label="Filtrar por categoría">
       <button
         type="button"
+        role="tab"
+        aria-selected={selectedCategoryId === null}
         onClick={() => onSelectCategory(null)}
-        className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-          selectedCategoryId === null
-            ? 'bg-indigo-600 text-white shadow-sm'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        }`}
+        className={`${baseClass} ${selectedCategoryId === null ? activeClass : idleClass}`}
       >
         Todas
       </button>
@@ -31,12 +34,10 @@ export function CategoryFilter({
           <button
             key={cat.id}
             type="button"
+            role="tab"
+            aria-selected={isSelected}
             onClick={() => onSelectCategory(cat.id)}
-            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-              isSelected
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`${baseClass} ${isSelected ? activeClass : idleClass}`}
           >
             {cat.name}
           </button>
