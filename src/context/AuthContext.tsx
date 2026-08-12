@@ -9,7 +9,7 @@ import {
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase, TABLE_NAMES } from '../services/supabase';
-import type { ProfileRow } from '../types/database';
+import type { ProfileRow, UserRole } from '../types/database';
 
 export interface AuthContextValue {
   user: User | null;
@@ -17,7 +17,12 @@ export interface AuthContextValue {
   isLoading: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
-  signUpWithPassword: (email: string, password: string) => Promise<void>;
+  signUpWithPassword: (
+    email: string,
+    password: string,
+    fullName: string,
+    role: UserRole,
+  ) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -142,9 +147,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signUpWithPassword = useCallback(
-    async (email: string, password: string): Promise<void> => {
+    async (
+      email: string,
+      password: string,
+      fullName: string,
+      role: UserRole,
+    ): Promise<void> => {
       try {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              role,
+            },
+          },
+        });
         if (error !== null) throw error;
       } catch (error) {
         console.error('Error al registrar usuario con email y contraseña', error);

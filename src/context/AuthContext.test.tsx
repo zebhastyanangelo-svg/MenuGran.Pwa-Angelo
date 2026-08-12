@@ -72,11 +72,18 @@ function AuthProbe() {
       <span data-testid="auth-role">{auth.profile?.role ?? 'sin-perfil'}</span>
       <span data-testid="auth-loading">{String(auth.isLoading)}</span>
       <button onClick={() => void auth.signOut()}>Cerrar sesión</button>
-      <button
-        onClick={() => void auth.signInWithPassword('a@b.com', 'secret')}
-      >
-        Entrar
-      </button>
+        <button
+          onClick={() => void auth.signInWithPassword('a@b.com', 'secret')}
+        >
+          Entrar
+        </button>
+        <button
+          onClick={() =>
+            void auth.signUpWithPassword('a@b.com', 'secret', 'Test User', 'customer')
+          }
+        >
+          Registrar
+        </button>
     </div>
   );
 }
@@ -216,6 +223,32 @@ describe('AuthProvider', () => {
     expect(authMocks.signInWithPassword).toHaveBeenCalledWith({
       email: 'a@b.com',
       password: 'secret',
+    });
+  });
+
+  it('llama a supabase.auth.signUp con full_name y role en options.data', async () => {
+    authMocks.signUp.mockResolvedValue({
+      data: { user: null, session: null },
+      error: null,
+    });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+
+    expect(authMocks.signUp).toHaveBeenCalledWith({
+      email: 'a@b.com',
+      password: 'secret',
+      options: {
+        data: {
+          full_name: 'Test User',
+          role: 'customer',
+        },
+      },
     });
   });
 });
