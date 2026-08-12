@@ -12,6 +12,7 @@ const authMocks = vi.hoisted(() => ({
   signInWithOAuth: vi.fn(),
   signInWithPassword: vi.fn(),
   signUp: vi.fn(),
+  resend: vi.fn(),
   signOut: vi.fn(),
   from: vi.fn(),
 }));
@@ -24,6 +25,7 @@ vi.mock('../services/supabase', () => ({
       signInWithOAuth: authMocks.signInWithOAuth,
       signInWithPassword: authMocks.signInWithPassword,
       signUp: authMocks.signUp,
+      resend: authMocks.resend,
       signOut: authMocks.signOut,
     },
     from: authMocks.from,
@@ -77,13 +79,18 @@ function AuthProbe() {
         >
           Entrar
         </button>
-        <button
-          onClick={() =>
-            void auth.signUpWithPassword('a@b.com', 'secret', 'Test User', 'customer')
-          }
-        >
-          Registrar
-        </button>
+      <button
+        onClick={() =>
+          void auth.signUpWithPassword('a@b.com', 'secret', 'Test User', 'customer')
+        }
+      >
+        Registrar
+      </button>
+      <button
+        onClick={() => void auth.resendConfirmationEmail('a@b.com')}
+      >
+        Reenviar confirmación
+      </button>
     </div>
   );
 }
@@ -228,7 +235,14 @@ describe('AuthProvider', () => {
 
   it('llama a supabase.auth.signUp con full_name y role en options.data', async () => {
     authMocks.signUp.mockResolvedValue({
-      data: { user: null, session: null },
+      data: {
+        user: {
+          id: 'u-123',
+          email_confirmed_at: '2026-01-01T00:00:00.000Z',
+          identities: [{ provider: 'email' }],
+        },
+        session: null,
+      },
       error: null,
     });
 
@@ -249,6 +263,39 @@ describe('AuthProvider', () => {
           role: 'customer',
         },
       },
+    });
+  });
+
+  it('retorna needsEmailConfirmation=true cuando el usuario no está verificado', async () => {
+    authMocks.signUp.mockResolvedValue({
+      data: { user: { id: 'u-1', email_confirmed_at: null, identities: [] }, session: null },
+      error: null,
+    });
+
+    const probe = render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+    await expect(probe).toBeTruthy();
+  });
+
+  it('llama a supabase.auth.resend con type signup al reenviar confirmación', async () => {
+    authMocks.resend.mockResolvedValue({ data: { user: null, session: null }, error: null });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reenviar confirmación' }));
+
+    expect(authMocks.resend).toHaveBeenCalledWith({
+      type: 'signup',
+      email: 'a@b.com',
     });
   });
 });

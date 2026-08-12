@@ -8,6 +8,7 @@ import type { AuthContextValue } from '../../context/AuthContext';
 
 const signInWithPassword = vi.fn();
 const signUpWithPassword = vi.fn();
+const resendConfirmationEmail = vi.fn();
 const navigate = vi.fn();
 
 vi.mock('../../hooks/useAuth', () => ({
@@ -33,6 +34,7 @@ function getMockAuth(): AuthContextValue {
     signInWithGoogle: vi.fn(),
     signInWithPassword,
     signUpWithPassword,
+    resendConfirmationEmail,
     signOut: vi.fn(),
   };
 }
@@ -123,7 +125,7 @@ describe('AuthForm', () => {
 
   it('envía full_name y role en signUpWithPassword al registrarse', async () => {
     const user = userEvent.setup();
-    signUpWithPassword.mockResolvedValueOnce(undefined);
+    signUpWithPassword.mockResolvedValueOnce({ needsEmailConfirmation: false });
     renderWithRouter('register', '/marketplace');
 
     await user.type(screen.getByLabelText(/Nombre completo/i), 'Juan Pérez');
@@ -145,7 +147,7 @@ describe('AuthForm', () => {
 
   it('envía el rol merchant_owner al registrarse como comercio', async () => {
     const user = userEvent.setup();
-    signUpWithPassword.mockResolvedValueOnce(undefined);
+    signUpWithPassword.mockResolvedValueOnce({ needsEmailConfirmation: false });
     renderWithRouter('register', '/marketplace');
 
     await user.type(screen.getByLabelText(/Nombre completo/i), 'Ana García');
@@ -214,5 +216,75 @@ describe('AuthForm', () => {
     await userEvent.click(screen.getByTestId('register-submit'));
 
     expect(screen.getByText('Registrando...')).toBeInTheDocument();
+  });
+
+  it('muestra sugerencia de corrección de dominio al registrar con typo', async () => {
+    const user = userEvent.setup();
+    renderWithRouter('register');
+
+    await user.type(screen.getByLabelText(/Nombre completo/i), 'Test User');
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'user@gmai.com');
+    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.click(screen.getByTestId('register-submit'));
+
+    expect(
+      await screen.findByText(/¿Quisiste decir 'user@gmail.com'\?/i),
+    ).toBeInTheDocument();
+    expect(signUpWithPassword).not.toHaveBeenCalled();
+  });
+
+  it('muestra banner de confirmación y no navega cuando el email requiere confirmación', async () => {
+    const user = userEvent.setup();
+    signUpWithPassword.mockResolvedValueOnce({ needsEmailConfirmation: true });
+    renderWithRouter('register', '/marketplace');
+
+    await user.type(screen.getByLabelText(/Nombre completo/i), 'Juan Pérez');
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'juan@example.com');
+    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.selectOptions(screen.getByLabelText(/Tipo de cuenta/i), 'customer');
+    await user.click(screen.getByTestId('register-submit'));
+
+    expect(
+      await screen.findByText(/¡Registro exitoso!/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Revisa tu bandeja de entrada/i)).toBeInTheDocument();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('muestra mensaje de confirmación y botón de reenvío al iniciar sesión sin confirmar', async () => {
+    const user = userEvent.setup();
+    signInWithPassword.mockRejectedValueOnce(
+      Object.assign(new Error('Email not confirmed'), { code: 'email_not_confirmed' }),
+    );
+    renderWithRouter('login');
+
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'unconfirmed@example.com');
+    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.click(screen.getByTestId('login-submit'));
+
+    expect(
+      await screen.findByText(
+        /Debes confirmar tu correo electrónico antes de ingresar/i,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('resend-confirmation')).toBeInTheDocument();
+  });
+
+  it('llama a resendConfirmationEmail al pulsar el botón de reenvío', async () => {
+    const user = userEvent.setup();
+    signInWithPassword.mockRejectedValueOnce(
+      Object.assign(new Error('Email not confirmed'), { code: 'email_not_confirmed' }),
+    );
+    resendConfirmationEmail.mockResolvedValueOnce(undefined);
+    renderWithRouter('login');
+
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'unconfirmed@example.com');
+    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.click(screen.getByTestId('login-submit'));
+
+    await screen.findByTestId('resend-confirmation');
+    await user.click(screen.getByTestId('resend-confirmation'));
+
+    expect(resendConfirmationEmail).toHaveBeenCalledWith('unconfirmed@example.com');
   });
 });

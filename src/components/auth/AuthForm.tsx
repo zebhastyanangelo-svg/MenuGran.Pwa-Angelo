@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { suggestEmailDomain } from '../../utils/emailSuggestions';
 import type { UserRole } from '../../types/database';
 
 type AuthTab = 'login' | 'register';
@@ -43,6 +44,13 @@ function resolveAuthErrorMessage(error: unknown): string {
   return 'Ha ocurrido un error inesperado. Inténtalo de nuevo.';
 }
 
+function isUnconfirmedEmailError(error: unknown): boolean {
+  if (error !== null && typeof error === 'object' && 'code' in error) {
+    return (error as { code: unknown }).code === 'email_not_confirmed';
+  }
+  return false;
+}
+
 /**
  * Formulario de autenticación con pestañas para alternar entre
  * Iniciar Sesión y Registrarse.
@@ -51,15 +59,19 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
   const [activeTab, setActiveTab] = useState<AuthTab>(defaultTab);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showConfirmationBanner, setShowConfirmationBanner] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signInWithPassword, signUpWithPassword } = useAuth();
+  const { signInWithPassword, signUpWithPassword, resendConfirmationEmail } = useAuth();
 
   const from = searchParams.get('from') ?? '/marketplace';
 
   const handleTabChange = (tab: AuthTab) => {
     setActiveTab(tab);
     setError(null);
+    setShowConfirmationBanner(false);
+    setPendingEmail('');
     navigate(tab === 'login' ? '/login' : '/register', { replace: true });
   };
 
@@ -67,6 +79,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setShowConfirmationBanner(false);
     const form = e.currentTarget;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
@@ -74,7 +87,14 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
       await signInWithPassword(email, password);
       navigate(from, { replace: true });
     } catch (err) {
-      setError(resolveAuthErrorMessage(err));
+      if (isUnconfirmedEmailError(err)) {
+        setPendingEmail(email);
+        setError(
+          'Debes confirmar tu correo electrónico antes de ingresar. Revisa tu bandeja de entrada.',
+        );
+      } else {
+        setError(resolveAuthErrorMessage(err));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -84,14 +104,44 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setShowConfirmationBanner(false);
     const form = e.currentTarget;
     const fullName = (form.elements.namedItem('full_name') as HTMLInputElement).value.trim();
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
     const role = (form.elements.namedItem('role') as HTMLSelectElement).value as UserRole;
+
+    const suggestion = suggestEmailDomain(email);
+    if (suggestion !== null) {
+      setError(
+        `¿Quisiste decir '${suggestion.suggestion}'? Corrige tu correo e inténtalo de nuevo.`,
+      );
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      await signUpWithPassword(email, password, fullName, role);
-      navigate(from, { replace: true });
+      const result = await signUpWithPassword(email, password, fullName, role);
+      if (result.needsEmailConfirmation) {
+        setPendingEmail(email);
+        setShowConfirmationBanner(true);
+      } else {
+        navigate(from, { replace: true });
+      }
+    } catch (err) {
+      setError(resolveAuthErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (pendingEmail === '') return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      await resendConfirmationEmail(pendingEmail);
+      setError(null);
     } catch (err) {
       setError(resolveAuthErrorMessage(err));
     } finally {
@@ -128,9 +178,30 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         </button>
       </div>
 
+       {showConfirmationBanner && (
+        <div className="mb-4 rounded-md bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700">
+          <p className="font-medium">¡Registro exitoso!</p>
+          <p>
+            Te enviamos un correo de confirmación a <strong>{pendingEmail}</strong>.
+            Revisa tu bandeja de entrada (y la carpeta de spu) para activar tu cuenta.
+          </p>
+        </div>
+      )}
+
       {error !== null && (
         <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
           {error}
+          {pendingEmail !== '' && (
+            <button
+              type="button"
+              data-testid="resend-confirmation"
+              onClick={handleResendConfirmation}
+              disabled={isLoading}
+              className="ml-2 underline disabled:opacity-50"
+            >
+              {isLoading ? 'Reenviando...' : 'Reenviar email de confirmación'}
+            </button>
+          )}
         </div>
       )}
 

@@ -10,6 +10,11 @@ import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { ProfileRow, UserRole } from '../types/database';
+import { requiresEmailConfirmation } from '../utils/emailSuggestions';
+
+export interface SignUpResult {
+  needsEmailConfirmation: boolean;
+}
 
 export interface AuthContextValue {
   user: User | null;
@@ -22,7 +27,8 @@ export interface AuthContextValue {
     password: string,
     fullName: string,
     role: UserRole,
-  ) => Promise<void>;
+  ) => Promise<SignUpResult>;
+  resendConfirmationEmail: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -152,9 +158,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: string,
       fullName: string,
       role: UserRole,
-    ): Promise<void> => {
+    ): Promise<SignUpResult> => {
       try {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -165,8 +171,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           },
         });
         if (error !== null) throw error;
+        return {
+          needsEmailConfirmation: requiresEmailConfirmation(data.user),
+        };
       } catch (error) {
         console.error('Error al registrar usuario con email y contraseña', error);
+        throw error;
+      }
+    },
+    [],
+  );
+
+  const resendConfirmationEmail = useCallback(
+    async (email: string): Promise<void> => {
+      try {
+        const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email,
+        });
+        if (error !== null) throw error;
+      } catch (error) {
+        console.error('Error al reenviar el email de confirmación', error);
         throw error;
       }
     },
@@ -190,20 +215,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       profile,
       isLoading,
-      signInWithGoogle,
-      signInWithPassword,
-      signUpWithPassword,
-      signOut,
-    }),
-    [
-      user,
-      profile,
-      isLoading,
-      signInWithGoogle,
-      signInWithPassword,
-      signUpWithPassword,
-      signOut,
-    ],
+       signInWithGoogle,
+       signInWithPassword,
+       signUpWithPassword,
+       resendConfirmationEmail,
+       signOut,
+     }),
+     [
+       user,
+       profile,
+       isLoading,
+       signInWithGoogle,
+       signInWithPassword,
+       signUpWithPassword,
+       resendConfirmationEmail,
+       signOut,
+     ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
