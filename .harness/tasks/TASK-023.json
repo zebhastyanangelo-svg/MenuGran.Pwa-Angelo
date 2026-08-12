@@ -1,0 +1,17 @@
+{
+  "id": "TASK-023",
+  "title": "Flujo de Carrito, Checkout & Subida de Comprobante",
+  "description": "Mejoras de UX en el proceso de compra, navegación del carrito en formato drawer y subida de comprobante de pago.",
+  "status": "completed",
+  "requirements": [
+    "Convertir el carrito de compras en un Drawer lateral o modal fluido.",
+    "Rediseñar el formulario de Checkout con selección clara de entrega o retiro en local.",
+    "Añadir componente para adjuntar comprobante de pago con vista previa de imagen, soporte drag-and-drop y estados de carga.",
+    "Implementar feedback visual claro (toasts o alertas PWA) tras completar un pedido."
+  ],
+  "acceptance_criteria": [
+    "Flujo completo desde el carrito hasta la confirmación de pago operando visualmente sin fricción.",
+    "Soporte de carga de imágenes validado.",
+    "Tests de integración del flujo de compra en verde."
+  ]
+}

@@ -8,6 +8,7 @@ import { ReloadPrompt } from './components/pwa/ReloadPrompt';
 import { NotificationToastProvider, NotificationToastList } from './components/pwa/NotificationToast';
 import { PageLoader } from './components/PageLoader';
 import { Layout } from './components/layout/Layout';
+import { CartFab } from './components/cart/CartFab';
 
 const LoginPage = lazy(() => import('./pages/LoginPage').then((mod) => ({ default: mod.LoginPage })));
 const RegisterPage = lazy(() => import('./pages/RegisterPage').then((mod) => ({ default: mod.RegisterPage })));
@@ -47,6 +48,7 @@ export function App() {
               </Routes>
             </Suspense>
             <ReloadPrompt />
+            <CartFab />
           </BrowserRouter>
           <NotificationToastList />
         </NotificationToastProvider>

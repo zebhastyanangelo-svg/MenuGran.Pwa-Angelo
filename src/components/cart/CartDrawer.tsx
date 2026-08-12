@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { X, ShoppingCart, Plus, Minus, Trash2, ArrowRight } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 import { useNavigate } from 'react-router-dom';
@@ -20,6 +21,24 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     removeItem,
   } = useCart();
   const navigate = useNavigate();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen && items.length === 0) {
     return null;
@@ -28,24 +47,31 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   return (
     <div
       aria-hidden={!isOpen}
-      className="fixed inset-0 z-50 flex"
+      className={`fixed inset-0 z-50 flex ${isOpen ? '' : 'pointer-events-none'}`}
     >
       <div
         onClick={onClose}
-        className="absolute inset-0 bg-black/30 transition-opacity"
+        className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0'
+        }`}
         aria-label="Cerrar carrito"
       />
 
       <aside
+        ref={panelRef}
         aria-label="Carrito de compras"
-        className="relative flex h-full w-full max-w-sm flex-col bg-white shadow-xl animate-in slide-in-from-right"
+        role="dialog"
+        aria-modal="true"
+        className={`relative ml-auto flex h-full w-full max-w-sm flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
       >
         <header className="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
           <h2 className="text-lg font-bold text-gray-900">Tu carrito</h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="rounded-full p-2 text-gray-500 transition hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
             aria-label="Cerrar"
           >
             <X className="h-5 w-5" />
@@ -132,7 +158,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     <button
                       type="button"
                       onClick={() => removeItem(item.product.id)}
-                      className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500"
                       aria-label={`Eliminar ${item.product.title}`}
                     >
                       <Trash2 className="h-5 w-5" />
@@ -166,7 +192,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               navigate('/checkout');
               onClose();
             }}
-            className={`mt-3 w-full justify-center rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50`}
+            className={`mt-3 flex w-full items-center justify-center rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50`}
           >
             Proceder al pago
             <ArrowRight className="ml-2 h-5 w-5" />

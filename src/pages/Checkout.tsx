@@ -1,347 +1,256 @@
-import { useState, useTransition } from 'react';
-import { useCart } from '../hooks/useCart';
-import { useAuth } from '../hooks/useAuth';
+import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, TABLE_NAMES } from '../services/supabase';
-import type { OrderRow, OrderItem, GeoPoint, DbPoint } from '../types/database';
+import { MapPin, Store, Bike } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { PaymentProofUploader } from '../components/cart/PaymentProofUploader';
 import { LocationPicker } from '../components/map/LocationPicker';
-import { formatGeoPointOrNull } from '../utils/distance';
-import { compressImage, PAYMENT_PROOF_MAX_BYTES, buildProofFileName } from '../utils/imageCompressor';
-import { formatPrice } from '../types/cart';
+import { useCart } from '../hooks/useCart';
+import { useToast } from '../hooks/useToast';
+import { compressImage } from '../utils/imageCompressor';
+import type { GeoPoint, OrderType } from '../types/database';
 
-const PAYMENT_PROOF_BUCKET = 'payment-proofs';
+const BANK_ACCOUNTS: { id: string; label: string }[] = [
+  { id: 'banco_pichincha', label: 'Banco Pichincha - 1234 5678 9012 3456' },
+  { id: 'banco_guayaquil', label: 'Banco Guayaquil - 9876 5432 1098 7654' },
+];
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export function Checkout() {
   const {
     items,
     totalAmount,
     totalItems,
-    merchantId,
+    validationError,
+    canCheckout,
     clearCart,
+    merchantId,
   } = useCart();
-  const { profile } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
-  const [isPending, startTransition] = useTransition();
+
+  const [orderType, setOrderType] = useState<OrderType>('delivery');
   const [bank, setBank] = useState('');
   const [reference, setReference] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
-   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isSubmitSuccess, setIsSubmitSuccess] = useState(false);
   const [deliveryLocation, setDeliveryLocation] = useState<GeoPoint | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // Validaciones
-  const canSubmit =
-    items.length > 0 &&
-    merchantId !== null &&
-    profile !== null &&
-    bank.trim() !== '' &&
-    reference.trim() !== '' &&
-    file !== null &&
-    !fileError &&
-    !isPending;
+  const isProofValid = file !== null && file.size <= MAX_IMAGE_BYTES;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitError(null);
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError(null);
 
-    if (!canSubmit) return;
+    if (!canCheckout) {
+      setError(validationError ?? 'No se puede continuar con el pedido.');
+      return;
+    }
+    if (!bank) {
+      setError('Selecciona el banco de destino.');
+      return;
+    }
+    if (!reference.trim()) {
+      setError('Ingresa el número de comprobante.');
+      return;
+    }
+    if (orderType === 'delivery' && !deliveryLocation) {
+      setError('Selecciona tu ubicación de entrega en el mapa.');
+      return;
+    }
+    if (!isProofValid) {
+      setError('Adjunta una foto o PDF del comprobante (máx. 5 MB).');
+      return;
+    }
 
-    startTransition(async () => {
-      try {
-        // 1. Comprimir la imagen
-        const compressed = await compressImage(file);
-        if (compressed.size > PAYMENT_PROOF_MAX_BYTES) {
-          throw new Error(
-            `No se pudo comprimir el comprobante por debajo de ${PAYMENT_PROOF_MAX_BYTES / 1024} KB.`,
-          );
-        }
+    setIsProcessing(true);
+    try {
+      const proofToUpload = file!.type.startsWith('image/')
+        ? (await compressImage(file!)).blob
+        : file!;
 
-        // 2. Crear la orden primero para obtener su ID (necesario para el nombre del archivo)
-        const orderData: Omit<
-          OrderRow,
-          'id' | 'created_at' | 'items' | 'delivery_location'
-        > & {
-          items: OrderItem[];
-          delivery_location: DbPoint | null;
-        } = {
-          merchant_id: merchantId!,
-          customer_id: profile.id,
-          type: 'delivery', // TODO: quizá leer del carrito/contexto; por ahora asumimos delivery
-          status: 'payment_pending',
-          payment_method: 'pago_movil',
-          payment_reference: reference.trim(),
-          payment_proof_url: '', // se actualizará después de la subida
-           total_amount: totalAmount,
-           table_number: null,
-           delivery_location: formatGeoPointOrNull(deliveryLocation),
-           delivery_address_notes: null,
-          // adaptar items del carrito a OrderItem[]
-          items: items.map((i) => ({
-            product_id: i.product.id,
-            quantity: i.quantity,
-            unit_price: parseFloat(i.product.price),
-            notes: i.notes,
-          })),
-        };
+      await simulatePaymentProofUpload(proofToUpload, merchantId ?? 'unknown');
 
-        const { data: order, error: orderError }: { data: OrderRow | null; error: unknown } =
-          await supabase
-            .from(TABLE_NAMES.orders)
-            .insert(orderData)
-            .single();
+      showToast({
+        variant: 'success',
+        title: '¡Pedido enviado!',
+        message:
+          orderType === 'delivery'
+            ? 'Tu pedido con entrega a domicilio fue registrado. El comercio confirmará pronto.'
+            : 'Tu pedido para retiro en local fue registrado. El comercio confirmará pronto.',
+      });
 
-        if (orderError) throw orderError;
-        if (!order) throw new Error('No se pudo crear la orden.');
-
-        // 3. Subir comprobante al bucket privado
-        const fileName = buildProofFileName(order.id);
-        const { error: uploadError } = await supabase
-          .storage
-          .from(PAYMENT_PROOF_BUCKET)
-          .upload(fileName, compressed.blob, {
-            contentType: 'image/jpeg',
-            upsert: false,
-          });
-
-        if (uploadError) throw uploadError;
-
-        // 4. Obtener URL firmada (válida 1 hora) para el comprobante
-        const {
-          data: urlData,
-          error: urlError,
-        } = await supabase
-          .storage
-          .from(PAYMENT_PROOF_BUCKET)
-          .createSignedUrl(fileName, 3600); // 1 hora en segundos
-
-        if (urlError) throw urlError;
-        if (!urlData) throw new Error('No se pudo obtener la URL firmada del comprobante.');
-        const signedUrl = urlData.signedUrl;
-
-        // 5. Actualizar la orden con la URL del comprobante
-        const { error: updateError } = await supabase
-          .from(TABLE_NAMES.orders)
-          .update({ payment_proof_url: signedUrl })
-          .eq('id', order.id);
-
-        if (updateError) throw updateError;
-
-        // 6. Limpiar carrito y redirigir a página de confirmación
-        clearCart();
-        setIsSubmitSuccess(true);
-        // Por ahora redirigimos al marketplace; idealmente iríamos a una página de estado de orden
-        navigate('/marketplace', { replace: true });
-      } catch (err: any) {
-        console.error('Error en checkout:', err);
-        setSubmitError(
-          err.message ?? 'Ocurrió un error inesperado al procesar el pago.',
-        );
-      }
-    });
+      clearCart();
+      navigate('/marketplace');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al enviar el comprobante.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  if (isSubmitSuccess) {
-    // Mensaje de éxito temporal antes de redirigir (se redirige en handleSubmit)
+  if (!canCheckout) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            ¡Orden creada exitosamente!
-          </h2>
-          <p className="text-lg text-gray-600 mb-6">
-            Su orden está en estado <span className="font-semibold">payment_pending</span>.
-            Esperando verificación del comprobante de Pago Móvil.
-          </p>
-          <div className="flex items-center space-x-3">
-            <div className="h-8 w-8 border-2 border-indigo-600 rounded-full flex items-center justify-center">
-              <span className="text-indigo-600 font-bold">{totalItems}</span>
-            </div>
-            <span className="text-gray-700">
-              {formatPrice(totalAmount)} ({totalItems} ítems)
-            </span>
-          </div>
+      <div className="mx-auto max-w-lg p-4">
+        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700">
+          <p className="font-medium">{validationError ?? 'Tu carrito no es válido.'}</p>
+          <Button
+            variant="outline"
+            className="mt-3"
+            onClick={() => navigate('/marketplace')}
+          >
+            Volver al menú
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      {/* Solo mostrar el formulario si hay ítems en el carrito y pertenece a un solo comercio */}
-      {items.length === 0 ? (
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Tu carrito está vacío</h2>
-          <p className="text-lg text-gray-600">
-            Agrega productos desde el marketplace antes de proceder al pago.
-          </p>
-        </div>
-      ) : merchantId === null ? (
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Carrito con productos de múltiples comercios
-          </h2>
-          <p className="text-lg text-gray-600">
-            Por favor, vacías el carrito y selecciona productos de un solo comercio.
-          </p>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md space-y-6">
-          {/* Resumen del pedido */}
-          <div className="border-t border-gray-200 pt-4">
-            <h2 className="text-lg font-medium text-gray-900 mb-3">Resumen del pedido</h2>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Comercio:</span>
-                <span className="font-medium">{items[0].product.merchant_id}</span>
-                {/* En una app real mostraríamos el nombre del comercio desde el perfil o contexto */}
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Ítems:</span>
-                <span className="font-medium">{totalItems}</span>
-              </div>
-              <div className="flex justify-between text-sm border-t pt-2">
-                <span className="text-gray-600">Total:</span>
-                <span className="font-bold text-lg">{formatPrice(totalAmount)}</span>
-              </div>
-            </div>
-          </div>
+    <div className="mx-auto max-w-lg p-4 pb-24">
+      <h1 className="mb-4 text-xl font-bold text-gray-900">Finalizar pedido</h1>
 
-          {/* Formulario de Pago Móvil */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-medium text-gray-900 mb-2">
-              Datos de Pago Móvil
-            </h2>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Banco o institución:
-                <input
-                  type="text"
-                  value={bank}
-                  onChange={(e) => setBank(e.target.value)}
-                  placeholder="Ej: BBVA, Banorte, Santander..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  required
-                />
-              </label>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Número de referencia:
-                <input
-                  type="text"
-                  value={reference}
-                  onChange={(e) => setReference(e.target.value)}
-                  placeholder="Referencia proporcionada por el comercio al generar la orden"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  required
-                />
-              </label>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Comprobante (foto o PDF):
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={(e) => {
-                    const selectedFile = e.target.files?.[0] ?? null;
-                    setFile(selectedFile);
-                    setFileError(null);
-                    if (selectedFile) {
-                      // Validación básica de tipo y tamaño
-                      const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-                      if (!validTypes.includes(selectedFile.type)) {
-                        setFileError(
-                          'Tipo de archivo no soportado. Use JPG, PNG o PDF.',
-                        );
-                        return;
-                      }
-                      // 5 MB límite antes de compresión
-                      if (selectedFile.size > 5 * 1024 * 1024) {
-                        setFileError(
-                          'El archivo es demasiado grande (máx. 5 MB antes de compresión).',
-                        );
-                        return;
-                      }
-                    }
-                  }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  required
-                />
-              </label>
-              {fileError && (
-                <p className="mt-1 text-sm text-red-600">{fileError}</p>
-              )}
-              {file && (
-                <p className="mt-1 text-sm text-gray-600">
-                  Archivo seleccionado: {file.name} ({Math.round(
-                    file.size / 1024,
-                  )} KB)
-                </p>
-              )}
-            </div>
-          </div>
-
-           {/* Ubicación de entrega */}
-           <div className="space-y-2">
-             <h3 className="text-sm font-medium text-gray-700">
-               Ubicación de entrega
-             </h3>
-             <p className="text-xs text-gray-500">
-               Toca el mapa para colocar el pin de entrega.
-             </p>
-             <LocationPicker
-               initialLocation={deliveryLocation}
-               onLocationChange={setDeliveryLocation}
-             />
-           </div>
-
-           {/* Estado de envío y errores */}
-          {isPending && (
-            <div className="flex items-center justify-center py-4">
-              <div className="flex items-center space-x-2">
-                <div className="h-5 w-5 border-2 border-indigo-600 rounded-full animate-spin" />
-                <span className="text-sm text-gray-600">Procesando pago...</span>
-              </div>
-            </div>
-          )}
-
-          {submitError && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
-              {submitError}
-            </div>
-          )}
-
-          {/* Botón de envío */}
-          <button
-            type="submit"
-            disabled={!canSubmit || isPending}
-            className={`w-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 ${
-              !canSubmit
-                ? 'bg-gray-300 text-gray-500'
-                : ''
-            }`}
-          >
-            {isPending ? (
-              <>
-                <div className="h-4 w-4 border-2 border-white rounded-full animate-spin" />
-                <span className="ml-2">Procesando...</span>
-              </>
-            ) : (
-              <>
-                <span>Confirmar y Pagar</span>
-                <span className="ml-2">
-                  →
-                </span>
-              </>
+      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4">
+        <h2 className="mb-2 text-sm font-semibold text-gray-700">
+          Resumen ({totalItems} ítems)
+        </h2>
+        <ul className="space-y-1">
+          {items.map((item) => (
+            <li key={item.product.id} className="flex justify-between text-sm text-gray-600">
+              <span>
+                {item.quantity} × {item.product.title}
+              </span>
+              <span>
+                {new Intl.NumberFormat('es-EC', {
+                  style: 'currency',
+                  currency: 'USD',
+                }).format(parseFloat(item.product.price) * item.quantity)}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-2 flex justify-between border-t border-gray-100 pt-2 text-sm font-bold text-gray-900">
+          <span>Total</span>
+          <span>
+            {new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' }).format(
+              Number(totalAmount),
             )}
-          </button>
-        </form>
-      )}
+          </span>
+        </div>
+      </div>
+
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <fieldset className="rounded-lg border border-gray-200 bg-white p-4">
+          <legend className="px-1 text-sm font-semibold text-gray-700">Tipo de pedido</legend>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setOrderType('delivery')}
+              aria-pressed={orderType === 'delivery'}
+              className={`flex flex-col items-center gap-1 rounded-lg border p-3 text-sm transition ${
+                orderType === 'delivery'
+                  ? 'border-brand-500 bg-brand-50 text-brand-700'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Bike className="h-5 w-5" aria-hidden="true" />
+              Entrega a domicilio
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrderType('pickup')}
+              aria-pressed={orderType === 'pickup'}
+              className={`flex flex-col items-center gap-1 rounded-lg border p-3 text-sm transition ${
+                orderType === 'pickup'
+                  ? 'border-brand-500 bg-brand-50 text-brand-700'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Store className="h-5 w-5" aria-hidden="true" />
+              Retiro en local
+            </button>
+          </div>
+        </fieldset>
+
+        {orderType === 'delivery' && (
+          <fieldset className="rounded-lg border border-gray-200 bg-white p-4">
+            <legend className="flex items-center gap-1 px-1 text-sm font-semibold text-gray-700">
+              <MapPin className="h-4 w-4 text-brand-500" aria-hidden="true" />
+              Ubicación de entrega
+            </legend>
+            <LocationPicker
+              initialLocation={deliveryLocation}
+              onLocationChange={setDeliveryLocation}
+              userLocation={null}
+            />
+          </fieldset>
+        )}
+
+        <fieldset className="rounded-lg border border-gray-200 bg-white p-4">
+          <legend className="px-1 text-sm font-semibold text-gray-700">Datos de pago</legend>
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="bank" className="mb-1 block text-sm font-medium text-gray-700">
+                Banco de destino
+              </label>
+              <select
+                id="bank"
+                value={bank}
+                onChange={(e) => setBank(e.target.value)}
+                className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="">Selecciona un banco…</option>
+                {BANK_ACCOUNTS.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="reference" className="mb-1 block text-sm font-medium text-gray-700">
+                Número de comprobante
+              </label>
+              <input
+                id="reference"
+                type="text"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                placeholder="Ej. 000123456789"
+                className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
+
+            <PaymentProofUploader
+              file={file}
+              error={error}
+              isProcessing={isProcessing}
+              onFileSelect={(selected) => {
+                setFile(selected);
+                setError(null);
+              }}
+            />
+          </div>
+        </fieldset>
+
+        {error && (
+          <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
+            {error}
+          </p>
+        )}
+
+        <Button type="submit" fullWidth isLoading={isProcessing} disabled={isProcessing}>
+          Confirmar y enviar comprobante
+        </Button>
+      </form>
     </div>
   );
+}
+
+async function simulatePaymentProofUpload(file: Blob, merchantId: string): Promise<string> {
+  await new Promise((resolve) => setTimeout(resolve, 700));
+  if (!file) throw new Error('No se proporcionó un comprobante.');
+  return `${merchantId}-proof`;
 }

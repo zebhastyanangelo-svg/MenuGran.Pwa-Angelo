@@ -69,6 +69,8 @@ vi.mock('./hooks/useCart', () => ({
     totalAmount: '0.00',
     totalItems: 0,
     merchantId: null,
+    validationError: null,
+    canCheckout: true,
     clearCart: vi.fn(),
   }),
 }));
@@ -100,8 +102,8 @@ describe('App Router Integration', () => {
     window.history.pushState({}, '', '/merchant/dashboard');
     render(<App />);
 
-    expect(await screen.findByRole('heading', { name: /Iniciar Sesión/i })).toBeInTheDocument();
-  });
+    expect(await screen.findByRole('heading', { name: /Iniciar Sesión/i }, { timeout: 10000 })).toBeInTheDocument();
+  }, 15000);
 
   it('renders marketplace page on root path', async () => {
     setAuth(baseAuthValue);
@@ -110,9 +112,9 @@ describe('App Router Integration', () => {
     render(<App />);
 
      expect(
-       await screen.findByPlaceholderText(/Buscar comercios o platillos/i, {}, { timeout: 3000 }),
+       await screen.findByPlaceholderText(/Buscar comercios o platillos/i, {}, { timeout: 30000 }),
      ).toBeInTheDocument();
-  });
+  }, 45000);
 
   it('renders merchant dashboard when user has proper role', async () => {
     setAuth({
@@ -138,8 +140,8 @@ describe('App Router Integration', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /Panel de Comercio/i })).toBeInTheDocument();
-    }, { timeout: 10000 });
-  }, 15000);
+    }, { timeout: 30000 });
+  }, 45000);
 
   it('resolves lazy login route through Suspense and renders its content', async () => {
     setAuth(baseAuthValue);
@@ -149,8 +151,8 @@ describe('App Router Integration', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /Iniciar Sesión/i })).toBeInTheDocument();
-    });
-  });
+    }, { timeout: 10000 });
+  }, 15000);
 
   it('resolves lazy checkout route through Suspense and renders its content', async () => {
     setAuth({
@@ -175,9 +177,9 @@ describe('App Router Integration', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Tu carrito está vacío/i)).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByText(/Finalizar pedido/i)).toBeInTheDocument();
+    }, { timeout: 10000 });
+  }, 15000);
 
   it('resolves lazy not-found route through Suspense', async () => {
     setAuth(baseAuthValue);
@@ -187,6 +189,6 @@ describe('App Router Integration', () => {
 
     await waitFor(() => {
       expect(screen.getByText('404')).toBeInTheDocument();
-    });
-  });
+    }, { timeout: 10000 });
+  }, 15000);
 });

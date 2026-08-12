@@ -2,7 +2,7 @@
   "id": "TASK-021",
   "title": "Sistema de Diseño Base, Componentes UI y Layout PWA",
   "description": "Definición de tokens visuales de Tailwind, componentes atómicos reutilizables y un Layout responsivo adaptado para PWA con Bottom Navigation en móviles.",
-  "status": "in_progress",
+  "status": "completed",
   "requirements": [
     "Crear o refactorizar componentes base en `src/components/ui/` (Button, Input, Card, Badge, Modal, Skeleton).",
     "Implementar un Layout adaptativo con `BottomNav` para vistas móviles (respetando safe-areas en modo standalone PWA) y Sidebar/Header para desktop.",

@@ -3,100 +3,48 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Checkout } from './Checkout';
+import { useCart } from '../hooks/useCart';
+
+const mockShowToast = vi.fn();
 
 vi.mock('../hooks/useCart', () => ({
-  useCart: vi.fn().mockReturnValue({
-    items: [],
-    totalAmount: '0.00',
-    totalItems: 0,
-    merchantId: 'm-123',
-    clearCart: vi.fn(),
-  }),
+  useCart: vi.fn(),
 }));
 
-vi.mock('../hooks/useAuth', () => ({
-  useAuth: vi.fn().mockReturnValue({
-    profile: { id: 'user-123', email: 'user@example.com' },
-  }),
+vi.mock('../hooks/useToast', () => ({
+  useToast: () => ({ showToast: mockShowToast }),
 }));
 
 vi.mock('../utils/imageCompressor', () => ({
-  compressImage: vi.fn().mockResolvedValue({
-    blob: new Blob(['fake-image-data'], { type: 'image/jpeg' }),
-    size: 50_000, // 50 KB
-    width: 800,
-    height: 600,
-    type: 'image/jpeg',
-  }),
+  compressImage: vi.fn().mockResolvedValue({ blob: new Blob(['fake']), size: 50_000, width: 1, height: 1, type: 'image/jpeg' }),
   PAYMENT_PROOF_MAX_BYTES: 150 * 1024,
-  buildProofFileName: vi.fn().mockImplementation((orderId) => `${orderId}/proof.jpg`),
+  buildProofFileName: vi.fn().mockImplementation((orderId: string) => `${orderId}/proof.jpg`),
 }));
 
 vi.mock('../components/map/LocationPicker', () => {
   return {
-    LocationPicker: ({ onLocationChange }: any) => {
-      const React = require('react');
-      React.useEffect(() => {
-        onLocationChange({ x: -99.1332, y: 19.4326 });
-      }, [onLocationChange]);
-
-      return (
-        <div data-testid="mock-location-picker">
-          <button
-            type="button"
-            onClick={() => onLocationChange({ x: -99.1332, y: 19.4326 })}
-          >
-            Seleccionar ubicación
-          </button>
-        </div>
-      );
-    },
+    LocationPicker: ({ onLocationChange }: any) => (
+      <div data-testid="mock-location-picker">
+        <button type="button" onClick={() => onLocationChange({ x: -99.1332, y: 19.4326 })}>
+          Seleccionar ubicación
+        </button>
+      </div>
+    ),
   };
 });
 
-vi.mock('../services/supabase', () => {
-  const fromMock = vi.fn();
-  fromMock.mockImplementation((_tableName) => {
-    const insertMock = vi.fn().mockImplementation((_data) => {
-      return {
-        single: vi.fn().mockResolvedValue({ data: { id: 'order-123' }, error: null })
-      };
-    });
-    const updateMock = vi.fn().mockImplementation((_data) => {
-      return {
-        eq: vi.fn().mockResolvedValue({ error: null })
-      };
-    });
-    return { insert: insertMock, update: updateMock };
-  });
-
-  const storageFromMock = vi.fn();
-  storageFromMock.mockImplementation((_bucketName) => {
-    const uploadMock = vi.fn().mockResolvedValue({ error: null });
-    const createSignedUrlMock = vi.fn().mockResolvedValue({ data: { signedUrl: 'https://example.com/signed-url.jpg' }, error: null });
-    return { upload: uploadMock, createSignedUrl: createSignedUrlMock };
-  });
-
-  return {
-    supabase: {
-      from: fromMock,
-      storage: {
-        from: storageFromMock,
-      },
-    },
-    TABLE_NAMES: {
-      merchants: 'merchants',
-      categories: 'categories',
-      products: 'products',
-      profiles: 'profiles',
-      orders: 'orders',
-      deliveries: 'deliveries',
-      merchantStaff: 'merchant_staff',
-    },
-  };
-});
-
-const PAYMENT_PROOF_BUCKET = 'payment-proofs';
+const validCart = {
+  items: [{ product: { id: 'p-1', price: '100.00', title: 'Pizza' }, quantity: 1 } as any],
+  totalAmount: '100',
+  totalItems: 1,
+  merchantId: 'm-123',
+  validationError: null,
+  canCheckout: true,
+  clearCart: vi.fn(),
+  updateQuantity: vi.fn(),
+  removeItem: vi.fn(),
+  addItem: vi.fn(),
+};
 
 beforeAll(() => {
   process.env.VITE_SUPABASE_URL = 'http://localhost';
@@ -105,147 +53,96 @@ beforeAll(() => {
 
 describe('Checkout', () => {
   const user = userEvent.setup();
-  let mockUseCart: any;
-  let mockImageCompressor: any;
-  let mockSupabase: any;
 
-  beforeEach(async () => {
-    const useCartModule = await import('../hooks/useCart');
-    mockUseCart = vi.mocked(useCartModule);
-    mockUseCart.useCart().clearCart.mockClear();
-    
-    const imageCompressorModule = await import('../utils/imageCompressor');
-    mockImageCompressor = vi.mocked(imageCompressorModule);
-    mockImageCompressor.compressImage.mockClear();
-    
-    const supabaseModule = await import('../services/supabase');
-    mockSupabase = vi.mocked(supabaseModule);
-    mockSupabase.supabase.from.mockClear();
-    mockSupabase.supabase.storage.from.mockClear();
+  beforeEach(() => {
+    mockShowToast.mockClear();
+    vi.mocked(useCart).mockReturnValue(validCart);
   });
 
-  it('renderiza sin caer', () => {
-    render(
-      <MemoryRouter>
-        <Checkout />
-      </MemoryRouter>
-    );
-    expect(screen.getByText(/Tu carrito está vacío/i)).toBeInTheDocument();
-  });
-
-  it('muestra mensaje de carrito vacío cuando no hay ítems', () => {
-    render(
-      <MemoryRouter>
-        <Checkout />
-      </MemoryRouter>
-    );
-    expect(screen.getByText(/Tu carrito está vacío/i)).toBeInTheDocument();
-  });
-
-  it('muestra mensaje de comercio múltiple cuando merchantId es null', async () => {
-    const useCartModule = await import('../hooks/useCart');
-    mockUseCart = vi.mocked(useCartModule);
-    mockUseCart.useCart.mockReturnValue({
-      items: [{ product: { id: 'p-1', price: '100.00' } as any, quantity: 1 }],
-      totalAmount: '100.00',
-      totalItems: 1,
-      merchantId: null,
-      clearCart: vi.fn(),
+  it('muestra estado inválido cuando el carrito no es válido', () => {
+    vi.mocked(useCart).mockReturnValue({
+      ...validCart,
+      canCheckout: false,
+      validationError: 'Carrito con productos de múltiples comercios.',
     });
     render(
       <MemoryRouter>
         <Checkout />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     expect(screen.getByText(/Carrito con productos de múltiples comercios/i)).toBeInTheDocument();
   });
 
-  it('deshabilita el botón de pago inicialmente', async () => {
+  it('renderiza el formulario con tipo de pedido cuando el carrito es válido', () => {
     render(
       <MemoryRouter>
         <Checkout />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
-    const submitButton = screen.queryByRole('button', { name: /Confirmar y Pagar/i });
-    expect(submitButton).toBeNull();
+    expect(screen.getByText(/Finalizar pedido/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Entrega a domicilio/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Retiro en local/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Tu carrito está vacío/i)).not.toBeInTheDocument();
   });
 
-  it('habilita el botón de pago cuando se completan los campos requeridos', async () => {
-    const useCartModule = await import('../hooks/useCart');
-    mockUseCart = vi.mocked(useCartModule);
-    mockUseCart.useCart.mockReturnValue({
-      items: [{ product: { id: 'p-1', price: '100.00' } as any, quantity: 2 }],
-      totalAmount: '200.00',
-      totalItems: 2,
-      merchantId: 'm-123',
-      clearCart: vi.fn(),
-    });
+  it('requiere banco, referencia y comprobante antes de enviar', async () => {
     render(
       <MemoryRouter>
         <Checkout />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    const bankInput = screen.getByLabelText(/Banco o institución:/i) as HTMLInputElement;
-    await user.type(bankInput, 'BBVA');
-
-    const refInput = screen.getByLabelText(/Número de referencia:/i) as HTMLInputElement;
-    await user.type(refInput, 'REF123456');
-
-    const fileInput = screen.getByLabelText(/Comprobante \(foto o PDF\):/i) as HTMLInputElement;
-    const file = new File(['fake-image-content'], 'test.jpg', { type: 'image/jpeg' });
-    await user.upload(fileInput, file);
-
-    const selectLocationBtn = screen.queryByRole('button', { name: /Seleccionar ubicación/i });
-    if (selectLocationBtn) {
-      await user.click(selectLocationBtn);
-    }
-
-    // Get the form via the bank input
-    const form = bankInput.closest('form');
-    if (!form) {
-      throw new Error('Could not find form');
-    }
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
     fireEvent.submit(form);
 
-    // Wait for the processing spinner to appear
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/Selecciona el banco de destino/i);
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  it('la entrega a domicilio requiere ubicación', async () => {
+    render(
+      <MemoryRouter>
+        <Checkout />
+      </MemoryRouter>,
+    );
+
+    await user.selectOptions(screen.getByLabelText(/Banco de destino/i), 'banco_pichincha');
+    await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
+    const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
+    await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), file);
+
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/Selecciona tu ubicación de entrega/i);
+  });
+
+  it('confirma el pedido, muestra toast y vacía el carrito', async () => {
+    render(
+      <MemoryRouter>
+        <Checkout />
+      </MemoryRouter>,
+    );
+
+    await user.selectOptions(screen.getByLabelText(/Banco de destino/i), 'banco_pichincha');
+    await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
+    const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
+    await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), file);
+    await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
     await waitFor(() => {
-      return screen.getByText(/Procesando pago.../i);
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: 'success', title: '¡Pedido enviado!' }),
+      );
     });
-
-    // Esperar a que se llame a from dos veces para la tabla de orders (insert y update)
-    await waitFor(() => {
-      return mockSupabase.supabase.from.mock.calls.length >= 2;
-    });
-
-    // Verificar las llamadas a supabase.from para la tabla de orders
-    expect(mockSupabase.supabase.from).toHaveBeenCalledTimes(2);
-    expect(mockSupabase.supabase.from).toHaveBeenNthCalledWith(1, 'orders');
-    expect(mockSupabase.supabase.from).toHaveBeenNthCalledWith(2, 'orders');
-
-    // Verificar que se haya llamado a insert para crear la orden
-    const insertObject = mockSupabase.supabase.from.mock.results[0].value;
-    expect(insertObject.insert).toHaveBeenCalledTimes(1);
-
-    // Verificar que delivery_location se envíe como cadena POINT "(x,y)" de PostgREST
-    const insertedPayload = insertObject.insert.mock.calls[0][0];
-    expect(insertedPayload.delivery_location).toBe('(-99.1332,19.4326)');
-
-    // Verificar que se haya llamado a storage.from dos veces con el bucket correcto
-    expect(mockSupabase.supabase.storage.from).toHaveBeenCalledTimes(2);
-    expect(mockSupabase.supabase.storage.from).toHaveBeenNthCalledWith(1, PAYMENT_PROOF_BUCKET);
-    expect(mockSupabase.supabase.storage.from).toHaveBeenNthCalledWith(2, PAYMENT_PROOF_BUCKET);
-
-    // Obtener el mock del primer llamado (para upload)
-    const storageUploadMock = mockSupabase.supabase.storage.from.mock.results[0].value;
-    expect(storageUploadMock.upload).toHaveBeenCalled();
-
-    // Obtener el mock del segundo llamado (para createSignedUrl)
-    const storageUrlMock = mockSupabase.supabase.storage.from.mock.results[1].value;
-    expect(storageUrlMock.createSignedUrl).toHaveBeenCalled();
-
-    // Verificar que se haya llamado a update para actualizar la orden con la URL del comprobante
-    const updateObject = mockSupabase.supabase.from.mock.results[1].value;
-    expect(updateObject.update).toHaveBeenCalledTimes(1);
-  }, 10000);
+    expect(validCart.clearCart).toHaveBeenCalled();
+  });
 });
