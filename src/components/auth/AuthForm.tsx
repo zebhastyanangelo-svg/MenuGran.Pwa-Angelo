@@ -24,6 +24,40 @@ const REGISTER_ROLES: readonly UserRole[] = ['customer', 'merchant_owner'];
 const SUBMIT_BASE_CLASS =
   'w-full rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50';
 
+const GOOGLE_BUTTON_CLASS =
+  'flex w-full items-center justify-center gap-3 rounded-md border border-gray-300 bg-white py-2.5 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50';
+
+/**
+ * Logo oficial de Google en SVG (colores de marca).
+ */
+function GoogleLogo() {
+  return (
+    <svg
+      className="h-5 w-5"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      data-testid="google-logo"
+    >
+      <path
+        fill="#4285F4"
+        d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z"
+      />
+    </svg>
+  );
+}
+
 /**
  * Traduce el error de Supabase a un mensaje legible para el usuario.
  */
@@ -63,7 +97,8 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
   const [pendingEmail, setPendingEmail] = useState('');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signInWithPassword, signUpWithPassword, resendConfirmationEmail } = useAuth();
+  const { signInWithPassword, signUpWithPassword, resendConfirmationEmail, signInWithGoogle } =
+    useAuth();
 
   const from = searchParams.get('from') ?? '/marketplace';
 
@@ -73,6 +108,19 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     setShowConfirmationBanner(false);
     setPendingEmail('');
     navigate(tab === 'login' ? '/login' : '/register', { replace: true });
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    setError(null);
+    setShowConfirmationBanner(false);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setError(resolveAuthErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -151,6 +199,32 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
 
   return (
     <div className="w-full max-w-md">
+      <button
+        type="button"
+        data-testid="google-signin"
+        onClick={() => void handleGoogleSignIn()}
+        disabled={isLoading}
+        className={GOOGLE_BUTTON_CLASS}
+      >
+        {isLoading ? (
+          <span className="flex items-center justify-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Conectando con Google...
+          </span>
+        ) : (
+          <>
+            <GoogleLogo />
+            Continuar con Google
+          </>
+        )}
+      </button>
+
+      <div className="my-6 flex items-center gap-3">
+        <span className="h-px flex-1 bg-gray-300" />
+        <span className="text-sm text-gray-500">o ingresa con tu correo</span>
+        <span className="h-px flex-1 bg-gray-300" />
+      </div>
+
       <div className="mb-6 flex border-b border-gray-200">
         <button
           type="button"

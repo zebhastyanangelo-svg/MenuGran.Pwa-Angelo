@@ -9,6 +9,7 @@ import type { AuthContextValue } from '../../context/AuthContext';
 const signInWithPassword = vi.fn();
 const signUpWithPassword = vi.fn();
 const resendConfirmationEmail = vi.fn();
+const signInWithGoogle = vi.fn();
 const navigate = vi.fn();
 
 vi.mock('../../hooks/useAuth', () => ({
@@ -31,7 +32,7 @@ function getMockAuth(): AuthContextValue {
     user: null,
     profile: null,
     isLoading: false,
-    signInWithGoogle: vi.fn(),
+    signInWithGoogle,
     signInWithPassword,
     signUpWithPassword,
     resendConfirmationEmail,
@@ -92,6 +93,58 @@ describe('AuthForm', () => {
     await user.click(screen.getByRole('button', { name: /Iniciar Sesión/i }));
 
     expect(navigate).toHaveBeenCalledWith('/login', { replace: true });
+  });
+
+  it('renderiza el botón Continuar con Google y el separador en login', () => {
+    renderWithRouter('login');
+
+    expect(
+      screen.getByRole('button', { name: /Continuar con Google/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('o ingresa con tu correo')).toBeInTheDocument();
+  });
+
+  it('renderiza el botón de Google también en el tab de registro', () => {
+    renderWithRouter('register');
+
+    expect(
+      screen.getByRole('button', { name: /Continuar con Google/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('llama a signInWithGoogle al hacer clic en Continuar con Google', async () => {
+    const user = userEvent.setup();
+    signInWithGoogle.mockResolvedValueOnce(undefined);
+    renderWithRouter('login');
+
+    await user.click(screen.getByRole('button', { name: /Continuar con Google/i }));
+
+    expect(signInWithGoogle).toHaveBeenCalledTimes(1);
+  });
+
+  it('muestra spinner y deshabilita el botón de Google mientras carga', async () => {
+    signInWithGoogle.mockImplementation(() => new Promise(() => {}));
+    renderWithRouter('login');
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /Continuar con Google/i }),
+    );
+
+    expect(screen.getByText('Conectando con Google...')).toBeInTheDocument();
+    expect(screen.getByTestId('google-signin')).toBeDisabled();
+  });
+
+  it('muestra mensaje de error claro cuando el inicio con Google falla', async () => {
+    const user = userEvent.setup();
+    signInWithGoogle.mockRejectedValueOnce(new Error('OAuth provider unavailable'));
+    renderWithRouter('login');
+
+    await user.click(screen.getByRole('button', { name: /Continuar con Google/i }));
+
+    expect(
+      await screen.findByText(/OAuth provider unavailable/i),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('google-signin')).not.toBeDisabled();
   });
 
   it('envía credenciales de login con signInWithPassword y redirige al marketplace', async () => {

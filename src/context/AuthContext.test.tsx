@@ -79,6 +79,9 @@ function AuthProbe() {
         >
           Entrar
         </button>
+      <button onClick={() => void auth.signInWithGoogle().catch(() => undefined)}>
+          Continuar con Google
+        </button>
       <button
         onClick={() =>
           void auth.signUpWithPassword('a@b.com', 'secret', 'Test User', 'customer')
@@ -231,6 +234,51 @@ describe('AuthProvider', () => {
       email: 'a@b.com',
       password: 'secret',
     });
+  });
+
+  it('llama a signInWithOAuth con provider google y redirectTo del marketplace', async () => {
+    authMocks.signInWithOAuth.mockResolvedValue({
+      data: { url: null, provider: 'google' },
+      error: null,
+    });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar con Google' }));
+
+    expect(authMocks.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/marketplace` },
+    });
+  });
+
+  it('propaga el error y lo registra en consola cuando el inicio con Google falla', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    authMocks.signInWithOAuth.mockResolvedValue({
+      data: { url: null, provider: 'google' },
+      error: new Error('OAuth flow failed'),
+    });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar con Google' }));
+
+    expect(consoleError).toHaveBeenCalledWith(
+      'Error al iniciar sesión con Google',
+      expect.any(Error),
+    );
+
+    consoleError.mockRestore();
   });
 
   it('llama a supabase.auth.signUp con full_name y role en options.data', async () => {
