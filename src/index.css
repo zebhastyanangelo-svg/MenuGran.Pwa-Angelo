@@ -14,3 +14,7 @@ body {
 #root {
   min-height: 100vh;
 }
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}

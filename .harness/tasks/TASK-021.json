@@ -1,0 +1,18 @@
+{
+  "id": "TASK-021",
+  "title": "Sistema de Diseño Base, Componentes UI y Layout PWA",
+  "description": "Definición de tokens visuales de Tailwind, componentes atómicos reutilizables y un Layout responsivo adaptado para PWA con Bottom Navigation en móviles.",
+  "status": "in_progress",
+  "requirements": [
+    "Crear o refactorizar componentes base en `src/components/ui/` (Button, Input, Card, Badge, Modal, Skeleton).",
+    "Implementar un Layout adaptativo con `BottomNav` para vistas móviles (respetando safe-areas en modo standalone PWA) y Sidebar/Header para desktop.",
+    "Asegurar consistencia en la paleta de colores y tipografía mediante Tailwind CSS.",
+    "Mantener la suite de tests existente en verde y agregar pruebas unitarias para los nuevos componentes UI."
+  ],
+  "acceptance_criteria": [
+    "Componentes atómicos probados e integrados en `src/components/ui/`.",
+    "Navegación móvil nativa fluida mediante barra inferior.",
+    "Sin regresiones: `npm test` debe ejecutar los 201+ tests con éxito.",
+    "Validación de tipos e inspección de código limpia (`tsc -b` y `npm run lint`)."
+  ]
+}
