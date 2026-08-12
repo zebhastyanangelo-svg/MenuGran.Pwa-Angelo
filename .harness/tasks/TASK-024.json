@@ -2,7 +2,7 @@
   "id": "TASK-024",
   "title": "Panel de Comerciante (Dashboard UI)",
   "description": "Optimización del panel de administración para comercios: gestión de inventario y monitoreo de pedidos entrantes.",
-  "status": "pending",
+  "status": "completed",
   "requirements": [
     "Crear tabla o grid de productos del comercio con acciones rápidas (Crear, Editar, Desactivar).",
     "Diseñar interfaz para gestionar pedidos entrantes con actualización de estado en tiempo real (Pendiente, En preparación, Entregado).",
