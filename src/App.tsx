@@ -1,7 +1,8 @@
 import { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { useAuth } from './hooks/useAuth';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { OfflineBanner } from './components/pwa/OfflineBanner';
 import { ReloadPrompt } from './components/pwa/ReloadPrompt';
@@ -21,6 +22,22 @@ const MerchantDashboardPage = lazy(() =>
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((mod) => ({ default: mod.NotFoundPage })));
 const Checkout = lazy(() => import('./pages/Checkout').then((mod) => ({ default: mod.Checkout })));
 const OrderTracker = lazy(() => import('./pages/OrderTracker').then((mod) => ({ default: mod.OrderTracker })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then((mod) => ({ default: mod.ProfilePage })));
+
+function RootRedirect() {
+  const { user, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return <PageLoader message="Comprobando sesión..." />;
+  }
+
+  if (user !== null && location.pathname === '/') {
+    return <Navigate to="/marketplace" replace />;
+  }
+
+  return <Navigate to="/login" replace />;
+}
 
 export function App() {
   return (
@@ -33,10 +50,18 @@ export function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route element={<Layout />}>
-                  <Route path="/" element={<Navigate to="/login" replace />} />
-                 <Route path="/marketplace" element={<MarketplacePage />} />
-                 <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
-                 <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/" element={<RootRedirect />} />
+                  <Route path="/marketplace" element={<MarketplacePage />} />
+                  <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <ProfilePage />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route path="/orders/:id" element={<OrderTracker />} />
                   <Route
                     path="/merchant/dashboard"

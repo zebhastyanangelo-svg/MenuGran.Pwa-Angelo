@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import type { ProfileRow } from '../types/database';
-import { AuthProvider, fetchProfile } from './AuthContext';
+import { AuthProvider } from './AuthContext';
+import { fetchProfile } from './auth-profile';
 import { useAuth } from '../hooks/useAuth';
 
 const authMocks = vi.hoisted(() => ({
@@ -148,6 +149,26 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('auth-email')).toHaveTextContent('sin-sesion');
     expect(await screen.findByText('false')).toBeInTheDocument();
     expect(screen.getByTestId('auth-role')).toHaveTextContent('sin-perfil');
+  });
+
+  it('carga la sesión persistida desde getSession al iniciar', async () => {
+    mockProfileQuery({
+      data: buildProfile('persisted-user', 'customer'),
+      error: null,
+    });
+    authMocks.getSession.mockResolvedValue({
+      data: { session: buildSession('persisted-user') },
+      error: null,
+    });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    expect(await screen.findByTestId('auth-email')).toHaveTextContent('persisted-user@menugram.com');
+    expect(await screen.findByTestId('auth-role')).toHaveTextContent('customer');
   });
 
   it('carga el perfil del usuario al emitirse SIGNED_IN', async () => {

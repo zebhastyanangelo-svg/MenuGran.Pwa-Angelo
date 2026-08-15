@@ -28,9 +28,9 @@ function check(name, ok, detail = '') {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  -> ${detail}` : ''}`);
 }
 
-const R = (n) => Math.random().toString(36).slice(2, 8);
-const ownerEmail = `owner-${R(4)}@menugram.test`;
-const customerEmail = `customer-${R(4)}@menugram.test`;
+const R = () => Math.random().toString(36).slice(2, 8);
+const ownerEmail = `owner-${R()}@menugram.test`;
+const customerEmail = `customer-${R()}@menugram.test`;
 const PASS = 'Test123456!';
 
 // 1) signUp owner (autoconfirm habilitado)
@@ -48,7 +48,7 @@ check('trigger: profile auto-creado', !!profile && profile.email === ownerEmail,
 // 3) owner crea comercio (RLS merchants_insert_owner)
 const { data: merchant, error: mErr } = await admin
   .from('merchants')
-  .insert({ owner_id: data.user.id, name: 'Restaurante Demo', slug: `demo-${R(4)}`, location: '(-66.9,10.5)' })
+  .insert({ owner_id: data.user.id, name: 'Restaurante Demo', slug: `demo-${R()}`, location: '(-66.9,10.5)' })
   .select()
   .single();
 check('owner inserta merchant', !!merchant && !mErr, mErr?.message ?? merchant?.id);
@@ -136,7 +136,7 @@ const anon = createClient(URL, ANON, { auth: { persistSession: false, autoRefres
 const { data: leaked } = await anon.from('profiles').select('*');
 check('anon NO lee profiles', !leaked || leaked.length === 0, `rows=${leaked?.length}`);
 
-const { error: neg1 } = await customer.from('merchants').insert({ owner_id: crypto.randomUUID(), name: 'Hack', slug: `hack-${R(4)}` });
+const { error: neg1 } = await customer.from('merchants').insert({ owner_id: crypto.randomUUID(), name: 'Hack', slug: `hack-${R()}` });
 check('customer NO inserta merchant ajeno', !!neg1, neg1?.message ?? 'se permitio!');
 
 const { data: neg2Data, error: neg2 } = await customer

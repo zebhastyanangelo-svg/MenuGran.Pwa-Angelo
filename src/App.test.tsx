@@ -2,7 +2,7 @@ import { describe, expect, it, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import App from './App';
 import { useAuth } from './hooks/useAuth';
-import type { AuthContextValue } from './context/AuthContext';
+import type { AuthContextValue } from './context/auth-context-core';
 
 const createQuery = () => {
   const query: Record<string, unknown> = {
@@ -104,6 +104,28 @@ describe('App Router Integration', () => {
 
     expect(await screen.findByRole('heading', { name: /Iniciar Sesión/i }, { timeout: 10000 })).toBeInTheDocument();
   }, 15000);
+
+  it('redirects authenticated user from root to marketplace', async () => {
+    setAuth({
+      ...baseAuthValue,
+      user: { id: 'user-auth', email: 'user@example.com' } as never,
+      profile: {
+        id: 'user-auth',
+        role: 'customer',
+        email: 'user@example.com',
+        full_name: 'Test User',
+        avatar_url: null,
+        created_at: '',
+        updated_at: '',
+      },
+      isLoading: false,
+    });
+
+    window.history.pushState({}, '', '/');
+    render(<App />);
+
+    expect(await screen.findByPlaceholderText(/Buscar comercios o platillos/i, {}, { timeout: 30000 })).toBeInTheDocument();
+  }, 45000);
 
   it('renders marketplace page on root path', async () => {
     setAuth(baseAuthValue);

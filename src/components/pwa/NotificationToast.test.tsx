@@ -1,10 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
-import {
-  NotificationToastProvider,
-  useNotificationToast,
-  NotificationToastList,
-} from './NotificationToast';
+import { NotificationToastProvider, NotificationToastList } from './NotificationToast';
+import { useNotificationToast } from './useNotificationToast';
 
 const TestConsumer = () => {
   const { showToast, hideToast, toasts } = useNotificationToast();

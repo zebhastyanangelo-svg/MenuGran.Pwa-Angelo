@@ -12,7 +12,7 @@ import {
   useNotifications,
   buildOrderNotification,
 } from '../hooks/useNotifications';
-import { useNotificationToast } from '../components/pwa/NotificationToast';
+import { useNotificationToast } from '../components/pwa/useNotificationToast';
 import { statusDisplayMap } from '../utils/statusDisplayMap';
 
 export function OrderTracker() {

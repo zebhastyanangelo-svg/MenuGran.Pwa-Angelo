@@ -1,63 +1,16 @@
 import {
-  createContext,
   useCallback,
   useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react';
-import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
-import type { PostgrestError } from '@supabase/supabase-js';
-import { supabase, TABLE_NAMES } from '../services/supabase';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
+import { supabase } from '../services/supabase';
 import type { ProfileRow, UserRole } from '../types/database';
 import { requiresEmailConfirmation } from '../utils/emailSuggestions';
-
-export interface SignUpResult {
-  needsEmailConfirmation: boolean;
-}
-
-export interface AuthContextValue {
-  user: User | null;
-  profile: ProfileRow | null;
-  isLoading: boolean;
-  signInWithGoogle: () => Promise<void>;
-  signInWithPassword: (email: string, password: string) => Promise<void>;
-  signUpWithPassword: (
-    email: string,
-    password: string,
-    fullName: string,
-    role: UserRole,
-  ) => Promise<SignUpResult>;
-  resendConfirmationEmail: (email: string) => Promise<void>;
-  signOut: () => Promise<void>;
-}
-
-interface ProfileQueryResult {
-  data: ProfileRow | null;
-  error: PostgrestError | null;
-}
-
-export const AuthContext = createContext<AuthContextValue | null>(null);
-
-/**
- * Consulta el perfil del usuario en la tabla public.profiles.
- *
- * Devuelve `null` si el perfil no existe o la consulta falla (p. ej. por
- * una política RLS), sin propagar la excepción.
- */
-export async function fetchProfile(userId: string): Promise<ProfileRow | null> {
-  const result = (await supabase
-    .from(TABLE_NAMES.profiles)
-    .select('*')
-    .eq('id', userId)
-    .single()) as unknown as ProfileQueryResult;
-
-  if (result.error !== null) {
-    console.error('Error al consultar el perfil del usuario', result.error);
-    return null;
-  }
-  return result.data;
-}
+import { AuthContext, type AuthContextValue, type SignUpResult } from './auth-context-core';
+import { fetchProfile } from './auth-profile';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);

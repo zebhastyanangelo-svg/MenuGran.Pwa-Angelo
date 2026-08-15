@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useSearchParams } from 'react-router-dom';
 import { AuthForm } from './AuthForm';
 import { useAuth } from '../../hooks/useAuth';
-import type { AuthContextValue } from '../../context/AuthContext';
+import type { AuthContextValue } from '../../context/auth-context-core';
 
 const signInWithPassword = vi.fn();
 const signUpWithPassword = vi.fn();

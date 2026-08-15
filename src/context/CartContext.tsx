@@ -1,9 +1,8 @@
-import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AddItemResult, CartItem, CartContextValue } from '../types/cart';
 import type { ProductRow } from '../types/database';
 import { loadCartFromStorage, saveCartToStorage } from '../types/cart';
-
-export const CartContext = createContext<CartContextValue | null>(null);
+import { CartContext } from './cart-context';
 
 interface CartProviderProps {
   children: ReactNode;

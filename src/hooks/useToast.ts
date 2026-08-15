@@ -1,1 +1,1 @@
-export { useNotificationToast as useToast } from '../components/pwa/NotificationToast';
+export { useNotificationToast as useToast } from '../components/pwa/useNotificationToast';
