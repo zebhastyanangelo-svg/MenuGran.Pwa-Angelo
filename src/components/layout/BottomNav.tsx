@@ -14,7 +14,7 @@ export function BottomNav() {
               to={to}
               className={({ isActive }) =>
                 `flex flex-col items-center gap-1 py-2 text-xs font-medium ${
-                  isActive ? 'text-brand-600' : 'text-gray-500'
+                  isActive ? 'text-brand-red' : 'text-slate-500'
                 }`
               }
             >

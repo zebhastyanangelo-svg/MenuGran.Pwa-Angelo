@@ -10,7 +10,7 @@ describe('Card', () => {
 
   it('aplica la clase base de tarjeta', () => {
     const { container } = render(<Card>Base</Card>);
-    expect(container.firstChild).toHaveClass('rounded-xl');
+    expect(container.firstChild).toHaveClass('rounded-2xl');
   });
 
   it('compone header, title y content', () => {

@@ -111,8 +111,8 @@ export function Checkout() {
     <div className="mx-auto max-w-lg p-4 pb-24">
       <h1 className="mb-4 text-xl font-bold text-gray-900">Finalizar pedido</h1>
 
-      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-gray-700">
+      <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="mb-2 text-sm font-semibold text-slate-700">
           Resumen ({totalItems} ítems)
         </h2>
         <ul className="space-y-1">
@@ -141,42 +141,42 @@ export function Checkout() {
       </div>
 
       <form className="space-y-4" onSubmit={handleSubmit}>
-        <fieldset className="rounded-lg border border-gray-200 bg-white p-4">
-          <legend className="px-1 text-sm font-semibold text-gray-700">Tipo de pedido</legend>
-          <div className="grid grid-cols-2 gap-2">
+        <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <legend className="px-1 text-sm font-semibold text-slate-700">Tipo de pedido</legend>
+          <div className="flex rounded-full bg-slate-100 p-1">
             <button
               type="button"
               onClick={() => setOrderType('delivery')}
               aria-pressed={orderType === 'delivery'}
-              className={`flex flex-col items-center gap-1 rounded-lg border p-3 text-sm transition ${
+              className={`flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition ${
                 orderType === 'delivery'
-                  ? 'border-brand-500 bg-brand-50 text-brand-700'
-                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-brand-red text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Bike className="h-5 w-5" aria-hidden="true" />
+              <Bike className="h-4 w-4" aria-hidden="true" />
               Entrega a domicilio
             </button>
             <button
               type="button"
               onClick={() => setOrderType('pickup')}
               aria-pressed={orderType === 'pickup'}
-              className={`flex flex-col items-center gap-1 rounded-lg border p-3 text-sm transition ${
+              className={`flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition ${
                 orderType === 'pickup'
-                  ? 'border-brand-500 bg-brand-50 text-brand-700'
-                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-brand-red text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Store className="h-5 w-5" aria-hidden="true" />
+              <Store className="h-4 w-4" aria-hidden="true" />
               Retiro en local
             </button>
           </div>
         </fieldset>
 
         {orderType === 'delivery' && (
-          <fieldset className="rounded-lg border border-gray-200 bg-white p-4">
-            <legend className="flex items-center gap-1 px-1 text-sm font-semibold text-gray-700">
-              <MapPin className="h-4 w-4 text-brand-500" aria-hidden="true" />
+          <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <legend className="flex items-center gap-1 px-1 text-sm font-semibold text-slate-700">
+              <MapPin className="h-4 w-4 text-brand-red" aria-hidden="true" />
               Ubicación de entrega
             </legend>
             <LocationPicker
@@ -187,18 +187,18 @@ export function Checkout() {
           </fieldset>
         )}
 
-        <fieldset className="rounded-lg border border-gray-200 bg-white p-4">
-          <legend className="px-1 text-sm font-semibold text-gray-700">Datos de pago</legend>
+        <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <legend className="px-1 text-sm font-semibold text-slate-700">Datos de pago</legend>
           <div className="space-y-3">
             <div>
-              <label htmlFor="bank" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="bank" className="mb-1 block text-sm font-medium text-slate-700">
                 Banco de destino
               </label>
               <select
                 id="bank"
                 value={bank}
                 onChange={(e) => setBank(e.target.value)}
-                className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red"
               >
                 <option value="">Selecciona un banco…</option>
                 {BANK_ACCOUNTS.map((account) => (
@@ -210,7 +210,7 @@ export function Checkout() {
             </div>
 
             <div>
-              <label htmlFor="reference" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="reference" className="mb-1 block text-sm font-medium text-slate-700">
                 Número de comprobante
               </label>
               <input
@@ -219,7 +219,7 @@ export function Checkout() {
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
                 placeholder="Ej. 000123456789"
-                className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red"
               />
             </div>
 

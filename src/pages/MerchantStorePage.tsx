@@ -131,11 +131,11 @@ export function MerchantStorePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-12">
-        <header className="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
+      <div className="min-h-screen bg-slate-50 pb-12">
+        <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-sm">
           <div className="mx-auto max-w-3xl">
-            <h1 className="text-xl font-bold text-gray-900">MenuGram</h1>
-            <p className="text-xs text-gray-500">Cargando comercio...</p>
+            <h1 className="text-xl font-bold text-slate-900">MenuGram</h1>
+            <p className="text-xs text-slate-500">Cargando comercio...</p>
           </div>
         </header>
         <main className="mx-auto max-w-3xl px-4 pt-4">
@@ -165,7 +165,7 @@ export function MerchantStorePage() {
             <button
               type="button"
               onClick={() => void fetchData()}
-              className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-700"
+              className="mt-3 rounded-xl bg-brand-red px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#c80024]"
             >
               Reintentar
             </button>
@@ -189,7 +189,7 @@ export function MerchantStorePage() {
             <button
               type="button"
               onClick={goBack}
-              className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-700"
+              className="mt-3 rounded-xl bg-brand-red px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#c80024]"
             >
               Volver a comercios
             </button>
@@ -200,10 +200,10 @@ export function MerchantStorePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
+    <div className="min-h-screen bg-slate-50 pb-12">
+      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-sm">
         <div className="mx-auto max-w-3xl">
-          <h1 className="text-xl font-bold text-gray-900">MenuGram</h1>
+          <h1 className="text-xl font-bold text-slate-900">MenuGram</h1>
         </div>
       </header>
 
@@ -211,15 +211,15 @@ export function MerchantStorePage() {
         <button
           type="button"
           onClick={goBack}
-          className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:text-brand-700"
+          className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-red hover:text-[#c80024]"
           aria-label="Volver a comercios"
         >
           <ArrowLeft className="h-4 w-4" />
           Volver a comercios
         </button>
 
-        <div className="mb-4 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="h-32 w-full bg-gradient-to-r from-indigo-500 to-purple-600">
+        <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="h-32 w-full bg-gradient-to-r from-brand-red via-[#f64a62] to-brand-amber/80">
             {merchant.banner_url && !isBannerError ? (
               <img
                 src={merchant.banner_url}
@@ -233,7 +233,7 @@ export function MerchantStorePage() {
 
           <div className="relative p-4 pt-0">
             <div className="-mt-8 mb-2 flex items-end justify-between">
-              <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-white bg-gray-100 shadow-md">
+              <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-white bg-slate-100 shadow-md">
                 {merchant.logo_url && !isLogoError ? (
                   <img
                     src={merchant.logo_url}
@@ -243,7 +243,7 @@ export function MerchantStorePage() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-indigo-100 text-lg font-bold text-indigo-700">
+                  <div className="flex h-full w-full items-center justify-center bg-red-50 text-lg font-bold text-brand-red">
                     {merchant.name.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -253,8 +253,8 @@ export function MerchantStorePage() {
               </Badge>
             </div>
 
-            <h2 className="text-lg font-bold text-gray-900">{merchant.name}</h2>
-            <p className="text-xs text-gray-500">@{merchant.slug}</p>
+            <h2 className="text-lg font-bold text-slate-900">{merchant.name}</h2>
+            <p className="text-xs text-slate-500">@{merchant.slug}</p>
           </div>
         </div>
 

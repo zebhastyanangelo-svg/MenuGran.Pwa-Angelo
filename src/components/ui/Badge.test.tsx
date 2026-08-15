@@ -10,12 +10,12 @@ describe('Badge', () => {
 
   it('aplica la clase de variante success', () => {
     render(<Badge variant="success">Listo</Badge>);
-    expect(screen.getByText('Listo')).toHaveClass('bg-green-100');
+    expect(screen.getByText('Listo')).toHaveClass('bg-emerald-100');
   });
 
   it('usa la variante neutral por defecto', () => {
     render(<Badge>Neutral</Badge>);
-    expect(screen.getByText('Neutral')).toHaveClass('bg-gray-100');
+    expect(screen.getByText('Neutral')).toHaveClass('bg-slate-100');
   });
 
   it('aplica clases personalizadas', () => {

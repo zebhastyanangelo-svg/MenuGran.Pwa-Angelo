@@ -93,7 +93,7 @@ describe('CategoryFilter', () => {
     expect(screen.getByRole('tab', { name: /Bebidas/i })).toBeInTheDocument();
   });
 
-  it('marca la categoría seleccionada', () => {
+  it('marca la categoría seleccionada con la marca principal', () => {
     const categories = [buildCategory('c1', 'Entradas')];
     render(
       <CategoryFilter
@@ -103,7 +103,7 @@ describe('CategoryFilter', () => {
       />,
     );
 
-    expect(screen.getByRole('tab', { name: /Entradas/i })).toHaveClass('bg-brand-600');
+    expect(screen.getByRole('tab', { name: /Entradas/i })).toHaveClass('bg-brand-red');
   });
 });
 

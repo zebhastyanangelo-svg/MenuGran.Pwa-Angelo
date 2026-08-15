@@ -9,7 +9,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 const baseInput =
-  'h-10 w-full rounded-lg border bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2';
+  'h-11 w-full rounded-xl border bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2';
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   { label, error, leftIcon, helperText, className = '', id, ...rest },
@@ -21,7 +21,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 
   const stateClasses = hasError
     ? 'border-red-400 focus:ring-red-400 focus:border-red-400'
-    : 'border-gray-300 focus:ring-brand-500 focus:border-brand-500';
+    : 'border-slate-200 focus:ring-brand-red focus:border-brand-red';
 
   return (
     <div className="w-full">

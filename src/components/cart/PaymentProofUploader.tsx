@@ -99,16 +99,16 @@ export function PaymentProofUploader({
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
-          className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition ${
+          className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition ${
             isDragging
-              ? 'border-brand-500 bg-brand-50'
-              : 'border-gray-300 bg-gray-50 hover:border-brand-400 hover:bg-gray-100'
+              ? 'border-brand-red bg-red-50'
+              : 'border-slate-200 bg-slate-50 hover:border-brand-red hover:bg-red-50'
           } ${isProcessing ? 'pointer-events-none opacity-60' : ''}`}
         >
-          <UploadCloud className="h-8 w-8 text-brand-500" aria-hidden="true" />
-          <p className="text-sm text-gray-600">
+          <UploadCloud className="h-8 w-8 text-brand-red" aria-hidden="true" />
+          <p className="text-sm text-slate-600">
             Arrastra tu comprobante aquí o{' '}
-            <span className="font-semibold text-brand-600">haz clic para seleccionar</span>
+            <span className="font-semibold text-brand-red">haz clic para seleccionar</span>
           </p>
           <p className="text-xs text-gray-400">JPG, PNG o PDF · máx. 5 MB</p>
         </div>
@@ -149,7 +149,7 @@ export function PaymentProofUploader({
 
           {isProcessing && (
             <div className="absolute inset-0 flex items-center justify-center gap-2 bg-white/80">
-              <Loader2 className="h-5 w-5 animate-spin text-brand-600" aria-hidden="true" />
+              <Loader2 className="h-5 w-5 animate-spin text-brand-red" aria-hidden="true" />
               <span className="text-sm font-medium text-gray-700">Subiendo comprobante…</span>
             </div>
           )}

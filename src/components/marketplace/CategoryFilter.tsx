@@ -12,9 +12,9 @@ export function CategoryFilter({
   onSelectCategory,
 }: CategoryFilterProps) {
   const baseClass =
-    'whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500';
-  const activeClass = 'bg-brand-600 text-white shadow-sm';
-  const idleClass = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+    'whitespace-nowrap rounded-full border px-4 py-1.5 text-xs font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/60';
+  const activeClass = 'border-brand-red bg-brand-red text-white shadow-sm';
+  const idleClass = 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50';
 
   return (
     <div className="no-scrollbar flex w-full gap-2 overflow-x-auto py-2" role="tablist" aria-label="Filtrar por categoría">

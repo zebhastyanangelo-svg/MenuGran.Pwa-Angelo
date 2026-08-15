@@ -37,3 +37,5 @@ src/
 - `docs/ARCHITECTURE-STACK.md` — stack tecnológico y flujo de datos
 - `docs/REQUIREMENTS-FEATURES.md` — roles RBAC y funcionalidades
 - `docs/DATABASE-SCHEMA.md` — esquema completo de PostgreSQL
+- `docs/THEME-GUIDE.md` — tokens visuales, componentes y guía de accesibilidad del diseño
+- `docs/DESIGN-TOKENS-BOARD.md` — board visual del sistema de diseño para compartir con el equipo

@@ -8,7 +8,7 @@ export function Layout() {
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       {!isAuthRoute && <Sidebar />}
       <main className="mx-auto w-full max-w-5xl px-4 pb-24 pt-4 md:pb-4 md:pl-64">
         <Outlet />

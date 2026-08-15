@@ -71,7 +71,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-gray-500 transition hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-red"
             aria-label="Cerrar"
           >
             <X className="h-5 w-5" />
@@ -192,7 +192,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               navigate('/checkout');
               onClose();
             }}
-            className={`mt-3 flex w-full items-center justify-center rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50`}
+            className={`mt-3 flex w-full items-center justify-center rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#c80024] disabled:cursor-not-allowed disabled:opacity-50`}
           >
             Proceder al pago
             <ArrowRight className="ml-2 h-5 w-5" />

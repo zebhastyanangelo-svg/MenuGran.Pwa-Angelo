@@ -21,7 +21,7 @@ describe('BottomNav', () => {
         <BottomNav />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('link', { name: /inicio/i })).toHaveClass('text-brand-600');
+    expect(screen.getByRole('link', { name: /inicio/i })).toHaveClass('text-brand-red');
   });
 
   it('usa el atributo de navegación principal', () => {

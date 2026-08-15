@@ -35,7 +35,7 @@ export function ProductCard({ product, categoryName, onSelect }: ProductCardProp
             }
           : undefined
       }
-      className={`flex cursor-pointer gap-4 p-3 transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-500 ${
+      className={`flex cursor-pointer gap-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-red ${
         interactive ? '' : 'cursor-default'
       }`}
     >

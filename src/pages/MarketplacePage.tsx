@@ -50,11 +50,11 @@ export function MarketplacePage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
+    <div className="min-h-screen bg-slate-50 pb-12">
+      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-sm">
         <div className="mx-auto max-w-3xl">
-          <h1 className="text-xl font-bold text-gray-900">MenuGram</h1>
-          <p className="text-xs text-gray-500">Descubre comercios y menús</p>
+          <h1 className="text-xl font-bold text-slate-900">MenuGram</h1>
+          <p className="text-xs text-slate-500">Descubre comercios y menús</p>
         </div>
       </header>
 
@@ -69,7 +69,7 @@ export function MarketplacePage() {
             <button
               type="button"
               onClick={() => void fetchData()}
-              className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-700"
+              className="mt-3 rounded-xl bg-brand-red px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#c80024]"
             >
               Reintentar
             </button>
