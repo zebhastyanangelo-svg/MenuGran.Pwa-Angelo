@@ -13,6 +13,7 @@ import { CartFab } from './components/cart/CartFab';
 const LoginPage = lazy(() => import('./pages/LoginPage').then((mod) => ({ default: mod.LoginPage })));
 const RegisterPage = lazy(() => import('./pages/RegisterPage').then((mod) => ({ default: mod.RegisterPage })));
 const MarketplacePage = lazy(() => import('./pages/MarketplacePage').then((mod) => ({ default: mod.MarketplacePage })));
+const MerchantStorePage = lazy(() => import('./pages/MerchantStorePage').then((mod) => ({ default: mod.MerchantStorePage })));
 const MerchantDashboardPage = lazy(() =>
   import('./pages/MerchantDashboardPage').then((mod) => ({ default: mod.MerchantDashboardPage })),
 );
@@ -32,8 +33,9 @@ export function App() {
                 <Route path="/register" element={<RegisterPage />} />
                 <Route element={<Layout />}>
                   <Route path="/" element={<Navigate to="/login" replace />} />
-                  <Route path="/marketplace" element={<MarketplacePage />} />
-                  <Route path="/checkout" element={<Checkout />} />
+                 <Route path="/marketplace" element={<MarketplacePage />} />
+                 <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+                 <Route path="/checkout" element={<Checkout />} />
                   <Route path="/orders/:id" element={<OrderTracker />} />
                   <Route
                     path="/merchant/dashboard"

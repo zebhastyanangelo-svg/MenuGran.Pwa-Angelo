@@ -1,5 +1,5 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { CartItem, CartContextValue } from '../types/cart';
+import type { AddItemResult, CartItem, CartContextValue } from '../types/cart';
 import type { ProductRow } from '../types/database';
 import { loadCartFromStorage, saveCartToStorage } from '../types/cart';
 
@@ -68,6 +68,39 @@ export function CartProvider({ children }: CartProviderProps) {
     });
   }, []);
 
+  const confirmAddItem = useCallback(
+    (product: ProductRow, quantity: number = 1, notes?: string): AddItemResult => {
+      const hasItems = items.length > 0;
+      const differentMerchant = hasItems && items[0].product.merchant_id !== product.merchant_id;
+
+      if (differentMerchant) {
+        setItems([{ product, quantity, notes }]);
+        return { action: 'cleared-then-added' };
+      }
+
+      setItems((prev) => {
+        const existingIndex = prev.findIndex(
+          (item) => item.product.id === product.id,
+        );
+
+        if (existingIndex !== -1) {
+          const updated = [...prev];
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            quantity: updated[existingIndex].quantity + quantity,
+            notes: notes ?? updated[existingIndex].notes,
+          };
+          return updated;
+        }
+
+        return [...prev, { product, quantity, notes }];
+      });
+
+      return { action: 'added', merchantId: product.merchant_id };
+    },
+    [items],
+  );
+
   const removeItem = useCallback((productId: string): void => {
     setItems((prev) => prev.filter((item) => item.product.id !== productId));
   }, []);
@@ -92,6 +125,7 @@ export function CartProvider({ children }: CartProviderProps) {
     () => ({
       items,
       addItem,
+      confirmAddItem,
       removeItem,
       updateQuantity,
       clearCart,
@@ -101,19 +135,20 @@ export function CartProvider({ children }: CartProviderProps) {
       validationError,
       merchantId,
     }),
-    [
-      items,
-      addItem,
-      removeItem,
-      updateQuantity,
-      clearCart,
-      totalItems,
-      totalAmount,
-      canCheckout,
-      validationError,
-      merchantId,
-    ],
-  );
+     [
+       items,
+       addItem,
+       confirmAddItem,
+       removeItem,
+       updateQuantity,
+       clearCart,
+       totalItems,
+       totalAmount,
+       canCheckout,
+       validationError,
+       merchantId,
+     ],
+   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

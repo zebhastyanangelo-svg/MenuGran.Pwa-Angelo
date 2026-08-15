@@ -44,6 +44,7 @@ const validCart = {
   updateQuantity: vi.fn(),
   removeItem: vi.fn(),
   addItem: vi.fn(),
+  confirmAddItem: vi.fn(),
 };
 
 beforeAll(() => {

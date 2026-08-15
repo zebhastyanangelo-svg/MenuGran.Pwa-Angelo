@@ -1,11 +1,12 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
-import type { MerchantRow, ProductRow } from '../types/database';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import type { MerchantRow } from '../types/database';
 import { MarketplacePage } from './MarketplacePage';
-import { CartProvider } from '../context/CartContext';
 
 const authMocks = vi.hoisted(() => ({
   supabaseMock: { from: vi.fn() },
+  navigateMock: vi.fn(),
 }));
 
 vi.mock('../services/supabase', () => ({
@@ -20,6 +21,18 @@ vi.mock('../services/supabase', () => ({
   },
   supabase: authMocks.supabaseMock,
 }));
+
+vi.mock('../hooks/useToast', () => ({
+  useToast: () => ({ showToast: vi.fn(), hideToast: vi.fn(), toasts: [] }),
+}));
+
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>();
+  return {
+    ...actual,
+    useNavigate: () => authMocks.navigateMock,
+  };
+});
 
 function buildMerchant(id: string, name: string): MerchantRow {
   return {
@@ -37,35 +50,24 @@ function buildMerchant(id: string, name: string): MerchantRow {
   };
 }
 
-function buildProduct(id: string, title: string, categoryId: string): ProductRow {
-  return {
-    id,
-    merchant_id: 'merchant-1',
-    category_id: categoryId,
-    title,
-    description: `Descripción de ${title}`,
-    price: '12.50',
-    image_url: null,
-    is_available: true,
-    created_at: '2026-01-01T00:00:00.000Z',
-  };
-}
-
 function mockTableResults(results: Record<string, { data: unknown[] | null; error: unknown }>) {
   authMocks.supabaseMock.from = vi.fn((table: string) => {
     const result = results[table] ?? { data: [], error: null };
-    const query: any = {
+    const query: {
+      select: () => typeof query;
+      eq: () => typeof query;
+      order: () => typeof query;
+      single: () => typeof query;
+      then: (resolve: (v: unknown) => unknown) => void;
+    } = {
       select: () => query,
       eq: () => query,
       order: () => query,
+      single: () => query,
       then: (resolve: (v: unknown) => unknown) => resolve(result),
     };
     return query;
   });
-}
-
-function renderWithProviders(ui: React.ReactNode) {
-  return render(<CartProvider>{ui}</CartProvider>);
 }
 
 const localStore: Record<string, string> = {};
@@ -85,6 +87,7 @@ const localStorageMock = {
 describe('MarketplacePage', () => {
   beforeEach(() => {
     authMocks.supabaseMock.from = vi.fn();
+    authMocks.navigateMock.mockReset();
     Object.defineProperty(globalThis, 'localStorage', {
       value: localStorageMock,
       configurable: true,
@@ -95,11 +98,13 @@ describe('MarketplacePage', () => {
   it('muestra los comercios tras cargar los datos', async () => {
     mockTableResults({
       merchants: { data: [buildMerchant('m1', 'La Esquina')], error: null },
-      categories: { data: [], error: null },
-      products: { data: [], error: null },
     });
 
-    renderWithProviders(<MarketplacePage />);
+    render(
+      <MemoryRouter>
+        <MarketplacePage />
+      </MemoryRouter>,
+    );
 
     expect(await screen.findByText('La Esquina')).toBeInTheDocument();
   });
@@ -107,53 +112,47 @@ describe('MarketplacePage', () => {
   it('muestra estado vacío cuando no hay comercios', async () => {
     mockTableResults({
       merchants: { data: [], error: null },
-      categories: { data: [], error: null },
-      products: { data: [], error: null },
     });
 
-    renderWithProviders(<MarketplacePage />);
+    render(
+      <MemoryRouter>
+        <MarketplacePage />
+      </MemoryRouter>,
+    );
 
-    expect(
-      await screen.findByText(/No se encontraron comercios/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/No se encontraron comercios/i)).toBeInTheDocument();
   });
 
   it('muestra mensaje de error y botón para reintentar', async () => {
     mockTableResults({
       merchants: { data: null, error: { message: 'fallo de red' } },
-      categories: { data: null, error: { message: 'fallo de red' } },
-      products: { data: null, error: { message: 'fallo de red' } },
     });
 
-    renderWithProviders(<MarketplacePage />);
+    render(
+      <MemoryRouter>
+        <MarketplacePage />
+      </MemoryRouter>,
+    );
 
-    expect(
-      await screen.findByText(/Ocurrió un error al cargar la información/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /Reintentar/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Ocurrió un error al cargar la información/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Reintentar/i })).toBeInTheDocument();
   });
 
-  it('abre el detalle del producto, agrega al carrito y cierra el modal', async () => {
+  it('navega al detalle del comercio al hacer clic en la tarjeta', async () => {
     mockTableResults({
-      merchants: { data: [], error: null },
-      categories: { data: [{ id: 'cat-1', merchant_id: 'merchant-1', name: 'Platillos', sort_order: 1, created_at: '2026-01-01T00:00:00.000Z' }], error: null },
-      products: { data: [buildProduct('p1', 'Hamburguesa', 'cat-1')], error: null },
+      merchants: { data: [buildMerchant('m1', 'La Esquina')], error: null },
     });
 
-    renderWithProviders(<MarketplacePage />);
+    render(
+      <MemoryRouter>
+        <MarketplacePage />
+      </MemoryRouter>,
+    );
 
-    fireEvent.click(await screen.findByRole('tab', { name: /Productos/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Ver producto Hamburguesa/i }));
+    const merchant = await screen.findByText('La Esquina');
+    const card = merchant.closest('[role="button"]');
+    fireEvent.click(card!);
 
-    const dialog = await screen.findByRole('dialog');
-    expect(dialog).toBeInTheDocument();
-    expect(within(dialog).getByText('Platillos')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Agregar al carrito/i }));
-
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(JSON.parse(localStorage.getItem('menugram_cart') ?? '[]').length).toBe(1);
+    expect(authMocks.navigateMock).toHaveBeenCalledWith('/merchant/m1');
   });
 });

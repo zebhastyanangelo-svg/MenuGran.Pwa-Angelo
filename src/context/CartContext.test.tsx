@@ -198,4 +198,66 @@ describe('useCart', () => {
       expect(result.current.validationError).toContain('diferentes comercios');
     });
   });
+
+  describe('confirmAddItem', () => {
+    it('agrega el producto cuando el carrito está vacío', () => {
+      const { result } = renderHook(() => useCart(), { wrapper });
+
+      const product = buildProduct('p1', 'm1', 'Pizza', '150.00');
+
+      let res: ReturnType<typeof result.current.confirmAddItem>;
+      act(() => {
+        res = result.current.confirmAddItem(product);
+      });
+
+      expect(result.current.items).toHaveLength(1);
+      expect(res!.action).toBe('added');
+      if (res!.action === 'added') {
+        expect(res!.merchantId).toBe('m1');
+      }
+    });
+
+    it('agrega al mismo comercio sin limpiar', () => {
+      const { result } = renderHook(() => useCart(), { wrapper });
+
+      const product1 = buildProduct('p1', 'm1', 'Pizza', '150.00');
+      const product2 = buildProduct('p2', 'm1', 'Tacos', '100.00');
+
+      act(() => {
+        result.current.addItem(product1);
+      });
+
+      let res: ReturnType<typeof result.current.confirmAddItem>;
+      act(() => {
+        res = result.current.confirmAddItem(product2);
+      });
+
+      expect(result.current.items).toHaveLength(2);
+      expect(result.current.merchantId).toBe('m1');
+      expect(res!.action).toBe('added');
+    });
+
+    it('vacía el carrito y agrega el producto de otro comercio', () => {
+      const { result } = renderHook(() => useCart(), { wrapper });
+
+      const product1 = buildProduct('p1', 'm1', 'Pizza', '150.00');
+      const product2 = buildProduct('p2', 'm2', 'Burger', '200.00');
+
+      act(() => {
+        result.current.addItem(product1);
+      });
+
+      expect(result.current.items).toHaveLength(1);
+
+      let res: ReturnType<typeof result.current.confirmAddItem>;
+      act(() => {
+        res = result.current.confirmAddItem(product2);
+      });
+
+      expect(result.current.items).toHaveLength(1);
+      expect(result.current.items[0].product.id).toBe('p2');
+      expect(result.current.merchantId).toBe('m2');
+      expect(res!.action).toBe('cleared-then-added');
+    });
+  });
 });

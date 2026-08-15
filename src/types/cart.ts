@@ -6,9 +6,18 @@ export interface CartItem {
   notes?: string;
 }
 
+export type AddItemResult =
+  | { action: 'added'; merchantId: string }
+  | { action: 'cleared-then-added' };
+
 export interface CartContextValue {
   items: CartItem[];
   addItem: (product: ProductRow, quantity?: number, notes?: string) => void;
+  confirmAddItem: (
+    product: ProductRow,
+    quantity?: number,
+    notes?: string,
+  ) => AddItemResult;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -50,7 +59,6 @@ export function saveCartToStorage(items: CartItem[]): void {
   try {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   } catch {
-    // Silently fail if localStorage unavailable
   }
 }
 
