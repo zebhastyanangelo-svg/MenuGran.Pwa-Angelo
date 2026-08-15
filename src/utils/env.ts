@@ -56,35 +56,29 @@ export class EnvError extends Error {
 export interface RuntimeEnv {
   supabaseUrl: string;
   supabaseAnonKey: string;
-  cloudinaryCloudName?: string;
-  cloudinaryUploadPreset?: string;
+  imgbbApiKey?: string;
 }
 
 /**
  * Valida las variables públicas de entorno en runtime.
- * Las variables de Supabase son obligatorias; las de Cloudinary son opcionales
- * (se emiten advertencias si faltan).
+ * Las variables de Supabase son obligatorias; la de ImgBB es opcional
+ * (se emite una advertencia en runtime si falta, desactivando la
+ * subida de imágenes públicas).
  */
 export function validateRuntimeEnv(): RuntimeEnv {
   const supabaseUrl = getEnvVar('VITE_SUPABASE_URL');
   const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY');
 
-  const cloudinaryCloudName = getEnv()['VITE_CLOUDINARY_CLOUD_NAME'];
-  const cloudinaryUploadPreset = getEnv()['VITE_CLOUDINARY_UPLOAD_PRESET'];
+  const imgbbApiKey = getEnv()['VITE_IMGBB_API_KEY'];
 
-  if (cloudinaryCloudName === undefined || cloudinaryCloudName === '') {
-    warnIfMissing('VITE_CLOUDINARY_CLOUD_NAME', 'subida de imágenes');
-  }
-  if (cloudinaryUploadPreset === undefined || cloudinaryUploadPreset === '') {
-    warnIfMissing('VITE_CLOUDINARY_UPLOAD_PRESET', 'subida de imágenes');
+  if (imgbbApiKey === undefined || imgbbApiKey === '') {
+    warnIfMissing('VITE_IMGBB_API_KEY', 'subida de imágenes');
   }
 
   return {
     supabaseUrl,
     supabaseAnonKey,
-    cloudinaryCloudName:
-      cloudinaryCloudName && cloudinaryCloudName !== '' ? cloudinaryCloudName : undefined,
-    cloudinaryUploadPreset:
-      cloudinaryUploadPreset && cloudinaryUploadPreset !== '' ? cloudinaryUploadPreset : undefined,
+    imgbbApiKey:
+      imgbbApiKey && imgbbApiKey !== '' ? imgbbApiKey : undefined,
   };
 }

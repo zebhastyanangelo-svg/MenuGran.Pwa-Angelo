@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
-import { uploadToCloudinary } from '../../services/cloudinary';
+import { uploadToImgBB } from '../../services/imgbb';
 import type { CategoryRow, ProductRow } from '../../types/database';
 import { validateProductForm, type ProductFormData } from '../../utils/productForm';
 
@@ -68,12 +68,12 @@ export function ProductFormModal({
     setUploadError(null);
 
     try {
-      const url = await uploadToCloudinary(file);
+      const url = await uploadToImgBB(file);
       setImageUrl(url);
     } catch (err: unknown) {
       console.error('Error al subir la imagen:', err);
       setUploadError(
-        err instanceof Error ? err.message : 'Error al subir la imagen a Cloudinary'
+        err instanceof Error ? err.message : 'Error al subir la imagen a ImgBB'
       );
     } finally {
       setUploadingImage(false);
@@ -280,7 +280,7 @@ export function ProductFormModal({
             </div>
           </div>
 
-          {/* Imagen Cloudinary */}
+          {/* Imagen del Producto */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Imagen del Producto
@@ -316,11 +316,11 @@ export function ProductFormModal({
                   disabled={uploadingImage}
                   className="block w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                 />
-                {uploadingImage && (
-                  <p className="mt-1 text-xs text-indigo-600 font-medium animate-pulse">
-                    Subiendo imagen a Cloudinary...
-                  </p>
-                )}
+                 {uploadingImage && (
+                   <p className="mt-1 text-xs text-indigo-600 font-medium animate-pulse">
+                     Subiendo imagen a ImgBB...
+                   </p>
+                 )}
                 {uploadError && (
                   <p className="mt-1 text-xs text-red-600">{uploadError}</p>
                 )}

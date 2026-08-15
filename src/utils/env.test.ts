@@ -6,8 +6,7 @@ describe('env utility', () => {
     vi.unstubAllEnvs();
     vi.stubEnv('VITE_SUPABASE_URL', 'https://test.supabase.co');
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-anon-key');
-    vi.stubEnv('VITE_CLOUDINARY_CLOUD_NAME', 'test-cloud');
-    vi.stubEnv('VITE_CLOUDINARY_UPLOAD_PRESET', 'test-preset');
+    vi.stubEnv('VITE_IMGBB_API_KEY', 'test-imgbb-key');
   });
 
   afterEach(() => {
@@ -34,8 +33,7 @@ describe('env utility', () => {
       vi.unstubAllEnvs();
       vi.stubEnv('VITE_SUPABASE_URL', 'https://test.supabase.co');
       vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-anon-key');
-      vi.stubEnv('VITE_CLOUDINARY_CLOUD_NAME', 'test-cloud');
-      vi.stubEnv('VITE_CLOUDINARY_UPLOAD_PRESET', 'test-preset');
+      vi.stubEnv('VITE_IMGBB_API_KEY', 'test-imgbb-key');
       const result = getEnvVar('VITE_OPTIONAL', 'default-value');
       expect(result).toBe('default-value');
     });
@@ -79,8 +77,7 @@ describe('env utility', () => {
       const result = validateRuntimeEnv();
       expect(result.supabaseUrl).toBe('https://test.supabase.co');
       expect(result.supabaseAnonKey).toBe('test-anon-key');
-      expect(result.cloudinaryCloudName).toBe('test-cloud');
-      expect(result.cloudinaryUploadPreset).toBe('test-preset');
+      expect(result.imgbbApiKey).toBe('test-imgbb-key');
     });
 
     it('debe lanzar error si falta VITE_SUPABASE_URL', () => {
@@ -93,13 +90,11 @@ describe('env utility', () => {
       expect(() => validateRuntimeEnv()).toThrow('[EnvError]');
     });
 
-    it('debe retornar undefined para variables de Cloudinary opcionales si no están definidas', () => {
-      vi.stubEnv('VITE_CLOUDINARY_CLOUD_NAME', '');
-      vi.stubEnv('VITE_CLOUDINARY_UPLOAD_PRESET', '');
+    it('debe retornar undefined para la variable opcional de ImgBB si no está definida', () => {
+      vi.stubEnv('VITE_IMGBB_API_KEY', '');
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const result = validateRuntimeEnv();
-      expect(result.cloudinaryCloudName).toBeUndefined();
-      expect(result.cloudinaryUploadPreset).toBeUndefined();
+      expect(result.imgbbApiKey).toBeUndefined();
       expect(warnSpy).toHaveBeenCalled();
       warnSpy.mockRestore();
     });

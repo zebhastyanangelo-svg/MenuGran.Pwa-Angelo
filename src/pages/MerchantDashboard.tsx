@@ -7,6 +7,7 @@ import {
 import { supabase } from '../services/supabase';
 import type { OrderRow } from '../types/database';
 import { ProductManagement } from '../components/merchant/ProductManagement';
+import { MerchantProfileForm } from '../components/merchant/MerchantProfileForm';
 import { OrdersBoard } from '../components/merchant/OrdersBoard';
 import { PaymentProofModal } from '../components/merchant/PaymentProofModal';
 
@@ -14,7 +15,7 @@ export function MerchantDashboard() {
   const { user } = useAuth();
   const { merchantIds, orders, loading, error, updateOrderStatus } =
     useMerchantDashboard(user);
-  const [activeTab, setActiveTab] = useState<'orders' | 'catalog'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'catalog' | 'profile'>('orders');
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [proofError, setProofError] = useState<string | null>(null);
@@ -46,7 +47,9 @@ export function MerchantDashboard() {
     setProofError(null);
   }
 
-  const tabClass = (tab: 'orders' | 'catalog') =>
+  const tabClass = (
+    tab: 'orders' | 'catalog' | 'profile',
+  ) =>
     `flex-1 sm:flex-none px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
       activeTab === tab
         ? 'bg-indigo-600 text-white shadow-sm'
@@ -103,17 +106,27 @@ export function MerchantDashboard() {
               >
                 Catálogo
               </button>
+              <button
+                type="button"
+                className={tabClass('profile')}
+                onClick={() => setActiveTab('profile')}
+                aria-pressed={activeTab === 'profile'}
+              >
+                Perfil
+              </button>
             </nav>
 
-            {activeTab === 'orders' ? (
-              <OrdersBoard
-                orders={orders}
-                onUpdateStatus={updateOrderStatus}
-                onOpenProof={handleOpenProof}
-              />
-            ) : (
-              <ProductManagement merchantId={merchantIds[0] ?? ''} />
-            )}
+             {activeTab === 'orders' ? (
+               <OrdersBoard
+                 orders={orders}
+                 onUpdateStatus={updateOrderStatus}
+                 onOpenProof={handleOpenProof}
+               />
+             ) : activeTab === 'catalog' ? (
+               <ProductManagement merchantId={merchantIds[0] ?? ''} />
+             ) : (
+               <MerchantProfileForm merchantId={merchantIds[0] ?? ''} />
+             )}
           </>
         )}
       </div>

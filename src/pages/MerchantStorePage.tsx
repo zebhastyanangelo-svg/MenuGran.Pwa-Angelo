@@ -39,6 +39,8 @@ export function MerchantStorePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isBannerError, setIsBannerError] = useState(false);
+  const [isLogoError, setIsLogoError] = useState(false);
 
   const goBack = useCallback(() => {
     navigate('/marketplace');
@@ -218,10 +220,12 @@ export function MerchantStorePage() {
 
         <div className="mb-4 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="h-32 w-full bg-gradient-to-r from-indigo-500 to-purple-600">
-            {merchant.banner_url ? (
+            {merchant.banner_url && !isBannerError ? (
               <img
                 src={merchant.banner_url}
                 alt={`Banner de ${merchant.name}`}
+                loading="lazy"
+                onError={() => setIsBannerError(true)}
                 className="h-full w-full object-cover"
               />
             ) : null}
@@ -230,11 +234,12 @@ export function MerchantStorePage() {
           <div className="relative p-4 pt-0">
             <div className="-mt-8 mb-2 flex items-end justify-between">
               <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-white bg-gray-100 shadow-md">
-                {merchant.logo_url ? (
+                {merchant.logo_url && !isLogoError ? (
                   <img
                     src={merchant.logo_url}
                     alt={`Logo de ${merchant.name}`}
                     loading="lazy"
+                    onError={() => setIsLogoError(true)}
                     className="h-full w-full object-cover"
                   />
                 ) : (

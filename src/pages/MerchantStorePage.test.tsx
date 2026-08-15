@@ -27,14 +27,19 @@ vi.mock('../hooks/useToast', () => ({
   useToast: () => ({ showToast: authMocks.showToastMock, hideToast: vi.fn(), toasts: [] }),
 }));
 
-function buildMerchant(id: string, name: string): MerchantRow {
+function buildMerchant(
+  id: string,
+  name: string,
+  logo_url: string | null = null,
+  banner_url: string | null = null,
+): MerchantRow {
   return {
     id,
     owner_id: 'owner-1',
     name,
     slug: name.toLowerCase().replace(/\s/g, '-'),
-    logo_url: null,
-    banner_url: null,
+    logo_url,
+    banner_url,
     status: 'active',
     verification_docs: {},
     location: null,
@@ -252,5 +257,115 @@ describe('MerchantStorePage', () => {
         }),
       );
     });
+  });
+
+  it('muestra el logo y el banner del comercio cuando están definidos', async () => {
+    mockTableResults({
+      merchants: {
+        data: [
+          buildMerchant('merchant-1', 'La Esquina', 'https://i.ibb.co/logo.png', 'https://i.ibb.co/banner.jpg'),
+        ],
+        error: null,
+      },
+      categories: { data: [], error: null },
+      products: { data: [], error: null },
+    });
+
+    renderWithProviders(
+      <MemoryRouter initialEntries={['/merchant/merchant-1']}>
+        <Routes>
+          <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByAltText('Logo de La Esquina')).toHaveAttribute(
+      'src',
+      'https://i.ibb.co/logo.png',
+    );
+    expect(screen.getByAltText('Banner de La Esquina')).toHaveAttribute(
+      'src',
+      'https://i.ibb.co/banner.jpg',
+    );
+  });
+
+  it('muestra el placeholder del logo cuando logo_url es null', async () => {
+    mockTableResults({
+      merchants: { data: [buildMerchant('merchant-1', 'La Esquina')], error: null },
+      categories: { data: [], error: null },
+      products: { data: [], error: null },
+    });
+
+    renderWithProviders(
+      <MemoryRouter initialEntries={['/merchant/merchant-1']}>
+        <Routes>
+          <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('La Esquina');
+    expect(screen.queryByAltText(/Logo de/i)).not.toBeInTheDocument();
+    expect(screen.queryByAltText(/Banner de/i)).not.toBeInTheDocument();
+    expect(screen.getByText('L')).toBeInTheDocument();
+  });
+
+  it('muestra el placeholder cuando logo_url y banner_url están vacíos', async () => {
+    mockTableResults({
+      merchants: {
+        data: [buildMerchant('merchant-1', 'La Esquina', '', '')],
+        error: null,
+      },
+      categories: { data: [], error: null },
+      products: { data: [], error: null },
+    });
+
+    renderWithProviders(
+      <MemoryRouter initialEntries={['/merchant/merchant-1']}>
+        <Routes>
+          <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('La Esquina');
+    expect(screen.queryByAltText(/Logo de/i)).not.toBeInTheDocument();
+    expect(screen.queryByAltText(/Banner de/i)).not.toBeInTheDocument();
+  });
+
+  it('muestra el placeholder del logo si la imagen falla al cargar (onError)', async () => {
+    mockTableResults({
+      merchants: {
+        data: [
+          buildMerchant(
+            'merchant-1',
+            'La Esquina',
+            'https://i.ibb.co/logo-roto.png',
+            'https://i.ibb.co/banner-roto.jpg',
+          ),
+        ],
+        error: null,
+      },
+      categories: { data: [], error: null },
+      products: { data: [], error: null },
+    });
+
+    renderWithProviders(
+      <MemoryRouter initialEntries={['/merchant/merchant-1']}>
+        <Routes>
+          <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const logoImg = await screen.findByAltText('Logo de La Esquina');
+    expect(logoImg).toBeInTheDocument();
+
+    fireEvent.error(logoImg);
+
+    await waitFor(() => {
+      expect(screen.queryByAltText('Logo de La Esquina')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('L')).toBeInTheDocument();
   });
 });

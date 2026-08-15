@@ -17,9 +17,9 @@ vi.mock('../../services/supabase', () => ({
   },
 }));
 
-// Mock Cloudinary upload
-vi.mock('../../services/cloudinary', () => ({
-  uploadToCloudinary: vi.fn().mockResolvedValue('https://res.cloudinary.com/demo/image/upload/sample.jpg'),
+// Mock ImgBB upload
+vi.mock('../../services/imgbb', () => ({
+  uploadToImgBB: vi.fn().mockResolvedValue('https://i.ibb.co/sample/food.jpg'),
 }));
 
 const mockCategories: CategoryRow[] = [
@@ -47,7 +47,7 @@ const mockProducts: ProductRow[] = [
     title: 'Hamburguesa Clásica',
     description: 'Carne, queso, lechuga',
     price: '8.50',
-    image_url: 'https://cloudinary.com/burguer.jpg',
+     image_url: 'https://i.ibb.co/sample/burguer.jpg',
     is_available: true,
     created_at: new Date().toISOString(),
   },

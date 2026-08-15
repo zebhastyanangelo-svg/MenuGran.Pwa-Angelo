@@ -16,7 +16,7 @@ describe('productForm utilities', () => {
         price: '12.50',
         category_id: 'cat-123',
         is_available: true,
-        image_url: 'https://cloudinary.com/image.jpg',
+        image_url: 'https://i.ibb.co/sample/image.jpg',
       };
 
       const result = validateProductForm(validProduct);
