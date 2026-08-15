@@ -184,7 +184,7 @@ export function LocationPicker({
         type="button"
         onClick={handleDetectLocation}
         disabled={isLocating}
-        className="absolute top-2 right-2 flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-md hover:bg-gray-50 disabled:opacity-50"
+        className="absolute top-2 right-2 z-[1000] pointer-events-auto flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-md hover:bg-gray-50 disabled:opacity-50"
       >
         {isLocating ? (
           <>
