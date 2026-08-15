@@ -37,6 +37,20 @@ export function usePwaUpdate(options: UsePwaUpdateOptions = {}) {
     setOfflineReady(false);
   }, []);
 
+  const checkForUpdates = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+      return;
+    }
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration) {
+        await registration.update();
+      }
+    } catch (error) {
+      console.error('[PWA] Error al verificar actualizaciones:', error);
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
@@ -50,15 +64,25 @@ export function usePwaUpdate(options: UsePwaUpdateOptions = {}) {
       setOfflineReady(true);
       onOfflineReady?.();
     };
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        void checkForUpdates();
+      }
+    };
 
     window.addEventListener(PWA_NEED_REFRESH_EVENT, handleNeedRefresh);
     window.addEventListener(PWA_OFFLINE_READY_EVENT, handleOfflineReady);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener(PWA_NEED_REFRESH_EVENT, handleNeedRefresh);
       window.removeEventListener(PWA_OFFLINE_READY_EVENT, handleOfflineReady);
+      document.removeEventListener(
+        'visibilitychange',
+        handleVisibilityChange,
+      );
     };
-  }, [onNeedRefresh, onOfflineReady]);
+  }, [onNeedRefresh, onOfflineReady, checkForUpdates]);
 
   return {
     needRefresh,
@@ -66,6 +90,7 @@ export function usePwaUpdate(options: UsePwaUpdateOptions = {}) {
     isUpdateAvailable: needRefresh,
     isOfflineReady: offlineReady,
     updateServiceWorker,
+    checkForUpdates,
     closePrompt,
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, fireEvent, waitFor } from '@testing-library/react';
 import { usePwaInstall, usePwaUpdate } from '../hooks/usePwaUpdate';
 
 function createMockRegistration(overrides: Partial<ServiceWorkerRegistration> = {}) {
@@ -166,19 +166,90 @@ describe('usePwaUpdate', () => {
   });
 
   it('limpia los event listeners al desmontar', () => {
-    const removeSpy = vi.spyOn(window, 'removeEventListener');
+    const removeWindowSpy = vi.spyOn(window, 'removeEventListener');
+    const removeDocSpy = vi.spyOn(document, 'removeEventListener');
     const { unmount } = renderHook(() => usePwaUpdate());
 
     unmount();
 
-    expect(removeSpy).toHaveBeenCalledWith(
+    expect(removeWindowSpy).toHaveBeenCalledWith(
       'pwa:need-refresh',
       expect.any(Function),
     );
-    expect(removeSpy).toHaveBeenCalledWith(
+    expect(removeWindowSpy).toHaveBeenCalledWith(
       'pwa:offline-ready',
       expect.any(Function),
     );
+    expect(removeDocSpy).toHaveBeenCalledWith(
+      'visibilitychange',
+      expect.any(Function),
+    );
+  });
+
+  it('expondr checkForUpdates que llama registration.update()', async () => {
+    const registration = createMockRegistration();
+    stubServiceWorker(registration);
+
+    const { result } = renderHook(() => usePwaUpdate());
+
+    await act(async () => {
+      await result.current.checkForUpdates();
+    });
+
+    expect(registration.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('checkForUpdates es no-op cuando no hay Service Worker disponible', async () => {
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    });
+
+    const { result } = renderHook(() => usePwaUpdate());
+
+    await expect(
+      act(async () => {
+        await result.current.checkForUpdates();
+      }),
+    ).resolves.not.toThrow();
+  });
+
+  it('verifica actualizaciones al enfocar la app (visibilitychange)', async () => {
+    const registration = createMockRegistration();
+    stubServiceWorker(registration);
+
+    renderHook(() => usePwaUpdate());
+
+    Object.defineProperty(document, 'hidden', {
+      value: true,
+      configurable: true,
+    });
+    fireEvent(document, new Event('visibilitychange'));
+    Object.defineProperty(document, 'hidden', {
+      value: false,
+      configurable: true,
+    });
+    fireEvent(document, new Event('visibilitychange'));
+
+    await waitFor(() => {
+      expect(registration.update).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('no verifica actualizaciones cuando la pestaña sigue oculta', () => {
+    const registration = createMockRegistration();
+    stubServiceWorker(registration);
+
+    renderHook(() => usePwaUpdate());
+
+    Object.defineProperty(document, 'hidden', {
+      value: true,
+      configurable: true,
+    });
+    fireEvent(document, new Event('visibilitychange'));
+
+    expect(registration.update).not.toHaveBeenCalled();
   });
 
   it('acepta callbacks opcionales sin romper', () => {
