@@ -10,6 +10,7 @@ vi.mock('leaflet', () => {
     remove: vi.fn(),
     on: vi.fn(),
     off: vi.fn(),
+    invalidateSize: vi.fn(),
   };
 
   const markerFn = vi.fn((_latlng: unknown, _options?: unknown) => ({
@@ -19,6 +20,10 @@ vi.mock('leaflet', () => {
     remove: vi.fn(),
   }));
 
+  const tileLayerFn = vi.fn(() => ({
+    addTo: vi.fn(),
+  }));
+
   const iconFn = vi.fn((_options: unknown) => ({ _options }));
 
   return {
@@ -26,6 +31,7 @@ vi.mock('leaflet', () => {
       map: vi.fn(() => mockMap),
       marker: markerFn,
       icon: iconFn,
+      tileLayer: tileLayerFn,
     },
   };
 });

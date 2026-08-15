@@ -33,11 +33,15 @@ function createMap(
   center: [number, number],
   zoom: number,
 ): L.Map {
-  return L.map(container, {
+  const map = L.map(container, {
     center,
     zoom,
     zoomControl: true,
   });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+  }).addTo(map);
+  return map;
 }
 
 function syncMarker(
@@ -104,6 +108,7 @@ export function LocationPicker({
     if (mapInstanceRef.current === null) {
       const map = createMap(mapRef.current, initialCenter, DEFAULT_ZOOM);
       mapInstanceRef.current = map;
+      map.invalidateSize();
 
       map.on('click', (e: L.LeafletMouseEvent) => {
         const latlng = e.latlng;
