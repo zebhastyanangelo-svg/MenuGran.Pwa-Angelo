@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { OfflineBanner } from './components/pwa/OfflineBanner';
 import { ReloadPrompt } from './components/pwa/ReloadPrompt';
 import { NotificationToastProvider, NotificationToastList } from './components/pwa/NotificationToast';
+import { Analytics } from '@vercel/analytics/react';
 import { PageLoader } from './components/PageLoader';
 import { Layout } from './components/layout/Layout';
 import { CartFab } from './components/cart/CartFab';
@@ -51,6 +52,7 @@ export function App() {
             </Suspense>
             <ReloadPrompt />
             <CartFab />
+            <Analytics />
           </BrowserRouter>
           <NotificationToastList />
         </NotificationToastProvider>

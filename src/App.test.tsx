@@ -191,4 +191,12 @@ describe('App Router Integration', () => {
       expect(screen.getByText('404')).toBeInTheDocument();
     }, { timeout: 10000 });
   }, 15000);
+
+  it('monta el componente Vercel Analytics sin interrumpir el render', async () => {
+    setAuth(baseAuthValue);
+
+    render(<App />);
+
+    expect(screen.getByTestId('vercel-analytics')).toBeInTheDocument();
+  }, 15000);
 });
