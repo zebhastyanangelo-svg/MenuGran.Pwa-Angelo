@@ -103,12 +103,21 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
 
   const from = searchParams.get('from') ?? '/marketplace';
 
+  const [registerView, setRegisterView] = useState<'customer' | 'merchant_owner'>('customer');
+
   const handleTabChange = (tab: AuthTab) => {
     setActiveTab(tab);
     setError(null);
     setShowConfirmationBanner(false);
     setPendingEmail('');
     navigate(tab === 'login' ? '/login' : '/register', { replace: true });
+  };
+
+  const handleRegisterViewChange = (view: 'customer' | 'merchant_owner') => {
+    setRegisterView(view);
+    setError(null);
+    setShowConfirmationBanner(false);
+    setPendingEmail('');
   };
 
   const handleGoogleSignIn = async () => {
@@ -196,7 +205,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         setPendingEmail(email);
         setShowConfirmationBanner(true);
       } else {
-        if (role === 'merchant_owner') {
+        if (registerView === 'merchant_owner') {
           setIsLoading(true);
           try {
             if (logoFile) {
@@ -372,51 +381,294 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         </form>
       )}
 
-      {activeTab === 'register' && (
+{activeTab === 'register' && (
         <form onSubmit={handleRegister} className="space-y-4">
           <h2 className="mb-2 text-center text-xl font-bold text-slate-900">
             Registrarse
           </h2>
-          <div>
-            <label htmlFor="register-full_name" className="block text-sm font-medium text-slate-700">
-              Nombre completo
-            </label>
-            <input
-              id="register-full_name"
-              name="full_name"
-              type="text"
-              required
-              autoComplete="name"
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-            />
+
+          {/* Account type tabs */}
+          <div className="flex gap-2 mb-4">
+            <button
+              type="button"
+              className={
+                'flex-1 py-2 rounded border border-slate-300 text-sm font-medium text-slate-700 transition-colors ' +
+                (registerView === 'customer'
+                  ? 'bg-brand-red text-white'
+                  : 'bg-slate-100 text-slate-900 hover:text-slate-800')
+              }
+              onClick={() => handleRegisterViewChange('customer')}
+            >
+              Cliente
+            </button>
+            <button
+              type="button"
+              className={
+                'flex-1 py-2 rounded border border-slate-300 text-sm font-medium text-slate-700 transition-colors ' +
+                (registerView === 'merchant_owner'
+                  ? 'bg-brand-red text-white'
+                  : 'bg-slate-100 text-slate-900 hover:text-slate-800')
+              }
+              onClick={() => handleRegisterViewChange('merchant_owner')}
+            >
+              Comercio
+            </button>
           </div>
-          <div>
-            <label htmlFor="register-email" className="block text-sm font-medium text-slate-700">
-              Correo electrónico
-            </label>
-            <input
-              id="register-email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-            />
-          </div>
-          <div>
-            <label htmlFor="register-password" className="block text-sm font-medium text-slate-700">
-              Contraseña
-            </label>
-            <input
-              id="register-password"
-              name="password"
-              type="password"
-              required
-              minLength={6}
-              autoComplete="new-password"
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-            />
-          </div>
+
+          {/* Customer form fields */}
+          {registerView === 'customer' && (
+            <div>
+              <div>
+                <label htmlFor="register-full_name" className="block text-sm font-medium text-slate-700">
+                  Nombre completo
+                </label>
+                <input
+                  id="register-full_name"
+                  name="full_name"
+                  type="text"
+                  required
+                  autoComplete="name"
+                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="register-ci" className="block text-sm font-medium text-slate-700">
+                  C.I. (Cédula de Identidad)
+                </label>
+                <input
+                  id="register-ci"
+                  name="ci"
+                  type="text"
+                  required
+                  autoComplete="name"
+                  maxLength={20}
+                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                  placeholder="Ej: V-12345678"
+                />
+              </div>
+              <div>
+                <label htmlFor="register-email" className="block text-sm font-medium text-slate-700">
+                  Correo electrónico
+                </label>
+                <input
+                  id="register-email"
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="register-phone" className="block text-sm font-medium text-slate-700">
+                  Teléfono
+                </label>
+                <input
+                  id="register-phone"
+                  name="phone"
+                  type="tel"
+                  required
+                  autoComplete="tel"
+                  maxLength={15}
+                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                  placeholder="Ej: +58 412-123-4567"
+                  pattern="[0-9\s+\-]+"
+                />
+              </div>
+              <div>
+                <label htmlFor="register-password" className="block text-sm font-medium text-slate-700">
+                  Contraseña
+                </label>
+                <input
+                  id="register-password"
+                  name="password"
+                  type="password"
+                  required
+                  minLength={6}
+                  autoComplete="new-password"
+                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Merchant form fields */}
+          {registerView === 'merchant_owner' && (
+            <div>
+              <div>
+                <label htmlFor="register-rif" className="block text-sm font-medium text-slate-700">
+                  RIF
+                </label>
+                <input
+                  id="register-rif"
+                  name="rif"
+                  type="text"
+                  required
+                  autoComplete="name"
+                  value={merchantData.rif}
+                  onChange={(e) =>
+                    setMerchantData({
+                      ...merchantData,
+                      rif: e.target.value,
+                    })
+                  }
+                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                  placeholder="Ej: J-12345678-9"
+                />
+                <label htmlFor="register-category" className="block text-sm font-medium text-slate-700 mt-4">
+                  Categoría
+                </label>
+                <input
+                  id="register-category"
+                  name="category"
+                  type="text"
+                  required
+                  autoComplete="name"
+                  value={merchantData.category}
+                  onChange={(e) =>
+                    setMerchantData({
+                      ...merchantData,
+                      category: e.target.value,
+                    })
+                  }
+                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                  placeholder="Ej: Restaurante, Tienda, etc."
+                />
+                <label htmlFor="register-description" className="block text-sm font-medium text-slate-700 mt-4">
+                  Descripción
+                </label>
+                <textarea
+                  id="register-description"
+                  name="description"
+                  rows={3}
+                  required
+                  placeholder="Describe tu negocio..."
+                  value={merchantData.description}
+                  onChange={(e) =>
+                    setMerchantData({
+                      ...merchantData,
+                      description: e.target.value,
+                    })
+                  }
+                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm resize-none"
+                />
+                <label htmlFor="register-address" className="block text-sm font-medium text-slate-700 mt-4">
+                  Dirección
+                </label>
+                <input
+                  id="register-address"
+                  name="address"
+                  type="text"
+                  required
+                  autoComplete="address"
+                  value={merchantData.address}
+                  onChange={(e) =>
+                    setMerchantData({
+                      ...merchantData,
+                      address: e.target.value,
+                    })
+                  }
+                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                  placeholder="Ej: Calle Principal #123"
+                />
+                <label htmlFor="register-phone_whatsapp" className="block text-sm font-medium text-slate-700 mt-4">
+                  Teléfono WhatsApp
+                </label>
+                <input
+                  id="register-phone_whatsapp"
+                  name="phone_whatsapp"
+                  type="tel"
+                  required
+                  autoComplete="tel"
+                  value={merchantData.phone_whatsapp}
+                  onChange={(e) =>
+                    setMerchantData({
+                      ...merchantData,
+                      phone_whatsapp: e.target.value,
+                    })
+                  }
+                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                  placeholder="Ej: +58 412-123-4567"
+                  pattern="[0-9\s+\-]+"
+                  maxLength={20}
+                />
+                <label htmlFor="register-service_modalities" className="block text-sm font-medium text-slate-700 mt-4">
+                  Modalidades de servicio
+                </label>
+                <input
+                  id="register-service_modalities"
+                  name="service_modalities"
+                  type="text"
+                  required
+                  autoComplete="name"
+                  value={merchantData.service_modalities.join(', ')}
+                  onChange={(e) =>
+                    setMerchantData({
+                      ...merchantData,
+                      service_modalities: e.target.value
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter((s) => s.length > 0),
+                    })
+                  }
+                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                  placeholder="Ej: Para llevar, En entrega a domicilio, En local"
+                />
+                <label htmlFor="register-business_hours" className="block text-sm font-medium text-slate-700 mt-4">
+                  Horario de atención
+                </label>
+                <input
+                  id="register-business_hours"
+                  name="business_hours"
+                  type="text"
+                  required
+                  autoComplete="business hours"
+                  value={merchantData.business_hours}
+                  onChange={(e) =>
+                    setMerchantData({
+                      ...merchantData,
+                      business_hours: e.target.value,
+                    })
+                  }
+                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                  placeholder="Ej: Lun-Sab 9:00-18:00"
+                />
+                <div className="mt-4">
+                  <label htmlFor="register-logo" className="block text-sm font-medium text-slate-700">
+                    Logo del negocio
+                  </label>
+                  <input
+                    type="file"
+                    id="register-logo"
+                    name="logo"
+                    accept="image/*"
+                    onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+                    className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    PNG, JPG mximo 5MB
+                  </p>
+                </div>
+                <div className="mt-4">
+                  <label htmlFor="register-banner" className="block text-sm font-medium text-slate-700">
+                    Banner del negocio
+                  </label>
+                  <input
+                    type="file"
+                    id="register-banner"
+                    name="banner"
+                    accept="image/*"
+                    onChange={(e) => setBannerFile(e.target.files?.[0] ?? null)}
+                    className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    PNG, JPG mximo 5MB
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div>
             <label htmlFor="register-role" className="block text-sm font-medium text-slate-700">
               Tipo de cuenta
@@ -436,178 +688,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
               ))}
             </select>
           </div>
-{/* Merchant-specific fields for merchant_owner role */}
-          <div>
-            <label htmlFor="register-rif" className="block text-sm font-medium text-slate-700">
-              RIF
-            </label>
-            <input
-              id="register-rif"
-              name="rif"
-              type="text"
-              required
-              autoComplete="name"
-              value={merchantData.rif}
-              onChange={(e) =>
-                setMerchantData({
-                  ...merchantData,
-                  rif: e.target.value,
-                })
-              }
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-              placeholder="Ej: J-12345678-9"
-            />
-            <label htmlFor="register-category" className="block text-sm font-medium text-slate-700 mt-4">
-              Categoría
-            </label>
-            <input
-              id="register-category"
-              name="category"
-              type="text"
-              required
-              autoComplete="name"
-              value={merchantData.category}
-              onChange={(e) =>
-                setMerchantData({
-                  ...merchantData,
-                  category: e.target.value,
-                })
-              }
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-              placeholder="Ej: Restaurante, Tienda, etc."
-            />
-            <label htmlFor="register-description" className="block text-sm font-medium text-slate-700 mt-4">
-              Descripción
-            </label>
-            <textarea
-              id="register-description"
-              name="description"
-              rows={3}
-              required
-              placeholder="Describe tu negocio..."
-              value={merchantData.description}
-              onChange={(e) =>
-                setMerchantData({
-                  ...merchantData,
-                  description: e.target.value,
-                })
-              }
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm resize-none"
-            />
-            <label htmlFor="register-address" className="block text-sm font-medium text-slate-700 mt-4">
-              Dirección
-            </label>
-            <input
-              id="register-address"
-              name="address"
-              type="text"
-              required
-              autoComplete="address"
-              value={merchantData.address}
-              onChange={(e) =>
-                setMerchantData({
-                  ...merchantData,
-                  address: e.target.value,
-                })
-              }
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-              placeholder="Ej: Calle Principal #123"
-            />
-            <label htmlFor="register-phone_whatsapp" className="block text-sm font-medium text-slate-700 mt-4">
-              Teléfono WhatsApp
-            </label>
-            <input
-              id="register-phone_whatsapp"
-              name="phone_whatsapp"
-              type="tel"
-              required
-              autoComplete="tel"
-              value={merchantData.phone_whatsapp}
-              onChange={(e) =>
-                setMerchantData({
-                  ...merchantData,
-                  phone_whatsapp: e.target.value,
-                })
-              }
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-              placeholder="Ej: +58 412-123-4567"
-              pattern="[0-9\s+\-]+"
-              maxLength={20}
-            />
-            <label htmlFor="register-service_modalities" className="block text-sm font-medium text-slate-700 mt-4">
-              Modalidades de servicio
-            </label>
-            <input
-              id="register-service_modalities"
-              name="service_modalities"
-              type="text"
-              required
-              autoComplete="name"
-              value={merchantData.service_modalities.join(', ')}
-              onChange={(e) =>
-                setMerchantData({
-                  ...merchantData,
-                  service_modalities: e.target.value
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter((s) => s.length > 0),
-                })
-              }
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-              placeholder="Ej: Para llevar, En entrega a domicilio, En local"
-            />
-            <label htmlFor="register-business_hours" className="block text-sm font-medium text-slate-700 mt-4">
-              Horario de atención
-            </label>
-            <input
-              id="register-business_hours"
-              name="business_hours"
-              type="text"
-              required
-              autoComplete="business hours"
-              value={merchantData.business_hours}
-              onChange={(e) =>
-                setMerchantData({
-                  ...merchantData,
-                  business_hours: e.target.value,
-                })
-              }
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-              placeholder="Ej: Lun-Sab 9:00-18:00"
-            />
-            <div className="mt-4">
-              <label htmlFor="register-logo" className="block text-sm font-medium text-slate-700">
-                Logo del negocio
-              </label>
-              <input
-                type="file"
-                id="register-logo"
-                name="logo"
-                accept="image/*"
-                onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
-                className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none"
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                PNG, JPG mximo 5MB
-              </p>
-            </div>
-            <div className="mt-4">
-              <label htmlFor="register-banner" className="block text-sm font-medium text-slate-700">
-                Banner del negocio
-              </label>
-              <input
-                type="file"
-                id="register-banner"
-                name="banner"
-                accept="image/*"
-                onChange={(e) => setBannerFile(e.target.files?.[0] ?? null)}
-                className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none"
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                PNG, JPG mximo 5MB
-              </p>
-            </div>
-          </div>
+
           <button
             type="submit"
             data-testid="register-submit"

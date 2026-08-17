@@ -352,4 +352,76 @@ describe('AuthForm', () => {
 
     expect(resendConfirmationEmail).toHaveBeenCalledWith('unconfirmed@example.com');
   });
+
+  it('cambiar a la pestaña de Comercio muestra los campos de comerciante y oculta los del cliente', async () => {
+    const user = userEvent.setup();
+    renderWithRouter('register', '/marketplace');
+
+    // Click the Comercio tab - get the button by role with exact name
+    const commerceButton = screen.getByRole('button', { name: /Comercio/i });
+    await user.click(commerceButton);
+
+    // Merchant fields should be visible
+    expect(screen.getByLabelText(/RIF/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Categoría/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Descripción/i)).toBeInTheDocument();
+
+    // Customer fields should be hidden
+    expect(screen.queryByLabelText(/Nombre completo/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('C.I.')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Teléfono$/i)).not.toBeInTheDocument();
+  });
+
+  it('cambiar a la pestaña de Cliente muestra los campos del cliente y oculta los del comercio', async () => {
+    const user = userEvent.setup();
+    renderWithRouter('register', '/marketplace');
+
+    // Click the Cliente tab - get the button by role with exact name
+    const customerButton = screen.getByRole('button', { name: /Cliente/i });
+    await user.click(customerButton);
+
+    // Customer fields should be visible
+    expect(screen.getByLabelText(/Nombre completo/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/C.I./i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Teléfono/i)).toBeInTheDocument();
+
+    // Merchant fields should be hidden
+    expect(screen.queryByLabelText(/RIF/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Categoría/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Descripción/i)).not.toBeInTheDocument();
+  });
+
+  it('validar que los campos de comercio no estén en el DOM cuando el rol es cliente', async () => {
+    const user = userEvent.setup();
+    renderWithRouter('register', '/marketplace');
+
+    // Click the Cliente tab first
+    const customerButton = screen.getByRole('button', { name: /Cliente/i });
+    await user.click(customerButton);
+
+    const merchantFields = [
+      'RIF',
+      'Categoría',
+      'Descripción',
+      'Dirección',
+      'Teléfono WhatsApp',
+    ];
+    for (const field of merchantFields) {
+      expect(screen.queryByLabelText(field)).not.toBeInTheDocument();
+    }
+  });
+
+  it('validar que los campos de cliente no estén en el DOM cuando el rol es comerciante', async () => {
+    const user = userEvent.setup();
+    renderWithRouter('register', '/marketplace');
+
+    // Click the Comercio tab first
+    const commerceButton = screen.getByRole('button', { name: /Comercio/i });
+    await user.click(commerceButton);
+
+    const customerFields = ['Nombre completo', 'C.I.', 'Teléfono'];
+    for (const field of customerFields) {
+      expect(screen.queryByLabelText(field)).not.toBeInTheDocument();
+    }
+  });
 });
