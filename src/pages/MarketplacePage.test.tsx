@@ -47,6 +47,13 @@ function buildMerchant(id: string, name: string): MerchantRow {
     location: null,
     is_active: true,
     created_at: '2026-01-01T00:00:00.000Z',
+    rif: 'J-12345678-0',
+    category: 'General',
+    description: 'Descripción',
+    address: 'Dirección',
+    phone_whatsapp: '+58 412-123-4567',
+    service_modalities: ['dine_in'],
+    business_hours: 'L-V: 8:00-20:00',
   };
 }
 

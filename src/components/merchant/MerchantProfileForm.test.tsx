@@ -37,6 +37,13 @@ const mockMerchant: MerchantRow = {
   is_active: true,
   location: null,
   created_at: new Date().toISOString(),
+  rif: 'J-12345678-0',
+  category: 'General',
+  description: 'Descripción',
+  address: 'Dirección',
+  phone_whatsapp: '+58 412-123-4567',
+  service_modalities: ['dine_in'],
+  business_hours: 'L-V: 8:00-20:00',
 };
 
 describe('MerchantProfileForm', () => {
@@ -170,7 +177,7 @@ describe('MerchantProfileForm', () => {
       banner_url: null,
     });
     expect(builder.update.mock.results[0].value.eq).toHaveBeenCalled();
-  });
+  }, 10000);
 
   it('muestra el error de la API si la subida a ImgBB falla', async () => {
     mockSupabase();

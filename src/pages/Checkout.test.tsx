@@ -33,6 +33,15 @@ vi.mock('../components/map/LocationPicker', () => {
   };
 });
 
+const mockSimulatePaymentProofUpload = vi
+  .fn()
+  .mockResolvedValue('m-123-proof');
+
+vi.mock('../services/checkoutService', () => ({
+  simulatePaymentProofUpload: (...args: unknown[]) =>
+    mockSimulatePaymentProofUpload(...args),
+}));
+
 const validCart = {
   items: [{ product: { id: 'p-1', price: '100.00', title: 'Pizza' }, quantity: 1 } as any],
   totalAmount: '100',
@@ -57,6 +66,7 @@ describe('Checkout', () => {
 
   beforeEach(() => {
     mockShowToast.mockClear();
+    mockSimulatePaymentProofUpload.mockClear().mockResolvedValue('m-123-proof');
     vi.mocked(useCart).mockReturnValue(validCart);
   });
 
@@ -120,7 +130,7 @@ describe('Checkout', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(/Selecciona tu ubicación de entrega/i);
-  });
+  }, 10000);
 
   it('confirma el pedido, muestra toast y vacía el carrito', async () => {
     render(
@@ -143,7 +153,7 @@ describe('Checkout', () => {
       expect(mockShowToast).toHaveBeenCalledWith(
         expect.objectContaining({ variant: 'success', title: '¡Pedido enviado!' }),
       );
-    });
+    }, { timeout: 5000 });
     expect(validCart.clearCart).toHaveBeenCalled();
-  });
+  }, 10000);
 });

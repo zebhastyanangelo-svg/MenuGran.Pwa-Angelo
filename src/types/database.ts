@@ -107,6 +107,13 @@ export interface MerchantRow {
   is_active: boolean;
   location: GeoPoint | null;
   created_at: IsoTimestamp;
+  rif: string;
+  category: string;
+  description: string | null;
+  address: string;
+  phone_whatsapp: string;
+  service_modalities: string[];
+  business_hours: string;
 }
 
 export interface MerchantStaffRow {
@@ -173,7 +180,7 @@ export type ProfileInsert = Pick<ProfileRow, 'id' | 'email'> &
 
 export type MerchantInsert = Pick<
   MerchantRow,
-  'owner_id' | 'name' | 'slug'
+  'owner_id' | 'name' | 'slug' | 'rif' | 'category' | 'description' | 'address' | 'phone_whatsapp' | 'service_modalities' | 'business_hours'
 > &
   Partial<Pick<MerchantRow, 'logo_url' | 'banner_url' | 'status' | 'is_active'>>;
 

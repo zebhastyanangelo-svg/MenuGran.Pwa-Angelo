@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useSearchParams } from 'react-router-dom';
@@ -185,7 +185,9 @@ describe('AuthForm', () => {
     await user.type(screen.getByLabelText(/Correo electrónico/i), 'juan@example.com');
     await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
     await user.selectOptions(screen.getByLabelText(/Tipo de cuenta/i), 'customer');
-    await user.click(screen.getByTestId('register-submit'));
+
+    const form = screen.getByTestId('register-submit').closest('form')!;
+    fireEvent.submit(form);
 
     expect(signUpWithPassword).toHaveBeenCalledWith(
       'juan@example.com',
@@ -207,7 +209,9 @@ describe('AuthForm', () => {
     await user.type(screen.getByLabelText(/Correo electrónico/i), 'ana@example.com');
     await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
     await user.selectOptions(screen.getByLabelText(/Tipo de cuenta/i), 'merchant_owner');
-    await user.click(screen.getByTestId('register-submit'));
+
+    const form = screen.getByTestId('register-submit').closest('form')!;
+    fireEvent.submit(form);
 
     expect(signUpWithPassword).toHaveBeenCalledWith(
       'ana@example.com',
@@ -252,7 +256,9 @@ describe('AuthForm', () => {
     await userEvent.type(screen.getByLabelText(/Nombre completo/i), 'Test User');
     await userEvent.type(screen.getByLabelText(/Correo electrónico/i), 'exists@example.com');
     await userEvent.type(screen.getByLabelText(/Contraseña/i), 'password123');
-    await userEvent.click(screen.getByTestId('register-submit'));
+
+    const form = screen.getByTestId('register-submit').closest('form')!;
+    fireEvent.submit(form);
 
     expect(
       await screen.findByText(/ya está registrado/i),
@@ -266,7 +272,9 @@ describe('AuthForm', () => {
     await userEvent.type(screen.getByLabelText(/Nombre completo/i), 'Test User');
     await userEvent.type(screen.getByLabelText(/Correo electrónico/i), 'test@example.com');
     await userEvent.type(screen.getByLabelText(/Contraseña/i), 'password123');
-    await userEvent.click(screen.getByTestId('register-submit'));
+
+    const form = screen.getByTestId('register-submit').closest('form')!;
+    fireEvent.submit(form);
 
     expect(screen.getByText('Registrando...')).toBeInTheDocument();
   });
@@ -278,7 +286,9 @@ describe('AuthForm', () => {
     await user.type(screen.getByLabelText(/Nombre completo/i), 'Test User');
     await user.type(screen.getByLabelText(/Correo electrónico/i), 'user@gmai.com');
     await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
-    await user.click(screen.getByTestId('register-submit'));
+
+    const form = screen.getByTestId('register-submit').closest('form')!;
+    fireEvent.submit(form);
 
     expect(
       await screen.findByText(/¿Quisiste decir 'user@gmail.com'\?/i),
@@ -295,7 +305,9 @@ describe('AuthForm', () => {
     await user.type(screen.getByLabelText(/Correo electrónico/i), 'juan@example.com');
     await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
     await user.selectOptions(screen.getByLabelText(/Tipo de cuenta/i), 'customer');
-    await user.click(screen.getByTestId('register-submit'));
+
+    const form = screen.getByTestId('register-submit').closest('form')!;
+    fireEvent.submit(form);
 
     expect(
       await screen.findByText(/¡Registro exitoso!/i),

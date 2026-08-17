@@ -8,6 +8,7 @@ import { useCart } from '../hooks/useCart';
 import { useToast } from '../hooks/useToast';
 import { compressImage } from '../utils/imageCompressor';
 import type { GeoPoint, OrderType } from '../types/database';
+import { simulatePaymentProofUpload } from '../services/checkoutService';
 
 const BANK_ACCOUNTS: { id: string; label: string }[] = [
   { id: 'banco_pichincha', label: 'Banco Pichincha - 1234 5678 9012 3456' },
@@ -247,10 +248,4 @@ export function Checkout() {
       </form>
     </div>
   );
-}
-
-async function simulatePaymentProofUpload(file: Blob, merchantId: string): Promise<string> {
-  await new Promise((resolve) => setTimeout(resolve, 700));
-  if (!file) throw new Error('No se proporcionó un comprobante.');
-  return `${merchantId}-proof`;
 }

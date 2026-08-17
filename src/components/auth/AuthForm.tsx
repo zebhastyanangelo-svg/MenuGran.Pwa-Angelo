@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { suggestEmailDomain } from '../../utils/emailSuggestions';
+import { uploadToImgBB } from '../../services/imgbb';
 import type { UserRole } from '../../types/database';
 
 type AuthTab = 'login' | 'register';
@@ -148,6 +149,27 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     }
   };
 
+  const [role, setRole] = useState<UserRole>('customer');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [merchantData, setMerchantData] = useState<{
+    rif: string;
+    category: string;
+    description: string;
+    address: string;
+    phone_whatsapp: string;
+    service_modalities: string[];
+    business_hours: string;
+  }>({
+    rif: '',
+    category: '',
+    description: '',
+    address: '',
+    phone_whatsapp: '',
+    service_modalities: [],
+    business_hours: '',
+  });
+
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -174,7 +196,28 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         setPendingEmail(email);
         setShowConfirmationBanner(true);
       } else {
-        navigate(from, { replace: true });
+        if (role === 'merchant_owner') {
+          setIsLoading(true);
+          try {
+            if (logoFile) {
+              await uploadToImgBB(logoFile, { compress: true });
+            }
+            if (bannerFile) {
+              await uploadToImgBB(bannerFile, { compress: true });
+            }
+            // TODO: Create merchant profile with new fields
+            // await createMerchant({...merchantData, logo_url, banner_url});
+            navigate(from, { replace: true });
+          } catch (uploadErr) {
+            setError(
+              uploadErr instanceof Error ? uploadErr.message : 'Error al subir imágenes',
+            );
+          } finally {
+            setIsLoading(false);
+          }
+        } else {
+          navigate(from, { replace: true });
+        }
       }
     } catch (err) {
       setError(resolveAuthErrorMessage(err));
@@ -381,6 +424,8 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
             <select
               id="register-role"
               name="role"
+              value={role}
+              onChange={(e) => setRole(e.target.value as UserRole)}
               required
               className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
             >
@@ -390,6 +435,178 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                 </option>
               ))}
             </select>
+          </div>
+{/* Merchant-specific fields for merchant_owner role */}
+          <div>
+            <label htmlFor="register-rif" className="block text-sm font-medium text-slate-700">
+              RIF
+            </label>
+            <input
+              id="register-rif"
+              name="rif"
+              type="text"
+              required
+              autoComplete="name"
+              value={merchantData.rif}
+              onChange={(e) =>
+                setMerchantData({
+                  ...merchantData,
+                  rif: e.target.value,
+                })
+              }
+              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+              placeholder="Ej: J-12345678-9"
+            />
+            <label htmlFor="register-category" className="block text-sm font-medium text-slate-700 mt-4">
+              Categoría
+            </label>
+            <input
+              id="register-category"
+              name="category"
+              type="text"
+              required
+              autoComplete="name"
+              value={merchantData.category}
+              onChange={(e) =>
+                setMerchantData({
+                  ...merchantData,
+                  category: e.target.value,
+                })
+              }
+              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+              placeholder="Ej: Restaurante, Tienda, etc."
+            />
+            <label htmlFor="register-description" className="block text-sm font-medium text-slate-700 mt-4">
+              Descripción
+            </label>
+            <textarea
+              id="register-description"
+              name="description"
+              rows={3}
+              required
+              placeholder="Describe tu negocio..."
+              value={merchantData.description}
+              onChange={(e) =>
+                setMerchantData({
+                  ...merchantData,
+                  description: e.target.value,
+                })
+              }
+              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm resize-none"
+            />
+            <label htmlFor="register-address" className="block text-sm font-medium text-slate-700 mt-4">
+              Dirección
+            </label>
+            <input
+              id="register-address"
+              name="address"
+              type="text"
+              required
+              autoComplete="address"
+              value={merchantData.address}
+              onChange={(e) =>
+                setMerchantData({
+                  ...merchantData,
+                  address: e.target.value,
+                })
+              }
+              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+              placeholder="Ej: Calle Principal #123"
+            />
+            <label htmlFor="register-phone_whatsapp" className="block text-sm font-medium text-slate-700 mt-4">
+              Teléfono WhatsApp
+            </label>
+            <input
+              id="register-phone_whatsapp"
+              name="phone_whatsapp"
+              type="tel"
+              required
+              autoComplete="tel"
+              value={merchantData.phone_whatsapp}
+              onChange={(e) =>
+                setMerchantData({
+                  ...merchantData,
+                  phone_whatsapp: e.target.value,
+                })
+              }
+              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+              placeholder="Ej: +58 412-123-4567"
+              pattern="[0-9\s+\-]+"
+              maxLength={20}
+            />
+            <label htmlFor="register-service_modalities" className="block text-sm font-medium text-slate-700 mt-4">
+              Modalidades de servicio
+            </label>
+            <input
+              id="register-service_modalities"
+              name="service_modalities"
+              type="text"
+              required
+              autoComplete="name"
+              value={merchantData.service_modalities.join(', ')}
+              onChange={(e) =>
+                setMerchantData({
+                  ...merchantData,
+                  service_modalities: e.target.value
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter((s) => s.length > 0),
+                })
+              }
+              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+              placeholder="Ej: Para llevar, En entrega a domicilio, En local"
+            />
+            <label htmlFor="register-business_hours" className="block text-sm font-medium text-slate-700 mt-4">
+              Horario de atención
+            </label>
+            <input
+              id="register-business_hours"
+              name="business_hours"
+              type="text"
+              required
+              autoComplete="business hours"
+              value={merchantData.business_hours}
+              onChange={(e) =>
+                setMerchantData({
+                  ...merchantData,
+                  business_hours: e.target.value,
+                })
+              }
+              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+              placeholder="Ej: Lun-Sab 9:00-18:00"
+            />
+            <div className="mt-4">
+              <label htmlFor="register-logo" className="block text-sm font-medium text-slate-700">
+                Logo del negocio
+              </label>
+              <input
+                type="file"
+                id="register-logo"
+                name="logo"
+                accept="image/*"
+                onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+                className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                PNG, JPG mximo 5MB
+              </p>
+            </div>
+            <div className="mt-4">
+              <label htmlFor="register-banner" className="block text-sm font-medium text-slate-700">
+                Banner del negocio
+              </label>
+              <input
+                type="file"
+                id="register-banner"
+                name="banner"
+                accept="image/*"
+                onChange={(e) => setBannerFile(e.target.files?.[0] ?? null)}
+                className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                PNG, JPG mximo 5MB
+              </p>
+            </div>
           </div>
           <button
             type="submit"
