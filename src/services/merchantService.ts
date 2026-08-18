@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { uploadToImgBB } from './imgbb';
 import type { MerchantRow } from '../types/database';
+import type { MerchantCategory, ServiceModality, BusinessHours } from '../types/database';
 
 export interface LogoBannerUploadResult {
   logo_url: string | null;
@@ -11,12 +12,12 @@ export interface CreateMerchantPayload {
   name: string;
   slug: string;
   rif: string;
-  category: string;
+  category: MerchantCategory;
   description: string | null;
   address: string;
   phone_whatsapp: string;
-  service_modalities: string[];
-  business_hours: string;
+  service_modalities: ServiceModality;
+  business_hours: BusinessHours;
   logo_file?: File | null;
   banner_file?: File | null;
   logo_url?: string | null;

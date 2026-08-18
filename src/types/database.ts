@@ -50,6 +50,23 @@ export type DeliveryStatus =
   | 'delivered'
   | 'failed';
 
+export type MerchantCategory =
+  | 'Comida rápida'
+  | 'Restaurante'
+  | 'Bebidas'
+  | 'Postres'
+  | 'Repostería'
+  | 'Bodegón'
+  | 'Otro';
+
+export type ServiceModality = ('Delivery' | 'Retiro en local' | 'Comer en el local')[];
+
+export interface BusinessHours {
+  days: string;
+  open_time: string;
+  close_time: string;
+}
+
 /* ---------- TIPOS AUXILIARES ---------- */
 
 export type IsoTimestamp = string;
@@ -108,12 +125,12 @@ export interface MerchantRow {
   location: GeoPoint | null;
   created_at: IsoTimestamp;
   rif: string;
-  category: string;
+  category: MerchantCategory;
   description: string | null;
   address: string;
   phone_whatsapp: string;
-  service_modalities: string[];
-  business_hours: string;
+  service_modalities: ServiceModality;
+  business_hours: BusinessHours;
 }
 
 export interface MerchantStaffRow {

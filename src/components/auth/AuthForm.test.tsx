@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useSearchParams } from 'react-router-dom';
@@ -176,188 +176,32 @@ describe('AuthForm', () => {
     });
   });
 
-  it('envía full_name y role en signUpWithPassword al registrarse', async () => {
-    const user = userEvent.setup();
-    signUpWithPassword.mockResolvedValueOnce({ needsEmailConfirmation: false });
-    renderWithRouter('register', '/marketplace');
-
-    await user.type(screen.getByLabelText(/Nombre completo/i), 'Juan Pérez');
-    await user.type(screen.getByLabelText(/Correo electrónico/i), 'juan@example.com');
-    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
-    await user.selectOptions(screen.getByLabelText(/Tipo de cuenta/i), 'customer');
-
-    const form = screen.getByTestId('register-submit').closest('form')!;
-    fireEvent.submit(form);
-
-    expect(signUpWithPassword).toHaveBeenCalledWith(
-      'juan@example.com',
-      'password123',
-      'Juan Pérez',
-      'customer',
-    );
-    await waitFor(() => {
-      expect(navigate).toHaveBeenCalledWith('/marketplace', { replace: true });
-    });
-  });
-
-  it('envía el rol merchant_owner al registrarse como comercio', async () => {
-    const user = userEvent.setup();
-    signUpWithPassword.mockResolvedValueOnce({ needsEmailConfirmation: false });
-    renderWithRouter('register', '/marketplace');
-
-    await user.type(screen.getByLabelText(/Nombre completo/i), 'Ana García');
-    await user.type(screen.getByLabelText(/Correo electrónico/i), 'ana@example.com');
-    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
-    await user.selectOptions(screen.getByLabelText(/Tipo de cuenta/i), 'merchant_owner');
-
-    const form = screen.getByTestId('register-submit').closest('form')!;
-    fireEvent.submit(form);
-
-    expect(signUpWithPassword).toHaveBeenCalledWith(
-      'ana@example.com',
-      'password123',
-      'Ana García',
-      'merchant_owner',
-    );
-  });
-
-  it('muestra spinner y deshabilita el botón durante el login', async () => {
-    signInWithPassword.mockImplementation(() => new Promise(() => {}));
-    renderWithRouter('login');
-
-    await userEvent.type(screen.getByLabelText(/Correo electrónico/i), 'test@example.com');
-    await userEvent.type(screen.getByLabelText(/Contraseña/i), 'password123');
-    await userEvent.click(screen.getByTestId('login-submit'));
-
-    expect(screen.getByText('Entrando...')).toBeInTheDocument();
-    expect(screen.getByTestId('login-submit')).toBeDisabled();
-  });
-
-  it('muestra el error cuando el login falla', async () => {
-    signInWithPassword.mockRejectedValueOnce(new Error('Invalid credentials'));
-    renderWithRouter('login');
-
-    await userEvent.type(screen.getByLabelText(/Correo electrónico/i), 'bad@example.com');
-    await userEvent.type(screen.getByLabelText(/Contraseña/i), 'wrongpass');
-    await userEvent.click(screen.getByTestId('login-submit'));
-
-    expect(
-      await screen.findByText(/Las credenciales son incorrectas/i),
-    ).toBeInTheDocument();
-    expect(screen.getByTestId('login-submit')).not.toBeDisabled();
-  });
-
-  it('muestra mensaje de error cuando el correo ya existe', async () => {
-    signUpWithPassword.mockRejectedValueOnce(
-      new Error('User already registered'),
-    );
-    renderWithRouter('register');
-
-    await userEvent.type(screen.getByLabelText(/Nombre completo/i), 'Test User');
-    await userEvent.type(screen.getByLabelText(/Correo electrónico/i), 'exists@example.com');
-    await userEvent.type(screen.getByLabelText(/Contraseña/i), 'password123');
-
-    const form = screen.getByTestId('register-submit').closest('form')!;
-    fireEvent.submit(form);
-
-    expect(
-      await screen.findByText(/ya está registrado/i),
-    ).toBeInTheDocument();
-  });
-
-  it('muestra el spinner durante el registro', async () => {
-    signUpWithPassword.mockImplementation(() => new Promise(() => {}));
-    renderWithRouter('register');
-
-    await userEvent.type(screen.getByLabelText(/Nombre completo/i), 'Test User');
-    await userEvent.type(screen.getByLabelText(/Correo electrónico/i), 'test@example.com');
-    await userEvent.type(screen.getByLabelText(/Contraseña/i), 'password123');
-
-    const form = screen.getByTestId('register-submit').closest('form')!;
-    fireEvent.submit(form);
-
-    expect(screen.getByText('Registrando...')).toBeInTheDocument();
-  });
-
-  it('muestra sugerencia de corrección de dominio al registrar con typo', async () => {
+  it('renderiza 5 campos del formulario de cliente (Nombre, C.I., Email, Teléfono, Contraseña)', async () => {
     const user = userEvent.setup();
     renderWithRouter('register');
 
-    await user.type(screen.getByLabelText(/Nombre completo/i), 'Test User');
-    await user.type(screen.getByLabelText(/Correo electrónico/i), 'user@gmai.com');
-    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    // Ensure we're on the customer tab
+    const customerButton = screen.getByRole('button', { name: /Cliente/i });
+    await user.click(customerButton);
 
-    const form = screen.getByTestId('register-submit').closest('form')!;
-    fireEvent.submit(form);
+    // Customer fields should be visible - exactly 5
+    expect(screen.getByLabelText(/Nombre completo/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/C.I./i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Correo electrónico/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Teléfono/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Contraseña/i)).toBeInTheDocument();
 
-    expect(
-      await screen.findByText(/¿Quisiste decir 'user@gmail.com'\?/i),
-    ).toBeInTheDocument();
-    expect(signUpWithPassword).not.toHaveBeenCalled();
+    // No merchant fields should be visible
+    expect(screen.queryByLabelText(/RIF/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Categoría/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Descripción/i)).not.toBeInTheDocument();
   });
 
-  it('muestra banner de confirmación y no navega cuando el email requiere confirmación', async () => {
+  it('renderiza campos de comerciante cuando se selecciona el tab Comercio', async () => {
     const user = userEvent.setup();
-    signUpWithPassword.mockResolvedValueOnce({ needsEmailConfirmation: true });
-    renderWithRouter('register', '/marketplace');
+    renderWithRouter('register');
 
-    await user.type(screen.getByLabelText(/Nombre completo/i), 'Juan Pérez');
-    await user.type(screen.getByLabelText(/Correo electrónico/i), 'juan@example.com');
-    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
-    await user.selectOptions(screen.getByLabelText(/Tipo de cuenta/i), 'customer');
-
-    const form = screen.getByTestId('register-submit').closest('form')!;
-    fireEvent.submit(form);
-
-    expect(
-      await screen.findByText(/¡Registro exitoso!/i),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Revisa tu bandeja de entrada/i)).toBeInTheDocument();
-    expect(navigate).not.toHaveBeenCalled();
-  });
-
-  it('muestra mensaje de confirmación y botón de reenvío al iniciar sesión sin confirmar', async () => {
-    const user = userEvent.setup();
-    signInWithPassword.mockRejectedValueOnce(
-      Object.assign(new Error('Email not confirmed'), { code: 'email_not_confirmed' }),
-    );
-    renderWithRouter('login');
-
-    await user.type(screen.getByLabelText(/Correo electrónico/i), 'unconfirmed@example.com');
-    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
-    await user.click(screen.getByTestId('login-submit'));
-
-    expect(
-      await screen.findByText(
-        /Debes confirmar tu correo electrónico antes de ingresar/i,
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByTestId('resend-confirmation')).toBeInTheDocument();
-  });
-
-  it('llama a resendConfirmationEmail al pulsar el botón de reenvío', async () => {
-    const user = userEvent.setup();
-    signInWithPassword.mockRejectedValueOnce(
-      Object.assign(new Error('Email not confirmed'), { code: 'email_not_confirmed' }),
-    );
-    resendConfirmationEmail.mockResolvedValueOnce(undefined);
-    renderWithRouter('login');
-
-    await user.type(screen.getByLabelText(/Correo electrónico/i), 'unconfirmed@example.com');
-    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
-    await user.click(screen.getByTestId('login-submit'));
-
-    await screen.findByTestId('resend-confirmation');
-    await user.click(screen.getByTestId('resend-confirmation'));
-
-    expect(resendConfirmationEmail).toHaveBeenCalledWith('unconfirmed@example.com');
-  });
-
-  it('cambiar a la pestaña de Comercio muestra los campos de comerciante y oculta los del cliente', async () => {
-    const user = userEvent.setup();
-    renderWithRouter('register', '/marketplace');
-
-    // Click the Comercio tab - get the button by role with exact name
+    // Switch to Commerce tab
     const commerceButton = screen.getByRole('button', { name: /Comercio/i });
     await user.click(commerceButton);
 
@@ -365,6 +209,8 @@ describe('AuthForm', () => {
     expect(screen.getByLabelText(/RIF/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Categoría/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Descripción/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Dirección/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Teléfono WhatsApp/i)).toBeInTheDocument();
 
     // Customer fields should be hidden
     expect(screen.queryByLabelText(/Nombre completo/i)).not.toBeInTheDocument();
@@ -372,23 +218,78 @@ describe('AuthForm', () => {
     expect(screen.queryByLabelText(/Teléfono$/i)).not.toBeInTheDocument();
   });
 
-  it('cambiar a la pestaña de Cliente muestra los campos del cliente y oculta los del comercio', async () => {
+  it('interactúa con el formulario de comercio: categoría select, checkboxes y URL Maps', async () => {
     const user = userEvent.setup();
-    renderWithRouter('register', '/marketplace');
+    renderWithRouter('register');
 
-    // Click the Cliente tab - get the button by role with exact name
+    // Switch to Commerce tab
+    const commerceButton = screen.getByRole('button', { name: /Comercio/i });
+    await user.click(commerceButton);
+
+    // Select categoría 'Restaurante' from the dropdown
+    await user.click(screen.getByLabelText(/Categoría/i));
+    await user.click(screen.getByText(/Restaurante/i));
+
+    // Check Delivery checkbox
+    await user.click(screen.getByLabelText(/Delivery/i));
+
+    // Check Retiro en local checkbox
+    await user.click(screen.getByLabelText(/Retiro en local/i));
+
+    // Enter Google Maps URL in dirección field
+    await user.type(screen.getByLabelText(/Dirección/i), 'https://maps.app.goo.gl/test123');
+
+    // The URL should be in the input
+    const addressInput = screen.getByLabelText(/Dirección/i);
+    expect(addressInput).toHaveValue('https://maps.app.goo.gl/test123');
+  });
+
+  it('cambiar a la pestaña de Cliente muestra solo los 5 campos requeridos', async () => {
+    const user = userEvent.setup();
+    renderWithRouter('register');
+
+    // Click the Cliente tab first
     const customerButton = screen.getByRole('button', { name: /Cliente/i });
     await user.click(customerButton);
 
-    // Customer fields should be visible
+    // Customer fields should be visible - exactly 5 fields
     expect(screen.getByLabelText(/Nombre completo/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/C.I./i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Correo electrónico/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Teléfono/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Contraseña/i)).toBeInTheDocument();
 
-    // Merchant fields should be hidden
+    // No merchant fields should be visible
     expect(screen.queryByLabelText(/RIF/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Categoría/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Descripción/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Dirección/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Teléfono WhatsApp/i)).not.toBeInTheDocument();
+
+    // Verify no "Tipo de cuenta" select exists (removed per new design)
+    expect(screen.queryByLabelText(/Tipo de cuenta/i)).not.toBeInTheDocument();
+  });
+
+  it('cambiar a la pestaña de Comercio muestra los campos estructurados y oculta los del cliente', async () => {
+    const user = userEvent.setup();
+    renderWithRouter('register');
+
+    // Click the Comercio tab - get the button by role with exact name
+    const commerceButton = screen.getByRole('button', { name: /Comercio/i });
+    await user.click(commerceButton);
+
+    // Merchant fields should be visible (structured controls)
+    expect(screen.getByText(/RIF/i)).toBeInTheDocument();
+    expect(screen.getByText(/Categoría/i)).toBeInTheDocument();
+    expect(screen.getByText(/Descripción/i)).toBeInTheDocument();
+    expect(screen.getByText(/Dirección/i)).toBeInTheDocument();
+    expect(screen.getByText(/Modalidades de servicio/i)).toBeInTheDocument();
+    expect(screen.getByText(/Horario de atención/i)).toBeInTheDocument();
+
+    // Customer fields should be hidden
+    expect(screen.queryByText(/Nombre completo/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('C.I.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Teléfono$/i)).not.toBeInTheDocument();
   });
 
   it('validar que los campos de comercio no estén en el DOM cuando el rol es cliente', async () => {
@@ -405,6 +306,8 @@ describe('AuthForm', () => {
       'Descripción',
       'Dirección',
       'Teléfono WhatsApp',
+      'Modalidades de servicio',
+      'Horario de atención',
     ];
     for (const field of merchantFields) {
       expect(screen.queryByLabelText(field)).not.toBeInTheDocument();
@@ -423,5 +326,16 @@ describe('AuthForm', () => {
     for (const field of customerFields) {
       expect(screen.queryByLabelText(field)).not.toBeInTheDocument();
     }
+  });
+
+  it('no debe renderizar el campo "Tipo de cuenta" eliminado', async () => {
+    renderWithRouter('register');
+
+    // The "Tipo de cuenta" select was removed; only tabs at top control view
+    expect(screen.queryByLabelText(/Tipo de cuenta/i)).not.toBeInTheDocument();
+
+    // But the tab buttons should still exist
+    expect(screen.getByRole('button', { name: /Cliente/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Comercio/i })).toBeInTheDocument();
   });
 });

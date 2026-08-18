@@ -38,12 +38,12 @@ const mockMerchant: MerchantRow = {
   location: null,
   created_at: new Date().toISOString(),
   rif: 'J-12345678-0',
-  category: 'General',
+  category: 'Restaurante',
   description: 'Descripción',
   address: 'Dirección',
   phone_whatsapp: '+58 412-123-4567',
-  service_modalities: ['dine_in'],
-  business_hours: 'L-V: 8:00-20:00',
+  service_modalities: ['Comer en el local'],
+  business_hours: { days: 'L-V', open_time: '8:00', close_time: '20:00' },
 };
 
 describe('MerchantProfileForm', () => {

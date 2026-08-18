@@ -84,12 +84,12 @@ describe('MerchantMapView', () => {
     location: loc,
     created_at: '2026-01-01T00:00:00.000Z',
     rif: 'J-12345678-0',
-    category: 'General',
+    category: 'Restaurante',
     description: 'Descripción',
      address: 'Dirección',
     phone_whatsapp: '+58 412-123-4567',
-    service_modalities: ['dine_in'],
-    business_hours: 'L-V: 8:00-20:00',
+    service_modalities: ['Comer en el local'],
+    business_hours: { days: 'L-V', open_time: '8:00', close_time: '20:00' },
   });
 
   it('muestra los comercios en el mapa', () => {
@@ -128,12 +128,12 @@ describe('MerchantsByDistance', () => {
     location: null,
     created_at: '2026-01-01T00:00:00.000Z',
     rif: 'J-12345678-0',
-    category: 'General',
+    category: 'Restaurante',
     description: 'Descripción',
     address: 'Dirección',
     phone_whatsapp: '+58 412-123-4567',
-    service_modalities: ['dine_in'],
-    business_hours: 'L-V: 8:00-20:00',
+    service_modalities: ['Comer en el local'],
+    business_hours: { days: 'L-V', open_time: '8:00', close_time: '20:00' },
   };
 
   it('ordena comercios por proximidad al punto origen', () => {

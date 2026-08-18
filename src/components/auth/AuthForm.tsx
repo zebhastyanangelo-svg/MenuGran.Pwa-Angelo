@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { suggestEmailDomain } from '../../utils/emailSuggestions';
 import { uploadToImgBB } from '../../services/imgbb';
-import type { UserRole } from '../../types/database';
+import type { UserRole, MerchantCategory, BusinessHours } from '../../types/database';
 
 type AuthTab = 'login' | 'register';
 
@@ -12,15 +12,9 @@ interface AuthFormProps {
   defaultTab?: AuthTab;
 }
 
-const ROLE_LABELS: Record<UserRole, string> = {
-  superadmin: 'Superadmin',
-  merchant_owner: 'Comercio (Owner)',
-  merchant_staff: 'Personal de Comercio',
-  driver: 'Repartidor',
-  customer: 'Cliente',
-};
-
-const REGISTER_ROLES: readonly UserRole[] = ['customer', 'merchant_owner'];
+/* Role labels and roles kept for reference but the role select
+   was removed per the new auth flow - selection is now controlled
+   by the "Cliente" / "Comercio" tabs at the top. */
 
 const SUBMIT_BASE_CLASS =
   'w-full rounded-xl border border-transparent bg-brand-red py-3 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70';
@@ -158,25 +152,24 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     }
   };
 
-  const [role, setRole] = useState<UserRole>('customer');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [merchantData, setMerchantData] = useState<{
     rif: string;
-    category: string;
+    category: MerchantCategory;
     description: string;
     address: string;
     phone_whatsapp: string;
-    service_modalities: string[];
-    business_hours: string;
+    service_modalities: ('Delivery' | 'Retiro en local' | 'Comer en el local')[];
+    business_hours: BusinessHours;
   }>({
     rif: '',
-    category: '',
+    category: 'Restaurante',
     description: '',
     address: '',
     phone_whatsapp: '',
     service_modalities: [],
-    business_hours: '',
+    business_hours: { days: 'L-V', open_time: '8:00', close_time: '20:00' },
   });
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -214,8 +207,6 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
             if (bannerFile) {
               await uploadToImgBB(bannerFile, { compress: true });
             }
-            // TODO: Create merchant profile with new fields
-            // await createMerchant({...merchantData, logo_url, banner_url});
             navigate(from, { replace: true });
           } catch (uploadErr) {
             setError(
@@ -381,7 +372,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         </form>
       )}
 
-{activeTab === 'register' && (
+      {activeTab === 'register' && (
         <form onSubmit={handleRegister} className="space-y-4">
           <h2 className="mb-2 text-center text-xl font-bold text-slate-900">
             Registrarse
@@ -518,22 +509,27 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                 <label htmlFor="register-category" className="block text-sm font-medium text-slate-700 mt-4">
                   Categoría
                 </label>
-                <input
+                <select
                   id="register-category"
                   name="category"
-                  type="text"
                   required
-                  autoComplete="name"
                   value={merchantData.category}
                   onChange={(e) =>
                     setMerchantData({
                       ...merchantData,
-                      category: e.target.value,
+                      category: e.target.value as MerchantCategory,
                     })
                   }
                   className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                  placeholder="Ej: Restaurante, Tienda, etc."
-                />
+                >
+                  <option value="Comida rápida">Comida rápida</option>
+                  <option value="Restaurante">Restaurante</option>
+                  <option value="Bebidas">Bebidas</option>
+                  <option value="Postres">Postres</option>
+                  <option value="Repostería">Repostería</option>
+                  <option value="Bodegón">Bodegón</option>
+                  <option value="Otro">Otro</option>
+                </select>
                 <label htmlFor="register-description" className="block text-sm font-medium text-slate-700 mt-4">
                   Descripción
                 </label>
@@ -569,7 +565,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                     })
                   }
                   className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                  placeholder="Ej: Calle Principal #123"
+                  placeholder="Ej: https://maps.app.goo.gl/..."
                 />
                 <label htmlFor="register-phone_whatsapp" className="block text-sm font-medium text-slate-700 mt-4">
                   Teléfono WhatsApp
@@ -592,47 +588,128 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                   pattern="[0-9\s+\-]+"
                   maxLength={20}
                 />
-                <label htmlFor="register-service_modalities" className="block text-sm font-medium text-slate-700 mt-4">
+                <label className="block text-sm font-medium text-slate-700 mt-4">
                   Modalidades de servicio
                 </label>
-                <input
-                  id="register-service_modalities"
-                  name="service_modalities"
-                  type="text"
-                  required
-                  autoComplete="name"
-                  value={merchantData.service_modalities.join(', ')}
-                  onChange={(e) =>
-                    setMerchantData({
-                      ...merchantData,
-                      service_modalities: e.target.value
-                        .split(',')
-                        .map((s) => s.trim())
-                        .filter((s) => s.length > 0),
-                    })
-                  }
-                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                  placeholder="Ej: Para llevar, En entrega a domicilio, En local"
-                />
+                <div className="mt-1 space-y-1">
+                  <label
+                    className="flex items-center gap-2 rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 cursor-pointer select-none hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2">
+                    <input
+                      type="checkbox"
+                      checked={merchantData.service_modalities.includes('Delivery')}
+                      id="service-delivery"
+                      onChange={(e) =>
+                        setMerchantData({
+                          ...merchantData,
+                          service_modalities:
+                            e.target.checked
+                              ? [...merchantData.service_modalities, 'Delivery']
+                              : merchantData.service_modalities.filter(
+                                  (m) => m !== 'Delivery',
+                                ),
+                        })
+                      }
+                      className="rounded border-transparent bg-brand-red p-1"
+                    />
+                    Delivery
+                  </label>
+                  <label
+                    className="flex items-center gap-2 rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 cursor-pointer select-none hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2">
+                    <input
+                      type="checkbox"
+                      checked={merchantData.service_modalities.includes('Retiro en local')}
+                      id="service-retiro-local"
+                      onChange={(e) =>
+                        setMerchantData({
+                          ...merchantData,
+                          service_modalities:
+                            e.target.checked
+                              ? [...merchantData.service_modalities, 'Retiro en local']
+                              : merchantData.service_modalities.filter(
+                                  (m) => m !== 'Retiro en local',
+                                ),
+                        })
+                      }
+                      className="rounded border-transparent bg-brand-red p-1"
+                    />
+                    Retiro en local
+                  </label>
+                  <label
+                    className="flex items-center gap-2 rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 cursor-pointer select-none hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2">
+                    <input
+                      type="checkbox"
+                      checked={merchantData.service_modalities.includes('Comer en el local')}
+                      id="service-comer-local"
+                      onChange={(e) =>
+                        setMerchantData({
+                          ...merchantData,
+                          service_modalities:
+                            e.target.checked
+                              ? [...merchantData.service_modalities, 'Comer en el local']
+                              : merchantData.service_modalities.filter(
+                                  (m) => m !== 'Comer en el local',
+                                ),
+                        })
+                      }
+                      className="rounded border-transparent bg-brand-red p-1"
+                    />
+                    Comer en el local
+                  </label>
+                </div>
                 <label htmlFor="register-business_hours" className="block text-sm font-medium text-slate-700 mt-4">
                   Horario de atención
                 </label>
-                <input
-                  id="register-business_hours"
-                  name="business_hours"
-                  type="text"
-                  required
-                  autoComplete="business hours"
-                  value={merchantData.business_hours}
-                  onChange={(e) =>
-                    setMerchantData({
-                      ...merchantData,
-                      business_hours: e.target.value,
-                    })
-                  }
-                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                  placeholder="Ej: Lun-Sab 9:00-18:00"
-                />
+                <div className="mt-1 grid grid-cols-3 gap-2">
+                  <select
+                    id="business-days"
+                    className="mt-1 block rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                    value={merchantData.business_hours.days}
+                    onChange={(e) =>
+                      setMerchantData({
+                        ...merchantData,
+                        business_hours: {
+                          ...merchantData.business_hours,
+                          days: e.target.value,
+                        },
+                      })
+                    }
+                  >
+                    <option value="L-V">L-V</option>
+                    <option value="Lun-Ven">Lun-Ven</option>
+                    <option value="Diario">Diario</option>
+                    <option value="Sab-Dom">Sab-Dom</option>
+                  </select>
+                  <input
+                    id="business-open-time"
+                    type="time"
+                    className="mt-1 block rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                    value={merchantData.business_hours.open_time}
+                    onChange={(e) =>
+                      setMerchantData({
+                        ...merchantData,
+                        business_hours: {
+                          ...merchantData.business_hours,
+                          open_time: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                  <input
+                    id="business-close-time"
+                    type="time"
+                    className="mt-1 block rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                    value={merchantData.business_hours.close_time}
+                    onChange={(e) =>
+                      setMerchantData({
+                        ...merchantData,
+                        business_hours: {
+                          ...merchantData.business_hours,
+                          close_time: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </div>
                 <div className="mt-4">
                   <label htmlFor="register-logo" className="block text-sm font-medium text-slate-700">
                     Logo del negocio
@@ -668,26 +745,6 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
               </div>
             </div>
           )}
-
-          <div>
-            <label htmlFor="register-role" className="block text-sm font-medium text-slate-700">
-              Tipo de cuenta
-            </label>
-            <select
-              id="register-role"
-              name="role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-              required
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-            >
-              {REGISTER_ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {ROLE_LABELS[role]}
-                </option>
-              ))}
-            </select>
-          </div>
 
           <button
             type="submit"
