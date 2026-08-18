@@ -87,7 +87,8 @@ function isUnconfirmedEmailError(error: unknown): boolean {
 export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
   const [activeTab, setActiveTab] = useState<AuthTab>(defaultTab);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [showConfirmationBanner, setShowConfirmationBanner] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
   const navigate = useNavigate();
@@ -115,7 +116,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
   };
 
   const handleGoogleSignIn = async () => {
-    setIsLoading(true);
+    setIsGoogleLoading(true);
     setError(null);
     setShowConfirmationBanner(false);
     try {
@@ -123,13 +124,13 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     } catch (err) {
       setError(resolveAuthErrorMessage(err));
     } finally {
-      setIsLoading(false);
+      setIsGoogleLoading(false);
     }
   };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsEmailLoading(true);
     setError(null);
     setShowConfirmationBanner(false);
     const form = e.currentTarget;
@@ -148,7 +149,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         setError(resolveAuthErrorMessage(err));
       }
     } finally {
-      setIsLoading(false);
+      setIsEmailLoading(false);
     }
   };
 
@@ -174,7 +175,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsEmailLoading(true);
     setError(null);
     setShowConfirmationBanner(false);
     const form = e.currentTarget;
@@ -188,7 +189,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
       setError(
         `¿Quisiste decir '${suggestion.suggestion}'? Corrige tu correo e inténtalo de nuevo.`,
       );
-      setIsLoading(false);
+      setIsEmailLoading(false);
       return;
     }
 
@@ -198,37 +199,37 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         setPendingEmail(email);
         setShowConfirmationBanner(true);
       } else {
-        if (registerView === 'merchant_owner') {
-          setIsLoading(true);
-          try {
-            if (logoFile) {
-              await uploadToImgBB(logoFile, { compress: true });
+if (registerView === 'merchant_owner') {
+            setIsEmailLoading(true);
+            try {
+              if (logoFile) {
+                await uploadToImgBB(logoFile, { compress: true });
+              }
+              if (bannerFile) {
+                await uploadToImgBB(bannerFile, { compress: true });
+              }
+              navigate(from, { replace: true });
+            } catch (uploadErr) {
+              setError(
+                uploadErr instanceof Error ? uploadErr.message : 'Error al subir imágenes',
+              );
+            } finally {
+              setIsEmailLoading(false);
             }
-            if (bannerFile) {
-              await uploadToImgBB(bannerFile, { compress: true });
-            }
-            navigate(from, { replace: true });
-          } catch (uploadErr) {
-            setError(
-              uploadErr instanceof Error ? uploadErr.message : 'Error al subir imágenes',
-            );
-          } finally {
-            setIsLoading(false);
-          }
-        } else {
+          } else {
           navigate(from, { replace: true });
         }
       }
     } catch (err) {
       setError(resolveAuthErrorMessage(err));
     } finally {
-      setIsLoading(false);
+      setIsEmailLoading(false);
     }
   };
 
   const handleResendConfirmation = async () => {
     if (pendingEmail === '') return;
-    setIsLoading(true);
+    setIsEmailLoading(true);
     setError(null);
     try {
       await resendConfirmationEmail(pendingEmail);
@@ -236,7 +237,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     } catch (err) {
       setError(resolveAuthErrorMessage(err));
     } finally {
-      setIsLoading(false);
+      setIsEmailLoading(false);
     }
   };
 
@@ -246,10 +247,10 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         type="button"
         data-testid="google-signin"
         onClick={() => void handleGoogleSignIn()}
-        disabled={isLoading}
+        disabled={isGoogleLoading}
         className={GOOGLE_BUTTON_CLASS}
       >
-        {isLoading ? (
+        {isGoogleLoading ? (
           <span className="flex items-center justify-center gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
             Conectando con Google...
@@ -313,10 +314,10 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
               type="button"
               data-testid="resend-confirmation"
               onClick={handleResendConfirmation}
-              disabled={isLoading}
+              disabled={isEmailLoading}
               className="ml-2 underline disabled:opacity-50"
             >
-              {isLoading ? 'Reenviando...' : 'Reenviar email de confirmación'}
+              {isEmailLoading ? 'Reenviando...' : 'Reenviar email de confirmación'}
             </button>
           )}
         </div>
@@ -357,10 +358,10 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
           <button
             type="submit"
             data-testid="login-submit"
-            disabled={isLoading}
+            disabled={isEmailLoading}
             className={SUBMIT_BASE_CLASS}
           >
-            {isLoading ? (
+            {isEmailLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Entrando...
@@ -749,10 +750,10 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
           <button
             type="submit"
             data-testid="register-submit"
-            disabled={isLoading}
+            disabled={isEmailLoading}
             className={SUBMIT_BASE_CLASS}
           >
-            {isLoading ? (
+            {isEmailLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Registrando...
