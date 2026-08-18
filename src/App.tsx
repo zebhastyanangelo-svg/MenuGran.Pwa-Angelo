@@ -25,7 +25,7 @@ const OrderTracker = lazy(() => import('./pages/OrderTracker').then((mod) => ({ 
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then((mod) => ({ default: mod.ProfilePage })));
 
 function RootRedirect() {
-  const { user, isLoading } = useAuth();
+  const { user, profile, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -33,7 +33,10 @@ function RootRedirect() {
   }
 
   if (user !== null && location.pathname === '/') {
-    return <Navigate to="/marketplace" replace />;
+    if (profile?.role === 'customer') {
+      return <Navigate to="/" replace />;
+    }
+    return <Navigate to="/admin" replace />;
   }
 
   return <Navigate to="/login" replace />;
@@ -71,6 +74,7 @@ export function App() {
                       </ProtectedRoute>
                     }
                   />
+                  <Route path="/admin" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantDashboardPage /></ProtectedRoute>} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>

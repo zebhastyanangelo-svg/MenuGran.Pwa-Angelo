@@ -34,7 +34,10 @@ export function ProtectedRoute({
   if (requiredRole !== undefined && profile !== null) {
     const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
     if (!roles.includes(profile.role)) {
-      return <Navigate to="/marketplace" replace />;
+      if (profile.role === 'customer') {
+        return <Navigate to="/" replace />;
+      }
+      return <Navigate to="/admin" replace />;
     }
   }
 
