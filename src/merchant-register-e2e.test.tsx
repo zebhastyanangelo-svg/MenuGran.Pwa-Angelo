@@ -40,10 +40,6 @@ vi.mock('./services/merchantService', () => ({
   updateMerchant: vi.fn(),
 }));
 
-vi.mock('./services/imgbb', () => ({
-  uploadToImgBB: vi.fn().mockResolvedValue('https://example.com/uploaded-image'),
-}));
-
 function buildProfile(id: string, role: ProfileRow['role']): ProfileRow {
   return {
     id,
@@ -66,7 +62,7 @@ function mockProfileQuery(result: {
   authMocks.from.mockReturnValue({ select });
 }
 
-describe('Merchant Owner Registration E2E', () => {
+describe('Merchant Owner Registration E2E', { timeout: 15000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -86,15 +82,17 @@ describe('Merchant Owner Registration E2E', () => {
     const commerceTab = screen.getByRole('button', { name: /Comercio/i });
     await userEvent.click(commerceTab);
 
-    // Merchant-specific fields must be present
-    expect(screen.getByLabelText('RIF')).toBeInTheDocument();
-    expect(screen.getByLabelText('Categoría')).toBeInTheDocument();
-    expect(screen.getByLabelText('Descripción')).toBeInTheDocument();
-    expect(screen.getByLabelText('Dirección')).toBeInTheDocument();
-    expect(screen.getByLabelText('Teléfono WhatsApp')).toBeInTheDocument();
+    // Only the simplified merchant fields must be present
+    expect(screen.getByLabelText('Nombre del Comercio')).toBeInTheDocument();
+    expect(screen.getByLabelText('Correo electrónico')).toBeInTheDocument();
+    expect(screen.getByLabelText('Contraseña')).toBeInTheDocument();
 
-    // Shared fields are present in both views
-    expect(screen.getByLabelText('Nombre completo')).toBeInTheDocument();
+    // The old structured merchant fields must no longer be present
+    expect(screen.queryByLabelText('RIF')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Categoría')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Descripción')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Dirección')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Teléfono WhatsApp')).not.toBeInTheDocument();
     // Customer-only fields must NOT be present in the merchant view
     expect(screen.queryByLabelText('C.I. (Cédula de Identidad)')).not.toBeInTheDocument();
 

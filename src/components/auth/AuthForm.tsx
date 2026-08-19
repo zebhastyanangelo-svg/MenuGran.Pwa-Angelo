@@ -3,8 +3,6 @@ import { Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { suggestEmailDomain } from '../../utils/emailSuggestions';
-import { uploadToImgBB } from '../../services/imgbb';
-import type { MerchantCategory, BusinessHours } from '../../types/database';
 
 type AuthTab = 'login' | 'register';
 
@@ -153,26 +151,6 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     }
   };
 
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [bannerFile, setBannerFile] = useState<File | null>(null);
-  const [merchantData, setMerchantData] = useState<{
-    rif: string;
-    category: MerchantCategory;
-    description: string;
-    address: string;
-    phone_whatsapp: string;
-    service_modalities: ('Delivery' | 'Retiro en local' | 'Comer en el local')[];
-    business_hours: BusinessHours;
-  }>({
-    rif: '',
-    category: 'Restaurante',
-    description: '',
-    address: '',
-    phone_whatsapp: '',
-    service_modalities: [],
-    business_hours: { days: 'L-V', open_time: '8:00', close_time: '20:00' },
-  });
-
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsEmailLoading(true);
@@ -200,24 +178,9 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         setPendingEmail(email);
         setShowConfirmationBanner(true);
       } else {
-if (registerView === 'merchant_owner') {
-            setIsEmailLoading(true);
-            try {
-              if (logoFile) {
-                await uploadToImgBB(logoFile, { compress: true });
-              }
-              if (bannerFile) {
-                await uploadToImgBB(bannerFile, { compress: true });
-              }
-              navigate(from, { replace: true });
-            } catch (uploadErr) {
-              setError(
-                uploadErr instanceof Error ? uploadErr.message : 'Error al subir imágenes',
-              );
-            } finally {
-              setIsEmailLoading(false);
-            }
-          } else {
+        if (registerView === 'merchant_owner') {
+          navigate('/merchant/dashboard', { replace: true });
+        } else {
           navigate(from, { replace: true });
         }
       }
@@ -408,11 +371,11 @@ if (registerView === 'merchant_owner') {
             </button>
           </div>
 
-           {/* Common fields for all register views: Nombre completo, Email, Contraseña */}
+           {/* Common fields for all register views: Nombre, Email, Contraseña */}
            <div>
              <div>
                <label htmlFor="register-full_name" className="block text-sm font-medium text-slate-700">
-                 Nombre completo
+                 {registerView === 'merchant_owner' ? 'Nombre del Comercio' : 'Nombre completo'}
                </label>
                <input
                  id="register-full_name"
@@ -489,268 +452,7 @@ if (registerView === 'merchant_owner') {
              </div>
            )}
 
-          {/* Merchant form fields */}
-          {registerView === 'merchant_owner' && (
-            <div>
-              <div>
-                <label htmlFor="register-rif" className="block text-sm font-medium text-slate-700">
-                  RIF
-                </label>
-                <input
-                  id="register-rif"
-                  name="rif"
-                  type="text"
-                  required
-                  autoComplete="name"
-                  value={merchantData.rif}
-                  onChange={(e) =>
-                    setMerchantData({
-                      ...merchantData,
-                      rif: e.target.value,
-                    })
-                  }
-                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                  placeholder="Ej: J-12345678-9"
-                />
-                <label htmlFor="register-category" className="block text-sm font-medium text-slate-700 mt-4">
-                  Categoría
-                </label>
-                <select
-                  id="register-category"
-                  name="category"
-                  required
-                  value={merchantData.category}
-                  onChange={(e) =>
-                    setMerchantData({
-                      ...merchantData,
-                      category: e.target.value as MerchantCategory,
-                    })
-                  }
-                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                >
-                  <option value="Comida rápida">Comida rápida</option>
-                  <option value="Restaurante">Restaurante</option>
-                  <option value="Bebidas">Bebidas</option>
-                  <option value="Postres">Postres</option>
-                  <option value="Repostería">Repostería</option>
-                  <option value="Bodegón">Bodegón</option>
-                  <option value="Otro">Otro</option>
-                </select>
-                <label htmlFor="register-description" className="block text-sm font-medium text-slate-700 mt-4">
-                  Descripción
-                </label>
-                <textarea
-                  id="register-description"
-                  name="description"
-                  rows={3}
-                  required
-                  placeholder="Describe tu negocio..."
-                  value={merchantData.description}
-                  onChange={(e) =>
-                    setMerchantData({
-                      ...merchantData,
-                      description: e.target.value,
-                    })
-                  }
-                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm resize-none"
-                />
-                <label htmlFor="register-address" className="block text-sm font-medium text-slate-700 mt-4">
-                  Dirección
-                </label>
-                <input
-                  id="register-address"
-                  name="address"
-                  type="text"
-                  required
-                  autoComplete="address"
-                  value={merchantData.address}
-                  onChange={(e) =>
-                    setMerchantData({
-                      ...merchantData,
-                      address: e.target.value,
-                    })
-                  }
-                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                  placeholder="Ej: https://maps.app.goo.gl/..."
-                />
-                <label htmlFor="register-phone_whatsapp" className="block text-sm font-medium text-slate-700 mt-4">
-                  Teléfono WhatsApp
-                </label>
-                <input
-                  id="register-phone_whatsapp"
-                  name="phone_whatsapp"
-                  type="tel"
-                  required
-                  autoComplete="tel"
-                  value={merchantData.phone_whatsapp}
-                  onChange={(e) =>
-                    setMerchantData({
-                      ...merchantData,
-                      phone_whatsapp: e.target.value,
-                    })
-                  }
-                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                  placeholder="Ej: +58 412-123-4567"
-                  pattern="[0-9\s+\-]+"
-                  maxLength={20}
-                />
-                <label className="block text-sm font-medium text-slate-700 mt-4">
-                  Modalidades de servicio
-                </label>
-                <div className="mt-1 space-y-1">
-                  <label
-                    className="flex items-center gap-2 rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 cursor-pointer select-none hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2">
-                    <input
-                      type="checkbox"
-                      checked={merchantData.service_modalities.includes('Delivery')}
-                      id="service-delivery"
-                      onChange={(e) =>
-                        setMerchantData({
-                          ...merchantData,
-                          service_modalities:
-                            e.target.checked
-                              ? [...merchantData.service_modalities, 'Delivery']
-                              : merchantData.service_modalities.filter(
-                                  (m) => m !== 'Delivery',
-                                ),
-                        })
-                      }
-                      className="rounded border-transparent bg-brand-red p-1"
-                    />
-                    Delivery
-                  </label>
-                  <label
-                    className="flex items-center gap-2 rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 cursor-pointer select-none hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2">
-                    <input
-                      type="checkbox"
-                      checked={merchantData.service_modalities.includes('Retiro en local')}
-                      id="service-retiro-local"
-                      onChange={(e) =>
-                        setMerchantData({
-                          ...merchantData,
-                          service_modalities:
-                            e.target.checked
-                              ? [...merchantData.service_modalities, 'Retiro en local']
-                              : merchantData.service_modalities.filter(
-                                  (m) => m !== 'Retiro en local',
-                                ),
-                        })
-                      }
-                      className="rounded border-transparent bg-brand-red p-1"
-                    />
-                    Retiro en local
-                  </label>
-                  <label
-                    className="flex items-center gap-2 rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 cursor-pointer select-none hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2">
-                    <input
-                      type="checkbox"
-                      checked={merchantData.service_modalities.includes('Comer en el local')}
-                      id="service-comer-local"
-                      onChange={(e) =>
-                        setMerchantData({
-                          ...merchantData,
-                          service_modalities:
-                            e.target.checked
-                              ? [...merchantData.service_modalities, 'Comer en el local']
-                              : merchantData.service_modalities.filter(
-                                  (m) => m !== 'Comer en el local',
-                                ),
-                        })
-                      }
-                      className="rounded border-transparent bg-brand-red p-1"
-                    />
-                    Comer en el local
-                  </label>
-                </div>
-                <label htmlFor="register-business_hours" className="block text-sm font-medium text-slate-700 mt-4">
-                  Horario de atención
-                </label>
-                <div className="mt-1 grid grid-cols-3 gap-2">
-                  <select
-                    id="business-days"
-                    className="mt-1 block rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                    value={merchantData.business_hours.days}
-                    onChange={(e) =>
-                      setMerchantData({
-                        ...merchantData,
-                        business_hours: {
-                          ...merchantData.business_hours,
-                          days: e.target.value,
-                        },
-                      })
-                    }
-                  >
-                    <option value="L-V">L-V</option>
-                    <option value="Lun-Ven">Lun-Ven</option>
-                    <option value="Diario">Diario</option>
-                    <option value="Sab-Dom">Sab-Dom</option>
-                  </select>
-                  <input
-                    id="business-open-time"
-                    type="time"
-                    className="mt-1 block rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                    value={merchantData.business_hours.open_time}
-                    onChange={(e) =>
-                      setMerchantData({
-                        ...merchantData,
-                        business_hours: {
-                          ...merchantData.business_hours,
-                          open_time: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                  <input
-                    id="business-close-time"
-                    type="time"
-                    className="mt-1 block rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                    value={merchantData.business_hours.close_time}
-                    onChange={(e) =>
-                      setMerchantData({
-                        ...merchantData,
-                        business_hours: {
-                          ...merchantData.business_hours,
-                          close_time: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div className="mt-4">
-                  <label htmlFor="register-logo" className="block text-sm font-medium text-slate-700">
-                    Logo del negocio
-                  </label>
-                  <input
-                    type="file"
-                    id="register-logo"
-                    name="logo"
-                    accept="image/*"
-                    onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
-                    className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none"
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    PNG, JPG mximo 5MB
-                  </p>
-                </div>
-                <div className="mt-4">
-                  <label htmlFor="register-banner" className="block text-sm font-medium text-slate-700">
-                    Banner del negocio
-                  </label>
-                  <input
-                    type="file"
-                    id="register-banner"
-                    name="banner"
-                    accept="image/*"
-                    onChange={(e) => setBannerFile(e.target.files?.[0] ?? null)}
-                    className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none"
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    PNG, JPG mximo 5MB
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+
 
           <button
             type="submit"

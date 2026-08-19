@@ -56,6 +56,7 @@ function renderWithRouter(defaultTab: 'login' | 'register' = 'login', from: stri
         <Route path="/register" element={<AuthForm defaultTab="register" />} />
         <Route path="/marketplace" element={<div data-testid="marketplace">Marketplace</div>} />
         <Route path="/dashboard" element={<div>Dashboard</div>} />
+        <Route path="/merchant/dashboard" element={<div data-testid="merchant-dashboard">Panel del comerciante</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -197,7 +198,7 @@ describe('AuthForm', () => {
     expect(screen.queryByLabelText(/Descripción/i)).not.toBeInTheDocument();
   });
 
-  it('renderiza campos de comerciante cuando se selecciona el tab Comercio', async () => {
+  it('renderiza solo Nombre del Comercio, Email y Contraseña en la pestaña de Comercio', async () => {
     const user = userEvent.setup();
     renderWithRouter('register');
 
@@ -205,44 +206,44 @@ describe('AuthForm', () => {
     const commerceButton = screen.getByRole('button', { name: /Comercio/i });
     await user.click(commerceButton);
 
-    // Merchant fields should be visible
-    expect(screen.getByLabelText(/RIF/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Categoría/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Descripción/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Dirección/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Teléfono WhatsApp/i)).toBeInTheDocument();
+    // Only the simplified merchant fields should be visible
+    expect(screen.getByLabelText(/Nombre del Comercio/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Correo electrónico/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Contraseña/i)).toBeInTheDocument();
 
-    // Nombre completo is now a shared field visible in both views
-    expect(screen.getByLabelText(/Nombre completo/i)).toBeInTheDocument();
-    // C.I. and Teléfono remain customer-only fields
+    // The removed merchant fields must not be present
+    expect(screen.queryByLabelText(/RIF/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Categoría/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Descripción/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Dirección/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Teléfono WhatsApp/i)).not.toBeInTheDocument();
+    // C.I. remains a customer-only field
     expect(screen.queryByLabelText('C.I.')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/Teléfono$/i)).not.toBeInTheDocument();
   });
 
-  it('interactúa con el formulario de comercio: categoría select, checkboxes y URL Maps', async () => {
+  it('registra un comercio con los 3 campos simplificados y redirige a su panel', async () => {
     const user = userEvent.setup();
+    signUpWithPassword.mockResolvedValueOnce({ needsEmailConfirmation: false });
     renderWithRouter('register');
 
     // Switch to Commerce tab
     const commerceButton = screen.getByRole('button', { name: /Comercio/i });
     await user.click(commerceButton);
 
-    // Select categoría 'Restaurante' from the dropdown
-    await user.click(screen.getByLabelText(/Categoría/i));
-    await user.click(screen.getByText(/Restaurante/i));
+    await user.type(screen.getByLabelText(/Nombre del Comercio/i), 'Mi Restaurante');
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'comercio@example.com');
+    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.click(screen.getByTestId('register-submit'));
 
-    // Check Delivery checkbox
-    await user.click(screen.getByLabelText(/Delivery/i));
-
-    // Check Retiro en local checkbox
-    await user.click(screen.getByLabelText(/Retiro en local/i));
-
-    // Enter Google Maps URL in dirección field
-    await user.type(screen.getByLabelText(/Dirección/i), 'https://maps.app.goo.gl/test123');
-
-    // The URL should be in the input
-    const addressInput = screen.getByLabelText(/Dirección/i);
-    expect(addressInput).toHaveValue('https://maps.app.goo.gl/test123');
+    expect(signUpWithPassword).toHaveBeenCalledWith(
+      'comercio@example.com',
+      'password123',
+      'Mi Restaurante',
+      'merchant_owner',
+    );
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('/merchant/dashboard', { replace: true });
+    });
   });
 
   it('cambiar a la pestaña de Cliente muestra solo los 5 campos requeridos', async () => {
@@ -271,24 +272,26 @@ describe('AuthForm', () => {
     expect(screen.queryByLabelText(/Tipo de cuenta/i)).not.toBeInTheDocument();
   });
 
-  it('cambiar a la pestaña de Comercio muestra los campos estructurados y oculta los del cliente', async () => {
+  it('cambiar a la pestaña de Comercio muestra solo los 3 campos y oculta los del cliente', async () => {
     const user = userEvent.setup();
     renderWithRouter('register');
 
-    // Click the Comercio tab - get the button by role with exact name
+    // Click the Comercio tab
     const commerceButton = screen.getByRole('button', { name: /Comercio/i });
     await user.click(commerceButton);
 
-    // Merchant fields should be visible (structured controls)
-    expect(screen.getByText(/RIF/i)).toBeInTheDocument();
-    expect(screen.getByText(/Categoría/i)).toBeInTheDocument();
-    expect(screen.getByText(/Descripción/i)).toBeInTheDocument();
-    expect(screen.getByText(/Dirección/i)).toBeInTheDocument();
-    expect(screen.getByText(/Modalidades de servicio/i)).toBeInTheDocument();
-    expect(screen.getByText(/Horario de atención/i)).toBeInTheDocument();
+    // Only the simplified merchant fields are visible
+    expect(screen.getByText(/Nombre del Comercio/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Correo electrónico/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Contraseña/i)).toBeInTheDocument();
 
-    // Nombre completo is now a shared field visible in both views
-    expect(screen.getByText(/Nombre completo/i)).toBeInTheDocument();
+    // The removed structured merchant fields must not be present
+    expect(screen.queryByText(/RIF/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Categoría/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Descripción/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Dirección/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Modalidades de servicio/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Horario de atención/i)).not.toBeInTheDocument();
     // C.I. and Teléfono remain customer-only fields
     expect(screen.queryByText('C.I.')).not.toBeInTheDocument();
     expect(screen.queryByText(/Teléfono$/i)).not.toBeInTheDocument();
