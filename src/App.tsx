@@ -23,6 +23,9 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((mod) => ({ 
 const Checkout = lazy(() => import('./pages/Checkout').then((mod) => ({ default: mod.Checkout })));
 const OrderTracker = lazy(() => import('./pages/OrderTracker').then((mod) => ({ default: mod.OrderTracker })));
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then((mod) => ({ default: mod.ProfilePage })));
+const MerchantSettingsPage = lazy(() =>
+  import('./pages/merchant/MerchantSettingsPage').then((mod) => ({ default: mod.MerchantSettingsPage })),
+);
 
 function RootRedirect() {
   const { user, profile, isLoading } = useAuth();
@@ -75,6 +78,7 @@ export function App() {
                     }
                   />
                   <Route path="/admin" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantDashboardPage /></ProtectedRoute>} />
+                  <Route path="/admin/settings" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantSettingsPage /></ProtectedRoute>} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>

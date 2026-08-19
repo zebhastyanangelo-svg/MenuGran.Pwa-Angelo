@@ -51,6 +51,7 @@ function buildMerchant(id: string, name: string): MerchantRow {
     category: 'Restaurante',
     description: 'Descripción',
     address: 'Dirección',
+    zone: null,
     phone_whatsapp: '+58 412-123-4567',
     service_modalities: ['Comer en el local'],
     business_hours: { days: 'L-V', open_time: '8:00', close_time: '20:00' },
