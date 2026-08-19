@@ -35,6 +35,7 @@ const mockMerchant: MerchantRow = {
   status: 'active' as const,
   verification_docs: {} as Record<string, unknown>,
   is_active: true,
+  is_open: true,
   location: null,
   created_at: new Date().toISOString(),
   rif: 'J-12345678-0',

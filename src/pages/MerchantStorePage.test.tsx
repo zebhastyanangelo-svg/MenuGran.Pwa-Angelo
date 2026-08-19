@@ -44,6 +44,7 @@ function buildMerchant(
     verification_docs: {},
     location: null,
     is_active: true,
+    is_open: true,
     created_at: '2026-01-01T00:00:00.000Z',
     rif: 'J-12345678-0',
     category: 'Restaurante',
@@ -162,8 +163,70 @@ describe('MerchantStorePage', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText(/No se encontraron platillos/i)).toBeInTheDocument();
-  });
+     expect(await screen.findByText(/Aún no hay platillos disponibles/i)).toBeInTheDocument();
+   });
+
+   it('muestra la etiqueta Abierto cuando is_open es true', async () => {
+     mockTableResults({
+       merchants: { data: [buildMerchant('merchant-1', 'La Esquina')], error: null },
+       categories: { data: [], error: null },
+       products: { data: [], error: null },
+     });
+
+     renderWithProviders(
+       <MemoryRouter initialEntries={['/merchant/merchant-1']}>
+         <Routes>
+           <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+         </Routes>
+       </MemoryRouter>,
+     );
+
+     expect(await screen.findByText('Abierto')).toBeInTheDocument();
+   });
+
+   it('muestra la etiqueta Cerrado cuando is_open es false', async () => {
+     const closedMerchant = { ...buildMerchant('merchant-1', 'La Esquina'), is_open: false };
+     mockTableResults({
+       merchants: { data: [closedMerchant], error: null },
+       categories: { data: [], error: null },
+       products: { data: [], error: null },
+     });
+
+     renderWithProviders(
+       <MemoryRouter initialEntries={['/merchant/merchant-1']}>
+         <Routes>
+           <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+         </Routes>
+       </MemoryRouter>,
+     );
+
+     expect(await screen.findByText('Cerrado')).toBeInTheDocument();
+   });
+
+   it('muestra la categoría y zona del comercio', async () => {
+     const zonedMerchant = {
+       ...buildMerchant('merchant-1', 'La Esquina'),
+       category: 'Postres',
+       zone: 'Laureles',
+     };
+     mockTableResults({
+       merchants: { data: [zonedMerchant], error: null },
+       categories: { data: [], error: null },
+       products: { data: [], error: null },
+     });
+
+     renderWithProviders(
+       <MemoryRouter initialEntries={['/merchant/merchant-1']}>
+         <Routes>
+           <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+         </Routes>
+       </MemoryRouter>,
+     );
+
+     expect(await screen.findByText('La Esquina')).toBeInTheDocument();
+     expect(screen.getByText('Postres')).toBeInTheDocument();
+     expect(screen.getByText('Laureles')).toBeInTheDocument();
+   });
 
   it('muestra mensaje de error al fallar la carga', async () => {
     mockTableResults({

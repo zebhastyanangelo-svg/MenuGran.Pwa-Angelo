@@ -122,6 +122,7 @@ export interface MerchantRow {
   status: MerchantStatus;
   verification_docs: MerchantVerificationDocs;
   is_active: boolean;
+  is_open: boolean;
   location: GeoPoint | null;
   created_at: IsoTimestamp;
   rif: string;
@@ -200,7 +201,7 @@ export type MerchantInsert = Pick<
   MerchantRow,
   'owner_id' | 'name' | 'slug' | 'rif' | 'category' | 'description' | 'address' | 'zone' | 'phone_whatsapp' | 'service_modalities' | 'business_hours'
 > &
-  Partial<Pick<MerchantRow, 'logo_url' | 'banner_url' | 'status' | 'is_active' | 'location'>>;
+  Partial<Pick<MerchantRow, 'logo_url' | 'banner_url' | 'status' | 'is_active' | 'is_open' | 'location'>>;
 
 export type MerchantStaffInsert = Pick<
   MerchantStaffRow,

@@ -21,6 +21,7 @@ function buildMerchant(id: string, name: string, slug: string): MerchantRow {
     verification_docs: {},
     location: null,
     is_active: true,
+    is_open: true,
     created_at: '2026-01-01T00:00:00.000Z',
     rif: 'J-12345678-0',
     category: 'Restaurante',

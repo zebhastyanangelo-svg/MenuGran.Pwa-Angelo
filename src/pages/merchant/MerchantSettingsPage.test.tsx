@@ -21,6 +21,7 @@ const mockMerchant: MerchantRow = {
   status: 'active' as const,
   verification_docs: {} as Record<string, unknown>,
   is_active: true,
+  is_open: true,
   location: null,
   created_at: '2026-01-01T00:00:00.000Z',
   rif: 'J-12345678-0',
@@ -157,32 +158,43 @@ describe('MerchantSettingsPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('precarga los campos con los datos del comercio existente', async () => {
-    await setMockState({ merchant: mockMerchant });
+   it('precarga los campos con los datos del comercio existente', async () => {
+     await setMockState({ merchant: mockMerchant });
 
-    render(<MerchantSettingsPage />);
+     render(<MerchantSettingsPage />);
 
-    expect(screen.getByDisplayValue('Pizzería La Trattoria')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('J-12345678-0')).toBeInTheDocument();
-    expect(
-      screen.getByLabelText(/Categoría/i) as HTMLSelectElement,
-    ).toHaveValue('Restaurante');
+     expect(screen.getByDisplayValue('Pizzería La Trattoria')).toBeInTheDocument();
+     expect(screen.getByDisplayValue('J-12345678-0')).toBeInTheDocument();
+     expect(
+       screen.getByLabelText(/Categoría/i) as HTMLSelectElement,
+     ).toHaveValue('Restaurante');
 
-    await fireEvent.click(
-      screen.getByRole('button', { name: /Ubicación/i }),
-    );
+     await fireEvent.click(
+       screen.getByRole('button', { name: /Ubicación/i }),
+     );
 
-    expect(screen.getByDisplayValue('Calle 123')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Centro')).toBeInTheDocument();
+     expect(screen.getByDisplayValue('Calle 123')).toBeInTheDocument();
+     expect(screen.getByDisplayValue('Centro')).toBeInTheDocument();
 
-    await fireEvent.click(
-      screen.getByRole('button', { name: /Horarios e Identidad/i }),
-    );
+     await fireEvent.click(
+       screen.getByRole('button', { name: /Horarios e Identidad/i }),
+     );
 
-    expect(
-      screen.getByRole('checkbox') as HTMLInputElement,
-    ).toBeChecked();
-  });
+     expect(
+       screen.getByRole('checkbox') as HTMLInputElement,
+     ).toBeChecked();
+   });
+
+   it('muestra el enlace Vista Previa con href al store del comercio', async () => {
+     await setMockState({ merchant: mockMerchant });
+
+     render(<MerchantSettingsPage />);
+
+     const previewLink = screen.getByRole('link', { name: /Vista Previa/i });
+     expect(previewLink).toHaveAttribute('href', '/merchant/merchant-123');
+     expect(previewLink).toHaveAttribute('target', '_blank');
+     expect(previewLink).toHaveAttribute('rel', 'noopener noreferrer');
+   });
 
   it('envia los cambios al guardar y muestra toast de exito', async () => {
     await setMockState();

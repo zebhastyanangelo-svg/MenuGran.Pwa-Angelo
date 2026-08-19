@@ -68,10 +68,11 @@ CREATE TABLE public.merchants (
     slug TEXT UNIQUE NOT NULL,
     logo_url TEXT,
     banner_url TEXT,
-    status merchant_status DEFAULT 'pending_approval'::merchant_status NOT NULL,
-    verification_docs JSONB DEFAULT '{}'::jsonb NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE NOT NULL,
-    location POINT,
+     status merchant_status DEFAULT 'pending_approval'::merchant_status NOT NULL,
+     verification_docs JSONB DEFAULT '{}'::jsonb NOT NULL,
+     is_active BOOLEAN DEFAULT TRUE NOT NULL,
+     is_open BOOLEAN DEFAULT TRUE NOT NULL,
+     location POINT,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 

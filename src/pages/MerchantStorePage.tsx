@@ -2,27 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { CategoryRow, MerchantRow, ProductRow } from '../types/database';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, MapPin, Package } from 'lucide-react';
 import { CategoryFilter } from '../components/marketplace/CategoryFilter';
 import { ProductCard, ProductCardSkeleton } from '../components/marketplace/ProductCard';
 import { SearchBar } from '../components/marketplace/SearchBar';
 import { Badge } from '../components/ui/Badge';
 import { useCart } from '../hooks/useCart';
 import { useToast } from '../hooks/useToast';
-
-const STATUS_VARIANT: Record<MerchantRow['status'], 'success' | 'warning' | 'danger'> = {
-  pending_approval: 'warning',
-  active: 'success',
-  suspended: 'danger',
-  rejected: 'danger',
-};
-
-const STATUS_LABEL: Record<MerchantRow['status'], string> = {
-  pending_approval: 'En revisión',
-  active: 'Abierto',
-  suspended: 'Suspendido',
-  rejected: 'Cerrado',
-};
 
 const SKELETON_COUNT = 4;
 
@@ -128,6 +114,8 @@ export function MerchantStorePage() {
     },
     [confirmAddItem, showToast],
   );
+
+  const isOpen = merchant?.is_active && merchant?.is_open;
 
   if (isLoading) {
     return (
@@ -248,13 +236,28 @@ export function MerchantStorePage() {
                   </div>
                 )}
               </div>
-              <Badge variant={STATUS_VARIANT[merchant.status]}>
-                {STATUS_LABEL[merchant.status]}
+              <Badge variant={isOpen ? 'success' : 'neutral'}>
+                {isOpen ? 'Abierto' : 'Cerrado'}
               </Badge>
             </div>
 
             <h2 className="text-lg font-bold text-slate-900">{merchant.name}</h2>
             <p className="text-xs text-slate-500">@{merchant.slug}</p>
+
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
+              {merchant.category && (
+                <span className="inline-flex items-center gap-1">
+                  <Package className="h-3 w-3" />
+                  {merchant.category}
+                </span>
+              )}
+              {merchant.zone && (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {merchant.zone}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -272,9 +275,17 @@ export function MerchantStorePage() {
 
         <div className="mt-4 flex flex-col gap-3">
           {filteredProducts.length === 0 ? (
-            <p className="py-8 text-center text-sm text-gray-500">
-              No se encontraron platillos.
-            </p>
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <Package className="h-10 w-10 text-slate-300" />
+              <p className="text-sm text-slate-500">
+                Aún no hay platillos disponibles.
+              </p>
+              {searchQuery && (
+                <p className="text-xs text-slate-400">
+                  No se encontraron resultados para "{searchQuery}".
+                </p>
+              )}
+            </div>
           ) : (
             filteredProducts.map((product) => (
               <ProductCard

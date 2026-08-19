@@ -177,12 +177,24 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-6">
       <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-          Configuración del Comercio
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Administra los datos, la ubicación y la identidad visual de tu negocio.
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              Configuración del Comercio
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Administra los datos, la ubicación y la identidad visual de tu negocio.
+            </p>
+          </div>
+          <a
+            href={`/merchant/${merchant.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-red"
+          >
+            Vista Previa
+          </a>
+        </div>
       </header>
 
       <nav
