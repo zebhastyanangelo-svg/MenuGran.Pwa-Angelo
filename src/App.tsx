@@ -34,7 +34,7 @@ function RootRedirect() {
 
   if (user !== null && location.pathname === '/') {
     if (profile?.role === 'customer') {
-      return <Navigate to="/" replace />;
+      return <Navigate to="/marketplace" replace />;
     }
     return <Navigate to="/admin" replace />;
   }

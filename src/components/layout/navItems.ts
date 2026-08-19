@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
-import { Home, ShoppingCart, LayoutDashboard, UserRound } from 'lucide-react';
+import { Home, ShoppingCart, LayoutDashboard, Settings, Store, UserRound } from 'lucide-react';
+import type { UserRole } from '../../types/database';
 
 export interface NavItem {
   to: string;
@@ -7,11 +8,25 @@ export interface NavItem {
   icon: LucideIcon;
 }
 
-export const navItems: NavItem[] = [
+export const customerNavItems: NavItem[] = [
   { to: '/marketplace', label: 'Inicio', icon: Home },
   { to: '/checkout', label: 'Carrito', icon: ShoppingCart },
-  { to: '/merchant/dashboard', label: 'Panel', icon: LayoutDashboard },
   { to: '/profile', label: 'Perfil', icon: UserRound },
 ];
+
+export const merchantNavItems: NavItem[] = [
+  { to: '/admin', label: 'Inicio', icon: LayoutDashboard },
+  { to: '/admin/settings', label: 'Configuración', icon: Settings },
+  { to: '/admin/profile', label: 'Perfil', icon: Store },
+];
+
+const merchantRoles: UserRole[] = ['merchant_owner', 'merchant_staff', 'superadmin'];
+
+export function getNavItemsForRole(role: UserRole | null | undefined): NavItem[] {
+  if (role !== null && role !== undefined && merchantRoles.includes(role)) {
+    return merchantNavItems;
+  }
+  return customerNavItems;
+}
 
 export const authRoutes = ['/login', '/register'];

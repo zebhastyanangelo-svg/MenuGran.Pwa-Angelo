@@ -1,8 +1,12 @@
 import { NavLink } from 'react-router-dom';
 import { UtensilsCrossed } from 'lucide-react';
-import { navItems } from './navItems';
+import { useAuth } from '../../hooks/useAuth';
+import { getNavItemsForRole } from './navItems';
 
 export function Sidebar() {
+  const { profile } = useAuth();
+  const navItems = getNavItemsForRole(profile?.role);
+
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-slate-200 bg-slate-50 md:flex">
       <div className="flex h-16 items-center gap-2 border-b border-slate-200 bg-white/80 px-5 backdrop-blur-sm">

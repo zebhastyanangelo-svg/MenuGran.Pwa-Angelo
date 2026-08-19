@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { suggestEmailDomain } from '../../utils/emailSuggestions';
 import { uploadToImgBB } from '../../services/imgbb';
-import type { UserRole, MerchantCategory, BusinessHours } from '../../types/database';
+import type { MerchantCategory, BusinessHours } from '../../types/database';
 
 type AuthTab = 'login' | 'register';
 
@@ -182,7 +182,8 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     const fullName = (form.elements.namedItem('full_name') as HTMLInputElement).value.trim();
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
-    const role = (form.elements.namedItem('role') as HTMLSelectElement).value as UserRole;
+
+    const role = registerView === 'merchant_owner' ? 'merchant_owner' : 'customer';
 
     const suggestion = suggestEmailDomain(email);
     if (suggestion !== null) {
@@ -407,82 +408,86 @@ if (registerView === 'merchant_owner') {
             </button>
           </div>
 
-          {/* Customer form fields */}
-          {registerView === 'customer' && (
-            <div>
-              <div>
-                <label htmlFor="register-full_name" className="block text-sm font-medium text-slate-700">
-                  Nombre completo
-                </label>
-                <input
-                  id="register-full_name"
-                  name="full_name"
-                  type="text"
-                  required
-                  autoComplete="name"
-                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                />
-              </div>
-              <div>
-                <label htmlFor="register-ci" className="block text-sm font-medium text-slate-700">
-                  C.I. (Cédula de Identidad)
-                </label>
-                <input
-                  id="register-ci"
-                  name="ci"
-                  type="text"
-                  required
-                  autoComplete="name"
-                  maxLength={20}
-                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                  placeholder="Ej: V-12345678"
-                />
-              </div>
-              <div>
-                <label htmlFor="register-email" className="block text-sm font-medium text-slate-700">
-                  Correo electrónico
-                </label>
-                <input
-                  id="register-email"
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                />
-              </div>
-              <div>
-                <label htmlFor="register-phone" className="block text-sm font-medium text-slate-700">
-                  Teléfono
-                </label>
-                <input
-                  id="register-phone"
-                  name="phone"
-                  type="tel"
-                  required
-                  autoComplete="tel"
-                  maxLength={15}
-                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                  placeholder="Ej: +58 412-123-4567"
-                  pattern="[0-9\s+\-]+"
-                />
-              </div>
-              <div>
-                <label htmlFor="register-password" className="block text-sm font-medium text-slate-700">
-                  Contraseña
-                </label>
-                <input
-                  id="register-password"
-                  name="password"
-                  type="password"
-                  required
-                  minLength={6}
-                  autoComplete="new-password"
-                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                />
-              </div>
-            </div>
-          )}
+           {/* Common fields for all register views: Nombre completo, Email, Contraseña */}
+           <div>
+             <div>
+               <label htmlFor="register-full_name" className="block text-sm font-medium text-slate-700">
+                 Nombre completo
+               </label>
+               <input
+                 id="register-full_name"
+                 name="full_name"
+                 type="text"
+                 required
+                 autoComplete="name"
+                 className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+               />
+             </div>
+             <div>
+               <label htmlFor="register-email" className="block text-sm font-medium text-slate-700">
+                 Correo electrónico
+               </label>
+               <input
+                 id="register-email"
+                 name="email"
+                 type="email"
+                 required
+                 autoComplete="email"
+                 className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+               />
+             </div>
+             <div>
+               <label htmlFor="register-password" className="block text-sm font-medium text-slate-700">
+                 Contraseña
+               </label>
+               <input
+                 id="register-password"
+                 name="password"
+                 type="password"
+                 required
+                 minLength={6}
+                 autoComplete="new-password"
+                 className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+               />
+             </div>
+           </div>
+
+           {/* Customer-specific fields */}
+           {registerView === 'customer' && (
+             <div>
+               <div>
+                 <label htmlFor="register-ci" className="block text-sm font-medium text-slate-700">
+                   C.I. (Cédula de Identidad)
+                 </label>
+                 <input
+                   id="register-ci"
+                   name="ci"
+                   type="text"
+                   required
+                   autoComplete="name"
+                   maxLength={20}
+                   className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                   placeholder="Ej: V-12345678"
+                 />
+               </div>
+               <div>
+                 <label htmlFor="register-phone" className="block text-sm font-medium text-slate-700">
+                   Teléfono
+                 </label>
+                 <input
+                   id="register-phone"
+                   name="phone"
+                   type="tel"
+                   required
+                   autoComplete="tel"
+                   maxLength={15}
+                   className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                   placeholder="Ej: +58 412-123-4567"
+                   pattern="[0-9\s+\-]+"
+                 />
+               </div>
+             </div>
+           )}
 
           {/* Merchant form fields */}
           {registerView === 'merchant_owner' && (

@@ -212,8 +212,9 @@ describe('AuthForm', () => {
     expect(screen.getByLabelText(/Dirección/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Teléfono WhatsApp/i)).toBeInTheDocument();
 
-    // Customer fields should be hidden
-    expect(screen.queryByLabelText(/Nombre completo/i)).not.toBeInTheDocument();
+    // Nombre completo is now a shared field visible in both views
+    expect(screen.getByLabelText(/Nombre completo/i)).toBeInTheDocument();
+    // C.I. and Teléfono remain customer-only fields
     expect(screen.queryByLabelText('C.I.')).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Teléfono$/i)).not.toBeInTheDocument();
   });
@@ -286,8 +287,9 @@ describe('AuthForm', () => {
     expect(screen.getByText(/Modalidades de servicio/i)).toBeInTheDocument();
     expect(screen.getByText(/Horario de atención/i)).toBeInTheDocument();
 
-    // Customer fields should be hidden
-    expect(screen.queryByText(/Nombre completo/i)).not.toBeInTheDocument();
+    // Nombre completo is now a shared field visible in both views
+    expect(screen.getByText(/Nombre completo/i)).toBeInTheDocument();
+    // C.I. and Teléfono remain customer-only fields
     expect(screen.queryByText('C.I.')).not.toBeInTheDocument();
     expect(screen.queryByText(/Teléfono$/i)).not.toBeInTheDocument();
   });
@@ -322,7 +324,8 @@ describe('AuthForm', () => {
     const commerceButton = screen.getByRole('button', { name: /Comercio/i });
     await user.click(commerceButton);
 
-    const customerFields = ['Nombre completo', 'C.I.', 'Teléfono'];
+    // C.I. and Teléfono remain customer-only fields; Nombre completo is now shared
+    const customerFields = ['C.I.', 'Teléfono'];
     for (const field of customerFields) {
       expect(screen.queryByLabelText(field)).not.toBeInTheDocument();
     }

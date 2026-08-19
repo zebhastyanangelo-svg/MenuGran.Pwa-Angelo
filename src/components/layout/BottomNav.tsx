@@ -1,7 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { navItems } from './navItems';
+import { useAuth } from '../../hooks/useAuth';
+import { getNavItemsForRole } from './navItems';
 
 export function BottomNav() {
+  const { profile } = useAuth();
+  const navItems = getNavItemsForRole(profile?.role);
+
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur-sm md:hidden"

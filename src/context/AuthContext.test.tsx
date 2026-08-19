@@ -367,4 +367,7 @@ describe('AuthProvider', () => {
       email: 'a@b.com',
     });
   });
+
+  it('debería establecer el rol merchant_owner en el perfil después del registro', async () => {
+})
 });
