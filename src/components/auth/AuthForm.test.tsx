@@ -2,9 +2,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useSearchParams } from 'react-router-dom';
+import type { AuthContextValue } from '../../context/auth-context-core';
 import { AuthForm } from './AuthForm';
 import { useAuth } from '../../hooks/useAuth';
-import type { AuthContextValue } from '../../context/auth-context-core';
 
 const signInWithPassword = vi.fn();
 const signUpWithPassword = vi.fn();
@@ -177,89 +177,67 @@ describe('AuthForm', () => {
     });
   });
 
-  it('renderiza 5 campos del formulario de cliente (Nombre, C.I., Email, Teléfono, Contraseña)', async () => {
-    const user = userEvent.setup();
+  it('renderiza el formulario de registro con campos de cliente (Nombre, Email, Contraseña, C.I., Teléfono)', async () => {
     renderWithRouter('register');
 
-    // Ensure we're on the customer tab
-    const customerButton = screen.getByRole('button', { name: /Cliente/i });
-    await user.click(customerButton);
-
-    // Customer fields should be visible - exactly 5
+    // Form should have exactly the customer fields
     expect(screen.getByLabelText(/Nombre completo/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/C.I./i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Correo electrónico/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Teléfono/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Contraseña/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/C.I./i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Teléfono/i)).toBeInTheDocument();
 
     // No merchant fields should be visible
     expect(screen.queryByLabelText(/RIF/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Categoría/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Descripción/i)).not.toBeInTheDocument();
-  });
-
-  it('renderiza solo Nombre del Comercio, Email y Contraseña en la pestaña de Comercio', async () => {
-    const user = userEvent.setup();
-    renderWithRouter('register');
-
-    // Switch to Commerce tab
-    const commerceButton = screen.getByRole('button', { name: /Comercio/i });
-    await user.click(commerceButton);
-
-    // Only the simplified merchant fields should be visible
-    expect(screen.getByLabelText(/Nombre del Comercio/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Correo electrónico/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Contraseña/i)).toBeInTheDocument();
-
-    // The removed merchant fields must not be present
-    expect(screen.queryByLabelText(/RIF/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/Categoría/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/Descripción/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Dirección/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Teléfono WhatsApp/i)).not.toBeInTheDocument();
-    // C.I. remains a customer-only field
-    expect(screen.queryByLabelText('C.I.')).not.toBeInTheDocument();
   });
 
-  it('registra un comercio con los 3 campos simplificados y redirige a su panel', async () => {
+  it('muestra el banner de contacto al final del formulario de registro', async () => {
+    renderWithRouter('register');
+
+    // The support banner should be present
+    expect(screen.getByText(/Quieres vender tu comida en MenuGran/i)).toBeInTheDocument();
+    expect(screen.getByText(/Contacta al equipo de soporte/i)).toBeInTheDocument();
+    expect(screen.getByText(/WhatsApp/i)).toBeInTheDocument();
+  });
+
+  it('redirige al marketplace tras registro exitoso de cliente', async () => {
     const user = userEvent.setup();
     signUpWithPassword.mockResolvedValueOnce({ needsEmailConfirmation: false });
     renderWithRouter('register');
 
-    // Switch to Commerce tab
-    const commerceButton = screen.getByRole('button', { name: /Comercio/i });
-    await user.click(commerceButton);
-
-    await user.type(screen.getByLabelText(/Nombre del Comercio/i), 'Mi Restaurante');
-    await user.type(screen.getByLabelText(/Correo electrónico/i), 'comercio@example.com');
+    await user.type(screen.getByLabelText(/Nombre completo/i), 'Usuario Test');
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'test@example.com');
     await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.type(screen.getByLabelText(/C.I./i), 'V-12345678');
+    await user.type(screen.getByLabelText(/Teléfono/i), '+58 412-123-4567');
     await user.click(screen.getByTestId('register-submit'));
 
     expect(signUpWithPassword).toHaveBeenCalledWith(
-      'comercio@example.com',
+      'test@example.com',
       'password123',
-      'Mi Restaurante',
-      'merchant_owner',
+      'Usuario Test',
+      'customer',
     );
     await waitFor(() => {
-      expect(navigate).toHaveBeenCalledWith('/merchant/dashboard', { replace: true });
+      expect(navigate).toHaveBeenCalledWith('/marketplace', { replace: true });
     });
   });
 
-  it('cambiar a la pestaña de Cliente muestra solo los 5 campos requeridos', async () => {
-    const user = userEvent.setup();
+  it('cambiar a la pestaña de Register siempre muestra solo los campos de cliente', async () => {
     renderWithRouter('register');
 
-    // Click the Cliente tab first
-    const customerButton = screen.getByRole('button', { name: /Cliente/i });
-    await user.click(customerButton);
+    // The register tab is already active by default
 
-    // Customer fields should be visible - exactly 5 fields
+    // Customer fields should be visible
     expect(screen.getByLabelText(/Nombre completo/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/C.I./i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Correo electrónico/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Teléfono/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Contraseña/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/C.I./i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Teléfono/i)).toBeInTheDocument();
 
     // No merchant fields should be visible
     expect(screen.queryByLabelText(/RIF/i)).not.toBeInTheDocument();
@@ -267,81 +245,18 @@ describe('AuthForm', () => {
     expect(screen.queryByLabelText(/Descripción/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Dirección/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Teléfono WhatsApp/i)).not.toBeInTheDocument();
-
-    // Verify no "Tipo de cuenta" select exists (removed per new design)
-    expect(screen.queryByLabelText(/Tipo de cuenta/i)).not.toBeInTheDocument();
-  });
-
-  it('cambiar a la pestaña de Comercio muestra solo los 3 campos y oculta los del cliente', async () => {
-    const user = userEvent.setup();
-    renderWithRouter('register');
-
-    // Click the Comercio tab
-    const commerceButton = screen.getByRole('button', { name: /Comercio/i });
-    await user.click(commerceButton);
-
-    // Only the simplified merchant fields are visible
-    expect(screen.getByText(/Nombre del Comercio/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Correo electrónico/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Contraseña/i)).toBeInTheDocument();
-
-    // The removed structured merchant fields must not be present
-    expect(screen.queryByText(/RIF/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Categoría/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Descripción/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Dirección/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Modalidades de servicio/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Horario de atención/i)).not.toBeInTheDocument();
-    // C.I. and Teléfono remain customer-only fields
-    expect(screen.queryByText('C.I.')).not.toBeInTheDocument();
-    expect(screen.queryByText(/Teléfono$/i)).not.toBeInTheDocument();
-  });
-
-  it('validar que los campos de comercio no estén en el DOM cuando el rol es cliente', async () => {
-    const user = userEvent.setup();
-    renderWithRouter('register', '/marketplace');
-
-    // Click the Cliente tab first
-    const customerButton = screen.getByRole('button', { name: /Cliente/i });
-    await user.click(customerButton);
-
-    const merchantFields = [
-      'RIF',
-      'Categoría',
-      'Descripción',
-      'Dirección',
-      'Teléfono WhatsApp',
-      'Modalidades de servicio',
-      'Horario de atención',
-    ];
-    for (const field of merchantFields) {
-      expect(screen.queryByLabelText(field)).not.toBeInTheDocument();
-    }
-  });
-
-  it('validar que los campos de cliente no estén en el DOM cuando el rol es comerciante', async () => {
-    const user = userEvent.setup();
-    renderWithRouter('register', '/marketplace');
-
-    // Click the Comercio tab first
-    const commerceButton = screen.getByRole('button', { name: /Comercio/i });
-    await user.click(commerceButton);
-
-    // C.I. and Teléfono remain customer-only fields; Nombre completo is now shared
-    const customerFields = ['C.I.', 'Teléfono'];
-    for (const field of customerFields) {
-      expect(screen.queryByLabelText(field)).not.toBeInTheDocument();
-    }
   });
 
   it('no debe renderizar el campo "Tipo de cuenta" eliminado', async () => {
     renderWithRouter('register');
 
-    // The "Tipo de cuenta" select was removed; only tabs at top control view
+    // The "Tipo de cuenta" select was removed; only login/register tabs exist
     expect(screen.queryByLabelText(/Tipo de cuenta/i)).not.toBeInTheDocument();
 
-    // But the tab buttons should still exist
-    expect(screen.getByRole('button', { name: /Cliente/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Comercio/i })).toBeInTheDocument();
+    // But the tab buttons should still exist (login/register)
+    // Note: there are two buttons with "Registrarse" text (tab + submit), so we check both exist
+    const registerButtons = screen.getAllByRole('button', { name: /Registrarse/i });
+    expect(registerButtons.length).toBe(2);
+    expect(screen.getByRole('button', { name: /Iniciar Sesión/i })).toBeInTheDocument();
   });
 });

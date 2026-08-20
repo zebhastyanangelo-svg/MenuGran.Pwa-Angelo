@@ -1,10 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ProfileRow } from './types/database';
 import { AuthProvider } from './context/AuthContext';
 import { AuthForm } from './components/auth/AuthForm';
+import { MerchantDashboardPage } from './pages/merchant/MerchantDashboardPage';
+import { useMerchantDashboardPage } from './hooks/useMerchantDashboardPage';
 
 const authMocks = vi.hoisted(() => ({
   onAuthStateChange: vi
@@ -40,84 +42,156 @@ vi.mock('./services/merchantService', () => ({
   updateMerchant: vi.fn(),
 }));
 
-function buildProfile(id: string, role: ProfileRow['role']): ProfileRow {
-  return {
-    id,
-    email: `${id}@menugram.com`,
-    full_name: null,
-    avatar_url: null,
-    role,
-    created_at: '2026-01-01T00:00:00.000Z',
-    updated_at: '2026-01-01T00:00:00.000Z',
+vi.mock('./hooks/useMerchantDashboardPage', () => ({
+  useMerchantDashboardPage: vi.fn(),
+}));
+
+const SUPPORT_BANNER_TEXT = /¿Quieres vender tu comida en MenuGran/i;
+
+function resetSupabaseSessionMocks() {
+  authMocks.getSession.mockResolvedValue({ data: { session: null } });
+  authMocks.onAuthStateChange.mockReturnValue({
+    data: { subscription: { unsubscribe: vi.fn() } },
+  });
+}
+
+function mockDashboardData(overrides: Record<string, unknown> = {}) {
+  const base = {
+    merchantId: null,
+    merchantName: null,
+    isOpen: false,
+    activeProducts: 0,
+    orders: [],
+    loading: false,
+    error: null,
+    toggleStoreOpen: vi.fn(),
+    updateOrderStatus: vi.fn(),
   };
+  const useMerchantMock = useMerchantDashboardPage as unknown as ReturnType<
+    typeof vi.fn
+  >;
+  useMerchantMock.mockReturnValue({ ...base, ...overrides });
 }
 
-function mockProfileQuery(result: {
-  data: ProfileRow | null;
-  error: unknown;
-}): void {
-  const single = vi.fn().mockResolvedValue(result);
-  const eq = vi.fn(() => ({ single }));
-  const select = vi.fn(() => ({ eq }));
-  authMocks.from.mockReturnValue({ select });
+async function renderWithAuth(ui: ReactNode) {
+  await act(async () => {
+    render(<MemoryRouter>{ui}</MemoryRouter>);
+  });
 }
 
-describe('Merchant Owner Registration E2E', { timeout: 15000 }, () => {
+describe('Single Registration Flow (AuthForm)', { timeout: 15000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetSupabaseSessionMocks();
   });
 
-  it('should render merchant_owner registration fields when Comercio tab is selected', async () => {
-    mockProfileQuery({ data: buildProfile('merchant-user-123', 'merchant_owner'), error: null });
-
-    render(
-      <MemoryRouter>
-        <AuthProvider>
-          <AuthForm defaultTab="register" />
-        </AuthProvider>
-      </MemoryRouter>,
+  it('renders the simplified register form with client fields and the support banner', async () => {
+    await renderWithAuth(
+      <AuthProvider>
+        <AuthForm defaultTab="register" />
+      </AuthProvider>,
     );
 
-    // Select the "Comercio" (merchant_owner) tab
-    const commerceTab = screen.getByRole('button', { name: /Comercio/i });
-    await userEvent.click(commerceTab);
+    expect(screen.getByLabelText(/Nombre completo/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Correo electrónico/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Contraseña/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/C.I./i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Teléfono/i)).toBeInTheDocument();
 
-    // Only the simplified merchant fields must be present
-    expect(screen.getByLabelText('Nombre del Comercio')).toBeInTheDocument();
-    expect(screen.getByLabelText('Correo electrónico')).toBeInTheDocument();
-    expect(screen.getByLabelText('Contraseña')).toBeInTheDocument();
+    expect(screen.getByText(SUPPORT_BANNER_TEXT)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /WhatsApp/i })).toBeInTheDocument();
 
-    // The old structured merchant fields must no longer be present
-    expect(screen.queryByLabelText('RIF')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Categoría')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Descripción')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Dirección')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Teléfono WhatsApp')).not.toBeInTheDocument();
-    // Customer-only fields must NOT be present in the merchant view
-    expect(screen.queryByLabelText('C.I. (Cédula de Identidad)')).not.toBeInTheDocument();
-
-    console.log('✅ Merchant registration fields rendered correctly');
+    expect(screen.getByTestId('register-submit')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Tipo de cuenta/i)).not.toBeInTheDocument();
   });
 
-  it('should mark the Comercio tab as active in merchant view', async () => {
-    mockProfileQuery({ data: buildProfile('merchant-user-456', 'merchant_owner'), error: null });
+  it('registers a customer with role "customer" and shows the email confirmation banner', async () => {
+    const user = userEvent.setup();
+    authMocks.signUp.mockResolvedValueOnce({
+      data: { user: { id: 'new-user-1', email_confirmed_at: null } },
+      error: null,
+    });
 
-    render(
-      <MemoryRouter>
-        <AuthProvider>
-          <AuthForm defaultTab="register" />
-        </AuthProvider>
-      </MemoryRouter>,
+    await renderWithAuth(
+      <AuthProvider>
+        <AuthForm defaultTab="register" />
+      </AuthProvider>,
     );
 
-    const commerceTab = screen.getByRole('button', { name: /Comercio/i });
-    expect(commerceTab.className).not.toContain('bg-brand-red');
+    await user.type(screen.getByLabelText(/Nombre completo/i), 'Usuario Test');
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'test@example.com');
+    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.type(screen.getByLabelText(/C.I./i), 'V-12345678');
+    await user.type(screen.getByLabelText(/Teléfono/i), '+58 412-123-4567');
+    await user.click(screen.getByTestId('register-submit'));
 
-    await userEvent.click(commerceTab);
+    await waitFor(() => {
+      expect(authMocks.signUp).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        password: 'password123',
+        options: { data: { full_name: 'Usuario Test', role: 'customer' } },
+      });
+    });
 
-    expect(commerceTab.className).toContain('bg-brand-red');
-    expect(screen.getByLabelText('Nombre del Comercio')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/¡Registro exitoso!/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/test@example.com/i)).toBeInTheDocument();
+  });
+});
 
-    console.log('✅ Comercio tab active state confirmed');
+describe('Merchant Dashboard Verification Card', { timeout: 15000 }, () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetSupabaseSessionMocks();
+  });
+
+  it('renders the verification card with a WhatsApp button when the merchant has no store assigned', async () => {
+    mockDashboardData({ merchantName: null });
+
+    await renderWithAuth(
+      <AuthProvider>
+        <MerchantDashboardPage />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Tu cuenta de comercio está en proceso de verificación/i),
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText(/Si aún no has registrado tu negocio, contáctanos/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Contactar por WhatsApp/i }),
+    ).toBeInTheDocument();
+
+    expect(screen.queryByText(/Pedidos hoy/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tienda Abierta/i)).not.toBeInTheDocument();
+  });
+
+  it('renders the normal dashboard instead of the verification card when a store is assigned', async () => {
+    mockDashboardData({
+      merchantName: 'La Pizza',
+      isOpen: true,
+      activeProducts: 8,
+    });
+
+    await renderWithAuth(
+      <AuthProvider>
+        <MerchantDashboardPage />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Hola, La Pizza/i)).toBeInTheDocument();
+    });
+
+    expect(
+      screen.queryByText(/Tu cuenta de comercio está en proceso de verificación/i),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Tienda Abierta')).toBeInTheDocument();
   });
 });

@@ -11,8 +11,9 @@ interface AuthFormProps {
 }
 
 /* Role labels and roles kept for reference but the role select
-   was removed per the new auth flow - selection is now controlled
-   by the "Cliente" / "Comercio" tabs at the top. */
+   was removed per the new auth flow - registration is now exclusively
+   for customers. The "Cliente" / "Comercio" tabs at the top have been
+   removed; only customer registration is available. */
 
 const SUBMIT_BASE_CLASS =
   'w-full rounded-xl border border-transparent bg-brand-red py-3 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70';
@@ -96,21 +97,12 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
 
   const from = searchParams.get('from') ?? '/marketplace';
 
-  const [registerView, setRegisterView] = useState<'customer' | 'merchant_owner'>('customer');
-
   const handleTabChange = (tab: AuthTab) => {
     setActiveTab(tab);
     setError(null);
     setShowConfirmationBanner(false);
     setPendingEmail('');
     navigate(tab === 'login' ? '/login' : '/register', { replace: true });
-  };
-
-  const handleRegisterViewChange = (view: 'customer' | 'merchant_owner') => {
-    setRegisterView(view);
-    setError(null);
-    setShowConfirmationBanner(false);
-    setPendingEmail('');
   };
 
   const handleGoogleSignIn = async () => {
@@ -161,7 +153,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
 
-    const role = registerView === 'merchant_owner' ? 'merchant_owner' : 'customer';
+    const role = 'customer';
 
     const suggestion = suggestEmailDomain(email);
     if (suggestion !== null) {
@@ -178,11 +170,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         setPendingEmail(email);
         setShowConfirmationBanner(true);
       } else {
-        if (registerView === 'merchant_owner') {
-          navigate('/merchant/dashboard', { replace: true });
-        } else {
-          navigate(from, { replace: true });
-        }
+        navigate(from, { replace: true });
       }
     } catch (err) {
       setError(resolveAuthErrorMessage(err));
@@ -337,122 +325,102 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         </form>
       )}
 
-      {activeTab === 'register' && (
+{activeTab === 'register' && (
         <form onSubmit={handleRegister} className="space-y-4">
           <h2 className="mb-2 text-center text-xl font-bold text-slate-900">
             Registrarse
           </h2>
 
-          {/* Account type tabs */}
-          <div className="flex gap-2 mb-4">
-            <button
-              type="button"
-              className={
-                'flex-1 py-2 rounded border border-slate-300 text-sm font-medium text-slate-700 transition-colors ' +
-                (registerView === 'customer'
-                  ? 'bg-brand-red text-white'
-                  : 'bg-slate-100 text-slate-900 hover:text-slate-800')
-              }
-              onClick={() => handleRegisterViewChange('customer')}
-            >
-              Cliente
-            </button>
-            <button
-              type="button"
-              className={
-                'flex-1 py-2 rounded border border-slate-300 text-sm font-medium text-slate-700 transition-colors ' +
-                (registerView === 'merchant_owner'
-                  ? 'bg-brand-red text-white'
-                  : 'bg-slate-100 text-slate-900 hover:text-slate-800')
-              }
-              onClick={() => handleRegisterViewChange('merchant_owner')}
-            >
-              Comercio
-            </button>
+          <div>
+            <div>
+              <label htmlFor="register-full_name" className="block text-sm font-medium text-slate-700">
+                Nombre completo
+              </label>
+              <input
+                id="register-full_name"
+                name="full_name"
+                type="text"
+                required
+                autoComplete="name"
+                className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+              />
+            </div>
+            <div>
+              <label htmlFor="register-email" className="block text-sm font-medium text-slate-700">
+                Correo electrónico
+              </label>
+              <input
+                id="register-email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+              />
+            </div>
+            <div>
+              <label htmlFor="register-password" className="block text-sm font-medium text-slate-700">
+                Contraseña
+              </label>
+              <input
+                id="register-password"
+                name="password"
+                type="password"
+                required
+                minLength={6}
+                autoComplete="new-password"
+                className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+              />
+            </div>
           </div>
 
-           {/* Common fields for all register views: Nombre, Email, Contraseña */}
-           <div>
-             <div>
-               <label htmlFor="register-full_name" className="block text-sm font-medium text-slate-700">
-                 {registerView === 'merchant_owner' ? 'Nombre del Comercio' : 'Nombre completo'}
-               </label>
-               <input
-                 id="register-full_name"
-                 name="full_name"
-                 type="text"
-                 required
-                 autoComplete="name"
-                 className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-               />
-             </div>
-             <div>
-               <label htmlFor="register-email" className="block text-sm font-medium text-slate-700">
-                 Correo electrónico
-               </label>
-               <input
-                 id="register-email"
-                 name="email"
-                 type="email"
-                 required
-                 autoComplete="email"
-                 className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-               />
-             </div>
-             <div>
-               <label htmlFor="register-password" className="block text-sm font-medium text-slate-700">
-                 Contraseña
-               </label>
-               <input
-                 id="register-password"
-                 name="password"
-                 type="password"
-                 required
-                 minLength={6}
-                 autoComplete="new-password"
-                 className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-               />
-             </div>
-           </div>
+          <div>
+            <div>
+              <label htmlFor="register-ci" className="block text-sm font-medium text-slate-700">
+                C.I. (Cédula de Identidad)
+              </label>
+              <input
+                id="register-ci"
+                name="ci"
+                type="text"
+                required
+                autoComplete="name"
+                maxLength={20}
+                className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                placeholder="Ej: V-12345678"
+              />
+            </div>
+            <div>
+              <label htmlFor="register-phone" className="block text-sm font-medium text-slate-700">
+                Teléfono
+              </label>
+              <input
+                id="register-phone"
+                name="phone"
+                type="tel"
+                required
+                autoComplete="tel"
+                maxLength={15}
+                className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                placeholder="Ej: +58 412-123-4567"
+                pattern="[0-9\s+\-]+"
+              />
+            </div>
+          </div>
 
-           {/* Customer-specific fields */}
-           {registerView === 'customer' && (
-             <div>
-               <div>
-                 <label htmlFor="register-ci" className="block text-sm font-medium text-slate-700">
-                   C.I. (Cédula de Identidad)
-                 </label>
-                 <input
-                   id="register-ci"
-                   name="ci"
-                   type="text"
-                   required
-                   autoComplete="name"
-                   maxLength={20}
-                   className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                   placeholder="Ej: V-12345678"
-                 />
-               </div>
-               <div>
-                 <label htmlFor="register-phone" className="block text-sm font-medium text-slate-700">
-                   Teléfono
-                 </label>
-                 <input
-                   id="register-phone"
-                   name="phone"
-                   type="tel"
-                   required
-                   autoComplete="tel"
-                   maxLength={15}
-                   className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
-                   placeholder="Ej: +58 412-123-4567"
-                   pattern="[0-9\s+\-]+"
-                 />
-               </div>
-             </div>
-           )}
-
-
+          <div className="mt-6 p-4 bg-slate-100 rounded-xl border border-slate-300">
+            <p className="text-sm text-slate-700 font-medium">
+              ¿Quieres vender tu comida en MenuGran? Contacta al equipo de soporte para dar de alta tu negocio
+            </p>
+            <a
+              href="https://wa.me/58414xxxxxxx"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 text-brand-red underline text-sm font-medium"
+            >
+              WhatsApp
+            </a>
+          </div>
 
           <button
             type="submit"
@@ -471,6 +439,9 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
           </button>
         </form>
       )}
+
+
+
     </div>
   );
 }

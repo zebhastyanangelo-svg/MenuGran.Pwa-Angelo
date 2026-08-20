@@ -177,4 +177,33 @@ describe('MerchantDashboardPage', () => {
 
     expect(updateOrderStatus).toHaveBeenCalledWith('o1', 'confirmed');
   });
+
+  it('muestra tarjeta de verificación cuando el comercio no tiene tienda asignada', () => {
+    (useMerchantDashboardPage as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+      {
+        merchantId: 'm-1',
+        merchantName: null,
+        isOpen: true,
+        activeProducts: 0,
+        orders: [],
+        loading: false,
+        error: null,
+        toggleStoreOpen: vi.fn(),
+        updateOrderStatus: vi.fn(),
+      },
+    );
+
+    renderPage();
+
+    // Should show verification card, not the normal dashboard
+    expect(screen.getByText(/Tu cuenta de comercio está en proceso de verificación/i)).toBeInTheDocument();
+    expect(screen.getByText(/Si aún no has registrado tu negocio, contáctanos/i)).toBeInTheDocument();
+    expect(screen.getByText(/Contactar por WhatsApp/i)).toBeInTheDocument();
+
+    // Should NOT show the normal dashboard elements
+    expect(screen.queryByText('Pedidos hoy')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ventas hoy')).not.toBeInTheDocument();
+    expect(screen.queryByText('Productos activos')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tienda Abierta')).not.toBeInTheDocument();
+  });
 });
