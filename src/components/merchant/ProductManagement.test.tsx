@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ProductFormModal } from './ProductFormModal';
+import { DishFormModal } from './DishFormModal';
 import { ProductManagement } from './ProductManagement';
 import { supabase } from '../../services/supabase';
 import type { CategoryRow, ProductRow } from '../../types/database';
@@ -47,7 +47,7 @@ const mockProducts: ProductRow[] = [
     title: 'Hamburguesa Clásica',
     description: 'Carne, queso, lechuga',
     price: '8.50',
-     image_url: 'https://i.ibb.co/sample/burguer.jpg',
+    image_url: 'https://i.ibb.co/sample/burguer.jpg',
     is_available: true,
     created_at: new Date().toISOString(),
   },
@@ -64,10 +64,10 @@ const mockProducts: ProductRow[] = [
   },
 ];
 
-describe('ProductFormModal', () => {
+describe('DishFormModal', () => {
   it('no se muestra si isOpen es false', () => {
     render(
-      <ProductFormModal
+      <DishFormModal
         isOpen={false}
         onClose={vi.fn()}
         onSave={vi.fn()}
@@ -75,12 +75,12 @@ describe('ProductFormModal', () => {
       />
     );
 
-    expect(screen.queryByText('Agregar Producto')).toBeNull();
+    expect(screen.queryByText('Nuevo Platillo')).toBeNull();
   });
 
   it('muestra el título correcto y llena los campos en modo edición', () => {
     render(
-      <ProductFormModal
+      <DishFormModal
         isOpen={true}
         onClose={vi.fn()}
         onSave={vi.fn()}
@@ -89,7 +89,7 @@ describe('ProductFormModal', () => {
       />
     );
 
-    expect(screen.getByText('Editar Producto')).toBeInTheDocument();
+    expect(screen.getByText('Editar Platillo')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Hamburguesa Clásica')).toBeInTheDocument();
     expect(screen.getByDisplayValue('8.50')).toBeInTheDocument();
   });
@@ -97,7 +97,7 @@ describe('ProductFormModal', () => {
   it('muestra mensaje de error si se intenta guardar un formulario inválido', async () => {
     const handleSave = vi.fn();
     render(
-      <ProductFormModal
+      <DishFormModal
         isOpen={true}
         onClose={vi.fn()}
         onSave={handleSave}
@@ -118,7 +118,7 @@ describe('ProductFormModal', () => {
   it('llama a onSave con los datos validados al completar el formulario', async () => {
     const handleSave = vi.fn().mockResolvedValue(undefined);
     render(
-      <ProductFormModal
+      <DishFormModal
         isOpen={true}
         onClose={vi.fn()}
         onSave={handleSave}
@@ -126,7 +126,7 @@ describe('ProductFormModal', () => {
       />
     );
 
-    fireEvent.change(screen.getByLabelText(/título/i), {
+    fireEvent.change(screen.getByLabelText(/nombre del platillo/i), {
       target: { value: 'Papas Fritas' },
     });
     fireEvent.change(screen.getByLabelText(/precio/i), {

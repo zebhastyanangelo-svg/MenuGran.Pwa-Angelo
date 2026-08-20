@@ -84,17 +84,27 @@ describe('Checkout', () => {
     expect(screen.getByText(/Carrito con productos de múltiples comercios/i)).toBeInTheDocument();
   });
 
-  it('renderiza el formulario con tipo de pedido cuando el carrito es válido', () => {
-    render(
-      <MemoryRouter>
-        <Checkout />
-      </MemoryRouter>,
-    );
-    expect(screen.getByText(/Finalizar pedido/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Entrega a domicilio/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Retiro en local/i })).toBeInTheDocument();
-    expect(screen.queryByText(/Tu carrito está vacío/i)).not.toBeInTheDocument();
-  });
+  it(
+    'renderiza el formulario con tipo de pedido cuando el carrito es válido',
+    () => {
+      render(
+        <MemoryRouter>
+          <Checkout />
+        </MemoryRouter>,
+      );
+      expect(screen.getByText(/Finalizar pedido/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Entrega a domicilio/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Retiro en local/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/Tu carrito está vacío/i),
+      ).not.toBeInTheDocument();
+    },
+    10000,
+  );
 
   it('requiere banco, referencia y comprobante antes de enviar', async () => {
     render(

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase, TABLE_NAMES } from '../../services/supabase';
 import type { CategoryRow, ProductRow } from '../../types/database';
 import { formatPrice } from '../../types/cart';
-import { ProductFormModal } from './ProductFormModal';
+import { DishFormModal } from './DishFormModal';
 import type { ProductFormData } from '../../utils/productForm';
 
 export interface ProductManagementProps {
@@ -223,9 +223,9 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
       {/* Cabecera y Botones Principales */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Catálogo de Productos</h2>
+          <h2 className="text-xl font-bold text-gray-900">Gestión del Menú</h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Administra los ítems de tu menú, precios, imágenes y disponibilidad.
+            Administra tus platillos, precios, imágenes y disponibilidad.
           </p>
         </div>
 
@@ -245,7 +245,7 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
             }}
             className="px-4 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors shadow-sm"
           >
-            + Nuevo Producto
+            + Nuevo Platillo
           </button>
         </div>
       </div>
@@ -398,7 +398,7 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
                   }`}
                   title={
                     prod.is_available
-                      ? 'Click para pausar venta'
+                      ? 'Click para marcar agotado'
                       : 'Click para activar venta'
                   }
                 >
@@ -407,7 +407,7 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
                       prod.is_available ? 'bg-green-500' : 'bg-red-500'
                     }`}
                   />
-                  {prod.is_available ? 'Disponible' : 'Pausado'}
+                  {prod.is_available ? 'Disponible' : 'Agotado'}
                 </button>
 
                 {/* Acciones Editar y Eliminar */}
@@ -436,8 +436,8 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
         </div>
       )}
 
-      {/* Modal de Creación / Edición de Producto */}
-      <ProductFormModal
+      {/* Modal de Creación / Edición de Platillo */}
+      <DishFormModal
         isOpen={isProductModalOpen}
         onClose={() => {
           setIsProductModalOpen(false);

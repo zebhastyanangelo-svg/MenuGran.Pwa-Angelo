@@ -26,6 +26,12 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage').then((mod) => ({ de
 const MerchantSettingsPage = lazy(() =>
   import('./pages/merchant/MerchantSettingsPage').then((mod) => ({ default: mod.MerchantSettingsPage })),
 );
+const MerchantDishesPage = lazy(() =>
+  import('./pages/merchant/MerchantDishesPage').then((mod) => ({ default: mod.MerchantDishesPage })),
+);
+const MerchantDashboardHomePage = lazy(() =>
+  import('./pages/merchant/MerchantDashboardPage').then((mod) => ({ default: mod.MerchantDashboardPage })),
+);
 
 function RootRedirect() {
   const { user, profile, isLoading } = useAuth();
@@ -79,6 +85,8 @@ export function App() {
                   />
                   <Route path="/admin" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantDashboardPage /></ProtectedRoute>} />
                   <Route path="/admin/settings" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantSettingsPage /></ProtectedRoute>} />
+                  <Route path="/admin/dishes" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantDishesPage /></ProtectedRoute>} />
+                  <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantDashboardHomePage /></ProtectedRoute>} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>

@@ -1,36 +1,42 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { uploadToImgBB } from '../../services/imgbb';
+import {
+  ImageUploadField,
+  type ImageFieldState,
+} from './ImageUploadField';
 import type { CategoryRow, ProductRow } from '../../types/database';
 import { validateProductForm, type ProductFormData } from '../../utils/productForm';
 
-export interface ProductFormModalProps {
+export interface DishFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (productData: ProductFormData) => Promise<void>;
+  onSave: (dishData: ProductFormData) => Promise<void>;
   categories: CategoryRow[];
   initialData?: ProductRow | null;
   onAddCategory?: (categoryName: string) => Promise<CategoryRow | null>;
 }
 
-export function ProductFormModal({
+export function DishFormModal({
   isOpen,
   onClose,
   onSave,
   categories,
   initialData,
   onAddCategory,
-}: ProductFormModalProps) {
+}: DishFormModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [isAvailable, setIsAvailable] = useState(true);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [image, setImage] = useState<ImageFieldState>({
+    url: null,
+    uploading: false,
+    error: null,
+  });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCatName, setNewCatName] = useState('');
@@ -43,17 +49,20 @@ export function ProductFormModal({
       setPrice(initialData.price ? String(initialData.price) : '');
       setCategoryId(initialData.category_id || '');
       setIsAvailable(initialData.is_available ?? true);
-      setImageUrl(initialData.image_url || null);
+      setImage({
+        url: initialData.image_url || null,
+        uploading: false,
+        error: null,
+      });
     } else {
       setTitle('');
       setDescription('');
       setPrice('');
       setCategoryId(categories.length > 0 ? categories[0].id : '');
       setIsAvailable(true);
-      setImageUrl(null);
+      setImage({ url: null, uploading: false, error: null });
     }
     setErrors({});
-    setUploadError(null);
     setShowNewCategory(false);
     setNewCatName('');
   }, [initialData, isOpen, categories]);
@@ -64,21 +73,25 @@ export function ProductFormModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadingImage(true);
-    setUploadError(null);
+    setImage((prev) => ({ ...prev, uploading: true, error: null }));
 
     try {
       const url = await uploadToImgBB(file);
-      setImageUrl(url);
+      setImage({ url, uploading: false, error: null });
     } catch (err: unknown) {
-      console.error('Error al subir la imagen:', err);
-      setUploadError(
-        err instanceof Error ? err.message : 'Error al subir la imagen a ImgBB'
-      );
-    } finally {
-      setUploadingImage(false);
+      setImage((prev) => ({
+        ...prev,
+        uploading: false,
+        error:
+          err instanceof Error
+            ? err.message
+            : 'Error al subir la imagen a ImgBB',
+      }));
     }
   };
+
+  const handleRemoveImage = () =>
+    setImage({ url: null, uploading: false, error: null });
 
   const handleCreateCategory = async () => {
     if (!newCatName.trim() || !onAddCategory) return;
@@ -90,8 +103,6 @@ export function ProductFormModal({
         setShowNewCategory(false);
         setNewCatName('');
       }
-    } catch (err: unknown) {
-      console.error('Error creando categoría:', err);
     } finally {
       setAddingCat(false);
     }
@@ -106,7 +117,7 @@ export function ProductFormModal({
       price,
       category_id: categoryId,
       is_available: isAvailable,
-      image_url: imageUrl,
+      image_url: image.url,
     };
 
     const validation = validateProductForm(formData);
@@ -122,12 +133,11 @@ export function ProductFormModal({
       await onSave(formData);
       onClose();
     } catch (err: unknown) {
-      console.error('Error al guardar producto:', err);
       setErrors({
         submit:
           err instanceof Error
             ? err.message
-            : 'Ocurrió un error inesperado al guardar el producto.',
+            : 'Ocurrió un error inesperado al guardar el platillo.',
       });
     } finally {
       setIsSaving(false);
@@ -139,7 +149,7 @@ export function ProductFormModal({
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 relative my-8">
         <div className="flex justify-between items-center mb-5 border-b pb-3">
           <h2 className="text-xl font-bold text-gray-900">
-            {initialData ? 'Editar Producto' : 'Agregar Producto'}
+            {initialData ? 'Editar Platillo' : 'Nuevo Platillo'}
           </h2>
           <button
             type="button"
@@ -158,13 +168,16 @@ export function ProductFormModal({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Título */}
+          {/* Nombre del platillo */}
           <div>
-            <label htmlFor="product-title" className="block text-sm font-medium text-gray-700 mb-1">
-              Título del Producto
+            <label
+              htmlFor="dish-title"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Nombre del Platillo
             </label>
             <input
-              id="product-title"
+              id="dish-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -180,11 +193,14 @@ export function ProductFormModal({
 
           {/* Descripción */}
           <div>
-            <label htmlFor="product-description" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="dish-description"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Descripción (Opcional)
             </label>
             <textarea
-              id="product-description"
+              id="dish-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
@@ -196,11 +212,14 @@ export function ProductFormModal({
           {/* Precio y Categoría */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="product-price" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="dish-price"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Precio ($)
               </label>
               <input
-                id="product-price"
+                id="dish-price"
                 type="number"
                 step="0.01"
                 value={price}
@@ -217,7 +236,10 @@ export function ProductFormModal({
 
             <div>
               <div className="flex justify-between items-center mb-1">
-                <label htmlFor="product-category" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="dish-category"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Categoría
                 </label>
                 {onAddCategory && !showNewCategory && (
@@ -258,7 +280,7 @@ export function ProductFormModal({
                 </div>
               ) : (
                 <select
-                  id="product-category"
+                  id="dish-category"
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
                   className={`w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
@@ -275,69 +297,35 @@ export function ProductFormModal({
               )}
 
               {errors.category_id && (
-                <p className="mt-1 text-xs text-red-600">{errors.category_id}</p>
+                <p className="mt-1 text-xs text-red-600">
+                  {errors.category_id}
+                </p>
               )}
             </div>
           </div>
 
-          {/* Imagen del Producto */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Imagen del Producto
-            </label>
-            <div className="flex items-center gap-4">
-              {imageUrl ? (
-                <div className="relative w-20 h-20 bg-gray-100 rounded border overflow-hidden flex-shrink-0">
-                  <img
-                    src={imageUrl}
-                    alt="Vista previa"
-                    className="w-full h-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setImageUrl(null)}
-                    className="absolute top-0 right-0 bg-red-600 text-white w-5 h-5 flex items-center justify-center text-xs rounded-bl font-bold"
-                    title="Quitar imagen"
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <div className="w-20 h-20 bg-gray-100 rounded border border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xs text-center p-1 flex-shrink-0">
-                  Sin Foto
-                </div>
-              )}
-
-              <div className="flex-grow">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  disabled={uploadingImage}
-                  className="block w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                />
-                 {uploadingImage && (
-                   <p className="mt-1 text-xs text-indigo-600 font-medium animate-pulse">
-                     Subiendo imagen a ImgBB...
-                   </p>
-                 )}
-                {uploadError && (
-                  <p className="mt-1 text-xs text-red-600">{uploadError}</p>
-                )}
-              </div>
-            </div>
-          </div>
+          {/* Imagen del platillo */}
+          <ImageUploadField
+            label="Imagen del Platillo"
+            fieldName="dish"
+            value={image}
+            onFileChange={handleImageChange}
+            onRemove={handleRemoveImage}
+          />
 
           {/* Disponibilidad */}
           <div className="flex items-center gap-2 pt-2">
             <input
-              id="product-available"
+              id="dish-available"
               type="checkbox"
               checked={isAvailable}
               onChange={(e) => setIsAvailable(e.target.checked)}
               className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
             />
-            <label htmlFor="product-available" className="text-sm font-medium text-gray-800">
+            <label
+              htmlFor="dish-available"
+              className="text-sm font-medium text-gray-800"
+            >
               Disponible para la venta
             </label>
           </div>
@@ -354,7 +342,7 @@ export function ProductFormModal({
             </button>
             <button
               type="submit"
-              disabled={isSaving || uploadingImage}
+              disabled={isSaving || image.uploading}
               className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors disabled:opacity-50"
             >
               {isSaving ? 'Guardando...' : 'Guardar'}
