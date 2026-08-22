@@ -21,9 +21,9 @@ export const merchantNavItems: NavItem[] = [
 ];
 
 export const superadminNavItems: NavItem[] = [
-  { to: '/admin', label: 'Inicio', icon: LayoutDashboard },
+  { to: '/super-admin/dashboard', label: 'Inicio', icon: LayoutDashboard },
   { to: '/super-admin', label: 'Negocios', icon: Building2 },
-  { to: '/admin/profile', label: 'Perfil', icon: Store },
+  { to: '/super-admin/profile', label: 'Perfil', icon: UserRound },
 ];
 
 const merchantRoles: UserRole[] = ['merchant_owner', 'merchant_staff'];

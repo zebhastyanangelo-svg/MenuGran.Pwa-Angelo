@@ -94,7 +94,7 @@ describe('App · flujo Super Admin', () => {
     window.history.pushState({}, '', '/');
   });
 
-  it('redirige al Super Admin desde / hacia /super-admin y muestra Negocios en el menú', async () => {
+  it('redirige al Super Admin desde / hacia su dashboard de métricas con menú sin carrito', async () => {
     vi.mocked(useAuth).mockReturnValue(buildSuperadminAuth() as AuthContextValue);
     authMocks.from.mockImplementation(() => createQuery());
 
@@ -102,10 +102,16 @@ describe('App · flujo Super Admin', () => {
     render(<App />);
 
     expect(
-      await screen.findByRole('heading', { name: /Panel de Super Admin/i }, { timeout: 15000 }),
+      await screen.findByRole('heading', { name: /Métricas Globales/i }, { timeout: 15000 }),
     ).toBeInTheDocument();
+    // Menú lateral con Inicio, Negocios y Perfil.
     expect(screen.getAllByRole('link', { name: /Negocios/i }).length).toBeGreaterThan(0);
-    expect(screen.getByText('Crear nuevo negocio')).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /^Inicio$/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /^Perfil$/i }).length).toBeGreaterThan(0);
+    // Sin botón flotante de carrito para el Super Admin.
+    expect(
+      screen.queryByRole('button', { name: /abrir carrito/i }),
+    ).not.toBeInTheDocument();
   }, 30000);
 
   it('renderiza /super-admin sin pantalla en blanco aunque las consultas fallen', async () => {

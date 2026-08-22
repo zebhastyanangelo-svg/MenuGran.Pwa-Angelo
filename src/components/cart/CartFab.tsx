@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ShoppingCart } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 import { useCart } from '../../hooks/useCart';
 import { CartDrawer } from './CartDrawer';
 
@@ -9,9 +10,15 @@ const AUTH_ROUTES = ['/login', '/register'];
 export function CartFab() {
   const [isOpen, setIsOpen] = useState(false);
   const { totalItems } = useCart();
+  const { profile } = useAuth();
   const { pathname } = useLocation();
 
   if (AUTH_ROUTES.includes(pathname)) {
+    return null;
+  }
+
+  // El Super Admin no compra: sin carrito flotante.
+  if (profile?.role === 'superadmin') {
     return null;
   }
 
