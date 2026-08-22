@@ -9,6 +9,7 @@ import { ReloadPrompt } from './components/pwa/ReloadPrompt';
 import { NotificationToastProvider, NotificationToastList } from './components/pwa/NotificationToast';
 import { Analytics } from '@vercel/analytics/react';
 import { PageLoader } from './components/PageLoader';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/layout/Layout';
 import { CartFab } from './components/cart/CartFab';
 
@@ -44,11 +45,21 @@ function RootRedirect() {
     return <PageLoader message="Comprobando sesión..." />;
   }
 
-  if (user !== null && location.pathname === '/') {
-    if (profile?.role === 'customer') {
+  if (user === null) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Usuario autenticado cuyo perfil aún no llegó: nunca renderizar rutas de
+  // cliente ni rebotar al login; esperar la resolución del rol real.
+  if (profile === null) {
+    return <PageLoader message="Cargando perfil..." />;
+  }
+
+  if (location.pathname === '/') {
+    if (profile.role === 'customer') {
       return <Navigate to="/marketplace" replace />;
     }
-    if (profile?.role === 'superadmin') {
+    if (profile.role === 'superadmin') {
       return <Navigate to="/super-admin" replace />;
     }
     return <Navigate to="/admin" replace />;
@@ -62,8 +73,9 @@ export function App() {
     <AuthProvider>
       <CartProvider>
         <NotificationToastProvider>
-          <BrowserRouter>
-            <Suspense fallback={<PageLoader message="Cargando página..." />}>
+            <BrowserRouter>
+              <ErrorBoundary>
+              <Suspense fallback={<PageLoader message="Cargando página..." />}>
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
@@ -97,7 +109,8 @@ export function App() {
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>
-            </Suspense>
+              </Suspense>
+              </ErrorBoundary>
             <ReloadPrompt />
             <CartFab />
             <Analytics />
