@@ -178,6 +178,28 @@ describe('MerchantDashboardPage', () => {
     expect(updateOrderStatus).toHaveBeenCalledWith('o1', 'confirmed');
   });
 
+  it('no renderiza la tarjeta de verificación cuando el comercio ya tiene tienda asignada', () => {
+    (useMerchantDashboardPage as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+      {
+        merchantId: 'm-1',
+        merchantName: 'La Pizza',
+        isOpen: true,
+        activeProducts: 0,
+        orders: [],
+        loading: false,
+        error: null,
+        toggleStoreOpen: vi.fn(),
+        updateOrderStatus: vi.fn(),
+      },
+    );
+
+    renderPage();
+
+    expect(screen.queryByText(/en proceso de verificación/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Contactar por WhatsApp/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Hola, La Pizza/i)).toBeInTheDocument();
+  });
+
   it('muestra tarjeta de verificación cuando el comercio no tiene tienda asignada', () => {
     (useMerchantDashboardPage as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
       {

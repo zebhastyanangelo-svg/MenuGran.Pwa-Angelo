@@ -106,6 +106,8 @@ export interface ProfileRow {
   id: string;
   email: string;
   full_name: string | null;
+  /** Cédula de identidad del usuario (capturada al crear comercios). */
+  ci?: string | null;
   avatar_url: string | null;
   role: UserRole;
   created_at: IsoTimestamp;

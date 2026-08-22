@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { fetchCurrentSessionRole } from '../../context/auth-profile';
 import { suggestEmailDomain } from '../../utils/emailSuggestions';
+import { getPostLoginPath } from '../../utils/postLoginRedirect';
 
 type AuthTab = 'login' | 'register';
 
@@ -95,7 +97,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
   const { signInWithPassword, signUpWithPassword, resendConfirmationEmail, signInWithGoogle } =
     useAuth();
 
-  const from = searchParams.get('from') ?? '/marketplace';
+  const requestedFrom = searchParams.get('from');
 
   const handleTabChange = (tab: AuthTab) => {
     setActiveTab(tab);
@@ -128,7 +130,8 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
     try {
       await signInWithPassword(email, password);
-      navigate(from, { replace: true });
+      const role = await fetchCurrentSessionRole();
+      navigate(getPostLoginPath(requestedFrom, role), { replace: true });
     } catch (err) {
       if (isUnconfirmedEmailError(err)) {
         setPendingEmail(email);
@@ -170,7 +173,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         setPendingEmail(email);
         setShowConfirmationBanner(true);
       } else {
-        navigate(from, { replace: true });
+        navigate(getPostLoginPath(requestedFrom, 'customer'), { replace: true });
       }
     } catch (err) {
       setError(resolveAuthErrorMessage(err));

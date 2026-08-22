@@ -1,5 +1,5 @@
 import { supabase, TABLE_NAMES } from '../services/supabase';
-import type { ProfileRow } from '../types/database';
+import type { ProfileRow, UserRole } from '../types/database';
 import type { ProfileQueryResult } from './auth-context-core';
 
 export async function fetchProfile(userId: string): Promise<ProfileRow | null> {
@@ -15,4 +15,17 @@ export async function fetchProfile(userId: string): Promise<ProfileRow | null> {
   }
 
   return result.data;
+}
+
+/**
+ * Devuelve el rol del perfil de la sesión activa (o null si no hay sesión).
+ * Se usa justo después del login para la redirección inteligente.
+ */
+export async function fetchCurrentSessionRole(): Promise<UserRole | null> {
+  const { data } = await supabase.auth.getUser();
+  if (data.user === null) {
+    return null;
+  }
+  const profile = await fetchProfile(data.user.id);
+  return profile?.role ?? null;
 }

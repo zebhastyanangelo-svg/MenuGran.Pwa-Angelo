@@ -6,6 +6,11 @@ import type { UserRole } from '../types/database';
 export interface ProtectedRouteProps {
   children: ReactNode;
   requiredRole?: UserRole | UserRole[];
+  /**
+   * Destino alternativo cuando el rol no cumple. Por defecto cada rol va a su
+   * inicio (customer → /, merchant → /admin).
+   */
+  redirectTo?: string;
 }
 
 /**
@@ -14,6 +19,7 @@ export interface ProtectedRouteProps {
 export function ProtectedRoute({
   children,
   requiredRole,
+  redirectTo,
 }: ProtectedRouteProps) {
   const { user, profile, isLoading } = useAuth();
   const location = useLocation();
@@ -31,10 +37,14 @@ export function ProtectedRoute({
     return <Navigate to={`/login?from=${encodeURIComponent(from)}`} replace />;
   }
 
-  if (requiredRole !== undefined && profile !== null) {
+  if (requiredRole !== undefined) {
     const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-    if (!roles.includes(profile.role)) {
-      if (profile.role === 'customer') {
+    const isAllowed = profile !== null && roles.includes(profile.role);
+    if (!isAllowed) {
+      if (redirectTo !== undefined) {
+        return <Navigate to={redirectTo} replace />;
+      }
+      if (profile === null || profile.role === 'customer') {
         return <Navigate to="/" replace />;
       }
       return <Navigate to="/admin" replace />;

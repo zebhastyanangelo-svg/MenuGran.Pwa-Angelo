@@ -55,13 +55,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
-    void supabase.auth.getSession().then(({ data }) => {
+    void supabase.auth.getSession().then(async ({ data }) => {
       if (!isMounted) return;
       setSession(data.session);
-      setIsLoading(false);
       if (data.session?.user !== undefined) {
-        void refreshProfile(data.session.user.id);
+        // Esperar el perfil antes de quitar el estado de carga para que las
+        // guardias de ruta validen el rol real desde el primer render.
+        await refreshProfile(data.session.user.id);
       }
+      if (!isMounted) return;
+      setIsLoading(false);
     });
 
     const { data: subscription } = supabase.auth.onAuthStateChange(

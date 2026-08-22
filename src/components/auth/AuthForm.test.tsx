@@ -11,9 +11,14 @@ const signUpWithPassword = vi.fn();
 const resendConfirmationEmail = vi.fn();
 const signInWithGoogle = vi.fn();
 const navigate = vi.fn();
+const fetchCurrentSessionRole = vi.fn();
 
 vi.mock('../../hooks/useAuth', () => ({
   useAuth: vi.fn(),
+}));
+
+vi.mock('../../context/auth-profile', () => ({
+  fetchCurrentSessionRole: (args: unknown) => fetchCurrentSessionRole(args),
 }));
 
 const mockUseSearchParams = vi.fn();
@@ -66,6 +71,7 @@ describe('AuthForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useAuth).mockReturnValue(getMockAuth());
+    fetchCurrentSessionRole.mockResolvedValue('customer');
   });
 
   it('renderiza el encabezado de Iniciar Sesión por defecto', () => {
@@ -177,6 +183,52 @@ describe('AuthForm', () => {
     });
   });
 
+  it('redirige a /super-admin tras el login del Super Admin sin ruta "from"', async () => {
+    const user = userEvent.setup();
+    signInWithPassword.mockResolvedValueOnce(undefined);
+    fetchCurrentSessionRole.mockResolvedValue('superadmin');
+    renderWithRouter('login', null);
+
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'admin@menugram.com');
+    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.click(screen.getByTestId('login-submit'));
+
+    expect(fetchCurrentSessionRole).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('/super-admin', { replace: true });
+    });
+  });
+
+  it('redirige al marketplace tras login de cliente sin ruta "from"', async () => {
+    const user = userEvent.setup();
+    signInWithPassword.mockResolvedValueOnce(undefined);
+    fetchCurrentSessionRole.mockResolvedValue('customer');
+    renderWithRouter('login', null);
+
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'client@example.com');
+    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.click(screen.getByTestId('login-submit'));
+
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('/marketplace', { replace: true });
+    });
+  });
+
+  it('honra la ruta "from" aunque el rol sea superadmin', async () => {
+    const user = userEvent.setup();
+    signInWithPassword.mockResolvedValueOnce(undefined);
+    fetchCurrentSessionRole.mockResolvedValue('superadmin');
+    renderWithRouter('login', '/orders/o-1');
+
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'admin@menugram.com');
+    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.click(screen.getByTestId('login-submit'));
+
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('/orders/o-1', { replace: true });
+    });
+  });
+
   it('renderiza el formulario de registro con campos de cliente (Nombre, Email, Contraseña, C.I., Teléfono)', async () => {
     renderWithRouter('register');
 
@@ -225,6 +277,26 @@ describe('AuthForm', () => {
     await waitFor(() => {
       expect(navigate).toHaveBeenCalledWith('/marketplace', { replace: true });
     });
+  });
+
+  it('nunca permite autorregistrarse como superadmin desde el registro público', async () => {
+    const user = userEvent.setup();
+    signUpWithPassword.mockResolvedValueOnce({ needsEmailConfirmation: false });
+    renderWithRouter('register', null);
+
+    await user.type(screen.getByLabelText(/Nombre completo/i), 'Impostor');
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'impostor@example.com');
+    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.type(screen.getByLabelText(/C.I./i), 'V-00000000');
+    await user.type(screen.getByLabelText(/Teléfono/i), '+58 412-000-0000');
+    await user.click(screen.getByTestId('register-submit'));
+
+    expect(signUpWithPassword).toHaveBeenCalledWith(
+      'impostor@example.com',
+      'password123',
+      'Impostor',
+      'customer',
+    );
   });
 
   it('cambiar a la pestaña de Register siempre muestra solo los campos de cliente', async () => {
