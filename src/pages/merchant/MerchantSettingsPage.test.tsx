@@ -3,6 +3,31 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MerchantSettingsPage } from './MerchantSettingsPage';
 import type { MerchantRow, MerchantUpdate } from '../../types/database';
 
+vi.mock('leaflet', () => {
+  const mockMap = {
+    setView: vi.fn(),
+    flyTo: vi.fn(),
+    remove: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
+    invalidateSize: vi.fn(),
+  };
+  return {
+    default: {
+      map: vi.fn(() => mockMap),
+      marker: vi.fn(() => ({ addTo: vi.fn(), setLatLng: vi.fn(), remove: vi.fn() })),
+      icon: vi.fn((options: unknown) => ({ options })),
+      tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
+    },
+  };
+});
+
+vi.mock('leaflet/dist/leaflet.css', () => ({}));
+
+const mockGeolocation = {
+  getCurrentPosition: vi.fn(),
+};
+
 const authMocks = vi.hoisted(() => ({
   useAuthMock: vi.fn(),
   supabaseMock: { from: vi.fn() },
@@ -69,6 +94,11 @@ describe('MerchantSettingsPage', () => {
     });
     authMocks.uploadToImgBBMock.mockResolvedValue('https://i.ibb.co/sample/logo.jpg');
     authMocks.saveSettingsMock.mockResolvedValue(mockMerchant);
+    Object.defineProperty(navigator, 'geolocation', {
+      value: mockGeolocation,
+      configurable: true,
+      writable: true,
+    });
   });
 
   async function setMockState(
@@ -377,5 +407,72 @@ describe('MerchantSettingsPage', () => {
     render(<MerchantSettingsPage />);
 
     expect(screen.getByText(/Configuración del Comercio/i)).toBeInTheDocument();
+  });
+
+  it('persiste la ubicación GPS del comercio como punto (x,y) al guardar', async () => {
+    await setMockState({
+      merchant: { ...mockMerchant, location: { x: -66.9036, y: 10.4806 } },
+    });
+
+    render(<MerchantSettingsPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Ubicación/i }));
+    expect(screen.getByTestId('captured-coordinates')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }));
+
+    await waitFor(() => {
+      expect(authMocks.saveSettingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          location: '(-66.9036,10.4806)',
+          address: 'Calle 123',
+        }),
+      );
+    });
+  });
+
+  it('envía location en null cuando el comercio nunca capturó coordenadas', async () => {
+    await setMockState({ merchant: mockMerchant });
+
+    render(<MerchantSettingsPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Ubicación/i }));
+    expect(
+      screen.queryByTestId('captured-coordinates'),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }));
+
+    await waitFor(() => {
+      expect(authMocks.saveSettingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ location: null }),
+      );
+    });
+  });
+
+  it('actualiza la ubicación con el GPS del navegador antes de guardar', async () => {
+    await setMockState();
+    mockGeolocation.getCurrentPosition.mockImplementation((success) => {
+      success({ coords: { latitude: 8.6, longitude: -71.15 } });
+    });
+
+    render(<MerchantSettingsPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Ubicación/i }));
+    fireEvent.click(screen.getByTestId('use-current-location'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('captured-coordinates')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }));
+
+    await waitFor(() => {
+      expect(authMocks.saveSettingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          location: '(-71.15,8.6)',
+        }),
+      );
+    });
   });
 });

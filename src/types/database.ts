@@ -251,7 +251,13 @@ export type DeliveryInsert = Pick<DeliveryRow, 'order_id'> &
 /* ---------- UPDATE (todos los campos opcionales) ---------- */
 
 export type ProfileUpdate = Partial<Omit<ProfileRow, 'id' | 'created_at'>>;
-export type MerchantUpdate = Partial<Omit<MerchantRow, 'id' | 'created_at'>>;
+/**
+ * Al escribir `location` PostgREST exige la cadena `(x,y)` de POINT
+ * (ver `formatGeoPoint`), por lo que se acepta DbPoint además de GeoPoint.
+ */
+export type MerchantUpdate = Partial<
+  Omit<MerchantRow, 'id' | 'created_at' | 'location'>
+> & { location?: DbPoint | GeoPoint | null };
 export type MerchantStaffUpdate = Partial<
   Omit<MerchantStaffRow, 'id' | 'created_at'>
 >;

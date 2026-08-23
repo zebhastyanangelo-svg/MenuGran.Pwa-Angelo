@@ -10,7 +10,10 @@ import { useToast } from '../../hooks/useToast';
 import { uploadToImgBB } from '../../services/imgbb';
 import type { ImageFieldState } from '../../components/merchant/ImageUploadField';
 import { ImageUploadField } from '../../components/merchant/ImageUploadField';
+import { LocationSettingsForm } from '../../components/merchant/LocationSettingsForm';
+import { formatGeoPointOrNull } from '../../utils/distance';
 import type {
+  GeoPoint,
   MerchantCategory,
   MerchantUpdate,
 } from '../../types/database';
@@ -48,6 +51,7 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
   const [category, setCategory] = useState<MerchantCategory>('Otro');
   const [address, setAddress] = useState('');
   const [zone, setZone] = useState('');
+  const [location, setLocation] = useState<GeoPoint | null>(null);
   const [logo, setLogo] = useState<ImageFieldState>(initialImageField);
   const [banner, setBanner] = useState<ImageFieldState>(initialImageField);
   const [isActive, setIsActive] = useState(true);
@@ -60,6 +64,7 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
       setCategory(merchant.category);
       setAddress(merchant.address);
       setZone(merchant.zone ?? '');
+      setLocation(merchant.location ?? null);
       setLogo({ url: merchant.logo_url ?? null, uploading: false, error: null });
       setBanner({ url: merchant.banner_url ?? null, uploading: false, error: null });
       setIsActive(merchant.is_active);
@@ -118,6 +123,7 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
         category,
         address: address.trim(),
         zone: zone.trim() || null,
+        location: formatGeoPointOrNull(location),
         logo_url: logo.url,
         banner_url: banner.url,
         is_active: isActive,
@@ -240,7 +246,9 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
         )}
 
         {activeTab === 'location' && (
-          <LocationTab
+          <LocationSettingsForm
+            location={location}
+            onLocationChange={setLocation}
             address={address}
             onAddressChange={setAddress}
             zone={zone}
@@ -350,59 +358,6 @@ function GeneralTab({
             </option>
           ))}
         </select>
-      </div>
-    </div>
-  );
-}
-
-interface LocationTabProps {
-  address: string;
-  onAddressChange: (value: string) => void;
-  zone: string;
-  onZoneChange: (value: string) => void;
-}
-
-function LocationTab({
-  address,
-  onAddressChange,
-  zone,
-  onZoneChange,
-}: LocationTabProps) {
-  return (
-    <div className="space-y-4">
-      <div>
-        <label
-          htmlFor="merchant-address"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          Dirección
-        </label>
-        <input
-          id="merchant-address"
-          type="text"
-          value={address}
-          onChange={(e) => onAddressChange(e.target.value)}
-          placeholder="Calle 123, Urbanización..."
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-          required
-        />
-      </div>
-
-      <div>
-        <label
-          htmlFor="merchant-zone"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          Zona
-        </label>
-        <input
-          id="merchant-zone"
-          type="text"
-          value={zone}
-          onChange={(e) => onZoneChange(e.target.value)}
-          placeholder="Ej. Centro, Laureles..."
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-        />
       </div>
     </div>
   );
