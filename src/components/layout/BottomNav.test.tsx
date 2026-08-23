@@ -4,6 +4,10 @@ import { MemoryRouter } from 'react-router-dom';
 
 const useAuthMock = vi.fn();
 
+vi.mock('../../hooks/useStaffPermissions', () => ({
+  useStaffPermissions: () => ({ permissions: null, isLoading: false }),
+}));
+
 vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => useAuthMock(),
 }));

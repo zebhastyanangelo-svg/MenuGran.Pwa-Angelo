@@ -2,6 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
+vi.mock('../../hooks/useStaffPermissions', () => ({
+  useStaffPermissions: () => ({ permissions: null, isLoading: false }),
+}));
+
 vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({ user: null, profile: { role: 'customer' }, isLoading: false }),
 }));

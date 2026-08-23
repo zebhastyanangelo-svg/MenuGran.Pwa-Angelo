@@ -1,11 +1,13 @@
 import { NavLink } from 'react-router-dom';
 import { UtensilsCrossed } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useStaffPermissions } from '../../hooks/useStaffPermissions';
 import { getNavItemsForRole } from './navItems';
 
 export function Sidebar() {
   const { profile } = useAuth();
-  const navItems = getNavItemsForRole(profile?.role);
+  const { permissions } = useStaffPermissions();
+  const navItems = getNavItemsForRole(profile?.role, permissions);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-slate-200 bg-slate-50 md:flex">

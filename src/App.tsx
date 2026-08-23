@@ -33,6 +33,9 @@ const MerchantDishesPage = lazy(() =>
 const MerchantDashboardHomePage = lazy(() =>
   import('./pages/merchant/MerchantDashboardPage').then((mod) => ({ default: mod.MerchantDashboardPage })),
 );
+const MerchantProfilePage = lazy(() =>
+  import('./pages/merchant/MerchantProfilePage').then((mod) => ({ default: mod.MerchantProfilePage })),
+);
 const SuperAdminMerchantsPage = lazy(() =>
   import('./pages/superadmin/SuperAdminMerchantsPage').then((mod) => ({ default: mod.SuperAdminMerchantsPage })),
 );
@@ -111,6 +114,8 @@ export function App() {
                   <Route path="/admin/settings" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantSettingsPage /></ProtectedRoute>} />
                   <Route path="/admin/dishes" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantDishesPage /></ProtectedRoute>} />
                   <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantDashboardHomePage /></ProtectedRoute>} />
+                  <Route path="/merchant/profile" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantProfilePage /></ProtectedRoute>} />
+                  <Route path="/admin/profile" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantProfilePage /></ProtectedRoute>} />
                   <Route path="/super-admin" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminMerchantsPage /></ProtectedRoute>} />
                   <Route path="/super-admin/dashboard" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminDashboardPage /></ProtectedRoute>} />
                   <Route path="/super-admin/profile" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminProfilePage /></ProtectedRoute>} />

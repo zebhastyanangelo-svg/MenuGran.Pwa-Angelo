@@ -88,6 +88,8 @@ export type DbPoint = string;
 export interface MerchantStaffPermissions {
   can_manage_menu: boolean;
   can_view_orders: boolean;
+  /** Permiso granular para gestionar pedidos (crear/actualizar estados). */
+  can_manage_orders?: boolean;
 }
 
 /** Payload de un item dentro del JSONB `orders.items`. */

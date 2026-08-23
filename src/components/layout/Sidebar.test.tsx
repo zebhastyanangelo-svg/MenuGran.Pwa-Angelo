@@ -4,6 +4,10 @@ import { MemoryRouter } from 'react-router-dom';
 
 const useAuthMock = vi.fn();
 
+vi.mock('../../hooks/useStaffPermissions', () => ({
+  useStaffPermissions: () => ({ permissions: null, isLoading: false }),
+}));
+
 vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => useAuthMock(),
 }));
@@ -48,7 +52,7 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /perfil/i })).toBeInTheDocument();
   });
 
-  it('usa la navegación de comercio para merchant_staff', () => {
+  it('usa la navegación de comercio para merchant_staff restringiendo secciones por permisos', () => {
     useAuthMock.mockReturnValue({ profile: { role: 'merchant_staff' } });
     render(
       <MemoryRouter>
@@ -56,6 +60,9 @@ describe('Sidebar', () => {
       </MemoryRouter>,
     );
     expect(screen.queryByRole('link', { name: /carrito/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /configuración/i })).toBeInTheDocument();
+    // Configuración es ownerOnly; los permisos del empleado aún no cargaron.
+    expect(screen.queryByRole('link', { name: /configuración/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /perfil/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /inicio/i })).toBeInTheDocument();
   });
 });

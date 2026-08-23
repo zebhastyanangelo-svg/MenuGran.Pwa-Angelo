@@ -1,10 +1,12 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useStaffPermissions } from '../../hooks/useStaffPermissions';
 import { getNavItemsForRole } from './navItems';
 
 export function BottomNav() {
   const { profile } = useAuth();
-  const navItems = getNavItemsForRole(profile?.role);
+  const { permissions } = useStaffPermissions();
+  const navItems = getNavItemsForRole(profile?.role, permissions);
 
   return (
     <nav
