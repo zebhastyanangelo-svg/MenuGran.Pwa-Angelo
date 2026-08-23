@@ -1,9 +1,12 @@
-import { useCallback } from 'react';
-import { ShieldCheck, Store } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { Loader2, ShieldCheck, Store, Trash2 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { CreateMerchantForm } from '../../components/superadmin/CreateMerchantForm';
 import { useSuperAdminMerchants } from '../../hooks/useSuperAdminMerchants';
+import type { MerchantAccountListItem } from '../../services/superAdminService';
 import type { CreateMerchantAccountInput } from '../../utils/merchantRegistration';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -13,7 +16,7 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: 'Rechazado',
 };
 
-/** Panel de Super Admin: creación y listado de comercios. */
+/** Panel de Super Admin: creación, listado y eliminación de comercios. */
 export function SuperAdminMerchantsPage() {
   const {
     merchants,
@@ -21,7 +24,12 @@ export function SuperAdminMerchantsPage() {
     error,
     lastCreatedPassword,
     addMerchant,
+    removeMerchant,
   } = useSuperAdminMerchants();
+  const [merchantPendingDelete, setMerchantPendingDelete] =
+    useState<MerchantAccountListItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleCreate = useCallback(
     async (input: CreateMerchantAccountInput) => {
@@ -29,6 +37,29 @@ export function SuperAdminMerchantsPage() {
     },
     [addMerchant],
   );
+
+  const closeDeleteModal = useCallback(() => {
+    setMerchantPendingDelete(null);
+    setDeleteError(null);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (merchantPendingDelete === null) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await removeMerchant(merchantPendingDelete);
+      closeDeleteModal();
+    } catch (caught) {
+      setDeleteError(
+        caught instanceof Error
+          ? caught.message
+          : 'No se pudo eliminar el comercio.',
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [merchantPendingDelete, removeMerchant, closeDeleteModal]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
@@ -100,15 +131,74 @@ export function SuperAdminMerchantsPage() {
                       {merchant.owner_full_name ?? 'sin propietario'}
                     </p>
                   </div>
-                  <Badge variant={merchant.is_active ? 'success' : 'neutral'}>
-                    {STATUS_LABELS[merchant.status] ?? merchant.status}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={merchant.is_active ? 'success' : 'neutral'}>
+                      {STATUS_LABELS[merchant.status] ?? merchant.status}
+                    </Badge>
+                    <button
+                      type="button"
+                      data-testid="delete-merchant"
+                      aria-label={`Eliminar ${merchant.name}`}
+                      title={`Eliminar ${merchant.name}`}
+                      onClick={() => {
+                        setDeleteError(null);
+                        setMerchantPendingDelete(merchant);
+                      }}
+                      className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-200"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
         </Card>
       </div>
+
+      <Modal
+        isOpen={merchantPendingDelete !== null}
+        onClose={closeDeleteModal}
+        title="Eliminar negocio"
+      >
+        {merchantPendingDelete !== null && (
+          <div className="space-y-4">
+            <p
+              className="text-sm text-gray-700"
+              data-testid="delete-confirmation-message"
+            >
+              ¿Estás seguro de que deseas eliminar{' '}
+              <strong>{merchantPendingDelete.name}</strong>? Esta acción borrará
+              el comercio y la cuenta del propietario permanentemente.
+            </p>
+            {deleteError !== null && (
+              <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+                {deleteError}
+              </p>
+            )}
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={closeDeleteModal} disabled={isDeleting}>
+                Cancelar
+              </Button>
+              <Button
+                data-testid="confirm-delete"
+                variant="danger"
+                onClick={() => void confirmDelete()}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Eliminando...
+                  </span>
+                ) : (
+                  'Eliminar permanentemente'
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

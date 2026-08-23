@@ -7,13 +7,12 @@
 // 1. Verifica el JWT del llamador y exige rol `superadmin` en su perfil.
 // 2. Valida el payload antes de tocar Auth.
 // 3. Nunca expone SUPABASE_SERVICE_ROLE_KEY al cliente.
-import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type',
-};
+import {
+  assertSuperadmin,
+  buildServiceRoleClient,
+  corsHeaders,
+  jsonResponse,
+} from '../_shared/superadmin-guard.ts';
 
 interface CreateMerchantPayload {
   email?: unknown;
@@ -23,66 +22,6 @@ interface CreateMerchantPayload {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 6;
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
-
-function buildAnonClient(authorizationHeader: string): SupabaseClient {
-  return createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    { global: { headers: { Authorization: authorizationHeader } } },
-  );
-}
-
-function buildServiceRoleClient(): SupabaseClient {
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY no configurada.');
-  }
-  return createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    serviceRoleKey,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-}
-
-/** Verifica el JWT del llamador y que su perfil tenga rol superadmin. */
-async function assertSuperadmin(
-  authorizationHeader: string | null,
-): Promise<{ ok: true; userId: string } | { ok: false; response: Response }> {
-  if (authorizationHeader === null || !authorizationHeader.startsWith('Bearer ')) {
-    return { ok: false, response: jsonResponse({ error: 'No autenticado.' }, 401) };
-  }
-  const token = authorizationHeader.slice('Bearer '.length);
-
-  const anonClient = buildAnonClient(authorizationHeader);
-  const { data: userData, error: userError } = await anonClient.auth.getUser(token);
-  if (userError !== null || userData.user === null) {
-    return {
-      ok: false,
-      response: jsonResponse({ error: 'Sesión inválida o expirada.' }, 401),
-    };
-  }
-
-  const { data: profile, error: profileError } = await anonClient
-    .from('profiles')
-    .select('role')
-    .eq('id', userData.user.id)
-    .single();
-  if (profileError !== null || profile?.role !== 'superadmin') {
-    return {
-      ok: false,
-      response: jsonResponse({ error: 'Solo un Super Admin puede crear comercios.' }, 403),
-    };
-  }
-
-  return { ok: true, userId: userData.user.id };
-}
 
 function validatePayload(
   payload: CreateMerchantPayload,

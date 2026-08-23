@@ -19,6 +19,7 @@ export interface MerchantAccountListItem {
   status: MerchantStatus;
   is_active: boolean;
   created_at: IsoTimestamp;
+  owner_id: string | null;
   owner_email: string | null;
   owner_full_name: string | null;
 }
@@ -30,6 +31,7 @@ interface MerchantListQueryRow {
   status: MerchantStatus;
   is_active: boolean;
   created_at: IsoTimestamp;
+  owner_id: string | null;
   profiles: { email: string; full_name: string | null } | null;
 }
 
@@ -168,6 +170,36 @@ function buildMerchantPayload(
   };
 }
 
+/**
+ * Elimina completamente un comercio y la cuenta de su propietario invocando
+ * el Edge Function `delete-merchant`, que —con la service_role key solo en
+ * el servidor y tras verificar que el llamador es superadmin— borra la fila
+ * del merchant, su perfil y al propietario en Supabase Auth.
+ */
+export async function deleteMerchant(
+  merchantId: string,
+  ownerId: string,
+): Promise<void> {
+  if (merchantId.trim() === '' || ownerId.trim() === '') {
+    throw new Error(
+      'Se requiere el identificador del comercio y del propietario.',
+    );
+  }
+  const { error } = await supabase.functions.invoke('delete-merchant', {
+    body: { merchantId, ownerId },
+  });
+  if (error !== null) {
+    throw new Error(extractDeleteMerchantErrorMessage(error));
+  }
+}
+
+function extractDeleteMerchantErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message !== '') {
+    return `Error al eliminar el comercio: ${error.message}`;
+  }
+  return 'Error al eliminar el comercio.';
+}
+
 /** Lista los comercios existentes junto a los datos de su propietario. */
 export async function listMerchantsWithOwners(): Promise<
   MerchantAccountListItem[]
@@ -175,7 +207,7 @@ export async function listMerchantsWithOwners(): Promise<
   const { data, error } = await supabase
     .from(TABLE_NAMES.merchants)
     .select(
-      'id, name, rif, status, is_active, created_at, profiles(email, full_name)',
+      'id, owner_id, name, rif, status, is_active, created_at, profiles(email, full_name)',
     )
     .order('created_at', { ascending: false });
 
@@ -190,6 +222,7 @@ export async function listMerchantsWithOwners(): Promise<
     status: row.status,
     is_active: row.is_active,
     created_at: row.created_at,
+    owner_id: row.owner_id ?? null,
     owner_email: row.profiles?.email ?? null,
     owner_full_name: row.profiles?.full_name ?? null,
   }));

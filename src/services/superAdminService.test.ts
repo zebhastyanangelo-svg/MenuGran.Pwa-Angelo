@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createMerchantAccount,
+  deleteMerchant,
   listMerchantsWithOwners,
 } from './superAdminService';
 import type { CreateMerchantAccountInput } from '../utils/merchantRegistration';
@@ -224,6 +225,7 @@ describe('listMerchantsWithOwners', () => {
         data: [
           {
             id: 'm-1',
+            owner_id: 'owner-1',
             name: 'La Pizzería de María',
             rif: 'J-40123456-7',
             status: 'active',
@@ -236,6 +238,7 @@ describe('listMerchantsWithOwners', () => {
           },
           {
             id: 'm-2',
+            owner_id: null,
             name: 'Arepas El Güero',
             rif: 'J-40987654-3',
             status: 'pending_approval',
@@ -251,17 +254,19 @@ describe('listMerchantsWithOwners', () => {
     const items = await listMerchantsWithOwners();
 
     expect(merchants.select).toHaveBeenCalledWith(
-      'id, name, rif, status, is_active, created_at, profiles(email, full_name)',
+      'id, owner_id, name, rif, status, is_active, created_at, profiles(email, full_name)',
     );
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({
       id: 'm-1',
       name: 'La Pizzería de María',
+      owner_id: 'owner-1',
       owner_email: 'maria@pizzeria.com',
       owner_full_name: 'María Pérez',
     });
     expect(items[1]).toMatchObject({
       id: 'm-2',
+      owner_id: null,
       owner_email: null,
       owner_full_name: null,
     });
@@ -274,6 +279,43 @@ describe('listMerchantsWithOwners', () => {
 
     await expect(listMerchantsWithOwners()).rejects.toThrow(
       'Error al listar los comercios: row level security',
+    );
+  });
+});
+
+describe('deleteMerchant', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    supabaseMocks.functionsInvoke.mockResolvedValue({
+      data: { deleted: true },
+      error: null,
+    });
+  });
+
+  it('invoca el Edge Function delete-merchant con merchantId y ownerId', async () => {
+    await deleteMerchant('merchant-9', 'new-owner');
+
+    expect(supabaseMocks.functionsInvoke).toHaveBeenCalledWith(
+      'delete-merchant',
+      { body: { merchantId: 'merchant-9', ownerId: 'new-owner' } },
+    );
+  });
+
+  it('rechaza sin invocar la función cuando faltan identificadores', async () => {
+    await expect(deleteMerchant('', '')).rejects.toThrow(
+      'Se requiere el identificador del comercio y del propietario.',
+    );
+    expect(supabaseMocks.functionsInvoke).not.toHaveBeenCalled();
+  });
+
+  it('propaga el error cuando el Edge Function falla', async () => {
+    supabaseMocks.functionsInvoke.mockResolvedValue({
+      data: null,
+      error: new Error('row level security'),
+    });
+
+    await expect(deleteMerchant('merchant-9', 'new-owner')).rejects.toThrow(
+      'Error al eliminar el comercio: row level security',
     );
   });
 });

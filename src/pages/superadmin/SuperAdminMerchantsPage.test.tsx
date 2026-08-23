@@ -7,11 +7,13 @@ import { SuperAdminMerchantsPage } from './SuperAdminMerchantsPage';
 const serviceMocks = vi.hoisted(() => ({
   createMerchantAccount: vi.fn(),
   listMerchantsWithOwners: vi.fn(),
+  deleteMerchant: vi.fn(),
 }));
 
 vi.mock('../../services/superAdminService', () => ({
   createMerchantAccount: serviceMocks.createMerchantAccount,
   listMerchantsWithOwners: serviceMocks.listMerchantsWithOwners,
+  deleteMerchant: serviceMocks.deleteMerchant,
 }));
 
 function buildMerchant(
@@ -24,6 +26,7 @@ function buildMerchant(
     status: 'active',
     is_active: true,
     created_at: '2026-08-21T00:00:00.000Z',
+    owner_id: 'owner-1',
     owner_email: 'maria@pizzeria.com',
     owner_full_name: 'María Pérez',
     ...overrides,
@@ -65,6 +68,7 @@ describe('SuperAdminMerchantsPage', () => {
       merchantId: 'm-2',
       temporaryPassword: 'TempPass123',
     });
+    serviceMocks.deleteMerchant.mockResolvedValue(undefined);
   });
 
   it('renderiza el encabezado del panel y el formulario de alta', async () => {
@@ -168,5 +172,99 @@ describe('SuperAdminMerchantsPage', () => {
     expect(
       await screen.findByText(/aún no hay negocios registrados/i),
     ).toBeInTheDocument();
+  });
+
+  describe('eliminación de comercios', () => {
+    async function openDeleteModal(): Promise<void> {
+      const user = userEvent.setup();
+      await user.click(await screen.findByTestId('delete-merchant'));
+    }
+
+    beforeEach(() => {
+      serviceMocks.deleteMerchant.mockResolvedValue(undefined);
+    });
+
+    it('muestra el botón de eliminar con icono de peligro por cada negocio', async () => {
+      serviceMocks.listMerchantsWithOwners.mockResolvedValue([
+        buildMerchant(),
+        buildMerchant({ id: 'm-2', owner_id: 'owner-2', name: 'Arepas El Güero' }),
+      ]);
+
+      render(<SuperAdminMerchantsPage />);
+
+      const buttons = await screen.findAllByTestId('delete-merchant');
+      expect(buttons).toHaveLength(2);
+      expect(buttons[0]).toHaveAttribute('aria-label', 'Eliminar La Pizzería de María');
+    });
+
+    it('muestra el modal de confirmación con el nombre del negocio al pulsar eliminar', async () => {
+      render(<SuperAdminMerchantsPage />);
+      await screen.findByTestId('merchant-row');
+
+      await openDeleteModal();
+
+      const message = screen.getByTestId('delete-confirmation-message');
+      expect(message).toHaveTextContent(
+        /¿Estás seguro de que deseas eliminar La Pizzería de María\?/,
+      );
+      expect(message).toHaveTextContent(
+        'Esta acción borrará el comercio y la cuenta del propietario permanentemente.',
+      );
+    });
+
+    it('no elimina nada al cancelar la confirmación', async () => {
+      render(<SuperAdminMerchantsPage />);
+      await screen.findByTestId('merchant-row');
+
+      const user = userEvent.setup();
+      await user.click(await screen.findByTestId('delete-merchant'));
+      await user.click(screen.getByRole('button', { name: /cancelar/i }));
+
+      expect(serviceMocks.deleteMerchant).not.toHaveBeenCalled();
+      expect(screen.queryByText(/¿Estás seguro de que deseas eliminar/i)).not.toBeInTheDocument();
+    });
+
+    it('elimina el comercio, cierra el modal y refresca el listado al confirmar', async () => {
+      let listCallCount = 0;
+      serviceMocks.listMerchantsWithOwners.mockImplementation(() => {
+        listCallCount += 1;
+        return Promise.resolve(listCallCount === 1 ? [buildMerchant()] : []);
+      });
+
+      render(<SuperAdminMerchantsPage />);
+      await screen.findByTestId('merchant-row');
+
+      const user = userEvent.setup();
+      await user.click(screen.getByTestId('delete-merchant'));
+      await user.click(screen.getByTestId('confirm-delete'));
+
+      expect(serviceMocks.deleteMerchant).toHaveBeenCalledWith('m-1', 'owner-1');
+      expect(
+        await screen.findByText(/aún no hay negocios registrados/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId('delete-confirmation-message'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('muestra un error dentro del modal si la eliminación falla', async () => {
+      serviceMocks.deleteMerchant.mockRejectedValue(
+        new Error('Error al eliminar el comercio: row level security'),
+      );
+
+      render(<SuperAdminMerchantsPage />);
+      await screen.findByTestId('merchant-row');
+
+      const user = userEvent.setup();
+      await user.click(screen.getByTestId('delete-merchant'));
+      await user.click(screen.getByTestId('confirm-delete'));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Error al eliminar el comercio: row level security',
+      );
+      expect(
+        screen.queryByTestId('delete-confirmation-message'),
+      ).toBeInTheDocument();
+    });
   });
 });
