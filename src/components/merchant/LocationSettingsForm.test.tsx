@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach, afterAll } from 'vites
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { useState } from 'react';
 import { LocationSettingsForm } from './LocationSettingsForm';
+import { parseGeoPoint } from '../../utils/geoPoint';
 import type { GeoPoint } from '../../types/database';
 
 vi.mock('leaflet', () => {
@@ -38,6 +39,21 @@ const mockGeolocation = {
 };
 
 const originalGeolocation = navigator.geolocation;
+
+/** Construye un WKB little-endian POINT(lng lat) con SRID 4326, como el que
+ * devuelve PostgREST para columnas geography/geometry de PostGIS. */
+function buildWkbHex(lng: number, lat: number): string {
+  const buffer = new ArrayBuffer(25);
+  const view = new DataView(buffer);
+  view.setUint8(0, 1);
+  view.setUint32(1, 0x20000001, true);
+  view.setUint32(5, 4326, true);
+  view.setFloat64(9, lat, true);
+  view.setFloat64(17, lng, true);
+  return Array.from(new Uint8Array(buffer))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 interface HarnessProps {
   initialLocation?: GeoPoint | null;
@@ -146,6 +162,37 @@ describe('LocationSettingsForm', () => {
     expect(screen.getByTestId('latitude')).toHaveTextContent('10.480600');
     expect(screen.getByTestId('longitude')).toHaveTextContent('-66.903600');
   });
+
+  it.each([
+    ['objeto { x, y }', { x: -66.9036, y: 10.4806 }, true],
+    ['cadena POINT de PostGIS', 'POINT(-66.9036 10.4806)', true],
+    ['tupla (x,y)', '(-66.9036,10.4806)', true],
+    ['null', null, false],
+    ['cadena malformada', 'no-es-una-ubicacion', false],
+    ['WKB hexadecimal', buildWkbHex(-66.9036, 10.4806), true],
+  ])(
+    'no rompe al recargar con location como %s',
+    (_label, rawLocation, shouldShowCoordinates) => {
+      const parsed = parseGeoPoint(rawLocation);
+
+      expect(() =>
+        render(<Harness initialLocation={parsed} />),
+      ).not.toThrow();
+
+      if (shouldShowCoordinates && parsed !== null) {
+        expect(screen.getByTestId('captured-coordinates')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('latitude'),
+        ).toHaveTextContent(/^-?\d+\.\d{6}$/);
+      } else {
+        expect(
+          screen.queryByTestId('captured-coordinates'),
+        ).not.toBeInTheDocument();
+      }
+
+      cleanup();
+    },
+  );
 
   it('centra el mapa en el punto capturado con flyTo', async () => {
     mockGeolocation.getCurrentPosition.mockImplementation((success) => {

@@ -428,8 +428,85 @@ describe('MerchantSettingsPage', () => {
           address: 'Calle 123',
         }),
       );
+      expect(authMocks.showToastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Ubicación actualizada correctamente' }),
+      );
     });
   });
+
+  it.each([
+    ['cadena POINT de PostGIS', 'POINT(-66.9036 10.4806)', true],
+    ['objeto { x, y }', { x: -66.9036, y: 10.4806 }, true],
+    ['tupla (x,y)', '(-66.9036,10.4806)', true],
+    ['null', null, false],
+    ['cadena malformada', 'ubicacion-invalida', false],
+    [
+      'WKB hexadecimal',
+      (() => {
+        const buffer = new ArrayBuffer(25);
+        const view = new DataView(buffer);
+        view.setUint8(0, 1);
+        view.setUint32(1, 0x20000001, true);
+        view.setUint32(5, 4326, true);
+        view.setFloat64(9, 10.4806, true);
+        view.setFloat64(17, -66.9036, true);
+        return Array.from(new Uint8Array(buffer))
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('');
+      })(),
+      true,
+    ],
+  ])('recarga sin romper con location como %s', async (_label, rawLocation, showsPin) => {
+    await setMockState({
+      merchant: {
+        ...mockMerchant,
+        location: rawLocation,
+      } as unknown as MerchantRow,
+    });
+
+    render(<MerchantSettingsPage />);
+
+    expect(screen.getByText(/Configuración del Comercio/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Ubicación/i }));
+    if (showsPin) {
+      expect(screen.getByTestId('captured-coordinates')).toBeInTheDocument();
+    } else {
+      expect(
+        screen.queryByTestId('captured-coordinates'),
+      ).not.toBeInTheDocument();
+    }
+  });
+
+  it.each([
+    ['cadena POINT de PostGIS', 'POINT(-66.9036 10.4806)', '(-66.9036,10.4806)'],
+    ['objeto { x, y }', { x: -66.9036, y: 10.4806 }, '(-66.9036,10.4806)'],
+    ['null', null, null],
+    ['cadena malformada', 'ubicacion-invalida', null],
+  ])(
+    'redondea al guardar una location recibida como %s',
+    async (_label, rawLocation, expectedSaved) => {
+      await setMockState({
+        merchant: {
+          ...mockMerchant,
+          location: rawLocation,
+        } as unknown as MerchantRow,
+      });
+
+      render(<MerchantSettingsPage />);
+
+      await screen.findByText('Guardar cambios');
+      fireEvent.click(
+        screen.getByRole('button', { name: /Guardar cambios/i }),
+      );
+
+      await waitFor(() => {
+        expect(authMocks.saveSettingsMock).toHaveBeenCalledWith(
+          expect.objectContaining({ location: expectedSaved }),
+        );
+      });
+    },
+  );
 
   it('envía location en null cuando el comercio nunca capturó coordenadas', async () => {
     await setMockState({ merchant: mockMerchant });

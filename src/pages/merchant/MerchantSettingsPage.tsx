@@ -12,6 +12,7 @@ import type { ImageFieldState } from '../../components/merchant/ImageUploadField
 import { ImageUploadField } from '../../components/merchant/ImageUploadField';
 import { LocationSettingsForm } from '../../components/merchant/LocationSettingsForm';
 import { formatGeoPointOrNull } from '../../utils/distance';
+import { parseGeoPoint } from '../../utils/geoPoint';
 import type {
   GeoPoint,
   MerchantCategory,
@@ -64,7 +65,8 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
       setCategory(merchant.category);
       setAddress(merchant.address);
       setZone(merchant.zone ?? '');
-      setLocation(merchant.location ?? null);
+      // Parseo defensivo: el backend puede devolver POINT, WKB, objeto o null.
+      setLocation(parseGeoPoint(merchant.location));
       setLogo({ url: merchant.logo_url ?? null, uploading: false, error: null });
       setBanner({ url: merchant.banner_url ?? null, uploading: false, error: null });
       setIsActive(merchant.is_active);
@@ -131,7 +133,10 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
 
       await saveSettings(updates);
       showToast({
-        title: 'Configuración guardada',
+        title:
+          location !== null
+            ? 'Ubicación actualizada correctamente'
+            : 'Configuración guardada',
         message: 'Los cambios se han guardado correctamente.',
         variant: 'success',
       });
