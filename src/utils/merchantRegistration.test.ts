@@ -12,6 +12,7 @@ function buildValidInput(): CreateMerchantAccountInput {
     ownerCi: 'V-12345678',
     ownerPhone: '04141234567',
     ownerEmail: 'maria@pizzeria.com',
+    ownerPassword: 'ClaveInicial1',
     businessName: 'La Pizzería de María',
     businessRif: 'J-40123456-7',
   };
@@ -72,5 +73,21 @@ describe('validateCreateMerchantInput', () => {
     const input = buildValidInput();
     input.ownerEmail = 'no-es-un-email';
     expect(validateCreateMerchantInput(input)).toContain('email válido');
+  });
+
+  it('rechaza el formulario sin contraseña inicial', () => {
+    const input = buildValidInput();
+    input.ownerPassword = '   ';
+    expect(validateCreateMerchantInput(input)).toContain(
+      'contraseña inicial del propietario es obligatoria',
+    );
+  });
+
+  it('rechaza contraseñas más cortas que el mínimo permitido', () => {
+    const input = buildValidInput();
+    input.ownerPassword = 'abc';
+    expect(validateCreateMerchantInput(input)).toContain(
+      'al menos 6 caracteres',
+    );
   });
 });

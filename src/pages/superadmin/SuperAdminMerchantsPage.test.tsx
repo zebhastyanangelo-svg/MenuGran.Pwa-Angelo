@@ -43,6 +43,10 @@ async function submitForm(): Promise<void> {
     'carlos@arepas.com',
   );
   await user.type(
+    screen.getByLabelText('Contraseña inicial'),
+    'ClaveTemporal1',
+  );
+  await user.type(
     screen.getByLabelText('Nombre del negocio (público)'),
     'Arepas El Güero',
   );
@@ -124,6 +128,7 @@ describe('SuperAdminMerchantsPage', () => {
       ownerCi: 'V-87654321',
       ownerPhone: '04241234567',
       ownerEmail: 'carlos@arepas.com',
+      ownerPassword: 'ClaveTemporal1',
       businessName: 'Arepas El Güero',
       businessRif: 'J-40987654-3',
     });

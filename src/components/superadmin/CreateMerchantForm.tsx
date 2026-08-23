@@ -17,6 +17,7 @@ const EMPTY_INPUT: CreateMerchantAccountInput = {
   ownerCi: '',
   ownerPhone: '',
   ownerEmail: '',
+  ownerPassword: '',
   businessName: '',
   businessRif: '',
 };
@@ -96,6 +97,17 @@ export function CreateMerchantForm({
             helperText="El comerciante iniciará sesión con este correo."
             value={input.ownerEmail}
             onChange={(event) => updateField('ownerEmail', event.target.value)}
+          />
+          <Input
+            label="Contraseña inicial"
+            name="ownerPassword"
+            type="password"
+            autoComplete="new-password"
+            helperText="El comerciante usará esta clave para iniciar sesión."
+            value={input.ownerPassword}
+            onChange={(event) =>
+              updateField('ownerPassword', event.target.value)
+            }
           />
         </div>
       </fieldset>

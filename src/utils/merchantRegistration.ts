@@ -8,6 +8,7 @@ export interface CreateMerchantAccountInput {
   ownerCi: string;
   ownerPhone: string;
   ownerEmail: string;
+  ownerPassword: string;
   businessName: string;
   businessRif: string;
 }
@@ -19,6 +20,7 @@ export interface CreateMerchantAccountResult {
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const MIN_PASSWORD_LENGTH = 6;
 
 /** Convierte un nombre de negocio en slug URL-safe (minúsculas, sin acentos). */
 export function slugifyMerchantName(name: string): string {
@@ -63,6 +65,12 @@ export function validateCreateMerchantInput(
   }
   if (!EMAIL_PATTERN.test(input.ownerEmail.trim())) {
     return 'Ingresa un email válido para el propietario.';
+  }
+  if (input.ownerPassword.trim() === '') {
+    return 'La contraseña inicial del propietario es obligatoria.';
+  }
+  if (input.ownerPassword.trim().length < MIN_PASSWORD_LENGTH) {
+    return `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`;
   }
   if (input.businessName.trim() === '') {
     return 'El nombre del negocio es obligatorio.';

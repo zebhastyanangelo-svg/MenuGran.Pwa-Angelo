@@ -9,6 +9,7 @@ const VALID_INPUT: CreateMerchantAccountInput = {
   ownerCi: 'V-12345678',
   ownerPhone: '04141234567',
   ownerEmail: 'maria@pizzeria.com',
+  ownerPassword: 'ClaveInicial1',
   businessName: 'La Pizzería de María',
   businessRif: 'J-40123456-7',
 };
@@ -26,6 +27,10 @@ async function fillForm(input: CreateMerchantAccountInput): Promise<void> {
     input.ownerEmail,
   );
   await user.type(
+    screen.getByLabelText('Contraseña inicial'),
+    input.ownerPassword,
+  );
+  await user.type(
     screen.getByLabelText('Nombre del negocio (público)'),
     input.businessName,
   );
@@ -33,7 +38,7 @@ async function fillForm(input: CreateMerchantAccountInput): Promise<void> {
 }
 
 describe('CreateMerchantForm', () => {
-  it('renderiza los seis campos requeridos', () => {
+  it('renderiza los siete campos requeridos', () => {
     render(<CreateMerchantForm onSubmit={vi.fn()} />);
 
     expect(
@@ -45,6 +50,9 @@ describe('CreateMerchantForm', () => {
     expect(
       screen.getByLabelText('Email (credenciales de acceso)'),
     ).toBeInTheDocument();
+    const passwordInput = screen.getByLabelText('Contraseña inicial');
+    expect(passwordInput).toBeInTheDocument();
+    expect(passwordInput).toHaveAttribute('type', 'password');
     expect(
       screen.getByLabelText('Nombre del negocio (público)'),
     ).toBeInTheDocument();

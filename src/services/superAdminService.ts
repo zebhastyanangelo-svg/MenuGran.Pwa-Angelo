@@ -1,4 +1,3 @@
-import type { Session } from '@supabase/supabase-js';
 import { supabase, TABLE_NAMES } from './supabase';
 import type {
   IsoTimestamp,
@@ -7,7 +6,6 @@ import type {
   ProfileUpdate,
 } from '../types/database';
 import {
-  generateTemporaryPassword,
   slugifyMerchantName,
   validateCreateMerchantInput,
   type CreateMerchantAccountInput,
@@ -37,11 +35,16 @@ interface MerchantListQueryRow {
 
 /**
  * Crea la cuenta completa de un comercio desde el panel de Super Admin:
- * 1. Registra al propietario en Supabase Auth usando su email como usuario.
+ * 1. Invoca el Edge Function `create-merchant`, que —con la service_role
+ *    key solo en el servidor y tras verificar que el llamador es superadmin—
+ *    registra al propietario auto-confirmado con su email, la contraseña
+ *    inicial definida en el formulario y rol `merchant_owner`.
  * 2. Asigna el rol `merchant_owner` en su perfil.
  * 3. Inserta el merchant activo vinculado a ese usuario, con el nombre
  *    público del negocio, para que MerchantDashboardPage detecte la tienda.
- * Al finalizar restaura la sesión previa del Super Admin.
+ *
+ * La llamada usa las credenciales cliente normales: la service_role key
+ * nunca llega al frontend.
  */
 export async function createMerchantAccount(
   input: CreateMerchantAccountInput,
@@ -51,43 +54,50 @@ export async function createMerchantAccount(
     throw new Error(validationError);
   }
 
-  const previousSession = await readCurrentSession();
-  const temporaryPassword = generateTemporaryPassword();
-  const userId = await signUpOwner(input, temporaryPassword);
+  const userId = await createConfirmedOwner(input);
   await assignOwnerRole(userId, input.ownerFullName, input.ownerCi);
   const merchantId = await insertActiveMerchant(userId, input);
 
-  await restoreSession(previousSession);
-
-  return { userId, merchantId, temporaryPassword };
+  return { userId, merchantId, temporaryPassword: input.ownerPassword };
 }
 
-async function readCurrentSession(): Promise<Session | null> {
-  const { data } = await supabase.auth.getSession();
-  return data.session ?? null;
-}
-
-async function signUpOwner(
+async function createConfirmedOwner(
   input: CreateMerchantAccountInput,
-  temporaryPassword: string,
 ): Promise<string> {
-  const { data, error } = await supabase.auth.signUp({
-    email: input.ownerEmail.trim(),
-    password: temporaryPassword,
-    options: {
-      data: {
-        full_name: input.ownerFullName.trim(),
-        role: 'merchant_owner',
-      },
+  const { data, error } = await supabase.functions.invoke('create-merchant', {
+    body: {
+      email: input.ownerEmail.trim(),
+      password: input.ownerPassword,
+      fullName: input.ownerFullName.trim(),
     },
   });
   if (error !== null) {
-    throw new Error(`Error al crear la cuenta del propietario: ${error.message}`);
+    throw new Error(extractFunctionErrorMessage(error));
   }
-  if (data.user === null) {
+  const userId = readUserIdFromPayload(data);
+  if (userId === null) {
     throw new Error('No se pudo crear la cuenta del propietario.');
   }
-  return data.user.id;
+  return userId;
+}
+
+function extractFunctionErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message !== '') {
+    return `Error al crear la cuenta del propietario: ${error.message}`;
+  }
+  return 'Error al crear la cuenta del propietario.';
+}
+
+function readUserIdFromPayload(payload: unknown): string | null {
+  if (
+    payload !== null &&
+    typeof payload === 'object' &&
+    'userId' in payload &&
+    typeof (payload as { userId: unknown }).userId === 'string'
+  ) {
+    return (payload as { userId: string }).userId;
+  }
+  return null;
 }
 
 async function assignOwnerRole(
@@ -156,20 +166,6 @@ function buildMerchantPayload(
     is_active: true,
     is_open: true,
   };
-}
-
-async function restoreSession(session: Session | null): Promise<void> {
-  if (session === null) return;
-  const { error } = await supabase.auth.setSession({
-    access_token: session.access_token,
-    refresh_token: session.refresh_token,
-  });
-  if (error !== null) {
-    console.error(
-      'No se pudo restaurar la sesión del Super Admin',
-      error.message,
-    );
-  }
 }
 
 /** Lista los comercios existentes junto a los datos de su propietario. */

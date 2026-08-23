@@ -183,7 +183,7 @@ describe('AuthForm', () => {
     });
   });
 
-  it('redirige a /super-admin tras el login del Super Admin sin ruta "from"', async () => {
+  it('redirige a /super-admin/dashboard tras el login del Super Admin sin ruta "from"', async () => {
     const user = userEvent.setup();
     signInWithPassword.mockResolvedValueOnce(undefined);
     fetchCurrentSessionRole.mockResolvedValue('superadmin');
@@ -195,7 +195,23 @@ describe('AuthForm', () => {
 
     expect(fetchCurrentSessionRole).toHaveBeenCalled();
     await waitFor(() => {
-      expect(navigate).toHaveBeenCalledWith('/super-admin', { replace: true });
+      expect(navigate).toHaveBeenCalledWith('/super-admin/dashboard', { replace: true });
+    });
+  });
+
+  it('redirige al panel del comercio tras login de merchant_owner sin ruta "from"', async () => {
+    const user = userEvent.setup();
+    signInWithPassword.mockResolvedValueOnce(undefined);
+    fetchCurrentSessionRole.mockResolvedValue('merchant_owner');
+    renderWithRouter('login', null);
+
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'owner@pizzeria.com');
+    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.click(screen.getByTestId('login-submit'));
+
+    expect(fetchCurrentSessionRole).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('/merchant/dashboard', { replace: true });
     });
   });
 

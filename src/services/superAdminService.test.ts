@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Session, User } from '@supabase/supabase-js';
 import {
   createMerchantAccount,
   listMerchantsWithOwners,
@@ -16,19 +15,13 @@ interface TableChain {
 }
 
 const supabaseMocks = vi.hoisted(() => ({
-  getSession: vi.fn(),
-  setSession: vi.fn(),
-  signUp: vi.fn(),
+  functionsInvoke: vi.fn(),
   from: vi.fn(),
 }));
 
 vi.mock('./supabase', () => ({
   supabase: {
-    auth: {
-      getSession: supabaseMocks.getSession,
-      setSession: supabaseMocks.setSession,
-      signUp: supabaseMocks.signUp,
-    },
+    functions: { invoke: supabaseMocks.functionsInvoke },
     from: supabaseMocks.from,
   },
   TABLE_NAMES: {
@@ -101,23 +94,9 @@ function buildValidInput(): CreateMerchantAccountInput {
     ownerCi: 'V-12345678',
     ownerPhone: '04141234567',
     ownerEmail: 'maria@pizzeria.com',
+    ownerPassword: 'ClaveInicial1',
     businessName: 'La Pizzería de María',
     businessRif: 'J-40123456-7',
-  };
-}
-
-function buildUser(id: string): User {
-  return { id, email: `${id}@menugram.com` } as unknown as User;
-}
-
-function buildSuperadminSession(): Session {
-  return {
-    access_token: 'super-access',
-    refresh_token: 'super-refresh',
-    token_type: 'bearer',
-    expires_in: 3600,
-    expires_at: 4102444800,
-    user: buildUser('super-1'),
   };
 }
 
@@ -128,13 +107,8 @@ describe('createMerchantAccount', () => {
     supabaseMocks.from.mockImplementation(
       (table: string) => registeredTables.get(table),
     );
-    supabaseMocks.getSession.mockResolvedValue({
-      data: { session: buildSuperadminSession() },
-      error: null,
-    });
-    supabaseMocks.setSession.mockResolvedValue({ error: null });
-    supabaseMocks.signUp.mockResolvedValue({
-      data: { user: buildUser('new-owner'), session: null },
+    supabaseMocks.functionsInvoke.mockResolvedValue({
+      data: { userId: 'new-owner' },
       error: null,
     });
     registerTable('profiles', {
@@ -152,21 +126,22 @@ describe('createMerchantAccount', () => {
     await expect(createMerchantAccount(input)).rejects.toThrow(
       /email válido/i,
     );
-    expect(supabaseMocks.signUp).not.toHaveBeenCalled();
+    expect(supabaseMocks.functionsInvoke).not.toHaveBeenCalled();
     expect(getTable('merchants').insert).not.toHaveBeenCalled();
   });
 
-  it('registra al propietario con su email como credencial y rol merchant_owner', async () => {
+  it('invoca el Edge Function create-merchant con las credenciales del formulario', async () => {
     await createMerchantAccount(buildValidInput());
 
-    expect(supabaseMocks.signUp).toHaveBeenCalledWith(
-      expect.objectContaining({
-        email: 'maria@pizzeria.com',
-        password: expect.any(String),
-        options: {
-          data: { full_name: 'María Pérez', role: 'merchant_owner' },
+    expect(supabaseMocks.functionsInvoke).toHaveBeenCalledWith(
+      'create-merchant',
+      {
+        body: {
+          email: 'maria@pizzeria.com',
+          password: 'ClaveInicial1',
+          fullName: 'María Pérez',
         },
-      }),
+      },
     );
   });
 
@@ -201,22 +176,19 @@ describe('createMerchantAccount', () => {
     );
     expect(result.merchantId).toBe('merchant-9');
     expect(result.userId).toBe('new-owner');
-    expect(result.temporaryPassword.length).toBeGreaterThan(0);
+    expect(result.temporaryPassword).toBe('ClaveInicial1');
   });
 
-  it('restaura la sesión previa del Super Admin tras completar el alta', async () => {
+  it('no manipula la sesión ni usa la API de Admin desde el frontend', async () => {
     await createMerchantAccount(buildValidInput());
 
-    expect(supabaseMocks.setSession).toHaveBeenCalledWith({
-      access_token: 'super-access',
-      refresh_token: 'super-refresh',
-    });
+    expect(supabaseMocks.functionsInvoke).toHaveBeenCalledTimes(1);
   });
 
-  it('propaga el error cuando el registro en Auth falla y no crea el merchant', async () => {
-    supabaseMocks.signUp.mockResolvedValue({
-      data: { user: null, session: null },
-      error: { message: 'email already registered' },
+  it('propaga el error cuando el Edge Function falla y no crea el merchant', async () => {
+    supabaseMocks.functionsInvoke.mockResolvedValue({
+      data: null,
+      error: new Error('email already registered'),
     });
 
     await expect(createMerchantAccount(buildValidInput())).rejects.toThrow(
