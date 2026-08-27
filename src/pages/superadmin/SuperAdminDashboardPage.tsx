@@ -1,5 +1,6 @@
 import { BarChart3, ClipboardList, Store, Users } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
+import { PlatformDistributionChart } from '../../components/superadmin/PlatformDistributionChart';
 import { useSuperAdminMetrics } from '../../hooks/useSuperAdminMetrics';
 
 interface MetricCardProps {
@@ -70,16 +71,28 @@ export function SuperAdminDashboardPage() {
               label="Usuarios clientes"
               value={String(metrics?.totalCustomers ?? 0)}
             />
-            <MetricCard
-              icon={<ClipboardList className="h-6 w-6" aria-hidden="true" />}
-              label="Pedidos globales"
-              value={String(metrics?.totalOrders ?? 0)}
-            />
-          </section>
-        )}
-      </div>
-    </div>
-  );
-}
+             <MetricCard
+               icon={<ClipboardList className="h-6 w-6" aria-hidden="true" />}
+               label="Pedidos globales"
+               value={String(metrics?.totalOrders ?? 0)}
+             />
+           </section>
+         )}
 
-export default SuperAdminDashboardPage;
+         {metrics !== null && !isLoading && (
+           <Card className="p-5">
+             <h2 className="mb-3 text-sm font-semibold text-slate-500">
+               Distribución global de la plataforma
+             </h2>
+             <PlatformDistributionChart
+               metrics={metrics}
+               isLoading={false}
+             />
+           </Card>
+         )}
+       </div>
+     </div>
+   );
+ }
+
+ export default SuperAdminDashboardPage;

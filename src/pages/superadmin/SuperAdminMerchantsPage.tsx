@@ -4,6 +4,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { MerchantMetricsModal } from '../../components/superadmin/MerchantMetricsModal';
 import { CreateMerchantForm } from '../../components/superadmin/CreateMerchantForm';
 import { useSuperAdminMerchants } from '../../hooks/useSuperAdminMerchants';
 import type { MerchantAccountListItem } from '../../services/superAdminService';
@@ -30,6 +31,8 @@ export function SuperAdminMerchantsPage() {
     useState<MerchantAccountListItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [selectedMerchant, setSelectedMerchant] =
+    useState<MerchantAccountListItem | null>(null);
 
   const handleCreate = useCallback(
     async (input: CreateMerchantAccountInput) => {
@@ -121,9 +124,19 @@ export function SuperAdminMerchantsPage() {
                 <li
                   key={merchant.id}
                   data-testid="merchant-row"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Ver métricas de ${merchant.name}`}
+                  onClick={() => setSelectedMerchant(merchant)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedMerchant(merchant);
+                    }
+                  }}
                   className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium text-gray-900">{merchant.name}</p>
                     <p className="text-sm text-gray-500">
                       RIF {merchant.rif} ·{' '}
@@ -140,7 +153,8 @@ export function SuperAdminMerchantsPage() {
                       data-testid="delete-merchant"
                       aria-label={`Eliminar ${merchant.name}`}
                       title={`Eliminar ${merchant.name}`}
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.stopPropagation();
                         setDeleteError(null);
                         setMerchantPendingDelete(merchant);
                       }}
@@ -198,9 +212,16 @@ export function SuperAdminMerchantsPage() {
             </div>
           </div>
         )}
-      </Modal>
-    </div>
-  );
-}
+       </Modal>
 
-export default SuperAdminMerchantsPage;
+       <MerchantMetricsModal
+         merchantId={selectedMerchant?.id ?? ''}
+         merchantName={selectedMerchant?.name ?? ''}
+         isOpen={selectedMerchant !== null}
+         onClose={() => setSelectedMerchant(null)}
+       />
+     </div>
+   );
+ }
+
+ export default SuperAdminMerchantsPage;

@@ -3,6 +3,9 @@ import { render } from '../../test/test-utils';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MerchantAccountListItem } from '../../services/superAdminService';
+import type { MerchantMetrics } from '../../services/merchantMetricsService';
+import type { UseMerchantMetricsResult } from '../../hooks/useMerchantMetrics';
+import { formatCurrency } from '../../utils/format';
 import { SuperAdminMerchantsPage } from './SuperAdminMerchantsPage';
 
 const serviceMocks = vi.hoisted(() => ({
@@ -11,10 +14,22 @@ const serviceMocks = vi.hoisted(() => ({
   deleteMerchant: vi.fn(),
 }));
 
+const metricsHookMocks = vi.hoisted(() => ({
+  useMerchantMetrics: vi.fn((): UseMerchantMetricsResult => ({
+    metrics: null,
+    isLoading: false,
+    error: null,
+  })),
+}));
+
 vi.mock('../../services/superAdminService', () => ({
   createMerchantAccount: serviceMocks.createMerchantAccount,
   listMerchantsWithOwners: serviceMocks.listMerchantsWithOwners,
   deleteMerchant: serviceMocks.deleteMerchant,
+}));
+
+vi.mock('../../hooks/useMerchantMetrics', () => ({
+  useMerchantMetrics: metricsHookMocks.useMerchantMetrics,
 }));
 
 function buildMerchant(
@@ -265,6 +280,80 @@ describe('SuperAdminMerchantsPage', () => {
       );
       expect(
         screen.queryByTestId('delete-confirmation-message'),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('métricas individuales por comercio', () => {
+    const sampleMetrics: MerchantMetrics = {
+      totalRevenue: 400.5,
+      totalOrders: 3,
+      completedOrders: 2,
+      cancelledOrders: 1,
+      averageTicket: 200.25,
+      activityLevel: 'Alta',
+      ordersLast30Days: 25,
+    };
+
+    beforeEach(() => {
+      metricsHookMocks.useMerchantMetrics.mockReturnValue({
+        metrics: sampleMetrics,
+        isLoading: false,
+        error: null,
+      });
+    });
+
+    function expectedRevenue(): string {
+      return formatCurrency(sampleMetrics.totalRevenue);
+    }
+
+    it('abre el modal de métricas al hacer clic en una fila de negocio', async () => {
+      const user = userEvent.setup();
+      render(<SuperAdminMerchantsPage />);
+
+      const row = await screen.findByTestId('merchant-row');
+      await user.click(row);
+
+      expect(
+        await screen.findByRole('heading', {
+          name: /Métricas de La Pizzería de María/i,
+        }),
+      ).toBeInTheDocument();
+      expect(screen.getByText(expectedRevenue())).toBeInTheDocument();
+      expect(screen.getByText('Ingresos procesados')).toBeInTheDocument();
+    });
+
+    it('no abre el modal de métricas al pulsar el botón de eliminar', async () => {
+      const user = userEvent.setup();
+      render(<SuperAdminMerchantsPage />);
+
+      await screen.findByTestId('merchant-row');
+      await user.click(screen.getByTestId('delete-merchant'));
+
+      expect(
+        screen.getByTestId('delete-confirmation-message'),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(expectedRevenue())).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('heading', {
+          name: /Métricas de La Pizzería de María/i,
+        }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('muestra el cargador de métricas mientras la consulta está en curso', async () => {
+      metricsHookMocks.useMerchantMetrics.mockReturnValue({
+        metrics: null,
+        isLoading: true,
+        error: null,
+      });
+      const user = userEvent.setup();
+      render(<SuperAdminMerchantsPage />);
+
+      await user.click(await screen.findByTestId('merchant-row'));
+
+      expect(
+        screen.getByRole('status', { hidden: true }),
       ).toBeInTheDocument();
     });
   });
