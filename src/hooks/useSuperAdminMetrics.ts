@@ -1,42 +1,29 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query'
 import {
   fetchSuperAdminMetrics,
   type SuperAdminMetrics,
-} from '../services/superAdminMetricsService';
+} from '../services/superAdminMetricsService'
 
 export interface UseSuperAdminMetricsResult {
-  metrics: SuperAdminMetrics | null;
-  isLoading: boolean;
-  error: string | null;
+  metrics: SuperAdminMetrics | null
+  isLoading: boolean
+  error: string | null
 }
 
-/** Carga las métricas globales para el dashboard del Super Admin. */
 export function useSuperAdminMetrics(): UseSuperAdminMetricsResult {
-  const [metrics, setMetrics] = useState<SuperAdminMetrics | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isError, error, isLoading } = useQuery<
+    SuperAdminMetrics,
+    Error
+  >({
+    queryKey: ['superAdminMetrics'],
+    queryFn: async () => fetchSuperAdminMetrics(),
+  })
 
-  const load = useCallback(async () => {
-    try {
-      const data = await fetchSuperAdminMetrics();
-      setMetrics(data);
-      setError(null);
-    } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : 'No se pudieron cargar las métricas.',
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  return { metrics, isLoading, error };
+  return {
+    metrics: data ?? null,
+    isLoading: isLoading || isError,
+    error: isError ? (error instanceof Error ? error.message : String(error)) : null,
+  }
 }
 
-export default useSuperAdminMetrics;
+export default useSuperAdminMetrics

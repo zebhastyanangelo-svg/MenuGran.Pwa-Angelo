@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { render } from '../test/test-utils';
 import userEvent from '@testing-library/user-event';
 import { MerchantDashboardPage } from './MerchantDashboardPage';
 import { BrowserRouter } from 'react-router-dom';
@@ -20,6 +21,15 @@ vi.mock('../hooks/useAuth', () => ({
         from: vi.fn().mockReturnThis(),
         createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: 'https://example.com/signed-url.jpg' }, error: null })
       },
+      channel: vi.fn().mockReturnValue({
+        on: vi.fn().mockReturnThis(),
+        subscribe: vi.fn().mockImplementation((cb) => {
+          if (cb) cb('SUBSCRIBED');
+          return { unsubscribe: vi.fn() };
+        }),
+        unsubscribe: vi.fn(),
+      }),
+      removeChannel: vi.fn(),
       from: vi.fn(),
     };
 
@@ -27,6 +37,15 @@ vi.mock('../hooks/useAuth', () => ({
     let mockMerchantsData = [{ id: 'm-1' }];
     let mockMerchantStaffData = [{ merchant_id: 'm-2' }];
     let mockOrdersData: any[] = [];
+    let mockOrdersPending = false;
+    let resolveOrderPromise: ((value: { data: any[]; error: null }) => void) | null = null;
+
+    const resolvePendingOrders = (data: any[]) => {
+      if (resolveOrderPromise) {
+        resolveOrderPromise({ data, error: null });
+        resolveOrderPromise = null;
+      }
+    };
 
     const fromMock = vi.fn().mockImplementation((_tableName) => {
       
@@ -85,7 +104,14 @@ vi.mock('../hooks/useAuth', () => ({
         return {
           select: vi.fn().mockReturnThis(),
           in: vi.fn().mockReturnThis(),
-          order: vi.fn().mockResolvedValue({ data: mockOrdersData, error: null }),
+          order: vi.fn().mockImplementation(() => {
+            if (mockOrdersPending) {
+              return new Promise<{ data: any[]; error: null }>((resolve) => {
+                resolveOrderPromise = resolve;
+              });
+            }
+            return Promise.resolve({ data: mockOrdersData, error: null });
+          }),
           update: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis()
         };
@@ -115,7 +141,9 @@ vi.mock('../hooks/useAuth', () => ({
       __setMockMerchantsData: (data: any) => { mockMerchantsData = data; },
       __setMockMerchantStaffData: (data: any) => { mockMerchantStaffData = data; },
       __setMockOrdersData: (data: any) => { mockOrdersData = data; },
+      __setMockOrdersPending: (pending: boolean) => { mockOrdersPending = pending; },
       __setMockUpdateError: (_error: Error | null) => undefined,
+      __resolveOrderPromise: resolvePendingOrders,
     };
   });
 
@@ -154,6 +182,7 @@ describe('MerchantDashboardPage', () => {
     supabaseModule.__setMockMerchantsData([{ id: 'm-1' }]);
     supabaseModule.__setMockMerchantStaffData([{ merchant_id: 'm-2' }]);
     supabaseModule.__setMockOrdersData([]);
+    supabaseModule.__setMockOrdersPending(false);
     supabaseModule.__setMockUpdateError(null);
 
     // Mock useAuth to return a merchant owner profile
@@ -177,16 +206,22 @@ describe('MerchantDashboardPage', () => {
   });
 
   it('shows loading state while fetching orders', async () => {
+    // Hold the orders query pending so loading state stays visible
+    supabaseModule.__setMockOrdersPending(true);
+
     render(
       <BrowserRouter>
         <MerchantDashboardPage />
       </BrowserRouter>
     );
 
-    // Initially loading
+    // Initially loading — use findByText since loading appears after merchantIds resolves
     expect(
-      screen.getByText(/Cargando pedidos.../i)
+      await screen.findByText(/Cargando pedidos.../i)
     ).toBeInTheDocument();
+
+    // Resolve the in-flight pending orders promise with empty data
+    supabaseModule.__resolveOrderPromise([]);
 
     // Wait for data to load (should show no orders since we set empty array)
     await waitFor(() => {

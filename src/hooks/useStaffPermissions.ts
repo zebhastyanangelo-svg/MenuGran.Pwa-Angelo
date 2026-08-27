@@ -1,53 +1,46 @@
-import { useEffect, useState } from 'react';
-import { supabase, TABLE_NAMES } from '../services/supabase';
-import type { MerchantStaffPermissions } from '../types/database';
-import { useAuth } from './useAuth';
+import { useQuery } from '@tanstack/react-query'
+import { supabase, TABLE_NAMES } from '../services/supabase'
+import { useAuth } from './useAuth'
+import type { MerchantStaffPermissions } from '../types/database'
 
 export interface UseStaffPermissionsResult {
-  permissions: MerchantStaffPermissions | null;
-  isLoading: boolean;
+  permissions: MerchantStaffPermissions | null
+  isLoading: boolean
 }
 
-/**
- * Resuelve los permisos granularizados del empleado autenticado
- * (rol merchant_staff). Para el resto de roles devuelve null.
- */
 export function useStaffPermissions(): UseStaffPermissionsResult {
-  const { user, profile } = useAuth();
-  const [permissions, setPermissions] =
-    useState<MerchantStaffPermissions | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const { user, profile } = useAuth()
+  const isStaff = profile?.role === 'merchant_staff'
 
-  const isStaff = profile?.role === 'merchant_staff';
+  const { data, isLoading, isError } = useQuery<
+    MerchantStaffPermissions | null,
+    Error
+  >({
+    queryKey: ['staffPermissions', user?.id],
+    enabled: !!user && isStaff,
+    queryFn: async (): Promise<MerchantStaffPermissions | null> => {
+      if (!user) return null
 
-  useEffect(() => {
-    if (user === null || !isStaff) {
-      setPermissions(null);
-      setIsLoading(false);
-      return;
-    }
+      const { data, error: supaError } = await supabase
+        .from(TABLE_NAMES.merchantStaff)
+        .select('permissions, is_active')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .maybeSingle()
 
-    let cancelled = false;
-    setIsLoading(true);
-    void supabase
-      .from(TABLE_NAMES.merchantStaff)
-      .select('permissions, is_active')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (cancelled) return;
-        const row = data as { permissions: MerchantStaffPermissions } | null;
-        setPermissions(row?.permissions ?? null);
-        setIsLoading(false);
-      });
+      if (supaError !== null) {
+        throw new Error(supaError.message)
+      }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [user, isStaff]);
+      const row = data as { permissions: MerchantStaffPermissions } | null
+      return row?.permissions ?? null
+    },
+  })
 
-  return { permissions, isLoading };
+  return {
+    permissions: data ?? null,
+    isLoading: isLoading || isError,
+  }
 }
 
-export default useStaffPermissions;
+export default useStaffPermissions
