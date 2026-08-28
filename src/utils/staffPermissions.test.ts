@@ -11,7 +11,7 @@ function buildValidInput(): EmployeeFormInput {
     fullName: 'Ana Gómez',
     email: 'ana@pizzeria.com',
     password: 'Clave123',
-    permissions: { can_manage_orders: true, can_manage_menu: false },
+    permissions: { can_manage_orders: true, can_manage_menu: false, can_manage_settings: false, can_view_metrics: false },
   };
 }
 
@@ -42,21 +42,25 @@ describe('validateEmployeeInput', () => {
 describe('toStaffPermissions', () => {
   it('normaliza los checkboxes al contrato JSONB', () => {
     expect(
-      toStaffPermissions({ can_manage_orders: true, can_manage_menu: true }),
+      toStaffPermissions({ can_manage_orders: true, can_manage_menu: true, can_manage_settings: false, can_view_metrics: false }),
     ).toEqual({
       can_manage_menu: true,
       can_view_orders: true,
       can_manage_orders: true,
+      can_manage_settings: false,
+      can_view_metrics: false,
     });
   });
 
   it('siempre concede ver pedidos', () => {
     expect(
-      toStaffPermissions({ can_manage_orders: false, can_manage_menu: false }),
+      toStaffPermissions({ can_manage_orders: false, can_manage_menu: false, can_manage_settings: false, can_view_metrics: false }),
     ).toEqual({
       can_manage_menu: false,
       can_view_orders: true,
       can_manage_orders: false,
+      can_manage_settings: false,
+      can_view_metrics: false,
     });
   });
 

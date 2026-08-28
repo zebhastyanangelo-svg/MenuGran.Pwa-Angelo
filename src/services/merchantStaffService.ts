@@ -27,9 +27,7 @@ export interface StaffListItem {
   email: string | null;
   permissions: MerchantStaffPermissions;
   isActive: boolean;
-}
-
-interface StaffQueryRow extends MerchantStaffRow {
+}interface StaffQueryRow extends MerchantStaffRow {
   profiles: { email: string; full_name: string | null } | null;
 }
 
@@ -173,29 +171,66 @@ export async function deleteStaff(staffId: string): Promise<void> {
   }
 }
 
+/** Actualiza los permisos de un empleado vinculado al comercio. */
+export async function updateStaffPermissions(
+  staffId: string,
+  permissions: MerchantStaffPermissions,
+): Promise<void> {
+  const { error } = await supabase
+    .from(TABLE_NAMES.merchantStaff)
+    .update({ permissions })
+    .eq('id', staffId);
+  if (error !== null) {
+    throw new Error(`Error al actualizar permisos: ${error.message}`);
+  }
+}
+
 /** Métricas resumen para las tarjetas de la vista Perfil. */
+export interface MerchantMetrics {
+  totalSales: number;
+  ordersToday: number;
+  activeProducts: number;
+}
+
+/**
+ * Métricas resumen para las tarjetas de la vista Perfil.
+ * Acepta un rango de fechas opcional (`startDate`, `endDate` en formato ISO
+ * `YYYY-MM-DD`). Cuando se proporciona, `totalSales` y `ordersToday` se
+ * calculan filtrando los pedidos del comercio dentro de ese rango.
+ */
 export async function fetchMerchantMetrics(
   merchantId: string,
+  startDate?: string,
+  endDate?: string,
 ): Promise<MerchantMetrics> {
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+  let salesQuery = supabase
+    .from(TABLE_NAMES.orders)
+    .select('total_amount')
+    .eq('merchant_id', merchantId);
 
-  const [salesResult, todayResult, productsResult] = await Promise.all([
-    supabase
-      .from(TABLE_NAMES.orders)
-      .select('total_amount')
-      .eq('merchant_id', merchantId),
-    supabase
-      .from(TABLE_NAMES.orders)
-      .select('id', { count: 'exact', head: true })
-      .eq('merchant_id', merchantId)
-      .gte('created_at', startOfDay.toISOString()),
-    supabase
-      .from(TABLE_NAMES.products)
-      .select('id', { count: 'exact', head: true })
-      .eq('merchant_id', merchantId)
-      .eq('is_available', true),
-  ]);
+  let countQuery = supabase
+    .from(TABLE_NAMES.orders)
+    .select('id', { count: 'exact', head: true })
+    .eq('merchant_id', merchantId);
+
+  if (startDate !== undefined && endDate !== undefined) {
+    const start = `${startDate}T00:00:00.000Z`;
+    const end = `${endDate}T23:59:59.999Z`;
+    salesQuery = salesQuery.gte('created_at', start).lte('created_at', end);
+    countQuery = countQuery.gte('created_at', start).lte('created_at', end);
+  } else {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    countQuery = countQuery.gte('created_at', startOfDay.toISOString());
+  }
+
+  const productsResult = await supabase
+    .from(TABLE_NAMES.products)
+    .select('id', { count: 'exact', head: true })
+    .eq('merchant_id', merchantId)
+    .eq('is_available', true);
+
+  const [salesResult, todayResult] = await Promise.all([salesQuery, countQuery]);
 
   if (salesResult.error !== null || todayResult.error !== null || productsResult.error !== null) {
     throw new Error('Error al calcular las métricas del comercio.');

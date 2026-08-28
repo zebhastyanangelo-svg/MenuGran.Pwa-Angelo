@@ -73,7 +73,7 @@ function buildValidInput(): EmployeeFormInput {
     fullName: 'Carlos Ruiz',
     email: 'carlos@pizzeria.com',
     password: 'Clave123',
-    permissions: { can_manage_orders: true, can_manage_menu: false },
+    permissions: { can_manage_orders: true, can_manage_menu: false, can_manage_settings: false, can_view_metrics: false },
   };
 }
 
@@ -223,6 +223,8 @@ describe('createEmployee', () => {
             can_manage_menu: false,
             can_view_orders: true,
             can_manage_orders: true,
+            can_manage_settings: false,
+            can_view_metrics: false,
           },
         },
       },

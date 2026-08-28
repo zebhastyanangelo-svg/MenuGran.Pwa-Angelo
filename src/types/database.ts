@@ -90,6 +90,10 @@ export interface MerchantStaffPermissions {
   can_view_orders: boolean;
   /** Permiso granular para gestionar pedidos (crear/actualizar estados). */
   can_manage_orders?: boolean;
+  /** Permiso para gestionar la configuración del comercio. */
+  can_manage_settings?: boolean;
+  /** Permiso para visualizar métricas y reportes del comercio. */
+  can_view_metrics?: boolean;
 }
 
 /** Payload de un item dentro del JSONB `orders.items`. */

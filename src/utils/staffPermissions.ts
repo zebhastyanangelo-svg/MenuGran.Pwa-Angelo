@@ -11,22 +11,35 @@ export interface EmployeeFormInput {
   permissions: {
     can_manage_orders: boolean;
     can_manage_menu: boolean;
+    can_manage_settings: boolean;
+    can_view_metrics: boolean;
   };
 }
 
 export const MIN_EMPLOYEE_PASSWORD_LENGTH = 6;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Permisos por defecto: solo consulta de pedidos. */
+/** Permisos por defecto: solo consulta de pedidos y métricas. */
 export const DEFAULT_STAFF_PERMISSIONS: MerchantStaffPermissions = {
   can_manage_menu: false,
   can_view_orders: true,
+  can_manage_settings: false,
+  can_view_metrics: false,
 };
 
-/**
- * Normaliza los checkboxes del formulario al contrato JSONB de
- * `merchant_staff.permissions`. `can_manage_orders` implica `can_view_orders`.
- */
+export interface PermissionOption {
+  key: keyof EmployeeFormInput['permissions'];
+  label: string;
+}
+
+/** Opciones de permisos para renderizar checkboxes en los modales. */
+export const PERMISSION_OPTIONS: PermissionOption[] = [
+  { key: 'can_manage_orders', label: 'Gestión de pedidos' },
+  { key: 'can_manage_menu', label: 'Gestión de menú' },
+  { key: 'can_manage_settings', label: 'Configuración' },
+  { key: 'can_view_metrics', label: 'Ver métricas' },
+];
+
 export function toStaffPermissions(
   input: EmployeeFormInput['permissions'],
 ): MerchantStaffPermissions {
@@ -34,6 +47,19 @@ export function toStaffPermissions(
     can_manage_menu: input.can_manage_menu,
     can_view_orders: true,
     can_manage_orders: input.can_manage_orders,
+    can_manage_settings: input.can_manage_settings,
+    can_view_metrics: input.can_view_metrics,
+  };
+}
+
+export function permissionsToFormInput(
+  permissions: MerchantStaffPermissions,
+): EmployeeFormInput['permissions'] {
+  return {
+    can_manage_orders: permissions.can_manage_orders ?? false,
+    can_manage_menu: permissions.can_manage_menu,
+    can_manage_settings: permissions.can_manage_settings ?? false,
+    can_view_metrics: permissions.can_view_metrics ?? false,
   };
 }
 
@@ -60,4 +86,6 @@ export const PERMISSION_LABELS: Record<string, string> = {
   can_manage_orders: 'Gestión de pedidos',
   can_view_orders: 'Ver pedidos',
   can_manage_menu: 'Gestión de menú',
+  can_manage_settings: 'Configuración',
+  can_view_metrics: 'Ver métricas',
 };

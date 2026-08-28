@@ -4,17 +4,17 @@ import {
   DollarSign,
   Loader2,
   Plus,
+  Settings,
   Store,
-  Trash2,
   UserRound,
-  UtensilsCrossed,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import type { MerchantStaffPermissions } from '../../types/database';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
+import { Modal } from '../../components/ui/Modal';
 import {
   createEmployee,
   deleteStaff,
@@ -22,51 +22,103 @@ import {
   getMerchantContext,
   listStaff,
   setStaffActive,
+  updateStaffPermissions,
   type MerchantContext,
   type MerchantMetrics,
   type StaffListItem,
 } from '../../services/merchantStaffService';
 import {
+  fetchMerchantAnalytics,
+  type MerchantAnalytics,
+} from '../../services/merchantAnalyticsService';
+import {
   PERMISSION_LABELS,
   validateEmployeeInput,
   type EmployeeFormInput,
 } from '../../utils/staffPermissions';
+import { DateRangePicker, getDefaultDateRange } from '../../components/merchant/DateRangePicker';
+import { SalesTrendChart } from '../../components/merchant/SalesTrendChart';
+import { OrdersDonutChart } from '../../components/merchant/OrdersDonutChart';
+import { UpdateStaffModal } from '../../components/merchant/UpdateStaffModal';
+import { DeleteStaffConfirmModal } from '../../components/merchant/DeleteStaffConfirmModal';
 
 const EMPTY_EMPLOYEE: EmployeeFormInput = {
   fullName: '',
   email: '',
   password: '',
-  permissions: { can_manage_orders: false, can_manage_menu: false },
+  permissions: { can_manage_orders: false, can_manage_menu: false, can_manage_settings: false, can_view_metrics: false },
 };
 
 function formatCurrency(value: number): string {
   return `$${value.toLocaleString('es-VE', { maximumFractionDigits: 2 })}`;
 }
 
-/** Vista Perfil del panel del comercio: métricas y gestión de empleados. */
 export function MerchantProfilePage() {
   const { user } = useAuth();
   const [context, setContext] = useState<MerchantContext | null>(null);
   const [metrics, setMetrics] = useState<MerchantMetrics | null>(null);
+  const [analytics, setAnalytics] = useState<MerchantAnalytics | null>(null);
   const [staff, setStaff] = useState<StaffListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+
+  const [dateRange, setDateRange] = useState(() => getDefaultDateRange());
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [employeeInput, setEmployeeInput] =
     useState<EmployeeFormInput>(EMPTY_EMPLOYEE);
   const [isCreating, setIsCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [staffToUpdate, setStaffToUpdate] = useState<StaffListItem | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [staffToDelete, setStaffToDelete] = useState<StaffListItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const [busyStaffId, setBusyStaffId] = useState<string | null>(null);
 
-  const refresh = useCallback(async (merchantId: string) => {
-    const [staffList, metricsData] = await Promise.all([
-      listStaff(merchantId),
-      fetchMerchantMetrics(merchantId),
-    ]);
-    setStaff(staffList);
-    setMetrics(metricsData);
-  }, []);
+  const refetchMetrics = useCallback(
+    async (merchantId: string) => {
+      const [staffList, metricsData] = await Promise.all([
+        listStaff(merchantId),
+        fetchMerchantMetrics(merchantId, dateRange.startDate, dateRange.endDate),
+      ]);
+      setStaff(staffList);
+      setMetrics(metricsData);
+    },
+    [dateRange.startDate, dateRange.endDate],
+  );
+
+  const loadAnalytics = useCallback(
+    async (merchantId: string) => {
+      setIsAnalyticsLoading(true);
+      setAnalyticsError(null);
+      try {
+        const data = await fetchMerchantAnalytics(
+          merchantId,
+          dateRange.startDate,
+          dateRange.endDate,
+        );
+        setAnalytics(data);
+      } catch (caught) {
+        setAnalyticsError(
+          caught instanceof Error
+            ? caught.message
+            : 'No se pudieron cargar las analíticas.',
+        );
+      } finally {
+        setIsAnalyticsLoading(false);
+      }
+    },
+    [dateRange.startDate, dateRange.endDate],
+  );
 
   useEffect(() => {
     if (user === null) return;
@@ -78,7 +130,10 @@ export function MerchantProfilePage() {
         if (cancelled) return;
         setContext(merchantContext);
         if (merchantContext !== null) {
-          await refresh(merchantContext.merchantId);
+          await Promise.all([
+            refetchMetrics(merchantContext.merchantId),
+            loadAnalytics(merchantContext.merchantId),
+          ]);
         }
         if (!cancelled) setError(null);
       } catch (caught) {
@@ -96,12 +151,44 @@ export function MerchantProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [user, refresh]);
+  }, [user, refetchMetrics, loadAnalytics]);
+
+  useEffect(() => {
+    if (context === null) return;
+    void (async () => {
+      try {
+        await Promise.all([
+          refetchMetrics(context.merchantId),
+          loadAnalytics(context.merchantId),
+        ]);
+      } catch (caught) {
+        if (caught instanceof Error) {
+          setError(caught.message);
+        }
+      }
+    })();
+  }, [context, refetchMetrics, loadAnalytics]);
+
+  const handleDateChange = useCallback((start: string, end: string) => {
+    setDateRange({ startDate: start, endDate: end });
+  }, []);
 
   const openAddModal = useCallback(() => {
     setEmployeeInput(EMPTY_EMPLOYEE);
     setFormError(null);
     setIsAddModalOpen(true);
+  }, []);
+
+  const openUpdateModal = useCallback((employee: StaffListItem) => {
+    setStaffToUpdate(employee);
+    setUpdateError(null);
+    setIsUpdateModalOpen(true);
+  }, []);
+
+  const openDeleteModal = useCallback((employee: StaffListItem) => {
+    setStaffToDelete(employee);
+    setDeleteError(null);
+    setIsDeleteModalOpen(true);
   }, []);
 
   const handleCreateEmployee = useCallback(async () => {
@@ -115,7 +202,7 @@ export function MerchantProfilePage() {
     setFormError(null);
     try {
       await createEmployee(context.merchantId, employeeInput);
-      await refresh(context.merchantId);
+      await refetchMetrics(context.merchantId);
       setIsAddModalOpen(false);
       setEmployeeInput(EMPTY_EMPLOYEE);
     } catch (caught) {
@@ -127,7 +214,7 @@ export function MerchantProfilePage() {
     } finally {
       setIsCreating(false);
     }
-  }, [context, employeeInput, refresh]);
+  }, [context, employeeInput, refetchMetrics]);
 
   const handleRevoke = useCallback(async (employee: StaffListItem) => {
     setBusyStaffId(employee.id);
@@ -147,21 +234,51 @@ export function MerchantProfilePage() {
     }
   }, []);
 
-  const handleDelete = useCallback(async (employee: StaffListItem) => {
-    setBusyStaffId(employee.id);
+  const handleConfirmDelete = useCallback(async () => {
+    if (staffToDelete === null) return;
+    setIsDeleting(true);
+    setDeleteError(null);
     try {
-      await deleteStaff(employee.id);
+      await deleteStaff(staffToDelete.id);
       setStaff((previous) =>
-        previous.filter((item) => item.id !== employee.id),
+        previous.filter((item) => item.id !== staffToDelete.id),
       );
+      setIsDeleteModalOpen(false);
+      setStaffToDelete(null);
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : 'No se pudo eliminar al empleado.',
+      setDeleteError(
+        caught instanceof Error
+          ? caught.message
+          : 'No se pudo eliminar al empleado.',
       );
     } finally {
-      setBusyStaffId(null);
+      setIsDeleting(false);
     }
-  }, []);
+  }, [staffToDelete]);
+
+  const handleSavePermissions = useCallback(async (permissions: MerchantStaffPermissions) => {
+    if (staffToUpdate === null || context === null) return;
+    setIsSaving(true);
+    setUpdateError(null);
+    try {
+      await updateStaffPermissions(staffToUpdate.id, permissions);
+      setStaff((previous) =>
+        previous.map((item) =>
+          item.id === staffToUpdate.id ? { ...item, permissions } : item,
+        ),
+      );
+      setIsUpdateModalOpen(false);
+      setStaffToUpdate(null);
+    } catch (caught) {
+      setUpdateError(
+        caught instanceof Error
+          ? caught.message
+          : 'No se pudo actualizar los permisos.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }, [staffToUpdate, context]);
 
   if (isLoading) {
     return (
@@ -187,8 +304,6 @@ export function MerchantProfilePage() {
     );
   }
 
-  const permissionBadge = (key: string) => PERMISSION_LABELS[key];
-
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
       <header className="flex items-center gap-3">
@@ -210,7 +325,16 @@ export function MerchantProfilePage() {
       )}
 
       <section aria-label="Métricas del comercio" data-testid="merchant-metrics">
-        <h2 className="mb-3 text-lg font-semibold text-gray-900">Resumen</h2>
+        <div className="mb-4 flex items-end justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Resumen</h2>
+          <DateRangePicker
+            startDate={dateRange.startDate}
+            endDate={dateRange.endDate}
+            onChange={handleDateChange}
+            isLoading={isAnalyticsLoading}
+          />
+        </div>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <MetricCard
             testId="metric-total-sales"
@@ -221,15 +345,34 @@ export function MerchantProfilePage() {
           <MetricCard
             testId="metric-orders-today"
             icon={<ClipboardList className="h-5 w-5 text-indigo-600" />}
-            label="Pedidos del día"
+            label="Pedidos en rango"
             value={String(metrics?.ordersToday ?? 0)}
           />
           <MetricCard
             testId="metric-active-products"
-            icon={<UtensilsCrossed className="h-5 w-5 text-brand-red" />}
+            icon={<Store className="h-5 w-5 text-brand-red" />}
             label="Platos activos"
             value={String(metrics?.activeProducts ?? 0)}
           />
+        </div>
+      </section>
+
+      <section aria-label="Analíticas de ventas" data-testid="analytics-section" className="space-y-4">
+        <h2 className="text-lg font-semibold text-gray-900">Analíticas de ventas</h2>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div data-testid="chart-sales-trend">
+            <SalesTrendChart
+              data={analytics?.dailyRevenue ?? []}
+              isLoading={isAnalyticsLoading}
+              error={analyticsError}
+            />
+          </div>
+          <div data-testid="chart-orders-donut">
+            <OrdersDonutChart
+              data={analytics?.statusBreakdown ?? []}
+              isLoading={isAnalyticsLoading}
+            />
+          </div>
         </div>
       </section>
 
@@ -267,13 +410,22 @@ export function MerchantProfilePage() {
                       .filter((key) => employee.permissions?.[key] === true)
                       .map((key) => (
                         <Badge key={key} variant="neutral">
-                          {permissionBadge(key)}
+                          {PERMISSION_LABELS[key]}
                         </Badge>
                       ))}
                   </div>
                 </div>
                 {context.isOwner && (
                   <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      data-testid={`modify-staff-${employee.id}`}
+                      onClick={() => openUpdateModal(employee)}
+                    >
+                      <Settings className="h-4 w-4" />
+                      Permisos
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -294,11 +446,11 @@ export function MerchantProfilePage() {
                       aria-label={`Eliminar ${employee.fullName ?? employee.email}`}
                       title={`Eliminar ${employee.fullName ?? employee.email}`}
                       disabled={busyStaffId === employee.id}
-                      onClick={() => void handleDelete(employee)}
+                      onClick={() => openDeleteModal(employee)}
                       data-testid={`delete-staff-${employee.id}`}
                       className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-200 disabled:opacity-50"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Users className="h-4 w-4" />
                     </button>
                   </div>
                 )}
@@ -396,6 +548,40 @@ export function MerchantProfilePage() {
               />
               {PERMISSION_LABELS.can_manage_menu}
             </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                data-testid="permission-settings"
+                checked={employeeInput.permissions.can_manage_settings}
+                onChange={(event) =>
+                  setEmployeeInput((prev) => ({
+                    ...prev,
+                    permissions: {
+                      ...prev.permissions,
+                      can_manage_settings: event.target.checked,
+                    },
+                  }))
+                }
+              />
+              {PERMISSION_LABELS.can_manage_settings}
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                data-testid="permission-metrics"
+                checked={employeeInput.permissions.can_view_metrics}
+                onChange={(event) =>
+                  setEmployeeInput((prev) => ({
+                    ...prev,
+                    permissions: {
+                      ...prev.permissions,
+                      can_view_metrics: event.target.checked,
+                    },
+                  }))
+                }
+              />
+              {PERMISSION_LABELS.can_view_metrics}
+            </label>
           </fieldset>
 
           {formError !== null && (
@@ -420,6 +606,33 @@ export function MerchantProfilePage() {
           </div>
         </form>
       </Modal>
+
+        <UpdateStaffModal
+          staff={staffToUpdate}
+          isOpen={isUpdateModalOpen}
+          onClose={() => {
+            setIsUpdateModalOpen(false);
+            setStaffToUpdate(null);
+          }}
+          onSave={handleSavePermissions}
+          isSaving={isSaving}
+          error={updateError}
+        />
+
+      {staffToDelete !== null && (
+        <DeleteStaffConfirmModal
+          staffName={staffToDelete.fullName ?? staffToDelete.email}
+          staffEmail={staffToDelete.email}
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setStaffToDelete(null);
+          }}
+          onConfirm={handleConfirmDelete}
+          isDeleting={isDeleting}
+          error={deleteError}
+        />
+      )}
     </div>
   );
 }
