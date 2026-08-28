@@ -1,12 +1,11 @@
 // Supabase Edge Function: create-employee
 //
-// Crea la cuenta de un empleado (merchant_staff) para un negocio:
-// 1. Valida el JWT del llamador y su autorización sobre el merchant
-//    (owner del negocio o superadmin).
-// 2. Crea al usuario en Supabase Auth con email_confirm: true vía la API de
-//    Admin (service_role key SOLO en el servidor).
-// 3. Inserta/actualiza el perfil con rol `merchant_staff` y vincula la
-//    relación en `merchant_staff` con los permisos granularizados.
+// Flujo idempotente para crear/vincular un empleado (merchant_staff):
+// 1. Valida el JWT del llamador y su autorización sobre el merchant.
+// 2. Intenta crear el usuario en Supabase Auth.
+//    Si ya existe, lo resuelve por email.
+// 3. Upsert del perfil con rol `merchant_staff`.
+// 4. Vincula la relación en `merchant_staff` con los permisos.
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildServiceRoleClient, corsHeaders, jsonResponse } from '../_shared/superadmin-guard.ts';
 
@@ -65,9 +64,10 @@ function validatePayload(payload: CreateEmployeePayload):
       ? payload.permissions as Record<string, unknown>
       : {};
   const permissions = {
-    can_manage_menu: rawPermissions.can_manage_menu === true,
-    can_view_orders: true,
     can_manage_orders: rawPermissions.can_manage_orders === true,
+    can_manage_menu: rawPermissions.can_manage_menu === true,
+    can_manage_settings: rawPermissions.can_manage_settings === true,
+    can_view_metrics: rawPermissions.can_view_metrics === true,
   };
 
   return { merchantId, email, password, fullName, permissions };
@@ -95,6 +95,26 @@ async function canManageMerchant(
   return profileResult.data?.role === 'superadmin';
 }
 
+/**
+ * Resuelve el ID de un usuario de Auth existente por correo.
+ * Usa la API Admin (listUsers con filtro) ya que getUserByEmail no
+ * existe como método directo en el SDK v2.
+ */
+async function findUserByEmail(
+  serviceClient: SupabaseClient,
+  email: string,
+): Promise<string | null> {
+  const { data, error } = await serviceClient.auth.admin.listUsers({
+    filters: { email },
+  });
+  if (error !== null || data?.users === undefined) return null;
+
+  const exactMatch = data.users.find(
+    (u) => u.email?.toLowerCase() === email.toLowerCase(),
+  );
+  return exactMatch?.id ?? null;
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -118,7 +138,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return jsonResponse({ error: 'No autenticado.' }, 401);
     }
 
-    // Identidad del llamador con SU propio JWT (nunca la service_role key).
     const callerClient = buildCallerClient(authHeader);
     const { data: userData, error: userError } =
       await callerClient.auth.getUser(authHeader.slice('Bearer '.length));
@@ -136,7 +155,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // 1. Crear usuario auto-confirmado en Auth.
+    // --- 1. Crear usuario o resolver existente (flujo idempotente) ---
+    let employeeUserId: string;
+    let isNewUser = false;
+
     const { data: created, error: createError } =
       await serviceClient.auth.admin.createUser({
         email: validated.email,
@@ -147,19 +169,35 @@ Deno.serve(async (req: Request): Promise<Response> => {
           role: 'merchant_staff',
         },
       });
-    if (createError !== null || created.user === null) {
-      return jsonResponse(
-        {
-          error: `Error al crear la cuenta del empleado: ${
-            createError?.message ?? 'sin datos'
-          }`,
-        },
-        400,
-      );
-    }
-    const employeeUserId = created.user.id;
 
-    // 2. Perfil con rol merchant_staff (upsert defensivo si no hay trigger).
+    if (createError === null && created.user !== null) {
+      employeeUserId = created.user.id;
+      isNewUser = true;
+    } else {
+      // El error "User Already Registered" (o similar) indica que ya existe.
+      const alreadyExists =
+        createError?.message?.toLowerCase().includes('already') === true ||
+        createError?.message?.toLowerCase().includes('registered') === true ||
+        createError?.message?.toLowerCase().includes('exists') === true;
+
+      if (!alreadyExists) {
+        return jsonResponse(
+          { error: `Error al crear la cuenta del empleado: ${createError?.message ?? 'sin datos'}` },
+          400,
+        );
+      }
+
+      const existingId = await findUserByEmail(serviceClient, validated.email);
+      if (existingId === null) {
+        return jsonResponse(
+          { error: `Error al crear la cuenta del empleado: ${createError?.message}` },
+          400,
+        );
+      }
+      employeeUserId = existingId;
+    }
+
+    // --- 2. Upsert del perfil ---
     const { error: profileError } = await serviceClient
       .from('profiles')
       .upsert(
@@ -172,14 +210,48 @@ Deno.serve(async (req: Request): Promise<Response> => {
         { onConflict: 'id', ignoreDuplicates: false },
       );
     if (profileError !== null) {
-      await serviceClient.auth.admin.deleteUser(employeeUserId);
+      if (isNewUser) {
+        await serviceClient.auth.admin.deleteUser(employeeUserId);
+      }
       return jsonResponse(
         { error: `Error al crear el perfil del empleado: ${profileError.message}` },
         400,
       );
     }
 
-    // 3. Vinculación con el negocio.
+    // --- 3. Vinculación con el negocio ---
+    // Verificar si ya está vinculado a ESTE negocio.
+    const { data: existingStaff } = await serviceClient
+      .from('merchant_staff')
+      .select('id, is_active')
+      .eq('merchant_id', validated.merchantId)
+      .eq('user_id', employeeUserId)
+      .maybeSingle();
+
+    if (existingStaff !== null) {
+      if (existingStaff.is_active) {
+        return jsonResponse(
+          { error: 'Este usuario ya está registrado como empleado en tu negocio.' },
+          400,
+        );
+      }
+      // Estaba desactivado: reactivar con los nuevos permisos.
+      const { error: reactivateError } = await serviceClient
+        .from('merchant_staff')
+        .update({
+          is_active: true,
+          permissions: validated.permissions,
+        })
+        .eq('id', existingStaff.id);
+      if (reactivateError !== null) {
+        return jsonResponse(
+          { error: `Error al reactivar al empleado: ${reactivateError.message}` },
+          400,
+        );
+      }
+      return jsonResponse({ userId: employeeUserId, staffId: existingStaff.id });
+    }
+
     const { data: staffRow, error: staffError } = await serviceClient
       .from('merchant_staff')
       .insert({
@@ -190,8 +262,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
       })
       .select('id')
       .single();
-    if (staffError !== null || staffRow === null) {
-      await serviceClient.auth.admin.deleteUser(employeeUserId);
+    if (staffRow === null || staffError !== null) {
+      if (isNewUser) {
+        await serviceClient.auth.admin.deleteUser(employeeUserId);
+      }
       return jsonResponse(
         { error: `Error al vincular al empleado con el negocio: ${staffError?.message ?? 'sin datos'}` },
         400,

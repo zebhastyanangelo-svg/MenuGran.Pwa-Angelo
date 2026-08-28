@@ -130,6 +130,17 @@ export async function createEmployee(
     },
   });
 
+  // Cuando el Edge Function devuelve HTTP 4xx con JSON { error: "..." },
+  // supabase.functions.invoke lo devuelve tanto en `error` como en `data`.
+  // Priorizamos el cuerpo JSON del Edge Function para mostrar el mensaje
+  // real de validación al usuario en el modal.
+  if (data !== null && typeof data === 'object' && 'error' in data) {
+    const serverMessage = (data as { error: unknown }).error;
+    if (typeof serverMessage === 'string') {
+      throw new Error(serverMessage);
+    }
+  }
+
   if (error !== null) {
     throw new Error(`Error al crear el empleado: ${error.message}`);
   }
