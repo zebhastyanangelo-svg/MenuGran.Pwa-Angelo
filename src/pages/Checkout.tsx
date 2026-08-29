@@ -5,10 +5,11 @@ import { Button } from '../components/ui/Button';
 import { PaymentProofUploader } from '../components/cart/PaymentProofUploader';
 import { LocationPicker } from '../components/map/LocationPicker';
 import { useCart } from '../hooks/useCart';
+import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { compressImage } from '../utils/imageCompressor';
 import type { GeoPoint, OrderType } from '../types/database';
-import { simulatePaymentProofUpload } from '../services/checkoutService';
+import { createOrder, uploadPaymentProof } from '../services/checkoutService';
 
 const BANK_ACCOUNTS: { id: string; label: string }[] = [
   { id: 'banco_pichincha', label: 'Banco Pichincha - 1234 5678 9012 3456' },
@@ -27,6 +28,7 @@ export function Checkout() {
     clearCart,
     merchantId,
   } = useCart();
+  const { user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -71,7 +73,22 @@ export function Checkout() {
         ? (await compressImage(file!)).blob
         : file!;
 
-      await simulatePaymentProofUpload(proofToUpload, merchantId ?? 'unknown');
+      const orderId = await createOrder({
+        merchantId: merchantId!,
+        customerId: user!.id,
+        orderType,
+        paymentMethod: 'pago_movil',
+        paymentReference: reference,
+        totalAmount: Number(totalAmount),
+        items: items.map((item) => ({
+          product_id: item.product.id,
+          quantity: item.quantity,
+          unit_price: parseFloat(item.product.price),
+        })),
+        deliveryLocation: orderType === 'delivery' ? deliveryLocation : null,
+      });
+
+      await uploadPaymentProof(proofToUpload, orderId);
 
       showToast({
         variant: 'success',

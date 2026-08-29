@@ -7,6 +7,9 @@ vi.mock('../../hooks/useAuth', () => ({ useAuth: vi.fn() }));
 vi.mock('../../hooks/useMerchantDashboardPage', () => ({
   useMerchantDashboardPage: vi.fn(),
 }));
+vi.mock('../../hooks/useToast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return { ...actual, useNavigate: vi.fn() };

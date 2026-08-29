@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from './context/AuthContext';
 import { AuthForm } from './components/auth/AuthForm';
 import { MerchantDashboardPage } from './pages/merchant/MerchantDashboardPage';
+import { NotificationToastProvider } from './components/pwa/NotificationToast';
 import { useMerchantDashboardPage } from './hooks/useMerchantDashboardPage';
 
 const authMocks = vi.hoisted(() => ({
@@ -150,16 +151,18 @@ describe('Merchant Dashboard Verification Card', { timeout: 15000 }, () => {
     mockDashboardData({ merchantName: null });
 
     await renderWithAuth(
-      <AuthProvider>
-        <MerchantDashboardPage />
-      </AuthProvider>,
-    );
+     <AuthProvider>
+         <NotificationToastProvider>
+           <MerchantDashboardPage />
+         </NotificationToastProvider>
+       </AuthProvider>,
+     );
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(/Tu cuenta de comercio está en proceso de verificación/i),
-      ).toBeInTheDocument();
-    });
+     await waitFor(() => {
+       expect(
+         screen.getByText(/Tu cuenta de comercio está en proceso de verificación/i),
+       ).toBeInTheDocument();
+     });
 
     expect(
       screen.getByText(/Si aún no has registrado tu negocio, contáctanos/i),
@@ -180,14 +183,16 @@ describe('Merchant Dashboard Verification Card', { timeout: 15000 }, () => {
     });
 
     await renderWithAuth(
-      <AuthProvider>
-        <MerchantDashboardPage />
-      </AuthProvider>,
-    );
+     <AuthProvider>
+         <NotificationToastProvider>
+           <MerchantDashboardPage />
+         </NotificationToastProvider>
+       </AuthProvider>,
+     );
 
-    await waitFor(() => {
-      expect(screen.getByText(/Hola, La Pizza/i)).toBeInTheDocument();
-    });
+     await waitFor(() => {
+       expect(screen.getByText(/Hola, La Pizza/i)).toBeInTheDocument();
+     });
 
     expect(
       screen.queryByText(/Tu cuenta de comercio está en proceso de verificación/i),

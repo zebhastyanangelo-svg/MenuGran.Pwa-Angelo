@@ -14,6 +14,10 @@ export interface MerchantDashboardData {
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>
 }
 
+export interface UseMerchantDashboardOptions {
+  onNewOrder?: (order: OrderRow) => void
+}
+
 async function fetchMerchantIds(user: User): Promise<string[]> {
   const ids: string[] = []
 
@@ -49,7 +53,10 @@ async function fetchOrders(ids: string[]): Promise<OrderRow[]> {
   return result.data ?? []
 }
 
-export function useMerchantDashboard(user: User | null): MerchantDashboardData {
+export function useMerchantDashboard(
+  user: User | null,
+  options?: UseMerchantDashboardOptions,
+): MerchantDashboardData {
   const queryClient = useQueryClient()
 
   const { data: merchantIds = [] } = useQuery<string[]>({
@@ -102,7 +109,25 @@ export function useMerchantDashboard(user: User | null): MerchantDashboardData {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
+          schema: 'public',
+          table: TABLE_NAMES.orders,
+          filter: `merchant_id=in.(${merchantIds.join(',')})`,
+        },
+        (payload) => {
+          queryClient.invalidateQueries({
+            queryKey: ['merchantOrders', user?.id, merchantIds.join('-')],
+          })
+          const newOrder = payload.new as OrderRow | undefined
+          if (newOrder && newOrder.status === 'payment_pending') {
+            options?.onNewOrder?.(newOrder)
+          }
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
           schema: 'public',
           table: TABLE_NAMES.orders,
           filter: `merchant_id=in.(${merchantIds.join(',')})`,
@@ -121,7 +146,7 @@ export function useMerchantDashboard(user: User | null): MerchantDashboardData {
       supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [merchantIds, user?.id, queryClient])
+  }, [merchantIds, user?.id, queryClient, options?.onNewOrder])
 
   return {
     merchantIds,

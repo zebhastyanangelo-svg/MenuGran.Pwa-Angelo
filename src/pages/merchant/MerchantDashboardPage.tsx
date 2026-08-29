@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useMerchantDashboardPage } from '../../hooks/useMerchantDashboardPage';
+import { useToast } from '../../hooks/useToast';
 import { Store, Loader2, Package, ClipboardList, TrendingUp, LogOut } from 'lucide-react';
 import type { OrderRow, OrderStatus } from '../../types/database';
 
@@ -62,6 +63,57 @@ function formatAmount(value: number): string {
 export function MerchantDashboardPage() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const { showToast } = useToast();
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  const playNotificationSound = useCallback(() => {
+    if (!soundEnabled) return;
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContext();
+      }
+      const ctx = audioCtxRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 800;
+      gain.gain.value = 0.3;
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      osc.stop(ctx.currentTime + 0.5);
+    } catch {
+      // AudioContext not available or blocked by browser
+    }
+  }, [soundEnabled]);
+
+  const handleNewOrder = useCallback(
+    (order: OrderRow) => {
+      playNotificationSound();
+      showToast({
+        variant: 'success',
+        title: 'Nuevo pedido',
+        message: `Pedido #${order.id} por Bs ${Number(order.total_amount ?? 0).toFixed(2)}`,
+      });
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        try {
+          new Notification('Nuevo pedido', {
+            body: `Pedido #${order.id} por Bs ${Number(order.total_amount ?? 0).toFixed(2)}`,
+          });
+        } catch {
+          // Notifications not supported in this environment
+        }
+      }
+    },
+    [playNotificationSound, showToast],
+  );
+
+  const dashboardOptions = useMemo(
+    () => ({ onNewOrder: handleNewOrder }),
+    [handleNewOrder],
+  );
+
   const {
     merchantName,
     isOpen,
@@ -71,7 +123,7 @@ export function MerchantDashboardPage() {
     error,
     toggleStoreOpen,
     updateOrderStatus,
-  } = useMerchantDashboardPage(user);
+  } = useMerchantDashboardPage(user, dashboardOptions);
   const [activeTab, setActiveTab] = useState<TabKey>('pending');
   const greetingName = merchantName ?? profile?.full_name ?? 'Comercio';
   const isStaff = profile?.role === 'merchant_staff';
@@ -178,19 +230,38 @@ return (
                 Este es el resumen de tu negocio hoy.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleToggle}
-              aria-pressed={isOpen}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                isOpen
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-gray-200 text-gray-600'
-              }`}
-            >
-              <Store className="h-4 w-4" />
-              {isOpen ? 'Tienda Abierta' : 'Tienda Cerrada'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+                    Notification.requestPermission();
+                  }
+                  setSoundEnabled((prev) => !prev);
+                }}
+                aria-pressed={soundEnabled}
+                className={`flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
+                  soundEnabled
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-200 text-gray-600'
+                }`}
+              >
+                {soundEnabled ? 'Sonido ON' : 'Sonido OFF'}
+              </button>
+              <button
+                type="button"
+                onClick={handleToggle}
+                aria-pressed={isOpen}
+                className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                  isOpen
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-200 text-gray-600'
+                }`}
+              >
+                <Store className="h-4 w-4" />
+                {isOpen ? 'Tienda Abierta' : 'Tienda Cerrada'}
+              </button>
+            </div>
           </header>
 
           {error && (

@@ -16,8 +16,13 @@ export interface MerchantDashboardPageData {
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>
 }
 
+export interface UseMerchantDashboardPageOptions {
+  onNewOrder?: (order: OrderRow) => void
+}
+
 export function useMerchantDashboardPage(
   user: User | null,
+  options?: UseMerchantDashboardPageOptions,
 ): MerchantDashboardPageData {
   const queryClient = useQueryClient()
 
@@ -168,7 +173,25 @@ export function useMerchantDashboardPage(
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
+          schema: 'public',
+          table: TABLE_NAMES.orders,
+          filter: `merchant_id=in.(${merchantIds.join(',')})`,
+        },
+        (payload) => {
+          queryClient.invalidateQueries({
+            queryKey: ['merchantOrders', user?.id, merchantIds.join('-')],
+          })
+          const newOrder = payload.new as OrderRow | undefined
+          if (newOrder && newOrder.status === 'payment_pending') {
+            options?.onNewOrder?.(newOrder)
+          }
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
           schema: 'public',
           table: TABLE_NAMES.orders,
           filter: `merchant_id=in.(${merchantIds.join(',')})`,
@@ -187,7 +210,7 @@ export function useMerchantDashboardPage(
       supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [merchantIds, user?.id, queryClient])
+  }, [merchantIds, user?.id, queryClient, options?.onNewOrder])
 
   return {
     merchantId: merchantIds[0] ?? null,

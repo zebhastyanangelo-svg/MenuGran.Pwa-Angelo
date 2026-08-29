@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Checkout } from './Checkout';
 import { useCart } from '../hooks/useCart';
+import { useAuth } from '../hooks/useAuth';
 
 const mockShowToast = vi.fn();
 
@@ -33,13 +34,16 @@ vi.mock('../components/map/LocationPicker', () => {
   };
 });
 
-const mockSimulatePaymentProofUpload = vi
-  .fn()
-  .mockResolvedValue('m-123-proof');
+const mockCreateOrder = vi.fn().mockResolvedValue('order-abc-123');
+const mockUploadPaymentProof = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('../services/checkoutService', () => ({
-  simulatePaymentProofUpload: (...args: unknown[]) =>
-    mockSimulatePaymentProofUpload(...args),
+  createOrder: (...args: unknown[]) => mockCreateOrder(...args),
+  uploadPaymentProof: (...args: unknown[]) => mockUploadPaymentProof(...args),
+}));
+
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: vi.fn(),
 }));
 
 const validCart = {
@@ -66,8 +70,19 @@ describe('Checkout', () => {
 
   beforeEach(() => {
     mockShowToast.mockClear();
-    mockSimulatePaymentProofUpload.mockClear().mockResolvedValue('m-123-proof');
+    mockCreateOrder.mockClear().mockResolvedValue('order-abc-123');
+    mockUploadPaymentProof.mockClear().mockResolvedValue(undefined);
     vi.mocked(useCart).mockReturnValue(validCart);
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 'user-123' } as any,
+      profile: null,
+      isLoading: false,
+      signInWithGoogle: vi.fn(),
+      signInWithPassword: vi.fn(),
+      signUpWithPassword: vi.fn(),
+      resendConfirmationEmail: vi.fn(),
+      signOut: vi.fn(),
+    });
   });
 
   it('muestra estado inválido cuando el carrito no es válido', () => {
@@ -164,6 +179,17 @@ describe('Checkout', () => {
         expect.objectContaining({ variant: 'success', title: '¡Pedido enviado!' }),
       );
     }, { timeout: 5000 });
+    expect(mockCreateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        merchantId: 'm-123',
+        customerId: 'user-123',
+        orderType: 'delivery',
+        paymentMethod: 'pago_movil',
+        paymentReference: 'REF123456',
+        totalAmount: 100,
+      }),
+    );
+    expect(mockUploadPaymentProof).toHaveBeenCalled();
     expect(validCart.clearCart).toHaveBeenCalled();
   }, 10000);
 });
