@@ -60,9 +60,9 @@ describe('Sidebar', () => {
       </MemoryRouter>,
     );
     expect(screen.queryByRole('link', { name: /carrito/i })).not.toBeInTheDocument();
-    // Configuración es ownerOnly; los permisos del empleado aún no cargaron.
+    // Configuración y Perfil son ownerOnly; los permisos del empleado aún no cargaron.
     expect(screen.queryByRole('link', { name: /configuración/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /perfil/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /perfil/i })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /inicio/i })).toBeInTheDocument();
   });
 });

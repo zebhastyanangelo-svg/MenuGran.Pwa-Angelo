@@ -324,57 +324,61 @@ export function MerchantProfilePage() {
         </p>
       )}
 
-      <section aria-label="Métricas del comercio" data-testid="merchant-metrics">
-        <div className="mb-4 flex items-end justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Resumen</h2>
-          <DateRangePicker
-            startDate={dateRange.startDate}
-            endDate={dateRange.endDate}
-            onChange={handleDateChange}
-            isLoading={isAnalyticsLoading}
-          />
-        </div>
+      {context.isOwner && (
+        <>
+          <section aria-label="Métricas del comercio" data-testid="merchant-metrics">
+            <div className="mb-4 flex items-end justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Resumen</h2>
+              <DateRangePicker
+                startDate={dateRange.startDate}
+                endDate={dateRange.endDate}
+                onChange={handleDateChange}
+                isLoading={isAnalyticsLoading}
+              />
+            </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <MetricCard
-            testId="metric-total-sales"
-            icon={<DollarSign className="h-5 w-5 text-green-600" />}
-            label="Total de ventas"
-            value={formatCurrency(metrics?.totalSales ?? 0)}
-          />
-          <MetricCard
-            testId="metric-orders-today"
-            icon={<ClipboardList className="h-5 w-5 text-indigo-600" />}
-            label="Pedidos en rango"
-            value={String(metrics?.ordersToday ?? 0)}
-          />
-          <MetricCard
-            testId="metric-active-products"
-            icon={<Store className="h-5 w-5 text-brand-red" />}
-            label="Platos activos"
-            value={String(metrics?.activeProducts ?? 0)}
-          />
-        </div>
-      </section>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <MetricCard
+                testId="metric-total-sales"
+                icon={<DollarSign className="h-5 w-5 text-green-600" />}
+                label="Total de ventas"
+                value={formatCurrency(metrics?.totalSales ?? 0)}
+              />
+              <MetricCard
+                testId="metric-orders-today"
+                icon={<ClipboardList className="h-5 w-5 text-indigo-600" />}
+                label="Pedidos en rango"
+                value={String(metrics?.ordersToday ?? 0)}
+              />
+              <MetricCard
+                testId="metric-active-products"
+                icon={<Store className="h-5 w-5 text-brand-red" />}
+                label="Platos activos"
+                value={String(metrics?.activeProducts ?? 0)}
+              />
+            </div>
+          </section>
 
-      <section aria-label="Analíticas de ventas" data-testid="analytics-section" className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900">Analíticas de ventas</h2>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div data-testid="chart-sales-trend">
-            <SalesTrendChart
-              data={analytics?.dailyRevenue ?? []}
-              isLoading={isAnalyticsLoading}
-              error={analyticsError}
-            />
-          </div>
-          <div data-testid="chart-orders-donut">
-            <OrdersDonutChart
-              data={analytics?.statusBreakdown ?? []}
-              isLoading={isAnalyticsLoading}
-            />
-          </div>
-        </div>
-      </section>
+          <section aria-label="Analíticas de ventas" data-testid="analytics-section" className="space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">Analíticas de ventas</h2>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <div data-testid="chart-sales-trend">
+                <SalesTrendChart
+                  data={analytics?.dailyRevenue ?? []}
+                  isLoading={isAnalyticsLoading}
+                  error={analyticsError}
+                />
+              </div>
+              <div data-testid="chart-orders-donut">
+                <OrdersDonutChart
+                  data={analytics?.statusBreakdown ?? []}
+                  isLoading={isAnalyticsLoading}
+                />
+              </div>
+            </div>
+          </section>
+        </>
+      )}
 
       <section aria-label="Gestión de empleados" data-testid="staff-section">
         <div className="mb-3 flex items-center justify-between">

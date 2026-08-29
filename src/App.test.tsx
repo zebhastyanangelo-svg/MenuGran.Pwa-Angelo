@@ -222,4 +222,27 @@ describe('App Router Integration', () => {
 
     expect(screen.getByTestId('vercel-analytics')).toBeInTheDocument();
   }, 15000);
+
+  it('redirige merchant_staff de /admin/profile a /admin', async () => {
+    setAuth({
+      ...baseAuthValue,
+      user: { id: 'staff-user', email: 'staff@menugram.com' } as never,
+      profile: {
+        id: 'staff-user',
+        role: 'merchant_staff',
+        email: 'staff@menugram.com',
+        full_name: null,
+        avatar_url: null,
+        created_at: '',
+        updated_at: '',
+      },
+    });
+
+    window.history.pushState({}, '', '/admin/profile');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Panel de Comercio/i })).toBeInTheDocument();
+    }, { timeout: 30000 });
+  }, 45000);
 });

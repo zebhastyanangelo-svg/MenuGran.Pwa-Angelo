@@ -441,4 +441,24 @@ describe('MerchantProfilePage', () => {
 
     expect(await screen.findByText(/aún no hay empleados/i, undefined, { timeout: 5000 })).toBeInTheDocument();
   });
+
+  it('oculta métricas, analíticas y gestión de empleados para merchant_staff', async () => {
+    authMocks.useAuth.mockReturnValue({
+      user: { id: 'staff-1' },
+      profile: { role: 'merchant_staff' },
+      isLoading: false,
+    });
+    serviceMocks.getMerchantContext.mockResolvedValue({ ...context, isOwner: false });
+
+    render(<MerchantProfilePage />);
+
+    await screen.findByTestId('staff-list', undefined, { timeout: 5000 });
+
+    expect(screen.queryByTestId('merchant-metrics')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('analytics-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('open-add-employee')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('revoke-staff-s-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('modify-staff-s-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('delete-staff-s-1')).not.toBeInTheDocument();
+  });
 });

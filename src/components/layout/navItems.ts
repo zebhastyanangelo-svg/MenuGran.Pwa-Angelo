@@ -22,7 +22,7 @@ export const merchantNavItems: NavItem[] = [
   { to: '/admin', label: 'Inicio', icon: LayoutDashboard },
   { to: '/admin/dishes', label: 'Platos', icon: UtensilsCrossed, requiredPermission: 'can_manage_menu' },
   { to: '/admin/settings', label: 'Configuración', icon: Settings, ownerOnly: true },
-  { to: '/admin/profile', label: 'Perfil', icon: Store },
+  { to: '/admin/profile', label: 'Perfil', icon: Store, ownerOnly: true },
 ];
 
 export const superadminNavItems: NavItem[] = [
