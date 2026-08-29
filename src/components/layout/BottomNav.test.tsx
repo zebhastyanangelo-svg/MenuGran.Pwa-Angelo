@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -15,8 +15,15 @@ vi.mock('../../hooks/useAuth', () => ({
 import { BottomNav } from './BottomNav';
 
 describe('BottomNav', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renderiza la navegación de cliente (Inicio, Carrito, Perfil)', () => {
-    useAuthMock.mockReturnValue({ profile: { role: 'customer' } });
+    useAuthMock.mockReturnValue({
+      profile: { role: 'customer' },
+      signOut: vi.fn(),
+    });
     render(
       <MemoryRouter initialEntries={['/marketplace']}>
         <BottomNav />
@@ -28,7 +35,10 @@ describe('BottomNav', () => {
   });
 
   it('usa la navegación de comercio y oculta Carrito para merchant_owner', () => {
-    useAuthMock.mockReturnValue({ profile: { role: 'merchant_owner' } });
+    useAuthMock.mockReturnValue({
+      profile: { role: 'merchant_owner' },
+      signOut: vi.fn(),
+    });
     render(
       <MemoryRouter initialEntries={['/admin']}>
         <BottomNav />
@@ -41,7 +51,10 @@ describe('BottomNav', () => {
   });
 
   it('marca como activo el enlace de la ruta actual', () => {
-    useAuthMock.mockReturnValue({ profile: { role: 'customer' } });
+    useAuthMock.mockReturnValue({
+      profile: { role: 'customer' },
+      signOut: vi.fn(),
+    });
     render(
       <MemoryRouter initialEntries={['/marketplace']}>
         <BottomNav />
@@ -51,12 +64,57 @@ describe('BottomNav', () => {
   });
 
   it('usa el atributo de navegación principal', () => {
-    useAuthMock.mockReturnValue({ profile: { role: 'customer' } });
+    useAuthMock.mockReturnValue({
+      profile: { role: 'customer' },
+      signOut: vi.fn(),
+    });
     render(
       <MemoryRouter initialEntries={['/marketplace']}>
         <BottomNav />
       </MemoryRouter>,
     );
     expect(screen.getByRole('navigation', { name: /navegación principal/i })).toBeInTheDocument();
+  });
+
+  it('muestra el botón de Cerrar Sesión en móvil para merchant_owner', () => {
+    useAuthMock.mockReturnValue({
+      profile: { role: 'merchant_owner' },
+      signOut: vi.fn(),
+    });
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <BottomNav />
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByRole('button', { name: /cerrar sesión/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('muestra el botón de Cerrar Sesión en móvil para merchant_staff', () => {
+    useAuthMock.mockReturnValue({
+      profile: { role: 'merchant_staff' },
+      signOut: vi.fn(),
+    });
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <BottomNav />
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByRole('button', { name: /cerrar sesión/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('no muestra el botón de Cerrar Sesión para visitantes no autenticados', () => {
+    useAuthMock.mockReturnValue({ profile: null, user: null, signOut: vi.fn() });
+    render(
+      <MemoryRouter initialEntries={['/marketplace']}>
+        <BottomNav />
+      </MemoryRouter>,
+    );
+    expect(
+      screen.queryByRole('button', { name: /cerrar sesión/i }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useStaffPermissions } from '../../hooks/useStaffPermissions';
 import { getNavItemsForRole } from './navItems';
+import { LogoutButton } from './LogoutButton';
 
 export function BottomNav() {
   const { profile } = useAuth();
@@ -30,6 +31,14 @@ export function BottomNav() {
           </li>
         ))}
       </ul>
+      {profile && (
+        <div className="border-t border-slate-200 py-2">
+          <LogoutButton
+            className="flex w-full items-center justify-center gap-1 text-[11px] font-medium text-slate-500 hover:text-slate-900"
+            iconClassName="h-4 w-4"
+          />
+        </div>
+      )}
     </nav>
   );
 }

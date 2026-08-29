@@ -4,8 +4,15 @@ import { ShoppingCart } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useCart } from '../../hooks/useCart';
 import { CartDrawer } from './CartDrawer';
+import type { UserRole } from '../../types/database';
 
 const AUTH_ROUTES = ['/login', '/register'];
+
+const NON_BUYER_ROLES: readonly UserRole[] = [
+  'superadmin',
+  'merchant_owner',
+  'merchant_staff',
+];
 
 export function CartFab() {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,8 +24,8 @@ export function CartFab() {
     return null;
   }
 
-  // El Super Admin y el empleado no compran: sin carrito flotante.
-  if (profile?.role === 'superadmin' || profile?.role === 'merchant_staff') {
+  // Propietarios, empleados y superadmins no compran: sin carrito flotante.
+  if (profile && NON_BUYER_ROLES.includes(profile.role)) {
     return null;
   }
 
