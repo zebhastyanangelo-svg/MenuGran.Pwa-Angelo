@@ -62,4 +62,14 @@ describe('CartFab', () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByTestId('cart-drawer')).not.toBeInTheDocument();
   });
+
+  it('oculta el botón flotante del carrito para merchant_staff', () => {
+    authState.profile = buildProfile('merchant_staff');
+    renderFab();
+
+    expect(
+      screen.queryByRole('button', { name: /abrir carrito/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('cart-drawer')).not.toBeInTheDocument();
+  });
 });

@@ -17,8 +17,8 @@ export function CartFab() {
     return null;
   }
 
-  // El Super Admin no compra: sin carrito flotante.
-  if (profile?.role === 'superadmin') {
+  // El Super Admin y el empleado no compran: sin carrito flotante.
+  if (profile?.role === 'superadmin' || profile?.role === 'merchant_staff') {
     return null;
   }
 

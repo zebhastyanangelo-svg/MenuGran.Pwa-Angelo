@@ -173,7 +173,7 @@ describe('listStaff', () => {
       isActive: true,
     });
     expect(items[1]).toMatchObject({
-      fullName: null,
+      fullName: 'Empleado de Staff',
       email: null,
       isActive: false,
     });

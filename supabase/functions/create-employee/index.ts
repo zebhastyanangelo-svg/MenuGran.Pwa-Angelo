@@ -195,6 +195,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
         );
       }
       employeeUserId = existingId;
+
+      // Actualiza la contraseña para que coincida con la ingresada en el modal.
+      const { error: updatePwdError } =
+        await serviceClient.auth.admin.updateUserById(employeeUserId, {
+          password: validated.password,
+        });
+      if (updatePwdError !== null) {
+        return jsonResponse(
+          {
+            error: `Error al actualizar la contraseña del empleado: ${updatePwdError.message}`,
+          },
+          400,
+        );
+      }
     }
 
     // --- 2. Upsert del perfil ---

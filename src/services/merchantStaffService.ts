@@ -28,7 +28,7 @@ export interface StaffListItem {
   permissions: MerchantStaffPermissions;
   isActive: boolean;
 }interface StaffQueryRow extends MerchantStaffRow {
-  profiles: { email: string; full_name: string | null } | null;
+  profiles: { email: string | null; full_name: string | null } | null;
 }
 
 export interface MerchantMetrics {
@@ -88,7 +88,7 @@ export async function getMerchantContext(
 export async function listStaff(merchantId: string): Promise<StaffListItem[]> {
   const { data, error } = await supabase
     .from(TABLE_NAMES.merchantStaff)
-    .select('id, user_id, permissions, is_active, profiles(email, full_name)')
+    .select('id, user_id, permissions, is_active, profiles:user_id ( full_name, email )')
     .eq('merchant_id', merchantId)
     .order('created_at', { ascending: true });
 
@@ -96,14 +96,23 @@ export async function listStaff(merchantId: string): Promise<StaffListItem[]> {
     throw new Error(`Error al cargar los empleados: ${error.message}`);
   }
 
-  return ((data ?? []) as unknown as StaffQueryRow[]).map((row) => ({
-    id: row.id,
-    userId: row.user_id,
-    fullName: row.profiles?.full_name ?? null,
-    email: row.profiles?.email ?? null,
-    permissions: row.permissions,
-    isActive: row.is_active,
-  }));
+  return ((data ?? []) as unknown as StaffQueryRow[]).map((row) => {
+    const profileEmail: string | null = row.profiles?.email ?? null;
+    const profileName: string | null = row.profiles?.full_name ?? null;
+    // Si profiles vino NULL (join fallido por RLS o perfil inexistente) o
+    // los campos son null, usamos la parte local del email y "Empleado de Staff".
+    const emailLocal = profileEmail?.split('@')[0];
+    const fullName =
+      profileName ?? emailLocal ?? 'Empleado de Staff';
+    return {
+      id: row.id,
+      userId: row.user_id,
+      fullName,
+      email: profileEmail,
+      permissions: row.permissions,
+      isActive: row.is_active,
+    };
+  });
 }
 
 /**

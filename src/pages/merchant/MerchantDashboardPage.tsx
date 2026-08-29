@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useMerchantDashboardPage } from '../../hooks/useMerchantDashboardPage';
-import { Store, Loader2, Package, ClipboardList, TrendingUp } from 'lucide-react';
+import { Store, Loader2, Package, ClipboardList, TrendingUp, LogOut } from 'lucide-react';
 import type { OrderRow, OrderStatus } from '../../types/database';
 
 type TabKey = 'pending' | 'preparing' | 'ready' | 'delivered';
@@ -59,7 +60,8 @@ function formatAmount(value: number): string {
 }
 
 export function MerchantDashboardPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
   const {
     merchantName,
     isOpen,
@@ -72,9 +74,20 @@ export function MerchantDashboardPage() {
   } = useMerchantDashboardPage(user);
   const [activeTab, setActiveTab] = useState<TabKey>('pending');
   const greetingName = merchantName ?? profile?.full_name ?? 'Comercio';
+  const isStaff = profile?.role === 'merchant_staff';
 
   // Check if the merchant has a store assigned
   const hasStore = !!merchantName;
+
+  async function handleLogout() {
+    try {
+      await signOut();
+      navigate('/login', { replace: true });
+    } catch {
+      // signOut may throw; navigate anyway
+      navigate('/login', { replace: true });
+    }
+  }
 
   const { ordersToday, salesToday } = useMemo(() => {
     const today = startOfToday();
@@ -125,6 +138,37 @@ return (
       )}
       {hasStore && (
         <div className="max-w-5xl mx-auto space-y-6">
+          {isStaff && (
+            <div
+              className="flex flex-col gap-3 rounded-xl border border-indigo-100 bg-indigo-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+              data-testid="staff-welcome-banner"
+            >
+              <div>
+                <p className="text-base font-semibold text-indigo-900">
+                  Hola, {profile?.full_name ?? 'Empleado'}
+                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-indigo-700">
+                  <span className="inline-flex items-center rounded-full bg-indigo-200 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+                    Rol: Empleado
+                  </span>
+                  {merchantName && (
+                    <span className="text-indigo-600">
+                      {merchantName}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="inline-flex items-center gap-2 self-start rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                data-testid="staff-logout-button"
+              >
+                <LogOut className="h-4 w-4" />
+                Cerrar sesión
+              </button>
+            </div>
+          )}
           <header className="flex flex-col gap-3 bg-white rounded-xl shadow-sm p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">

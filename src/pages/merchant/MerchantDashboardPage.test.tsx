@@ -7,10 +7,15 @@ vi.mock('../../hooks/useAuth', () => ({ useAuth: vi.fn() }));
 vi.mock('../../hooks/useMerchantDashboardPage', () => ({
   useMerchantDashboardPage: vi.fn(),
 }));
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return { ...actual, useNavigate: vi.fn() };
+});
 
 import { useAuth } from '../../hooks/useAuth';
 import { useMerchantDashboardPage } from '../../hooks/useMerchantDashboardPage';
 import { MerchantDashboardPage } from './MerchantDashboardPage';
+import { useNavigate } from 'react-router-dom';
 
 const today = new Date().toISOString();
 
@@ -227,5 +232,116 @@ describe('MerchantDashboardPage', () => {
     expect(screen.queryByText('Ventas hoy')).not.toBeInTheDocument();
     expect(screen.queryByText('Productos activos')).not.toBeInTheDocument();
     expect(screen.queryByText('Tienda Abierta')).not.toBeInTheDocument();
+  });
+
+  it('muestra el banner de bienvenida para merchant_staff con nombre y rol', () => {
+    (useAuth as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      user: { id: 'staff-1' },
+      profile: {
+        id: 'staff-1',
+        email: 'empleado@example.com',
+        full_name: 'María López',
+        avatar_url: null,
+        role: 'merchant_staff',
+        created_at: today,
+        updated_at: today,
+      },
+      signOut: vi.fn(),
+    });
+    (useMerchantDashboardPage as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+      {
+        merchantId: 'm-1',
+        merchantName: 'La Pizza',
+        isOpen: true,
+        activeProducts: 5,
+        orders: [],
+        loading: false,
+        error: null,
+        toggleStoreOpen: vi.fn(),
+        updateOrderStatus: vi.fn(),
+      },
+    );
+
+    renderPage();
+
+    const banner = screen.getByTestId('staff-welcome-banner');
+    expect(banner).toBeInTheDocument();
+    expect(screen.getByText(/Hola, María López/i)).toBeInTheDocument();
+    expect(screen.getByText('Rol: Empleado')).toBeInTheDocument();
+    expect(screen.getByText('La Pizza')).toBeInTheDocument();
+    expect(screen.getByTestId('staff-logout-button')).toBeInTheDocument();
+  });
+
+  it('no muestra el banner de bienvenida para merchant_owner', () => {
+    (useAuth as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      user: { id: 'owner-1' },
+      profile: {
+        id: 'owner-1',
+        email: 'owner@example.com',
+        full_name: 'Juan Dueño',
+        avatar_url: null,
+        role: 'merchant_owner',
+        created_at: today,
+        updated_at: today,
+      },
+      signOut: vi.fn(),
+    });
+    (useMerchantDashboardPage as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+      {
+        merchantId: 'm-1',
+        merchantName: 'La Pizza',
+        isOpen: true,
+        activeProducts: 5,
+        orders: [],
+        loading: false,
+        error: null,
+        toggleStoreOpen: vi.fn(),
+        updateOrderStatus: vi.fn(),
+      },
+    );
+
+    renderPage();
+
+    expect(screen.queryByTestId('staff-welcome-banner')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /cerrar sesión/i })).not.toBeInTheDocument();
+  });
+
+  it('ejecuta signOut y navega a /login al pulsar cerrar sesión del empleado', async () => {
+    const signOutMock = vi.fn().mockResolvedValue(undefined);
+    const navigateMock = vi.fn();
+    (useNavigate as unknown as ReturnType<typeof vi.fn>).mockReturnValue(navigateMock);
+    (useAuth as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      user: { id: 'staff-1' },
+      profile: {
+        id: 'staff-1',
+        email: 'empleado@example.com',
+        full_name: 'María López',
+        avatar_url: null,
+        role: 'merchant_staff',
+        created_at: today,
+        updated_at: today,
+      },
+      signOut: signOutMock,
+    });
+    (useMerchantDashboardPage as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+      {
+        merchantId: 'm-1',
+        merchantName: 'La Pizza',
+        isOpen: true,
+        activeProducts: 0,
+        orders: [],
+        loading: false,
+        error: null,
+        toggleStoreOpen: vi.fn(),
+        updateOrderStatus: vi.fn(),
+      },
+    );
+
+    renderPage();
+
+    await user.click(screen.getByTestId('staff-logout-button'));
+
+    expect(signOutMock).toHaveBeenCalledOnce();
+    expect(navigateMock).toHaveBeenCalledWith('/login', { replace: true });
   });
 });
