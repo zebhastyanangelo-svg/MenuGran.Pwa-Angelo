@@ -4,12 +4,21 @@ import { supabase, TABLE_NAMES } from '../services/supabase'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { OrderRow, OrderStatus } from '../types/database'
 
+export interface CustomerProfile {
+  full_name: string | null
+  email: string | null
+}
+
+export interface OrderWithCustomer extends OrderRow {
+  customer_profile?: CustomerProfile | null
+}
+
 export interface MerchantDashboardPageData {
   merchantId: string | null
   merchantName: string | null
   isOpen: boolean
   activeProducts: number
-  orders: OrderRow[]
+  orders: OrderWithCustomer[]
   loading: boolean
   error: string | null
   toggleStoreOpen: (open: boolean) => Promise<void>
@@ -56,18 +65,18 @@ export function useMerchantDashboardPage(
     },
   })
 
-  const { data: orders = [], isLoading, isError, error } = useQuery<OrderRow[]>({
+  const { data: orders = [], isLoading, isError, error } = useQuery<OrderWithCustomer[]>({
     queryKey: ['merchantOrders', user?.id, merchantIds.join('-')],
     enabled: !!user && merchantIds.length > 0,
-    queryFn: async (): Promise<OrderRow[]> => {
+    queryFn: async (): Promise<OrderWithCustomer[]> => {
       if (!user || merchantIds.length === 0) return []
       const result = await supabase
         .from(TABLE_NAMES.orders)
-        .select('*')
+        .select('*, profiles!customer_id(full_name, email)')
         .in('merchant_id', merchantIds)
         .order('created_at', { ascending: false })
       if (result.error) throw result.error
-      return result.data ?? []
+      return (result.data ?? []) as OrderWithCustomer[]
     },
   })
 

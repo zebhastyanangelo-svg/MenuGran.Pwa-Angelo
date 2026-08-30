@@ -6,7 +6,8 @@ import { useToast } from '../../hooks/useToast';
 import { supabase } from '../../services/supabase';
 import { PaymentProofLightbox } from '../../components/merchant/PaymentProofLightbox';
 import { Store, Loader2, Package, ClipboardList, TrendingUp, LogOut, Image as ImageIcon } from 'lucide-react';
-import type { OrderRow, OrderStatus } from '../../types/database';
+import type { OrderStatus } from '../../types/database';
+import type { OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 
 const PAYMENT_PROOF_BUCKET = 'payment-proofs';
 
@@ -93,7 +94,7 @@ export function MerchantDashboardPage() {
   }, [soundEnabled]);
 
   const handleNewOrder = useCallback(
-    (order: OrderRow) => {
+    (order: OrderWithCustomer) => {
       playNotificationSound();
       showToast({
         variant: 'success',
@@ -133,11 +134,11 @@ export function MerchantDashboardPage() {
   const isStaff = profile?.role === 'merchant_staff';
 
   // Payment proof lightbox state
-  const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderWithCustomer | null>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [proofError, setProofError] = useState<string | null>(null);
 
-  const handleOpenProof = useCallback(async (order: OrderRow) => {
+  const handleOpenProof = useCallback(async (order: OrderWithCustomer) => {
     setSelectedOrder(order);
     setProofUrl(null);
     setProofError(null);
@@ -198,7 +199,7 @@ export function MerchantDashboardPage() {
     void toggleStoreOpen(!isOpen);
   }
 
-  function handleAction(order: OrderRow, next: OrderStatus) {
+  function handleAction(order: OrderWithCustomer, next: OrderStatus) {
     void updateOrderStatus(order.id, next);
   }
 

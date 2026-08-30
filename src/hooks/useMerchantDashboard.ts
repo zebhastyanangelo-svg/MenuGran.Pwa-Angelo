@@ -3,12 +3,13 @@ import type { User, RealtimeChannel } from '@supabase/supabase-js'
 import { supabase, TABLE_NAMES } from '../services/supabase'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { OrderRow, OrderStatus } from '../types/database'
+import type { OrderWithCustomer } from './useMerchantDashboardPage'
 
 const PAYMENT_PROOF_BUCKET = 'payment-proofs'
 
 export interface MerchantDashboardData {
   merchantIds: string[]
-  orders: OrderRow[]
+  orders: OrderWithCustomer[]
   loading: boolean
   error: string | null
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>
@@ -47,17 +48,17 @@ async function fetchMerchantIds(user: User): Promise<string[]> {
   return [...new Set(ids)]
 }
 
-async function fetchOrders(ids: string[]): Promise<OrderRow[]> {
+async function fetchOrders(ids: string[]): Promise<OrderWithCustomer[]> {
   if (ids.length === 0) return []
   console.log('[fetchOrders] merchant IDs:', ids)
   const result = await supabase
     .from(TABLE_NAMES.orders)
-    .select('*')
+    .select('*, profiles!customer_id(full_name, email)')
     .in('merchant_id', ids)
     .order('created_at', { ascending: false })
   console.log('[fetchOrders] result:', JSON.stringify({ count: result.data?.length, error: result.error, data: result.data }, null, 2))
   if (result.error) throw result.error
-  return result.data ?? []
+  return (result.data ?? []) as OrderWithCustomer[]
 }
 
 export function useMerchantDashboard(
@@ -75,10 +76,10 @@ export function useMerchantDashboard(
     },
   })
 
-  const { data: orders = [], isLoading, isError, error } = useQuery<OrderRow[]>({
+  const { data: orders = [], isLoading, isError, error } = useQuery<OrderWithCustomer[]>({
     queryKey: ['merchantOrders', user?.id, merchantIds.join('-')],
     enabled: !!user && merchantIds.length > 0,
-    queryFn: async (): Promise<OrderRow[]> => {
+    queryFn: async (): Promise<OrderWithCustomer[]> => {
       if (!user || merchantIds.length === 0) return []
       return fetchOrders(merchantIds)
     },

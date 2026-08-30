@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import type { OrderRow, OrderStatus } from '../../types/database';
+import type { OrderStatus } from '../../types/database';
+import type { OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 import { formatPrice } from '../../types/cart';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import {
@@ -11,12 +12,12 @@ import {
 } from '../../utils/orderStatus';
 
 export interface OrdersBoardProps {
-  orders: OrderRow[];
+  orders: OrderWithCustomer[];
   onUpdateStatus: (orderId: string, status: OrderStatus) => void;
-  onOpenProof: (order: OrderRow) => void;
+  onOpenProof: (order: OrderWithCustomer) => void;
 }
 
-function getPaymentMethodLabel(method: OrderRow['payment_method']): string {
+function getPaymentMethodLabel(method: OrderWithCustomer['payment_method']): string {
   switch (method) {
     case 'pago_movil':
       return 'Pago Móvil';
@@ -31,8 +32,11 @@ function getPaymentMethodLabel(method: OrderRow['payment_method']): string {
   }
 }
 
-function getCustomerLabel(customerId: string | null): string {
-  return customerId ? `Cliente ${customerId.slice(0, 6)}...` : 'Cliente General';
+function getCustomerLabel(order: OrderWithCustomer): string {
+  const profile = order.customer_profile;
+  if (profile?.full_name) return profile.full_name;
+  if (profile?.email) return profile.email;
+  return order.customer_id ? `Cliente ${order.customer_id.slice(0, 6)}...` : 'Cliente General';
 }
 
 export function OrdersBoard({
@@ -111,7 +115,7 @@ export function OrdersBoard({
                     {order.id}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-800 block sm:table-cell">
-                    {getCustomerLabel(order.customer_id)}
+                    {getCustomerLabel(order)}
                   </td>
                   <td className="px-4 py-3 text-sm font-semibold text-gray-900 block sm:table-cell">
                     {formatPrice(order.total_amount)}
@@ -128,18 +132,18 @@ export function OrdersBoard({
                         Ref: {order.payment_reference}
                       </div>
                     )}
+                    {order.payment_proof_url && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenProof(order)}
+                        className="mt-1.5 inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded font-medium transition-colors"
+                      >
+                        Ver comprobante
+                      </button>
+                    )}
                   </td>
                   <td className="px-4 py-3 block sm:table-cell">
                     <div className="flex flex-wrap items-center gap-2">
-                      {order.payment_proof_url && (
-                        <button
-                          type="button"
-                          onClick={() => onOpenProof(order)}
-                          className="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded font-medium transition-colors"
-                        >
-                          Ver comprobante
-                        </button>
-                      )}
                       {getAllowedTransitions(order.status).map((nextStatus) => (
                         <button
                           key={nextStatus}

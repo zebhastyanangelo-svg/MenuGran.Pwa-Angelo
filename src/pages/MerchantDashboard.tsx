@@ -5,7 +5,7 @@ import {
   PAYMENT_PROOF_BUCKET,
 } from '../hooks/useMerchantDashboard';
 import { supabase } from '../services/supabase';
-import type { OrderRow } from '../types/database';
+import type { OrderWithCustomer } from '../hooks/useMerchantDashboardPage';
 import { ProductManagement } from '../components/merchant/ProductManagement';
 import { MerchantProfileForm } from '../components/merchant/MerchantProfileForm';
 import { OrdersBoard } from '../components/merchant/OrdersBoard';
@@ -16,11 +16,11 @@ export function MerchantDashboard() {
   const { merchantIds, orders, loading, error, updateOrderStatus } =
     useMerchantDashboard(user);
   const [activeTab, setActiveTab] = useState<'orders' | 'catalog' | 'profile'>('orders');
-  const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderWithCustomer | null>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [proofError, setProofError] = useState<string | null>(null);
 
-  async function handleOpenProof(order: OrderRow) {
+  async function handleOpenProof(order: OrderWithCustomer) {
     setProofError(null);
     setProofUrl(null);
     setSelectedOrder(order);

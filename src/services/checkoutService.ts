@@ -75,3 +75,19 @@ export async function uploadPaymentProof(
   if (error) throw error;
   return fileName;
 }
+
+/**
+ * Updates the `payment_proof_url` column on an existing order row so the
+ * merchant dashboard can retrieve and display the uploaded proof.
+ */
+export async function savePaymentProofUrl(
+  orderId: string,
+  paymentProofUrl: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from(TABLE_NAMES.orders)
+    .update({ payment_proof_url: paymentProofUrl })
+    .eq('id', orderId);
+
+  if (error) throw error;
+}
