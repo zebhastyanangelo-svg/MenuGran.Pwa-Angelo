@@ -3,8 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useMerchantDashboardPage } from '../../hooks/useMerchantDashboardPage';
 import { useToast } from '../../hooks/useToast';
-import { Store, Loader2, Package, ClipboardList, TrendingUp, LogOut } from 'lucide-react';
+import { supabase } from '../../services/supabase';
+import { PaymentProofLightbox } from '../../components/merchant/PaymentProofLightbox';
+import { Store, Loader2, Package, ClipboardList, TrendingUp, LogOut, Image as ImageIcon } from 'lucide-react';
 import type { OrderRow, OrderStatus } from '../../types/database';
+
+const PAYMENT_PROOF_BUCKET = 'payment-proofs';
 
 type TabKey = 'pending' | 'preparing' | 'ready' | 'delivered';
 
@@ -127,6 +131,38 @@ export function MerchantDashboardPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('pending');
   const greetingName = merchantName ?? profile?.full_name ?? 'Comercio';
   const isStaff = profile?.role === 'merchant_staff';
+
+  // Payment proof lightbox state
+  const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [proofError, setProofError] = useState<string | null>(null);
+
+  const handleOpenProof = useCallback(async (order: OrderRow) => {
+    setSelectedOrder(order);
+    setProofUrl(null);
+    setProofError(null);
+    if (!order.payment_proof_url) return;
+    try {
+      const { data, error: signedError } = await supabase.storage
+        .from(PAYMENT_PROOF_BUCKET)
+        .createSignedUrl(order.payment_proof_url, 60);
+      if (signedError || !data?.signedUrl) {
+        setProofError(
+          signedError?.message ?? 'No se pudo cargar el comprobante',
+        );
+        return;
+      }
+      setProofUrl(data.signedUrl);
+    } catch (err: unknown) {
+      setProofError(err instanceof Error ? err.message : 'Error de comprobante');
+    }
+  }, []);
+
+  const handleCloseProof = useCallback(() => {
+    setSelectedOrder(null);
+    setProofUrl(null);
+    setProofError(null);
+  }, []);
 
   // Check if the merchant has a store assigned
   const hasStore = !!merchantName;
@@ -339,6 +375,19 @@ return (
                       {order.items.length} producto(s) ·{' '}
                       {new Date(order.created_at).toLocaleTimeString()}
                     </p>
+                    {order.payment_proof_url && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => void handleOpenProof(order)}
+                          className="inline-flex items-center gap-1.5 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded font-medium transition-colors"
+                          data-testid={`proof-button-${order.id}`}
+                        >
+                          <ImageIcon className="h-3.5 w-3.5" />
+                          Ver comprobante
+                        </button>
+                      </div>
+                    )}
                     <div className="flex flex-wrap gap-2">
                       {getOrderActions(order.status).map((action) => (
                         <button
@@ -361,6 +410,14 @@ return (
             )}
           </section>
         </div>
+      )}
+      {selectedOrder && selectedOrder.payment_proof_url && (
+        <PaymentProofLightbox
+          order={selectedOrder}
+          proofUrl={proofUrl ?? ''}
+          error={proofError}
+          onClose={handleCloseProof}
+        />
       )}
     </div>
   );
