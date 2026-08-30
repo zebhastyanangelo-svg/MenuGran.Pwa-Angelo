@@ -1,5 +1,5 @@
 import { supabase, TABLE_NAMES } from './supabase';
-import { buildProofFileName } from '../utils/imageCompressor';
+import { buildProofFileName, buildTempProofFileName } from '../utils/imageCompressor';
 import type { OrderInsert, PaymentMethod, OrderType, OrderItem, GeoPoint } from '../types/database';
 
 const PAYMENT_PROOF_BUCKET = 'payment-proofs';
@@ -15,6 +15,7 @@ interface CreateOrderParams {
   deliveryLocation?: GeoPoint | null;
   deliveryAddressNotes?: string | null;
   tableNumber?: string | null;
+  paymentProofUrl?: string | null;
 }
 
 /**
@@ -31,6 +32,7 @@ export async function createOrder(params: CreateOrderParams): Promise<string> {
     status: 'payment_pending',
     payment_method: params.paymentMethod,
     payment_reference: params.paymentReference || null,
+    payment_proof_url: params.paymentProofUrl ?? undefined,
     total_amount: String(params.totalAmount),
     items: params.items,
     delivery_location:
@@ -90,4 +92,21 @@ export async function savePaymentProofUrl(
     .eq('id', orderId);
 
   if (error) throw error;
+}
+
+/**
+ * Uploads a payment-proof blob to Supabase Storage using a temporary filename
+ * (no orderId dependency). Returns the storage path. This allows uploading
+ * the proof BEFORE the order is created, so the URL can be included in the
+ * initial INSERT.
+ */
+export async function uploadPaymentProofTemp(file: Blob): Promise<string> {
+  const fileName = buildTempProofFileName();
+
+  const { error } = await supabase.storage
+    .from(PAYMENT_PROOF_BUCKET)
+    .upload(fileName, file);
+
+  if (error) throw error;
+  return fileName;
 }

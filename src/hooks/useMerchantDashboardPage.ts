@@ -10,7 +10,7 @@ export interface CustomerProfile {
 }
 
 export interface OrderWithCustomer extends OrderRow {
-  customer_profile?: CustomerProfile | null
+  profiles?: CustomerProfile | null
 }
 
 export interface MerchantDashboardPageData {

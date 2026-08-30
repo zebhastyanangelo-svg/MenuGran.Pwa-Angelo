@@ -33,7 +33,7 @@ function getPaymentMethodLabel(method: OrderWithCustomer['payment_method']): str
 }
 
 function getCustomerLabel(order: OrderWithCustomer): string {
-  const profile = order.customer_profile;
+  const profile = order.profiles;
   if (profile?.full_name) return profile.full_name;
   if (profile?.email) return profile.email;
   return order.customer_id ? `Cliente ${order.customer_id.slice(0, 6)}...` : 'Cliente General';
@@ -132,7 +132,7 @@ export function OrdersBoard({
                         Ref: {order.payment_reference}
                       </div>
                     )}
-                    {order.payment_proof_url && (
+                    {order.payment_proof_url ? (
                       <button
                         type="button"
                         onClick={() => onOpenProof(order)}
@@ -140,6 +140,10 @@ export function OrdersBoard({
                       >
                         Ver comprobante
                       </button>
+                    ) : (
+                      <span className="mt-1.5 block text-xs text-gray-400 italic">
+                        Sin capture
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-3 block sm:table-cell">

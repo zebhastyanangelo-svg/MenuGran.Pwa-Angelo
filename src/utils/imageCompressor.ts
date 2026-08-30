@@ -165,3 +165,23 @@ export function buildProofFileName(orderId: string): string {
   ).join('');
   return `${orderId}/${randomHex}.jpg`;
 }
+
+/**
+ * Generates a temporary proof filename that does not depend on orderId.
+ * Used to upload the proof BEFORE the order is created, so the URL can be
+ * included in the initial INSERT.
+ */
+export function buildTempProofFileName(): string {
+  const randomBytes = new Uint8Array(16);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues !== undefined) {
+    crypto.getRandomValues(randomBytes);
+  } else {
+    for (let i = 0; i < randomBytes.length; i++) {
+      randomBytes[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  const randomHex = Array.from(randomBytes, (b) =>
+    b.toString(16).padStart(2, '0'),
+  ).join('');
+  return `tmp/${randomHex}.jpg`;
+}

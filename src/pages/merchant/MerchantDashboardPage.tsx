@@ -376,7 +376,7 @@ return (
                       {order.items.length} producto(s) ·{' '}
                       {new Date(order.created_at).toLocaleTimeString()}
                     </p>
-                    {order.payment_proof_url && (
+                    {order.payment_proof_url ? (
                       <div className="flex items-center gap-2 mt-1">
                         <button
                           type="button"
@@ -388,6 +388,10 @@ return (
                           Ver comprobante
                         </button>
                       </div>
+                    ) : (
+                      <span className="text-xs text-gray-400 italic mt-1 block">
+                        Sin capture
+                      </span>
                     )}
                     <div className="flex flex-wrap gap-2">
                       {getOrderActions(order.status).map((action) => (

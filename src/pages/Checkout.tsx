@@ -9,7 +9,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { compressImage } from '../utils/imageCompressor';
 import type { GeoPoint, OrderType } from '../types/database';
-import { createOrder, uploadPaymentProof, savePaymentProofUrl } from '../services/checkoutService';
+import { createOrder, uploadPaymentProofTemp } from '../services/checkoutService';
 
 const BANK_ACCOUNTS: { id: string; label: string }[] = [
   { id: 'banco_pichincha', label: 'Banco Pichincha - 1234 5678 9012 3456' },
@@ -73,7 +73,11 @@ export function Checkout() {
         ? (await compressImage(file!)).blob
         : file!;
 
-      const orderId = await createOrder({
+      // Step 1: Upload proof BEFORE creating the order
+      const proofPath = await uploadPaymentProofTemp(proofToUpload);
+
+      // Step 2: Create order WITH the proof URL already set
+      await createOrder({
         merchantId: merchantId!,
         customerId: user!.id,
         orderType,
@@ -86,10 +90,8 @@ export function Checkout() {
           unit_price: parseFloat(item.product.price),
         })),
         deliveryLocation: orderType === 'delivery' ? deliveryLocation : null,
+        paymentProofUrl: proofPath,
       });
-
-      const proofPath = await uploadPaymentProof(proofToUpload, orderId);
-      await savePaymentProofUrl(orderId, proofPath);
 
       showToast({
         variant: 'success',

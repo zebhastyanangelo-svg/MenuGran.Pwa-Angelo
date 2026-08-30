@@ -35,13 +35,11 @@ vi.mock('../components/map/LocationPicker', () => {
 });
 
 const mockCreateOrder = vi.fn().mockResolvedValue('order-abc-123');
-const mockUploadPaymentProof = vi.fn().mockResolvedValue('m-123/proof.jpg');
-const mockSavePaymentProofUrl = vi.fn().mockResolvedValue(undefined);
+const mockUploadPaymentProofTemp = vi.fn().mockResolvedValue('tmp/abc123.jpg');
 
 vi.mock('../services/checkoutService', () => ({
   createOrder: (...args: unknown[]) => mockCreateOrder(...args),
-  uploadPaymentProof: (...args: unknown[]) => mockUploadPaymentProof(...args),
-  savePaymentProofUrl: (...args: unknown[]) => mockSavePaymentProofUrl(...args),
+  uploadPaymentProofTemp: (...args: unknown[]) => mockUploadPaymentProofTemp(...args),
 }));
 
 vi.mock('../hooks/useAuth', () => ({
@@ -73,8 +71,7 @@ describe('Checkout', () => {
   beforeEach(() => {
     mockShowToast.mockClear();
     mockCreateOrder.mockClear().mockResolvedValue('order-abc-123');
-    mockUploadPaymentProof.mockClear().mockResolvedValue('m-123/proof.jpg');
-    mockSavePaymentProofUrl.mockClear().mockResolvedValue(undefined);
+    mockUploadPaymentProofTemp.mockClear().mockResolvedValue('tmp/abc123.jpg');
     vi.mocked(useCart).mockReturnValue(validCart);
     vi.mocked(useAuth).mockReturnValue({
       user: { id: 'user-123' } as any,
@@ -182,6 +179,7 @@ describe('Checkout', () => {
         expect.objectContaining({ variant: 'success', title: '¡Pedido enviado!' }),
       );
     }, { timeout: 5000 });
+    expect(mockUploadPaymentProofTemp).toHaveBeenCalled();
     expect(mockCreateOrder).toHaveBeenCalledWith(
       expect.objectContaining({
         merchantId: 'm-123',
@@ -190,12 +188,8 @@ describe('Checkout', () => {
         paymentMethod: 'pago_movil',
         paymentReference: 'REF123456',
         totalAmount: 100,
+        paymentProofUrl: 'tmp/abc123.jpg',
       }),
-    );
-    expect(mockUploadPaymentProof).toHaveBeenCalled();
-    expect(mockSavePaymentProofUrl).toHaveBeenCalledWith(
-      'order-abc-123',
-      expect.any(String),
     );
     expect(validCart.clearCart).toHaveBeenCalled();
   }, 10000);
