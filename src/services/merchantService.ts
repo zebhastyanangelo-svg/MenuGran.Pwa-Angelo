@@ -27,6 +27,11 @@ export interface CreateMerchantPayload {
 export async function createMerchant(
   payload: CreateMerchantPayload,
 ): Promise<MerchantRow> {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError !== null || user === null) {
+    throw new Error('No se pudo obtener el usuario autenticado para crear el comercio.');
+  }
+
   let logo_url = payload.logo_url;
   let banner_url = payload.banner_url;
 
@@ -47,7 +52,7 @@ export async function createMerchant(
   const { data, error } = await supabase
     .from('merchants')
     .insert({
-      owner_id: '',
+      owner_id: user.id,
       name: payload.name,
       slug: payload.slug,
       rif: payload.rif,

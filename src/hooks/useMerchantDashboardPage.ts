@@ -32,26 +32,25 @@ export function useMerchantDashboardPage(
     queryFn: async (): Promise<string[]> => {
       if (!user) return []
 
-      const owner = await supabase
-        .from(TABLE_NAMES.merchants)
-        .select('id')
-        .eq('owner_id', user.id)
-        .eq('is_active', true)
-
-      if (owner.error || !Array.isArray(owner.data)) return []
-
-      const staff = await supabase
-        .from(TABLE_NAMES.merchantStaff)
-        .select('merchant_id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
+      const [ownerResult, staffResult] = await Promise.all([
+        supabase
+          .from(TABLE_NAMES.merchants)
+          .select('id')
+          .eq('owner_id', user.id)
+          .eq('is_active', true),
+        supabase
+          .from(TABLE_NAMES.merchantStaff)
+          .select('merchant_id')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
+      ])
 
       const ids: string[] = []
-      if (owner.data) {
-        owner.data.forEach((row) => row?.id && ids.push(row.id))
+      if (!ownerResult.error && Array.isArray(ownerResult.data)) {
+        ownerResult.data.forEach((row) => row?.id && ids.push(row.id))
       }
-      if (staff.data) {
-        staff.data.forEach((row) => row?.merchant_id && ids.push(row.merchant_id))
+      if (!staffResult.error && Array.isArray(staffResult.data)) {
+        staffResult.data.forEach((row) => row?.merchant_id && ids.push(row.merchant_id))
       }
       return [...new Set(ids)]
     },

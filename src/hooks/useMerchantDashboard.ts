@@ -21,11 +21,14 @@ export interface UseMerchantDashboardOptions {
 async function fetchMerchantIds(user: User): Promise<string[]> {
   const ids: string[] = []
 
+  console.log('[fetchMerchantIds] user.id:', user.id)
+
   const owner = await supabase
     .from(TABLE_NAMES.merchants)
-    .select('id')
+    .select('id, owner_id, name, is_active')
     .eq('owner_id', user.id)
     .eq('is_active', true)
+  console.log('[fetchMerchantIds] owner query:', JSON.stringify(owner, null, 2))
   if (!owner.error && Array.isArray(owner.data)) {
     owner.data.forEach((row) => row?.id && ids.push(row.id))
   }
@@ -35,20 +38,24 @@ async function fetchMerchantIds(user: User): Promise<string[]> {
     .select('merchant_id')
     .eq('user_id', user.id)
     .eq('is_active', true)
+  console.log('[fetchMerchantIds] staff query:', JSON.stringify(staff, null, 2))
   if (!staff.error && Array.isArray(staff.data)) {
     staff.data.forEach((row) => row?.merchant_id && ids.push(row.merchant_id))
   }
 
+  console.log('[fetchMerchantIds] final ids:', ids)
   return [...new Set(ids)]
 }
 
 async function fetchOrders(ids: string[]): Promise<OrderRow[]> {
   if (ids.length === 0) return []
+  console.log('[fetchOrders] merchant IDs:', ids)
   const result = await supabase
     .from(TABLE_NAMES.orders)
     .select('*')
     .in('merchant_id', ids)
     .order('created_at', { ascending: false })
+  console.log('[fetchOrders] result:', JSON.stringify({ count: result.data?.length, error: result.error, data: result.data }, null, 2))
   if (result.error) throw result.error
   return result.data ?? []
 }
