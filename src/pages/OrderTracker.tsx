@@ -19,10 +19,10 @@ import { OrderStatusStep } from '../components/orders/OrderStatusStep';
 import { getAllowedTransitions, getTransitionLabel, getTransitionButtonClass } from '../utils/orderStatus';
 
 export function OrderTracker() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, profile, isLoading: authLoading } = useAuth();
   const { id: orderId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const [order, setOrder] = useState<OrderRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +32,9 @@ export function OrderTracker() {
   const { permission, showNotification } = useNotifications();
   const { isOnline } = useOnlineStatus();
   const previousStatusRef = useRef<OrderStatus | null>(null);
+
+  const adminRoles: string[] = ['superadmin', 'merchant_owner', 'merchant_staff'];
+  const canManageOrders = profile !== null && adminRoles.includes(profile.role);
 
   const handleStatusChange = useCallback(
     (newStatus: OrderStatus): void => {
@@ -170,12 +173,6 @@ export function OrderTracker() {
       <div className="p-6 bg-red-50 border-l-4 border-red-500">
         <h2 className="text-red-800 font-bold mb-2">Error</h2>
         <p className="text-red-700">{error}</p>
-        <button
-          onClick={() => navigate('/marketplace', { replace: true })}
-          className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Volver al mercado
-        </button>
       </div>
     );
   }
@@ -309,41 +306,34 @@ export function OrderTracker() {
           </div>
         </section>
 
-        {!isCompleted && (
+        {!isCompleted && canManageOrders && allowedTransitions.length > 0 && (
           <div className="mt-8 space-y-4">
-            <button
-              onClick={() => navigate('/marketplace', { replace: true })}
-              className="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700"
-            >
-              Volver al mercado
-            </button>
-            {allowedTransitions.length > 0 && (
-              <div className="border-t pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-2">Transiciones disponibles:</p>
-                <div className="flex flex-wrap gap-2">
-                  {allowedTransitions.map((nextStatus) => (
-                    <button
-                      key={nextStatus}
-                      onClick={() => setExpandedStep(expandedStep === nextStatus ? null : nextStatus)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        expandedStep === nextStatus
-                          ? 'bg-brand-red text-white'
-                          : getTransitionButtonClass(nextStatus)
-                      }`}
-                    >
-                      {expandedStep === nextStatus ? 'Cerrar' : getTransitionLabel(nextStatus)}
-                    </button>
-                  ))}
-                </div>
-                {expandedStep && (
-                  <div className="mt-3 rounded-lg bg-gray-50 p-3">
-                    <p className="text-sm text-gray-600">
-                      Cambiar estado a: <strong>{getOrderStatusLabel(expandedStep as OrderStatus)}</strong>
-                    </p>
-                  </div>
-                )}
+            <div className="border-t pt-4">
+              <p className="text-sm font-semibold text-gray-700 mb-2">Transiciones disponibles:</p>
+              <div className="flex flex-wrap gap-2">
+                {allowedTransitions.map((nextStatus) => (
+                  <button
+                    key={nextStatus}
+                    onClick={() => setExpandedStep(expandedStep === nextStatus ? null : nextStatus)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      expandedStep === nextStatus
+                        ? 'bg-brand-red text-white'
+                        : getTransitionButtonClass(nextStatus)
+                    }`}
+                    data-testid={`transition-${nextStatus}`}
+                  >
+                    {expandedStep === nextStatus ? 'Cerrar' : getTransitionLabel(nextStatus)}
+                  </button>
+                ))}
               </div>
-            )}
+              {expandedStep && (
+                <div className="mt-3 rounded-lg bg-gray-50 p-3">
+                  <p className="text-sm text-gray-600">
+                    Cambiar estado a: <strong>{getOrderStatusLabel(expandedStep as OrderStatus)}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

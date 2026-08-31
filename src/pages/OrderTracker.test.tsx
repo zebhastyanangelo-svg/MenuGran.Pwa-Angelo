@@ -215,7 +215,7 @@ describe('OrderTracker', () => {
       expect(screen.getByText(/error al cargar la orden/i)).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/volver al mercado/i)).toBeInTheDocument();
+    expect(screen.queryByText(/volver al mercado/i)).not.toBeInTheDocument();
   });
 
   it('should redirect to login when not authenticated', async () => {
@@ -265,5 +265,109 @@ describe('OrderTracker', () => {
       expect(statusP).toHaveTextContent(/estado actual: en preparación/i);
       expect(statusP).not.toHaveTextContent(/estado actual: confirmado/i);
     });
+  });
+
+  it('should hide status transitions for customers', async () => {
+    useAuthMock.profile = { id: 'cust-1', full_name: 'Cliente', email: 'cli@test.com', role: 'customer', created_at: '' } as any;
+
+    const mockFrom = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
+    };
+    (supabase.from as Mock).mockReturnValue(mockFrom);
+
+    const { wrapper } = createWrapper();
+    render(<OrderTracker />, { wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText(/seguimiento de orden/i)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/transiciones disponibles/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('transition-confirmed')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('transition-preparing')).not.toBeInTheDocument();
+  });
+
+  it('should show status transitions for merchant_staff', async () => {
+    useAuthMock.profile = { id: 'staff-1', full_name: 'Empleado', email: 'emp@test.com', role: 'merchant_staff', created_at: '' } as any;
+
+    const mockFrom = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
+    };
+    (supabase.from as Mock).mockReturnValue(mockFrom);
+
+    const { wrapper } = createWrapper();
+    render(<OrderTracker />, { wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText(/seguimiento de orden/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/transiciones disponibles/i)).toBeInTheDocument();
+  });
+
+  it('should show status transitions for superadmin', async () => {
+    useAuthMock.profile = { id: 'sa-1', full_name: 'Super', email: 'sa@test.com', role: 'superadmin', created_at: '' } as any;
+
+    const mockFrom = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
+    };
+    (supabase.from as Mock).mockReturnValue(mockFrom);
+
+    const { wrapper } = createWrapper();
+    render(<OrderTracker />, { wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText(/seguimiento de orden/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/transiciones disponibles/i)).toBeInTheDocument();
+  });
+
+  it('should not show Volver al mercado button for any role', async () => {
+    useAuthMock.profile = { id: 'cust-1', full_name: 'Cliente', email: 'cli@test.com', role: 'customer', created_at: '' } as any;
+
+    const mockFrom = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
+    };
+    (supabase.from as Mock).mockReturnValue(mockFrom);
+
+    const { wrapper } = createWrapper();
+    render(<OrderTracker />, { wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText(/seguimiento de orden/i)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/volver al mercado/i)).not.toBeInTheDocument();
+  });
+
+  it('should keep order summary visible as read-only for customers', async () => {
+    useAuthMock.profile = { id: 'cust-1', full_name: 'Cliente', email: 'cli@test.com', role: 'customer', created_at: '' } as any;
+
+    const mockFrom = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
+    };
+    (supabase.from as Mock).mockReturnValue(mockFrom);
+
+    const { wrapper } = createWrapper();
+    render(<OrderTracker />, { wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText(/seguimiento de orden/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/resumen de la orden/i)).toBeInTheDocument();
+    expect(screen.getByText(/productos del pedido/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/\$25\.50/).length).toBeGreaterThanOrEqual(1);
   });
 });
