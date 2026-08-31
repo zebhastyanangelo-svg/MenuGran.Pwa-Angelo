@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useBlocker } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import { BottomNav } from './BottomNav';
@@ -8,26 +8,36 @@ import { ActiveOrderBanner } from '../orders/ActiveOrderBanner';
 import { useActiveOrder } from '../../hooks/useActiveOrder';
 
 export function Layout() {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { pathname } = location;
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
   const { showToast } = useToast();
   const { isActive } = useActiveOrder();
 
-  const blocker = useBlocker(
-    ({ nextLocation }) => isActive && nextLocation.pathname === '/checkout',
-  );
-
   useEffect(() => {
-    if (blocker.state === 'blocked') {
+    if (isActive && pathname === '/checkout') {
       showToast({
         variant: 'error',
         title: 'Pedido activo',
         message: 'Ya tienes un pedido en proceso. No puedes ir al checkout.',
         durationMs: 5000,
       });
-      blocker.reset();
+      navigate(-1);
     }
-  }, [blocker.state, showToast, blocker.reset]);
+  }, [pathname, isActive, showToast, navigate]);
+
+  useEffect(() => {
+    if (!isActive) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isActive]);
 
   return (
     <div className="min-h-screen bg-slate-50">
