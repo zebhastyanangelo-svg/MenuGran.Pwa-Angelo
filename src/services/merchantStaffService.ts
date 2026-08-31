@@ -9,6 +9,7 @@ import type {
   MerchantStaffRow,
 } from '../types/database';
 import {
+  DRIVER_PERMISSIONS,
   toStaffPermissions,
   validateEmployeeInput,
   type EmployeeFormInput,
@@ -135,7 +136,10 @@ export async function createEmployee(
       email: input.email.trim(),
       password: input.password,
       fullName: input.fullName.trim(),
-      permissions: toStaffPermissions(input.permissions),
+      role: input.role,
+      permissions: input.role === 'driver'
+        ? DRIVER_PERMISSIONS
+        : toStaffPermissions(input.permissions),
     },
   });
 

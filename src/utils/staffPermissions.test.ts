@@ -11,6 +11,7 @@ function buildValidInput(): EmployeeFormInput {
     fullName: 'Ana Gómez',
     email: 'ana@pizzeria.com',
     password: 'Clave123',
+    role: 'merchant_staff',
     permissions: { can_manage_orders: true, can_manage_menu: false, can_manage_settings: false, can_view_metrics: false },
   };
 }

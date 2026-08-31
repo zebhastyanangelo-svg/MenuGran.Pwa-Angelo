@@ -14,6 +14,7 @@ interface CreateEmployeePayload {
   email?: unknown;
   password?: unknown;
   fullName?: unknown;
+  role?: unknown;
   permissions?: unknown;
 }
 
@@ -35,6 +36,7 @@ function validatePayload(payload: CreateEmployeePayload):
       email: string;
       password: string;
       fullName: string;
+      role: 'merchant_staff' | 'driver';
       permissions: Record<string, boolean>;
     } {
   const merchantId =
@@ -43,6 +45,12 @@ function validatePayload(payload: CreateEmployeePayload):
   const password = typeof payload.password === 'string' ? payload.password : '';
   const fullName =
     typeof payload.fullName === 'string' ? payload.fullName.trim() : '';
+
+  const VALID_ROLES = ['merchant_staff', 'driver'];
+  const role =
+    typeof payload.role === 'string' && VALID_ROLES.includes(payload.role)
+      ? (payload.role as 'merchant_staff' | 'driver')
+      : 'merchant_staff';
 
   if (merchantId === '') {
     return { error: 'Se requiere el identificador del comercio.' };
@@ -63,14 +71,23 @@ function validatePayload(payload: CreateEmployeePayload):
     typeof payload.permissions === 'object' && payload.permissions !== null
       ? payload.permissions as Record<string, unknown>
       : {};
-  const permissions = {
-    can_manage_orders: rawPermissions.can_manage_orders === true,
-    can_manage_menu: rawPermissions.can_manage_menu === true,
-    can_manage_settings: rawPermissions.can_manage_settings === true,
-    can_view_metrics: rawPermissions.can_view_metrics === true,
-  };
 
-  return { merchantId, email, password, fullName, permissions };
+  // Los repartidores siempre reciben permisos de pedidos, ignorando lo enviado.
+  const permissions = role === 'driver'
+    ? {
+        can_manage_orders: true,
+        can_manage_menu: false,
+        can_manage_settings: false,
+        can_view_metrics: false,
+      }
+    : {
+        can_manage_orders: rawPermissions.can_manage_orders === true,
+        can_manage_menu: rawPermissions.can_manage_menu === true,
+        can_manage_settings: rawPermissions.can_manage_settings === true,
+        can_view_metrics: rawPermissions.can_view_metrics === true,
+      };
+
+  return { merchantId, email, password, fullName, role, permissions };
 }
 
 /** ¿Puede este usuario gestionar el merchant? Owner activo o superadmin. */
@@ -166,7 +183,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         email_confirm: true,
         user_metadata: {
           full_name: validated.fullName,
-          role: 'merchant_staff',
+          role: validated.role,
         },
       });
 
@@ -219,7 +236,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           id: employeeUserId,
           email: validated.email,
           full_name: validated.fullName,
-          role: 'merchant_staff',
+          role: validated.role,
         },
         { onConflict: 'id', ignoreDuplicates: false },
       );

@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Home, ShoppingCart, LayoutDashboard, Settings, Store, UserRound, Building2, UtensilsCrossed } from 'lucide-react';
+import { Home, ShoppingCart, LayoutDashboard, Settings, Store, UserRound, Building2, UtensilsCrossed, ListChecks } from 'lucide-react';
 import type { MerchantStaffPermissions, UserRole } from '../../types/database';
 
 export interface NavItem {
@@ -31,6 +31,10 @@ export const superadminNavItems: NavItem[] = [
   { to: '/super-admin/profile', label: 'Perfil', icon: UserRound },
 ];
 
+export const driverNavItems: NavItem[] = [
+  { to: '/driver', label: 'Repartos', icon: ListChecks },
+];
+
 const merchantRoles: UserRole[] = ['merchant_owner', 'merchant_staff'];
 
 /**
@@ -45,6 +49,9 @@ export function getNavItemsForRole(
 ): NavItem[] {
   if (role === 'superadmin') {
     return superadminNavItems;
+  }
+  if (role === 'driver') {
+    return driverNavItems;
   }
   if (role !== null && role !== undefined && merchantRoles.includes(role)) {
     return merchantNavItems.filter((item) => {

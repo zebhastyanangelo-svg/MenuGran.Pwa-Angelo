@@ -41,6 +41,7 @@ import {
   PERMISSION_LABELS,
   validateEmployeeInput,
   type EmployeeFormInput,
+  type EmployeeRole,
 } from '../../utils/staffPermissions';
 import {
   validatePasswordChange,
@@ -56,6 +57,7 @@ const EMPTY_EMPLOYEE: EmployeeFormInput = {
   fullName: '',
   email: '',
   password: '',
+  role: 'merchant_staff',
   permissions: { can_manage_orders: false, can_manage_menu: false, can_manage_settings: false, can_view_metrics: false },
 };
 
@@ -671,6 +673,34 @@ export function MerchantProfilePage() {
               }))
             }
           />
+
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-gray-700">Rol</span>
+            <select
+              name="employeeRole"
+              value={employeeInput.role}
+              onChange={(event) => {
+                const newRole = event.target.value as EmployeeRole;
+                setEmployeeInput((prev) => ({
+                  ...prev,
+                  role: newRole,
+                  permissions: newRole === 'driver'
+                    ? {
+                        can_manage_orders: true,
+                        can_manage_menu: false,
+                        can_manage_settings: false,
+                        can_view_metrics: false,
+                      }
+                    : prev.permissions,
+                }));
+              }}
+              className="block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              data-testid="employee-role"
+            >
+              <option value="merchant_staff">Empleado de Staff</option>
+              <option value="driver">Repartidor</option>
+            </select>
+          </label>
 
           <fieldset className="space-y-2 rounded-xl border border-gray-200 p-3">
             <legend className="px-1 text-sm font-medium text-gray-700">

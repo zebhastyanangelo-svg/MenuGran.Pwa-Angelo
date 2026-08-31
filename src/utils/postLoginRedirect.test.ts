@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CUSTOMER_HOME,
+  DRIVER_HOME,
   MERCHANT_HOME,
   SUPER_ADMIN_HOME,
   getPostLoginPath,
@@ -19,6 +20,11 @@ describe('getPostLoginPath', () => {
     );
   });
 
+  it('redirige al panel de reparto cuando el rol es driver', () => {
+    expect(getPostLoginPath(null, 'driver')).toBe(DRIVER_HOME);
+    expect(getPostLoginPath(null, 'driver')).toBe('/driver');
+  });
+
   it('mantiene el marketplace como destino por defecto del cliente', () => {
     expect(getPostLoginPath(null, 'customer')).toBe(CUSTOMER_HOME);
     expect(getPostLoginPath(null, null)).toBe(CUSTOMER_HOME);
@@ -30,10 +36,15 @@ describe('getPostLoginPath', () => {
     ).toBe('/merchant/dashboard');
   });
 
+  it('honra la ruta "from" aunque el usuario sea driver', () => {
+    expect(getPostLoginPath('/orders/123', 'driver')).toBe('/orders/123');
+  });
+
   it('ignora una ruta "from" vacía y aplica el destino por rol', () => {
     expect(getPostLoginPath('', 'superadmin')).toBe(SUPER_ADMIN_HOME);
     expect(getPostLoginPath('', 'customer')).toBe(CUSTOMER_HOME);
     expect(getPostLoginPath('', 'merchant_owner')).toBe(MERCHANT_HOME);
+    expect(getPostLoginPath('', 'driver')).toBe(DRIVER_HOME);
   });
 
   it('no filtra roles hacia su panel cuando no hay sesión definida', () => {

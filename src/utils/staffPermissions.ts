@@ -4,10 +4,13 @@
  */
 import type { MerchantStaffPermissions } from '../types/database';
 
+export type EmployeeRole = 'merchant_staff' | 'driver';
+
 export interface EmployeeFormInput {
   fullName: string;
   email: string;
   password: string;
+  role: EmployeeRole;
   permissions: {
     can_manage_orders: boolean;
     can_manage_menu: boolean;
@@ -23,6 +26,15 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const DEFAULT_STAFF_PERMISSIONS: MerchantStaffPermissions = {
   can_manage_menu: false,
   can_view_orders: true,
+  can_manage_settings: false,
+  can_view_metrics: false,
+};
+
+/** Permisos de repartidor: solo gestión de pedidos. */
+export const DRIVER_PERMISSIONS: MerchantStaffPermissions = {
+  can_manage_menu: false,
+  can_view_orders: true,
+  can_manage_orders: true,
   can_manage_settings: false,
   can_view_metrics: false,
 };

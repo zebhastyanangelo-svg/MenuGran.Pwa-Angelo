@@ -2,6 +2,7 @@ import type { UserRole } from '../types/database';
 
 export const SUPER_ADMIN_HOME = '/super-admin/dashboard';
 export const MERCHANT_HOME = '/merchant/dashboard';
+export const DRIVER_HOME = '/driver';
 export const CUSTOMER_HOME = '/marketplace';
 
 /**
@@ -9,6 +10,7 @@ export const CUSTOMER_HOME = '/marketplace';
  * - Honra la ruta `from` si existe (retorno tras ser redirigido al login).
  * - superadmin → /super-admin/dashboard
  * - merchant_owner → /merchant/dashboard (panel del comercio)
+ * - driver → /driver (panel de reparto)
  * - customer y resto → catálogo público (/marketplace)
  */
 export function getPostLoginPath(
@@ -23,6 +25,9 @@ export function getPostLoginPath(
   }
   if (role === 'merchant_owner') {
     return MERCHANT_HOME;
+  }
+  if (role === 'driver') {
+    return DRIVER_HOME;
   }
   return CUSTOMER_HOME;
 }

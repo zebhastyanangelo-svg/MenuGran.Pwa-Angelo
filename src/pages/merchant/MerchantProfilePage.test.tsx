@@ -262,6 +262,7 @@ describe('MerchantProfilePage', () => {
           fullName: 'Ana Gómez',
           email: 'ana@pizzeria.com',
           password: 'Clave123',
+          role: 'merchant_staff',
           permissions: {
             can_manage_orders: false,
             can_manage_menu: true,
@@ -304,6 +305,30 @@ describe('MerchantProfilePage', () => {
       expect(await screen.findByRole('alert')).toHaveTextContent(
         'Error al crear el empleado: email already registered',
       );
+    });
+
+    it('permite registrar un repartidor seleccionando el rol "driver"', async () => {
+      const user = userEvent.setup();
+      await openModalAndFill();
+
+      await user.selectOptions(screen.getByTestId('employee-role'), 'driver');
+
+      await user.click(screen.getByTestId('confirm-add-employee'));
+
+      await waitFor(() => {
+        expect(serviceMocks.createEmployee).toHaveBeenCalledWith('m-1', {
+          fullName: 'Ana Gómez',
+          email: 'ana@pizzeria.com',
+          password: 'Clave123',
+          role: 'driver',
+          permissions: {
+            can_manage_orders: true,
+            can_manage_menu: false,
+            can_manage_settings: false,
+            can_view_metrics: false,
+          },
+        });
+      });
     });
   });
 

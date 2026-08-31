@@ -45,6 +45,9 @@ const SuperAdminDashboardPage = lazy(() =>
 const SuperAdminProfilePage = lazy(() =>
   import('./pages/superadmin/SuperAdminProfilePage').then((mod) => ({ default: mod.SuperAdminProfilePage })),
 );
+const DriverDashboard = lazy(() =>
+  import('./pages/driver/DriverDashboard').then((mod) => ({ default: mod.DriverDashboard })),
+);
 
 function RootRedirect() {
   const { user, profile, isLoading } = useAuth();
@@ -70,6 +73,9 @@ function RootRedirect() {
     }
     if (profile.role === 'superadmin') {
       return <Navigate to="/super-admin/dashboard" replace />;
+    }
+    if (profile.role === 'driver') {
+      return <Navigate to="/driver" replace />;
     }
     return <Navigate to="/admin" replace />;
   }
@@ -119,6 +125,14 @@ export function App() {
                   <Route path="/super-admin" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminMerchantsPage /></ProtectedRoute>} />
                   <Route path="/super-admin/dashboard" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminDashboardPage /></ProtectedRoute>} />
                   <Route path="/super-admin/profile" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminProfilePage /></ProtectedRoute>} />
+                  <Route
+                    path="/driver"
+                    element={
+                      <ProtectedRoute requiredRole="driver">
+                        <DriverDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>
