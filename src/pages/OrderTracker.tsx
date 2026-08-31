@@ -18,6 +18,10 @@ import { getOrderStatusLabel } from '../utils/orderStatus';
 import { OrderStatusStep } from '../components/orders/OrderStatusStep';
 import { getAllowedTransitions, getTransitionLabel, getTransitionButtonClass } from '../utils/orderStatus';
 
+interface ProductNameMap {
+  [productId: string]: string;
+}
+
 export function OrderTracker() {
   const { user, profile, isLoading: authLoading } = useAuth();
   const { id: orderId } = useParams<{ id: string }>();
@@ -27,6 +31,9 @@ export function OrderTracker() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedStep, setExpandedStep] = useState<string | null>(null);
+  const [productNames, setProductNames] = useState<ProductNameMap>({});
+  const [merchantName, setMerchantName] = useState<string | null>(null);
+  const [customerName, setCustomerName] = useState<string | null>(null);
 
   const { showToast } = useNotificationToast();
   const { permission, showNotification } = useNotifications();
@@ -97,6 +104,35 @@ export function OrderTracker() {
       previousStatusRef.current = data.status;
       setError(null);
       saveOrder(data);
+
+      // Fetch product names, merchant name, and customer name in parallel
+      const productIds = data.items?.map((item: { product_id: string }) => item.product_id) ?? [];
+
+      const [productsResult, merchantResult, customerResult] = await Promise.all([
+        productIds.length > 0
+          ? supabase.from('products').select('id, title').in('id', productIds)
+          : { data: [], error: null },
+        supabase.from('merchants').select('name').eq('id', data.merchant_id).single(),
+        data.customer_id
+          ? supabase.from('profiles').select('full_name').eq('id', data.customer_id).single()
+          : { data: null, error: null },
+      ]);
+
+      if (productsResult.data) {
+        const nameMap: ProductNameMap = {};
+        for (const p of productsResult.data) {
+          nameMap[p.id] = p.title;
+        }
+        setProductNames(nameMap);
+      }
+
+      if (merchantResult.data) {
+        setMerchantName(merchantResult.data.name);
+      }
+
+      if (customerResult.data) {
+        setCustomerName(customerResult.data.full_name);
+      }
     } catch (err) {
       console.error('Error loading order:', err);
 
@@ -276,7 +312,9 @@ export function OrderTracker() {
               {order.items.map((item, index) => (
                 <div key={`${item.product_id}-${index}`} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
                   <div>
-                    <p className="font-semibold text-gray-800">{item.product_id}</p>
+                    <p className="font-semibold text-gray-800">
+                      {productNames[item.product_id] ?? `Producto #${item.product_id.slice(0, 8)}`}
+                    </p>
                     <p className="text-sm text-gray-500">Cantidad: {item.quantity} x ${item.unit_price}</p>
                   </div>
                   <p className="font-bold text-gray-900">${(item.quantity * item.unit_price).toFixed(2)}</p>
@@ -296,12 +334,16 @@ export function OrderTracker() {
           <h2 className="text-xl font-bold mb-4 text-gray-800">Información del Comercio</h2>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">ID de Comercio:</span>
-              <span className="font-medium">{order.merchant_id}</span>
+              <span className="text-gray-600">Comercio:</span>
+              <span className="font-medium">
+                {merchantName ?? `Comercio #${order.merchant_id.slice(0, 8)}`}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Cliente:</span>
-              <span className="font-medium">{order.customer_id || 'Cliente invitado'}</span>
+              <span className="font-medium">
+                {customerName ?? (order.customer_id ? `Cliente #${order.customer_id.slice(0, 8)}` : 'Cliente invitado')}
+              </span>
             </div>
           </div>
         </section>

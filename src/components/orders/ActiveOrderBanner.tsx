@@ -31,7 +31,7 @@ export function ActiveOrderBanner() {
           </div>
           <button
             type="button"
-            onClick={() => navigate(`/order/${order.id}`)}
+            onClick={() => navigate(`/orders/${order.id}`)}
             className="whitespace-nowrap rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white hover:bg-white/30 transition-colors"
           >
             Ver seguimiento

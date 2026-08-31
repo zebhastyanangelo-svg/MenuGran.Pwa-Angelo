@@ -36,6 +36,7 @@ vi.mock('../services/supabase', () => {
         return {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
+          in: vi.fn().mockReturnThis(),
           single: vi.fn().mockImplementation(() => {
             return Promise.resolve({ data: null, error: null });
           }),
@@ -66,9 +67,9 @@ const createWrapper = () => ({
     <AuthProvider>
       <CartProvider>
         <NotificationToastProvider>
-          <MemoryRouter initialEntries={['/order/test-order-id']}>
+          <MemoryRouter initialEntries={['/orders/test-order-id']}>
             <Routes>
-              <Route path="/order/:id" element={children} />
+              <Route path="/orders/:id" element={children} />
             </Routes>
           </MemoryRouter>
         </NotificationToastProvider>
@@ -123,6 +124,7 @@ describe('OrderTracker', () => {
     const mockFrom = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
     };
     (supabase.from as Mock).mockReturnValue(mockFrom);
@@ -157,6 +159,7 @@ describe('OrderTracker', () => {
     const mockFrom = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
     };
     (supabase.from as Mock).mockReturnValue(mockFrom);
@@ -184,6 +187,7 @@ describe('OrderTracker', () => {
     const mockFrom = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       single: vi.fn().mockImplementation(() => loadingPromise),
     };
     (supabase.from as Mock).mockReturnValue(mockFrom);
@@ -204,6 +208,7 @@ describe('OrderTracker', () => {
     const mockFrom = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: null, error: { message: 'Order not found' } }),
     };
     (supabase.from as Mock).mockReturnValue(mockFrom);
@@ -233,6 +238,7 @@ describe('OrderTracker', () => {
     const mockFrom = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
     };
     (supabase.from as Mock).mockReturnValue(mockFrom);
@@ -273,6 +279,7 @@ describe('OrderTracker', () => {
     const mockFrom = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
     };
     (supabase.from as Mock).mockReturnValue(mockFrom);
@@ -295,6 +302,7 @@ describe('OrderTracker', () => {
     const mockFrom = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
     };
     (supabase.from as Mock).mockReturnValue(mockFrom);
@@ -315,6 +323,7 @@ describe('OrderTracker', () => {
     const mockFrom = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
     };
     (supabase.from as Mock).mockReturnValue(mockFrom);
@@ -335,6 +344,7 @@ describe('OrderTracker', () => {
     const mockFrom = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
     };
     (supabase.from as Mock).mockReturnValue(mockFrom);
@@ -355,6 +365,7 @@ describe('OrderTracker', () => {
     const mockFrom = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
     };
     (supabase.from as Mock).mockReturnValue(mockFrom);

@@ -194,7 +194,7 @@ describe('Checkout', () => {
     expect(validCart.clearCart).toHaveBeenCalled();
   }, 10000);
 
-  it('redirige a /order/:orderId después de confirmar el pedido', async () => {
+  it('redirige a /orders/:orderId después de confirmar el pedido', async () => {
     render(
       <MemoryRouter>
         <Checkout />
