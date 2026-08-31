@@ -14,13 +14,30 @@ describe('imgbb service', () => {
     vi.unstubAllEnvs();
   });
 
-  it('debe lanzar error si la API key de ImgBB no está configurada', async () => {
+  it('debe usar el fallback estático si la variable de entorno está vacía', async () => {
     vi.stubEnv('VITE_IMGBB_API_KEY', '');
-    const file = new File(['test'], 'test.png', { type: 'image/png' });
+    const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
+    const mockDisplayUrl = 'https://i.ibb.co/fallback/test.jpg';
 
-    await expect(uploadToImgBB(file)).rejects.toThrow(
-      'La API key de ImgBB no está configurada.',
-    );
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        status: 200,
+        data: { display_url: mockDisplayUrl, url: mockDisplayUrl },
+      }),
+    } as Response);
+
+    const result = await uploadToImgBB(mockFile, { compress: false });
+    expect(result).toBe(mockDisplayUrl);
+
+    const calls = (
+      globalThis.fetch as unknown as {
+        mock: { calls: [string, RequestInit][]; };
+      }
+    ).mock.calls;
+    const [url] = calls[0];
+    expect(url).toContain('key=85de5bb4a57df79ff01ea99cc13f8f03');
   });
 
   it('debe subir la imagen exitosamente y devolver la URL (display_url)', async () => {

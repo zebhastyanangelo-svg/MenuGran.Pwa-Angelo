@@ -24,20 +24,23 @@ export interface ImgBBUploadResponse {
 
 const IMGBB_ENDPOINT = 'https://api.imgbb.com/1/upload';
 
+const IMGBB_FALLBACK_KEY = '85de5bb4a57df79ff01ea99cc13f8f03';
+
 /**
- * Obtiene la API key de ImgBB, preferiendo el override de `options.apiKey`
- * y cayendo al fallback de variable de entorno `VITE_IMGBB_API_KEY`.
+ * Obtiene la API key de ImgBB, preferiendo el override de `options.apiKey`,
+ * cayendo a la variable de entorno `VITE_IMGBB_API_KEY` y, como último
+ * recurso, usando un fallback estático para evitar errores en runtime.
  */
-function resolveApiKey(options?: UploadToImgBBOptions): string | undefined {
+function resolveApiKey(options?: UploadToImgBBOptions): string {
   const fromOption = options?.apiKey;
   if (fromOption !== undefined && fromOption !== '') {
     return fromOption;
   }
   const fromEnv = import.meta.env.VITE_IMGBB_API_KEY;
-  if (fromEnv === undefined || fromEnv === '') {
-    return undefined;
+  if (fromEnv !== undefined && fromEnv !== '') {
+    return fromEnv;
   }
-  return fromEnv;
+  return IMGBB_FALLBACK_KEY;
 }
 
 /**
