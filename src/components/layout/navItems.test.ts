@@ -20,7 +20,7 @@ describe('getNavItemsForRole', () => {
     expect(items).toContain('/admin/profile');
   });
 
-  it('incluye la ruta de Perfil del comercio (/admin/profile) para eliminar el 404', () => {
+  it('incluye la ruta de Perfil del comercio (/admin/profile)', () => {
     const profileItem = merchantNavItems.find((i) => i.to === '/admin/profile');
     expect(profileItem).toBeDefined();
   });
@@ -31,10 +31,10 @@ describe('getNavItemsForRole', () => {
     );
     expect(staffItems).toContain('/admin/dishes'); // can_manage_menu
     expect(staffItems).not.toContain('/admin/settings'); // ownerOnly
-    expect(staffItems).not.toContain('/admin/profile'); // ownerOnly
+    expect(staffItems).toContain('/admin/profile'); // visible para todo merchant
   });
 
-  it('oculta Platos y Perfil a empleados sin can_manage_menu', () => {
+  it('oculta Platos a empleados sin can_manage_menu pero mantiene Perfil', () => {
     const limited: MerchantStaffPermissions = {
       can_manage_menu: false,
       can_view_orders: true,
@@ -43,7 +43,7 @@ describe('getNavItemsForRole', () => {
     const items = getNavItemsForRole('merchant_staff', limited).map((i) => i.to);
     expect(items).not.toContain('/admin/dishes');
     expect(items).not.toContain('/admin/settings');
-    expect(items).not.toContain('/admin/profile');
+    expect(items).toContain('/admin/profile'); // siempre visible para merchant
     expect(items).toContain('/admin');
   });
 
@@ -51,12 +51,12 @@ describe('getNavItemsForRole', () => {
     const items = getNavItemsForRole('merchant_staff', null).map((i) => i.to);
     expect(items).not.toContain('/admin/dishes');
     expect(items).not.toContain('/admin/settings');
-    expect(items).not.toContain('/admin/profile');
+    expect(items).toContain('/admin/profile'); // visible sin permisos cargados
   });
 
-  it('no muestra /admin/profile a merchant_staff incluso con permisos completos', () => {
+  it('muestra /admin/profile a merchant_staff con permisos completos', () => {
     const items = getNavItemsForRole('merchant_staff', FULL_PERMISSIONS).map((i) => i.to);
-    expect(items).not.toContain('/admin/profile');
+    expect(items).toContain('/admin/profile');
     expect(items).toContain('/admin');
     expect(items).toContain('/admin/dishes');
   });

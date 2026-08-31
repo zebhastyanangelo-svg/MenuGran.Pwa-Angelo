@@ -3,7 +3,6 @@ import { UtensilsCrossed } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useStaffPermissions } from '../../hooks/useStaffPermissions';
 import { getNavItemsForRole } from './navItems';
-import { LogoutButton } from './LogoutButton';
 
 export function Sidebar() {
   const { profile } = useAuth();
@@ -32,14 +31,6 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
-      {profile && (
-        <footer className="border-t border-slate-200 p-3">
-          <LogoutButton
-            className="flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-white hover:text-brand-red"
-            iconClassName="h-5 w-5"
-          />
-        </footer>
-      )}
     </aside>
   );
 }

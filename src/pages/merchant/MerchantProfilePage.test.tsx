@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { MerchantProfilePage } from './MerchantProfilePage';
 import type { MerchantContext, StaffListItem } from '../../services/merchantStaffService';
 import type { MerchantAnalytics } from '../../services/merchantAnalyticsService';
@@ -98,7 +99,7 @@ describe('MerchantProfilePage', () => {
   });
 
   it('muestra las tarjetas de métricas del comercio', async () => {
-    render(<MerchantProfilePage />);
+    render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
 
     expect(
       await screen.findByTestId('merchant-metrics', undefined, {
@@ -111,7 +112,7 @@ describe('MerchantProfilePage', () => {
   });
 
   it('muestra las gráficas de analíticas con los datos cargados', async () => {
-    render(<MerchantProfilePage />);
+    render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
 
     expect(
       await screen.findByTestId('analytics-section', undefined, {
@@ -123,7 +124,7 @@ describe('MerchantProfilePage', () => {
   });
 
   it('filtra las métricas y analíticas al cambiar el rango de fechas', async () => {
-    render(<MerchantProfilePage />);
+    render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
 
     await screen.findByTestId('merchant-metrics', undefined, { timeout: 5000 });
 
@@ -154,7 +155,7 @@ describe('MerchantProfilePage', () => {
 
   it('restablece el rango de fechas al hacer clic en "Restablecer"', async () => {
     const user = userEvent.setup();
-    render(<MerchantProfilePage />);
+    render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
 
     await screen.findByTestId('merchant-metrics', undefined, { timeout: 5000 });
 
@@ -177,7 +178,7 @@ describe('MerchantProfilePage', () => {
   });
 
   it('muestra el selector de rango de fechas con las fechas por defecto', async () => {
-    render(<MerchantProfilePage />);
+    render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
 
     await screen.findByTestId('merchant-metrics', undefined, { timeout: 5000 });
 
@@ -188,7 +189,7 @@ describe('MerchantProfilePage', () => {
   });
 
   it('lista los empleados con estado y badges de permisos', async () => {
-    render(<MerchantProfilePage />);
+    render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
 
     const row = await screen.findByTestId('staff-row', undefined, { timeout: 5000 });
     expect(row).toHaveTextContent('Carlos Ruiz');
@@ -202,7 +203,7 @@ describe('MerchantProfilePage', () => {
       new Error('Error al cargar los empleados: rls denied'),
     );
 
-    render(<MerchantProfilePage />);
+    render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Error al cargar los empleados: rls denied',
@@ -214,7 +215,7 @@ describe('MerchantProfilePage', () => {
       new Error('Error al obtener órdenes para análisis: conexión fallida'),
     );
 
-    render(<MerchantProfilePage />);
+    render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
 
     await screen.findByTestId('merchant-metrics', undefined, { timeout: 5000 });
     expect(
@@ -225,7 +226,7 @@ describe('MerchantProfilePage', () => {
   describe('alta de empleados', () => {
     async function openModalAndFill(): Promise<void> {
       const user = userEvent.setup();
-      render(<MerchantProfilePage />);
+      render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
       await user.click(
         await screen.findByTestId('open-add-employee', undefined, {
           timeout: 5000,
@@ -309,7 +310,7 @@ describe('MerchantProfilePage', () => {
   describe('gestión de empleados', () => {
     it('revoca el acceso del empleado', async () => {
       const user = userEvent.setup();
-      render(<MerchantProfilePage />);
+      render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
       await screen.findByTestId('staff-row', undefined, { timeout: 5000 });
 
       await user.click(screen.getByTestId('revoke-staff-s-1'));
@@ -322,7 +323,7 @@ describe('MerchantProfilePage', () => {
 
     it('abre el modal de confirmación antes de eliminar al empleado', async () => {
       const user = userEvent.setup();
-      render(<MerchantProfilePage />);
+      render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
       await screen.findByTestId('staff-row', undefined, { timeout: 5000 });
 
       await user.click(screen.getByTestId('delete-staff-s-1'));
@@ -336,7 +337,7 @@ describe('MerchantProfilePage', () => {
 
     it('elimina al empleado del listado después de confirmar en el modal', async () => {
       const user = userEvent.setup();
-      render(<MerchantProfilePage />);
+      render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
       await screen.findByTestId('staff-row', undefined, { timeout: 5000 });
 
       await user.click(screen.getByTestId('delete-staff-s-1'));
@@ -350,7 +351,7 @@ describe('MerchantProfilePage', () => {
 
     it('cancela la eliminación desde el modal sin llamar al servicio', async () => {
       const user = userEvent.setup();
-      render(<MerchantProfilePage />);
+      render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
       await screen.findByTestId('staff-row', undefined, { timeout: 5000 });
 
       await user.click(screen.getByTestId('delete-staff-s-1'));
@@ -366,7 +367,7 @@ describe('MerchantProfilePage', () => {
 
     it('abre el modal de modificación de permisos al hacer clic en "Permisos"', async () => {
       const user = userEvent.setup();
-      render(<MerchantProfilePage />);
+      render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
       await screen.findByTestId('staff-row', undefined, { timeout: 5000 });
 
       await user.click(screen.getByTestId('modify-staff-s-1'));
@@ -379,7 +380,7 @@ describe('MerchantProfilePage', () => {
 
     it('guarda los permisos modificados del empleado', async () => {
       const user = userEvent.setup();
-      render(<MerchantProfilePage />);
+      render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
       await screen.findByTestId('staff-row', undefined, { timeout: 5000 });
 
       await user.click(screen.getByTestId('modify-staff-s-1'));
@@ -405,7 +406,7 @@ describe('MerchantProfilePage', () => {
 
     it('cierra el modal de modificación sin guardar al cancelar', async () => {
       const user = userEvent.setup();
-      render(<MerchantProfilePage />);
+      render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
       await screen.findByTestId('staff-row', undefined, { timeout: 5000 });
 
       await user.click(screen.getByTestId('modify-staff-s-1'));
@@ -423,7 +424,7 @@ describe('MerchantProfilePage', () => {
   it('oculta la gestión de empleados para usuarios que no son owner', async () => {
     serviceMocks.getMerchantContext.mockResolvedValue({ ...context, isOwner: false });
 
-    render(<MerchantProfilePage />);
+    render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
 
     expect(await screen.findByTestId('staff-list', undefined, { timeout: 5000 })).toBeInTheDocument();
     expect(
@@ -437,7 +438,7 @@ describe('MerchantProfilePage', () => {
   it('muestra el estado vacío cuando no hay empleados', async () => {
     serviceMocks.listStaff.mockResolvedValue([]);
 
-    render(<MerchantProfilePage />);
+    render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
 
     expect(await screen.findByText(/aún no hay empleados/i, undefined, { timeout: 5000 })).toBeInTheDocument();
   });
@@ -450,7 +451,7 @@ describe('MerchantProfilePage', () => {
     });
     serviceMocks.getMerchantContext.mockResolvedValue({ ...context, isOwner: false });
 
-    render(<MerchantProfilePage />);
+    render(<MemoryRouter><MerchantProfilePage /></MemoryRouter>);
 
     await screen.findByTestId('staff-list', undefined, { timeout: 5000 });
 

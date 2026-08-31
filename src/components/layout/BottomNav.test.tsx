@@ -76,40 +76,13 @@ describe('BottomNav', () => {
     expect(screen.getByRole('navigation', { name: /navegación principal/i })).toBeInTheDocument();
   });
 
-  it('muestra el botón de Cerrar Sesión en móvil para merchant_owner', () => {
+  it('no muestra el botón de Cerrar Sesión en el bottom nav', () => {
     useAuthMock.mockReturnValue({
       profile: { role: 'merchant_owner' },
       signOut: vi.fn(),
     });
     render(
       <MemoryRouter initialEntries={['/admin']}>
-        <BottomNav />
-      </MemoryRouter>,
-    );
-    expect(
-      screen.getByRole('button', { name: /cerrar sesión/i }),
-    ).toBeInTheDocument();
-  });
-
-  it('muestra el botón de Cerrar Sesión en móvil para merchant_staff', () => {
-    useAuthMock.mockReturnValue({
-      profile: { role: 'merchant_staff' },
-      signOut: vi.fn(),
-    });
-    render(
-      <MemoryRouter initialEntries={['/admin']}>
-        <BottomNav />
-      </MemoryRouter>,
-    );
-    expect(
-      screen.getByRole('button', { name: /cerrar sesión/i }),
-    ).toBeInTheDocument();
-  });
-
-  it('no muestra el botón de Cerrar Sesión para visitantes no autenticados', () => {
-    useAuthMock.mockReturnValue({ profile: null, user: null, signOut: vi.fn() });
-    render(
-      <MemoryRouter initialEntries={['/marketplace']}>
         <BottomNav />
       </MemoryRouter>,
     );
