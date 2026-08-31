@@ -66,6 +66,14 @@ vi.mock('./hooks/useCart', () => ({
   }),
 }));
 
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useBlocker: vi.fn(() => ({ state: 'unblocked', reset: vi.fn() })),
+  };
+});
+
 function buildSuperadminAuth(): Partial<AuthContextValue> {
   return {
     user: { id: 'sa-1', email: 'zebhastyanangelo@gmail.com' } as never,

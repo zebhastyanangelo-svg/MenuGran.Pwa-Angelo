@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { NotificationToastProvider } from '../pwa/NotificationToast';
 
 vi.mock('../../hooks/useStaffPermissions', () => ({
   useStaffPermissions: () => ({ permissions: null, isLoading: false }),
@@ -10,18 +11,28 @@ vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({ user: null, profile: { role: 'customer' }, isLoading: false }),
 }));
 
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useBlocker: vi.fn(() => ({ state: 'unblocked', reset: vi.fn() })),
+  };
+});
+
 import { Layout } from './Layout';
 
 function renderLayoutAt(path: string) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/marketplace" element={<div>Contenido mercado</div>} />
-          <Route path="/login" element={<div>Pantalla login</div>} />
-        </Route>
-      </Routes>
-    </MemoryRouter>,
+    <NotificationToastProvider>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/marketplace" element={<div>Contenido mercado</div>} />
+            <Route path="/login" element={<div>Pantalla login</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </NotificationToastProvider>,
   );
 }
 

@@ -77,7 +77,7 @@ export function Checkout() {
       const proofPath = await uploadPaymentProofTemp(proofToUpload);
 
       // Step 2: Create order WITH the proof URL already set
-      await createOrder({
+      const data = await createOrder({
         merchantId: merchantId!,
         customerId: user!.id,
         orderType,
@@ -103,7 +103,7 @@ export function Checkout() {
       });
 
       clearCart();
-      navigate('/marketplace');
+      navigate(`/order/${data}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al enviar el comprobante.');
     } finally {

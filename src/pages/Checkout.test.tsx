@@ -193,4 +193,38 @@ describe('Checkout', () => {
     );
     expect(validCart.clearCart).toHaveBeenCalled();
   }, 10000);
+
+  it('redirige a /order/:orderId después de confirmar el pedido', async () => {
+    render(
+      <MemoryRouter>
+        <Checkout />
+      </MemoryRouter>,
+    );
+
+    await user.selectOptions(screen.getByLabelText(/Banco de destino/i), 'banco_pichincha');
+    await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
+    const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
+    await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), file);
+    await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockCreateOrder).toHaveBeenCalled();
+    }, { timeout: 5000 });
+    expect(mockCreateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        merchantId: 'm-123',
+        customerId: 'user-123',
+        orderType: 'delivery',
+        paymentMethod: 'pago_movil',
+        paymentReference: 'REF123456',
+        totalAmount: 100,
+        paymentProofUrl: 'tmp/abc123.jpg',
+      }),
+    );
+    expect(validCart.clearCart).toHaveBeenCalled();
+  }, 10000);
 });

@@ -76,6 +76,14 @@ vi.mock('./hooks/useCart', () => ({
   }),
 }));
 
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useBlocker: vi.fn(() => ({ state: 'unblocked', reset: vi.fn() })),
+  };
+});
+
 describe('App Router Integration', () => {
   const setAuth = (value: Partial<AuthContextValue>) => {
     vi.mocked(useAuth).mockReturnValue(value as AuthContextValue);
