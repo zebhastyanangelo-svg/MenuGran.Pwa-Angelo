@@ -103,7 +103,7 @@ export function Checkout() {
       });
 
       clearCart();
-      navigate(`/order/${data}`);
+      navigate(`/orders/${data}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al enviar el comprobante.');
     } finally {

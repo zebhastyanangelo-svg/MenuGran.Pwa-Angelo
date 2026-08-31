@@ -1,10 +1,35 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MapPin, Navigation, X } from 'lucide-react';
 import { supabase, TABLE_NAMES } from '../services/supabase';
-import type { MerchantRow } from '../types/database';
+import type { GeoPoint, MerchantRow } from '../types/database';
 import { SearchBar } from '../components/marketplace/SearchBar';
 import { MerchantCard } from '../components/marketplace/MerchantCard';
 import { MarketplaceSkeleton } from '../components/marketplace/MarketplaceSkeleton';
+import {
+  getCurrentGeoPoint,
+  isGeolocationSupported,
+  resolveGeolocationErrorMessage,
+} from '../utils/geolocation';
+import { haversineDistance, DEFAULT_NEARBY_RADIUS_KM } from '../utils/geo';
+
+interface MerchantWithDistance {
+  merchant: MerchantRow;
+  distance: number | null;
+}
+
+function computeDistances(
+  merchants: MerchantRow[],
+  userLocation: GeoPoint | null,
+): MerchantWithDistance[] {
+  return merchants.map((m) => ({
+    merchant: m,
+    distance:
+      userLocation !== null && m.location !== null
+        ? haversineDistance(userLocation, m.location)
+        : null,
+  }));
+}
 
 export function MarketplacePage() {
   const navigate = useNavigate();
@@ -12,6 +37,11 @@ export function MarketplacePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [userLocation, setUserLocation] = useState<GeoPoint | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [nearbyOnly, setNearbyOnly] = useState(true);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -38,9 +68,57 @@ export function MarketplacePage() {
     void fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    if (!isGeolocationSupported()) {
+      setLocationError(
+        'Tu navegador no soporta geolocalización. Puedes explorar todos los comercios.',
+      );
+      return;
+    }
+
+    let cancelled = false;
+    setIsLocating(true);
+
+    getCurrentGeoPoint()
+      .then((point) => {
+        if (!cancelled) {
+          setUserLocation(point);
+          setLocationError(null);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setLocationError(resolveGeolocationErrorMessage(err));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLocating(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const merchantsWithDistance = useMemo(
+    () => computeDistances(merchants, userLocation),
+    [merchants, userLocation],
+  );
+
   const filteredMerchants = useMemo(() => {
-    return merchants.filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [merchants, searchQuery]);
+    const bySearch = merchantsWithDistance.filter((m) =>
+      m.merchant.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+
+    if (!nearbyOnly || userLocation === null) {
+      return bySearch;
+    }
+
+    return bySearch.filter(
+      (m) =>
+        m.distance === null || m.distance <= DEFAULT_NEARBY_RADIUS_KM,
+    );
+  }, [merchantsWithDistance, searchQuery, nearbyOnly, userLocation]);
 
   const handleMerchantClick = useCallback(
     (merchant: MerchantRow) => {
@@ -48,6 +126,8 @@ export function MarketplacePage() {
     },
     [navigate],
   );
+
+  const hasGps = userLocation !== null;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
@@ -60,6 +140,48 @@ export function MarketplacePage() {
 
       <main className="mx-auto max-w-3xl px-4 pt-4">
         <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+
+        {isLocating && (
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+            <Navigation className="h-3.5 w-3.5 animate-pulse" aria-hidden="true" />
+            Buscando comercios cercanos…
+          </p>
+        )}
+
+        {locationError !== null && (
+          <div className="mt-2 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="flex-1">{locationError}</span>
+            <button
+              type="button"
+              onClick={() => setLocationError(null)}
+              className="ml-1 shrink-0 rounded p-0.5 text-amber-600 hover:bg-amber-100"
+              aria-label="Cerrar aviso"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
+        {hasGps && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => setNearbyOnly((prev) => !prev)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                nearbyOnly
+                  ? 'border-brand-red bg-brand-red text-white'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-800'
+              }`}
+              data-testid="nearby-toggle"
+            >
+              <MapPin className="h-3 w-3" aria-hidden="true" />
+              {nearbyOnly
+                ? `Cercanos (${DEFAULT_NEARBY_RADIUS_KM} km)`
+                : 'Ver todos los comercios'}
+            </button>
+          </div>
+        )}
 
         {isLoading ? (
           <MarketplaceSkeleton />
@@ -78,13 +200,16 @@ export function MarketplacePage() {
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {filteredMerchants.length === 0 ? (
               <p className="col-span-full py-8 text-center text-sm text-gray-500">
-                No se encontraron comercios.
+                {nearbyOnly && hasGps
+                  ? 'No se encontraron comercios cercanos. Prueba ampliando el radio.'
+                  : 'No se encontraron comercios.'}
               </p>
             ) : (
-              filteredMerchants.map((merchant) => (
+              filteredMerchants.map(({ merchant, distance }) => (
                 <MerchantCard
                   key={merchant.id}
                   merchant={merchant}
+                  distance={distance ?? undefined}
                   onClick={handleMerchantClick}
                 />
               ))

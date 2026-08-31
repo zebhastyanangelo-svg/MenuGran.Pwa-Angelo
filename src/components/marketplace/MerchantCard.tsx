@@ -1,11 +1,14 @@
+import { MapPin } from 'lucide-react';
 import type { MerchantRow } from '../../types/database';
 
 export interface MerchantCardProps {
   merchant: MerchantRow;
   onClick?: (merchant: MerchantRow) => void;
+  /** Distancia en km desde la ubicación del usuario. Opcional. */
+  distance?: number;
 }
 
-export function MerchantCard({ merchant, onClick }: MerchantCardProps) {
+export function MerchantCard({ merchant, onClick, distance }: MerchantCardProps) {
   const handleClick = () => {
     if (onClick !== undefined) {
       onClick(merchant);
@@ -47,9 +50,17 @@ export function MerchantCard({ merchant, onClick }: MerchantCardProps) {
               </div>
             )}
           </div>
-          <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
-            Abierto
-          </span>
+          <div className="flex items-center gap-1.5">
+            {typeof distance === 'number' && (
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                <MapPin className="h-3 w-3" aria-hidden="true" />
+                {distance < 0.1 ? '<0.1' : distance.toFixed(1)} km
+              </span>
+            )}
+            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+              Abierto
+            </span>
+          </div>
         </div>
 
         <h3 className="text-base font-bold text-slate-900 group-hover:text-brand-red">

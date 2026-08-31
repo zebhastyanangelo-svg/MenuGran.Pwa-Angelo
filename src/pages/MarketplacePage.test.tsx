@@ -1,12 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { MerchantRow } from '../types/database';
+import type { GeoPoint, MerchantRow } from '../types/database';
 import { MarketplacePage } from './MarketplacePage';
 
-const authMocks = vi.hoisted(() => ({
+const mocks = vi.hoisted(() => ({
   supabaseMock: { from: vi.fn() },
   navigateMock: vi.fn(),
+  getCurrentGeoPointMock: vi.fn(),
 }));
 
 vi.mock('../services/supabase', () => ({
@@ -19,22 +20,38 @@ vi.mock('../services/supabase', () => ({
     orders: 'orders',
     deliveries: 'deliveries',
   },
-  supabase: authMocks.supabaseMock,
+  supabase: mocks.supabaseMock,
 }));
 
 vi.mock('../hooks/useToast', () => ({
   useToast: () => ({ showToast: vi.fn(), hideToast: vi.fn(), toasts: [] }),
 }));
 
+vi.mock('../utils/geolocation', () => ({
+  isGeolocationSupported: () => true,
+  getCurrentGeoPoint: () => mocks.getCurrentGeoPointMock(),
+  resolveGeolocationErrorMessage: (err: unknown) => {
+    if (err !== null && typeof err === 'object' && 'code' in err) {
+      const code = (err as { code: number }).code;
+      if (code === 1) return 'Permiso de ubicación denegado.';
+    }
+    return 'No se pudo obtener tu ubicación.';
+  },
+}));
+
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>();
   return {
     ...actual,
-    useNavigate: () => authMocks.navigateMock,
+    useNavigate: () => mocks.navigateMock,
   };
 });
 
-function buildMerchant(id: string, name: string): MerchantRow {
+function buildMerchant(
+  id: string,
+  name: string,
+  location: GeoPoint | null = null,
+): MerchantRow {
   return {
     id,
     owner_id: 'owner-1',
@@ -44,7 +61,7 @@ function buildMerchant(id: string, name: string): MerchantRow {
     banner_url: null,
     status: 'active',
     verification_docs: {},
-    location: null,
+    location,
     is_active: true,
     is_open: true,
     created_at: '2026-01-01T00:00:00.000Z',
@@ -59,8 +76,10 @@ function buildMerchant(id: string, name: string): MerchantRow {
   };
 }
 
-function mockTableResults(results: Record<string, { data: unknown[] | null; error: unknown }>) {
-  authMocks.supabaseMock.from = vi.fn((table: string) => {
+function mockTableResults(
+  results: Record<string, { data: unknown[] | null; error: unknown }>,
+) {
+  mocks.supabaseMock.from = vi.fn((table: string) => {
     const result = results[table] ?? { data: [], error: null };
     const query: {
       select: () => typeof query;
@@ -79,32 +98,17 @@ function mockTableResults(results: Record<string, { data: unknown[] | null; erro
   });
 }
 
-const localStore: Record<string, string> = {};
-const localStorageMock = {
-  getItem: (key: string) => (key in localStore ? localStore[key] : null),
-  setItem: (key: string, value: string) => {
-    localStore[key] = String(value);
-  },
-  removeItem: (key: string) => {
-    delete localStore[key];
-  },
-  clear: () => {
-    for (const key of Object.keys(localStore)) delete localStore[key];
-  },
-};
+const userLocation: GeoPoint = { x: -66.9036, y: 10.4806 };
 
 describe('MarketplacePage', () => {
   beforeEach(() => {
-    authMocks.supabaseMock.from = vi.fn();
-    authMocks.navigateMock.mockReset();
-    Object.defineProperty(globalThis, 'localStorage', {
-      value: localStorageMock,
-      configurable: true,
-    });
-    localStorageMock.clear();
+    mocks.supabaseMock.from = vi.fn();
+    mocks.navigateMock.mockReset();
+    mocks.getCurrentGeoPointMock.mockReset();
   });
 
   it('muestra los comercios tras cargar los datos', async () => {
+    mocks.getCurrentGeoPointMock.mockRejectedValue(new Error('no gps'));
     mockTableResults({
       merchants: { data: [buildMerchant('m1', 'La Esquina')], error: null },
     });
@@ -119,6 +123,7 @@ describe('MarketplacePage', () => {
   });
 
   it('muestra estado vacío cuando no hay comercios', async () => {
+    mocks.getCurrentGeoPointMock.mockRejectedValue(new Error('no gps'));
     mockTableResults({
       merchants: { data: [], error: null },
     });
@@ -129,10 +134,13 @@ describe('MarketplacePage', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText(/No se encontraron comercios/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/No se encontraron comercios/i),
+    ).toBeInTheDocument();
   });
 
   it('muestra mensaje de error y botón para reintentar', async () => {
+    mocks.getCurrentGeoPointMock.mockRejectedValue(new Error('no gps'));
     mockTableResults({
       merchants: { data: null, error: { message: 'fallo de red' } },
     });
@@ -143,11 +151,16 @@ describe('MarketplacePage', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText(/Ocurrió un error al cargar la información/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Reintentar/i })).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Ocurrió un error al cargar la información/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Reintentar/i }),
+    ).toBeInTheDocument();
   });
 
   it('navega al detalle del comercio al hacer clic en la tarjeta', async () => {
+    mocks.getCurrentGeoPointMock.mockRejectedValue(new Error('no gps'));
     mockTableResults({
       merchants: { data: [buildMerchant('m1', 'La Esquina')], error: null },
     });
@@ -162,6 +175,144 @@ describe('MarketplacePage', () => {
     const card = merchant.closest('[role="button"]');
     fireEvent.click(card!);
 
-    expect(authMocks.navigateMock).toHaveBeenCalledWith('/merchant/m1');
+    expect(mocks.navigateMock).toHaveBeenCalledWith('/merchant/m1');
+  });
+
+  describe('filtrado por geolocalización', () => {
+    it('solo muestra comercios dentro de 1 km cuando GPS está disponible', async () => {
+      mocks.getCurrentGeoPointMock.mockResolvedValue(userLocation);
+      const cerca = buildMerchant('m1', 'Cerca', { x: -66.904, y: 10.481 });
+      const lejos = buildMerchant('m2', 'Lejos', { x: -66.92, y: 10.5 });
+      mockTableResults({
+        merchants: { data: [cerca, lejos], error: null },
+      });
+
+      render(
+        <MemoryRouter>
+          <MarketplacePage />
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText('Cerca')).toBeInTheDocument();
+      expect(screen.queryByText('Lejos')).not.toBeInTheDocument();
+    });
+
+    it('muestra comercios sin location (null) incluidos en el filtro cercano', async () => {
+      mocks.getCurrentGeoPointMock.mockResolvedValue(userLocation);
+      const sinLocation = buildMerchant('m1', 'Sin GPS', null);
+      mockTableResults({
+        merchants: { data: [sinLocation], error: null },
+      });
+
+      render(
+        <MemoryRouter>
+          <MarketplacePage />
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText('Sin GPS')).toBeInTheDocument();
+    });
+
+    it('muestra todos los comercios cuando el usuario deniega el GPS', async () => {
+      mocks.getCurrentGeoPointMock.mockRejectedValue({ code: 1 });
+      const cerca = buildMerchant('m1', 'Cerca', { x: -66.904, y: 10.481 });
+      const lejos = buildMerchant('m2', 'Lejos', { x: -66.92, y: 10.5 });
+      mockTableResults({
+        merchants: { data: [cerca, lejos], error: null },
+      });
+
+      render(
+        <MemoryRouter>
+          <MarketplacePage />
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText('Cerca')).toBeInTheDocument();
+      expect(screen.getByText('Lejos')).toBeInTheDocument();
+    });
+
+    it('el toggle cambia entre "Cercanos" y "Ver todos"', async () => {
+      mocks.getCurrentGeoPointMock.mockResolvedValue(userLocation);
+      const cerca = buildMerchant('m1', 'Cerca', { x: -66.904, y: 10.481 });
+      const lejos = buildMerchant('m2', 'Lejos', { x: -66.92, y: 10.5 });
+      mockTableResults({
+        merchants: { data: [cerca, lejos], error: null },
+      });
+
+      render(
+        <MemoryRouter>
+          <MarketplacePage />
+        </MemoryRouter>,
+      );
+
+      await screen.findByText('Cerca');
+      expect(screen.queryByText('Lejos')).not.toBeInTheDocument();
+
+      const toggle = screen.getByTestId('nearby-toggle');
+      fireEvent.click(toggle);
+
+      expect(screen.getByText('Lejos')).toBeInTheDocument();
+
+      fireEvent.click(toggle);
+      await waitFor(() => {
+        expect(screen.queryByText('Lejos')).not.toBeInTheDocument();
+      });
+    });
+
+    it('muestra badge de distancia en las tarjetas', async () => {
+      mocks.getCurrentGeoPointMock.mockResolvedValue(userLocation);
+      const merchant = buildMerchant('m1', 'Mi Negocio', {
+        x: -66.904,
+        y: 10.481,
+      });
+      mockTableResults({
+        merchants: { data: [merchant], error: null },
+      });
+
+      render(
+        <MemoryRouter>
+          <MarketplacePage />
+        </MemoryRouter>,
+      );
+
+      await screen.findByText('Mi Negocio');
+      expect(screen.getByText(/km$/)).toBeInTheDocument();
+    });
+
+    it('muestra aviso de error de GPS y botón para cerrar', async () => {
+      mocks.getCurrentGeoPointMock.mockRejectedValue({ code: 1 });
+      mockTableResults({
+        merchants: { data: [buildMerchant('m1', 'La Esquina')], error: null },
+      });
+
+      render(
+        <MemoryRouter>
+          <MarketplacePage />
+        </MemoryRouter>,
+      );
+
+      await screen.findByText(/Permiso de ubicación denegado/i);
+      const closeBtn = screen.getByRole('button', { name: /Cerrar aviso/i });
+      fireEvent.click(closeBtn);
+      expect(
+        screen.queryByText(/Permiso de ubicación denegado/i),
+      ).not.toBeInTheDocument();
+    });
+
+    it('no muestra el toggle cuando no hay GPS', async () => {
+      mocks.getCurrentGeoPointMock.mockRejectedValue(new Error('no support'));
+      mockTableResults({
+        merchants: { data: [buildMerchant('m1', 'La Esquina')], error: null },
+      });
+
+      render(
+        <MemoryRouter>
+          <MarketplacePage />
+        </MemoryRouter>,
+      );
+
+      await screen.findByText('La Esquina');
+      expect(screen.queryByTestId('nearby-toggle')).not.toBeInTheDocument();
+    });
   });
 });
