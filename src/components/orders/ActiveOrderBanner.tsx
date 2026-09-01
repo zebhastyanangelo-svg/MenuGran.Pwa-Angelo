@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useActiveOrder } from '../../hooks/useActiveOrder';
+import { useActiveOrder, isActiveOrder } from '../../hooks/useActiveOrder';
 import { getOrderStatusLabel } from '../../utils/orderStatus';
 import { Bike, Store } from 'lucide-react';
 
@@ -7,7 +7,7 @@ export function ActiveOrderBanner() {
   const { isActive, order, status } = useActiveOrder();
   const navigate = useNavigate();
 
-  if (!isActive || !order || !status) {
+  if (!isActive || !order || !status || !isActiveOrder(order.status)) {
     return null;
   }
 

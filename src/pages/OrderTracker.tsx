@@ -17,6 +17,7 @@ import { statusDisplayMap } from '../utils/statusDisplayMap';
 import { getOrderStatusLabel } from '../utils/orderStatus';
 import { OrderStatusStep } from '../components/orders/OrderStatusStep';
 import { getAllowedTransitions, getTransitionLabel, getTransitionButtonClass } from '../utils/orderStatus';
+import { PartyPopper, ArrowLeft } from 'lucide-react';
 
 interface ProductNameMap {
   [productId: string]: string;
@@ -239,6 +240,29 @@ export function OrderTracker() {
           </span>
         </p>
       </header>
+
+      {order.status === 'delivered' && (
+        <div className="mb-8 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 p-8 text-center shadow-md">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+            <PartyPopper className="h-8 w-8 text-emerald-600" aria-hidden="true" />
+          </div>
+          <h2 className="text-2xl font-bold text-emerald-800 mb-2">
+            ¡Pedido Entregado!
+          </h2>
+          <p className="text-emerald-700 mb-6 text-lg">
+            ¡Gracias por tu compra, buen provecho!
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow hover:bg-emerald-700 transition-colors"
+            data-testid="back-to-marketplace"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Explorar más comercios
+          </button>
+        </div>
+      )}
 
       <div className="mb-8 overflow-x-auto">
         <div className="flex items-start justify-between min-w-[600px]">
