@@ -314,5 +314,61 @@ describe('MarketplacePage', () => {
       await screen.findByText('La Esquina');
       expect(screen.queryByTestId('nearby-toggle')).not.toBeInTheDocument();
     });
+
+    it('no colapsa cuando los comercios tienen location malformados', async () => {
+      mocks.getCurrentGeoPointMock.mockResolvedValue(userLocation);
+
+      const malformedMerchants = [
+        buildMerchant('m1', 'Sin Location', null),
+        // Simula location con coordenadas undefined (dato corrupto de DB)
+        { ...buildMerchant('m2', 'Coord Undefined'), location: { x: undefined, y: undefined } } as unknown as MerchantRow,
+        // Simula location con NaN
+        { ...buildMerchant('m3', 'Coord NaN'), location: { x: NaN, y: NaN } } as unknown as MerchantRow,
+        // Simula location que es un objeto vacío
+        { ...buildMerchant('m4', 'Obj Vacío'), location: {} } as unknown as MerchantRow,
+        // Comercio válido que debe renderizarse correctamente
+        buildMerchant('m5', 'Válido', { x: -66.904, y: 10.481 }),
+      ];
+
+      mockTableResults({
+        merchants: { data: malformedMerchants, error: null },
+      });
+
+      render(
+        <MemoryRouter>
+          <MarketplacePage />
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText('Sin Location')).toBeInTheDocument();
+      expect(screen.getByText('Coord Undefined')).toBeInTheDocument();
+      expect(screen.getByText('Coord NaN')).toBeInTheDocument();
+      expect(screen.getByText('Obj Vacío')).toBeInTheDocument();
+      expect(screen.getByText('Válido')).toBeInTheDocument();
+    });
+
+    it('no colapsa cuando el location de un comercio es undefined', async () => {
+      mocks.getCurrentGeoPointMock.mockResolvedValue(userLocation);
+
+      const merchants = [
+        { ...buildMerchant('m1', 'Broken'), location: undefined } as unknown as MerchantRow,
+        buildMerchant('m2', 'OK', { x: -66.904, y: 10.481 }),
+      ];
+
+      mockTableResults({
+        merchants: { data: merchants, error: null },
+      });
+
+      expect(() => {
+        render(
+          <MemoryRouter>
+            <MarketplacePage />
+          </MemoryRouter>,
+        );
+      }).not.toThrow();
+
+      expect(await screen.findByText('Broken')).toBeInTheDocument();
+      expect(screen.getByText('OK')).toBeInTheDocument();
+    });
   });
 });

@@ -50,8 +50,8 @@ export function sortByDistance<T extends { location: GeoPoint | null }>(
   from: GeoPoint,
 ): T[] {
   return [...items].sort((a, b) => {
-    const d = a.location ? haversineDistance(a.location, from).km : Infinity;
-    const e = b.location ? haversineDistance(b.location, from).km : Infinity;
+    const d = a.location != null ? safeDistanceKm(a.location, from) : Infinity;
+    const e = b.location != null ? safeDistanceKm(b.location, from) : Infinity;
     return d - e;
   });
 }
@@ -60,17 +60,26 @@ interface LocatedItem {
   location: GeoPoint | null;
 }
 
+function safeDistanceKm(a: GeoPoint, b: GeoPoint): number {
+  if (
+    typeof a.x !== 'number' || !Number.isFinite(a.x) ||
+    typeof a.y !== 'number' || !Number.isFinite(a.y) ||
+    typeof b.x !== 'number' || !Number.isFinite(b.x) ||
+    typeof b.y !== 'number' || !Number.isFinite(b.y)
+  ) {
+    return Infinity;
+  }
+  return haversineDistance(a, b).km;
+}
+
 export function merchantsByDistance(
   merchants: readonly (MerchantRow & LocatedItem)[],
   from: GeoPoint,
 ): MerchantRow[] {
   return [...merchants].sort((a, b) => {
-    if (a.location === null && b.location === null) return 0;
-    if (a.location === null) return 1;
-    if (b.location === null) return -1;
-    return (
-      haversineDistance(a.location, from).km -
-      haversineDistance(b.location, from).km
-    );
+    if (a.location == null && b.location == null) return 0;
+    if (a.location == null) return 1;
+    if (b.location == null) return -1;
+    return safeDistanceKm(a.location, from) - safeDistanceKm(b.location, from);
   });
 }

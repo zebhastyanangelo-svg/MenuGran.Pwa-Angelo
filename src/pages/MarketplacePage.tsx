@@ -11,7 +11,11 @@ import {
   isGeolocationSupported,
   resolveGeolocationErrorMessage,
 } from '../utils/geolocation';
-import { haversineDistance, DEFAULT_NEARBY_RADIUS_KM } from '../utils/geo';
+import {
+  haversineDistance,
+  isValidGeoPoint,
+  DEFAULT_NEARBY_RADIUS_KM,
+} from '../utils/geo';
 
 interface MerchantWithDistance {
   merchant: MerchantRow;
@@ -22,13 +26,20 @@ function computeDistances(
   merchants: MerchantRow[],
   userLocation: GeoPoint | null,
 ): MerchantWithDistance[] {
-  return merchants.map((m) => ({
-    merchant: m,
-    distance:
-      userLocation !== null && m.location !== null
-        ? haversineDistance(userLocation, m.location)
-        : null,
-  }));
+  const hasValidUserLocation = isValidGeoPoint(userLocation);
+
+  return merchants.map((m) => {
+    if (!hasValidUserLocation || !isValidGeoPoint(m.location)) {
+      return { merchant: m, distance: null };
+    }
+
+    try {
+      return { merchant: m, distance: haversineDistance(userLocation, m.location) };
+    } catch (err) {
+      console.warn('Error calculando distancia para comercio:', m.id, err);
+      return { merchant: m, distance: null };
+    }
+  });
 }
 
 export function MarketplacePage() {
