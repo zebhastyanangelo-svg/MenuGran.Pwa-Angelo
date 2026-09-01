@@ -1,10 +1,22 @@
 import { useCallback, useState } from 'react';
-import { Package, MapPin, LogOut, Loader2 } from 'lucide-react';
+import { Package, LogOut, Loader2, AlertCircle, MapPin } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useDriverDashboard } from '../../hooks/useDriverDashboard';
+import { DriverOrderCard } from '../../components/driver/DriverOrderCard';
 import { Button } from '../../components/ui/Button';
 
 export function DriverDashboard() {
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
+  const {
+    merchantName,
+    orders,
+    loading,
+    error,
+    actionLoading,
+    actionError,
+    takeOrder,
+     markDelivered,
+   } = useDriverDashboard(user);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = useCallback(async () => {
@@ -42,17 +54,76 @@ export function DriverDashboard() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-8">
-        <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4">
-            <MapPin className="h-5 w-5 text-gray-400" />
-            <h2 className="text-base font-semibold text-gray-800">
-              Pedidos disponibles
-            </h2>
-          </div>
-          <p className="text-sm text-gray-500" data-testid="driver-placeholder">
-            Próximamente verás aquí los pedidos asignados para entrega.
+        {merchantName && (
+          <p className="mb-4 text-sm text-gray-600" data-testid="driver-merchant-name">
+            Comercio: {merchantName}
           </p>
-        </section>
+        )}
+
+        {loading && (
+          <p
+            className="text-gray-600"
+            role="status"
+            data-testid="driver-loading"
+          >
+            Cargando pedidos...
+          </p>
+        )}
+
+        {error && (
+          <div
+            className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+            role="alert"
+            data-testid="driver-error"
+          >
+            <AlertCircle className="h-4 w-4 inline mr-2" />
+            {error}
+          </div>
+        )}
+
+        {actionError && (
+          <div
+            className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+            role="alert"
+            data-testid="driver-action-error"
+          >
+            <AlertCircle className="h-4 w-4 inline mr-2" />
+            {actionError}
+          </div>
+        )}
+
+        {!loading && !error && (
+          <>
+            {orders.length === 0 ? (
+              <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <MapPin className="h-5 w-5 text-gray-400" />
+                  <h2 className="text-base font-semibold text-gray-800">
+                    Pedidos disponibles
+                  </h2>
+                </div>
+                <p
+                  className="text-sm text-gray-500"
+                  data-testid="driver-no-orders"
+                >
+                  No hay pedidos disponibles en este momento.
+                </p>
+              </section>
+            ) : (
+              <div className="space-y-4">
+                {orders.map((order) => (
+                  <DriverOrderCard
+                    key={order.id}
+                    order={order}
+                    onTakeOrder={takeOrder}
+                    onMarkDelivered={markDelivered}
+                    actionDisabled={actionLoading}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </main>
     </div>
   );
