@@ -33,7 +33,8 @@ export const superadminNavItems: NavItem[] = [
 ];
 
 export const driverNavItems: NavItem[] = [
-  { to: '/driver', label: 'Repartos', icon: ListChecks },
+  { to: '/driver', label: 'Entregas', icon: ListChecks },
+  { to: '/profile', label: 'Perfil', icon: UserRound },
 ];
 
 const merchantRoles: UserRole[] = ['merchant_owner', 'merchant_staff'];

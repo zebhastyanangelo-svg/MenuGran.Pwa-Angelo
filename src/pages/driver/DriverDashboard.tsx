@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Package, LogOut, Loader2, AlertCircle, MapPin, Phone, Navigation, ShoppingBasket, ExternalLink } from 'lucide-react';
+import { Package, LogOut, Loader2, AlertCircle, MapPin, Phone, Navigation, ShoppingBasket, ExternalLink, PackageCheck } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useDriverDashboard } from '../../hooks/useDriverDashboard';
 import { useGpsTracking } from '../../hooks/useGpsTracking';
@@ -55,10 +55,7 @@ export function DriverDashboard() {
     () => orders.find((o) => o.status === 'on_the_way' && o.driver_id === user?.id) ?? null,
     [orders, user],
   );
-  const availableOrders = useMemo(
-    () => orders.filter((o) => o.status === 'ready' && !o.driver_id),
-    [orders],
-  );
+
 
   // GPS tracking for active delivery
   const { position, error: gpsError, tracking, startTracking, stopTracking } =
@@ -104,7 +101,6 @@ export function DriverDashboard() {
   // Determine which state to render
   const isActiveDelivery = !!activeDeliveryOrder;
   const hasAssignedReady = !!assignedReadyOrder;
-  const hasAvailableOrders = availableOrders.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -114,7 +110,7 @@ export function DriverDashboard() {
           <div className="mx-auto flex max-w-3xl items-center justify-between">
             <div className="flex items-center gap-3">
               <Package className="h-6 w-6 text-blue-600" />
-              <h1 className="text-lg font-bold text-gray-900">Panel de Reparto</h1>
+              <h1 className="text-lg font-bold text-gray-900">Entregas</h1>
             </div>
             <Button
               variant="outline"
@@ -176,7 +172,7 @@ export function DriverDashboard() {
         </main>
       )}
 
-      {/* EMPTY / AVAILABLE ORDERS — No assigned order */}
+      {/* EMPTY — No assigned order */}
       {!isActiveDelivery && !hasAssignedReady && (
         <main className="mx-auto max-w-3xl px-4 py-8">
           {merchantName && (
@@ -214,38 +210,15 @@ export function DriverDashboard() {
           )}
 
           {!loading && !error && (
-            <>
-              {hasAvailableOrders ? (
-                <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                  <div className="flex items-center gap-3 mb-4">
-                    <MapPin className="h-5 w-5 text-gray-400" />
-                    <h2 className="text-base font-semibold text-gray-800">
-                      Pedidos disponibles ({availableOrders.length})
-                    </h2>
-                  </div>
-                  <p className="text-xs text-gray-500 mb-4">
-                    Estos pedidos están listos pero aún no tienen repartidor asignado. Contacta al comercio para que te asigne.
-                  </p>
-                  <div className="space-y-3">
-                    {availableOrders.map((order) => (
-                      <AvailableOrderSummary key={order.id} order={order} />
-                    ))}
-                  </div>
-                </section>
-              ) : (
-                <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                  <div className="flex items-center gap-3 mb-4">
-                    <MapPin className="h-5 w-5 text-gray-400" />
-                    <h2 className="text-base font-semibold text-gray-800">
-                      Sin pedidos asignados
-                    </h2>
-                  </div>
-                  <p className="text-sm text-gray-500" data-testid="driver-no-orders">
-                    No tienes pedidos asignados en este momento. Cuando el comercio te asigne un pedido, aparecerá aquí.
-                  </p>
-                </section>
-              )}
-            </>
+            <section className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm text-center">
+              <PackageCheck className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <h2 className="text-base font-semibold text-gray-700 mb-1">
+                Sin entregas pendientes
+              </h2>
+              <p className="text-sm text-gray-500" data-testid="driver-no-orders">
+                Cuando el comercio te asigne un pedido, aparecerá aquí automáticamente.
+              </p>
+            </section>
           )}
         </main>
       )}
@@ -460,26 +433,6 @@ function AssignedOrderCard({ order, onStartDelivery, actionDisabled }: AssignedO
         Empezar Entrega
       </Button>
     </article>
-  );
-}
-
-interface AvailableOrderSummaryProps {
-  order: DriverOrder;
-}
-
-function AvailableOrderSummary({ order }: AvailableOrderSummaryProps) {
-  const address = getDeliveryAddress(order);
-
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-700">{getOrderNumber(order.id)}</p>
-        <p className="text-xs text-gray-500 truncate">{address}</p>
-      </div>
-      <span className="text-sm font-bold text-gray-900 ml-3 shrink-0">
-        {formatPrice(order.total_amount)}
-      </span>
-    </div>
   );
 }
 

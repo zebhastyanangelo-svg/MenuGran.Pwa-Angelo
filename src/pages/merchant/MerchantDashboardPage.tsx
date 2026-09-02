@@ -435,21 +435,21 @@ return (
                         </button>
                       ))}
                     </div>
-                    {order.status === 'ready' && drivers.length > 0 && (
+                    {order.type === 'delivery' && drivers.length > 0 && (
                       <div className="flex items-center gap-2 mt-1">
                         {order.driver_id ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 rounded font-medium">
-                            <Truck className="h-3.5 w-3.5" />
+                          <span className="inline-flex items-center gap-1.5 text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1.5 rounded-lg font-medium">
+                            <Truck className="h-4 w-4" />
                             Asignado a {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
                           </span>
                         ) : (
                           <button
                             type="button"
                             onClick={() => void handleOpenDriverModal(order)}
-                            className="inline-flex items-center gap-1.5 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded font-medium transition-colors"
+                            className="inline-flex items-center gap-1.5 text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-lg font-semibold transition-colors"
                             data-testid={`assign-driver-${order.id}`}
                           >
-                            <Truck className="h-3.5 w-3.5" />
+                            <Truck className="h-4 w-4" />
                             Asignar Delivery
                           </button>
                         )}
