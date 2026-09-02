@@ -34,6 +34,7 @@ import {
 } from '../../services/merchantAnalyticsService';
 import {
   PERMISSION_LABELS,
+  PERMISSION_OPTIONS,
   validateEmployeeInput,
   type EmployeeFormInput,
   type EmployeeRole,
@@ -468,6 +469,11 @@ function EmployeeManagementSection({
 
   const displayStaff = useMemo(() => localStaff, [localStaff]);
 
+  const modalPermissionKeys = useMemo(
+    () => new Set(PERMISSION_OPTIONS.map((o) => o.key)),
+    [],
+  );
+
   return (
     <section aria-label="Gestión de empleados" data-testid="staff-section">
       <div className="mb-3 flex items-center justify-between">
@@ -517,7 +523,12 @@ function EmployeeManagementSection({
                   {(
                     Object.keys(PERMISSION_LABELS) as Array<keyof MerchantStaffPermissions>
                   )
-                    .filter((key) => employee.permissions?.[key] === true)
+                    .filter(
+                      (key) =>
+                        modalPermissionKeys.has(
+                          key as keyof EmployeeFormInput['permissions'],
+                        ) && employee.permissions?.[key] === true,
+                    )
                     .map((key) => (
                       <Badge key={key} variant="neutral">
                         {PERMISSION_LABELS[key]}

@@ -442,7 +442,7 @@ return (
                             <Truck className="h-4 w-4" />
                             Asignado a {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
                           </span>
-                        ) : (order.status === 'confirmed' || order.status === 'preparing') ? (
+                        ) : order.status !== 'delivered' && order.status !== 'cancelled' ? (
                           <button
                             type="button"
                             onClick={() => void handleOpenDriverModal(order)}
