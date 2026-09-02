@@ -73,7 +73,8 @@ describe('Sidebar', () => {
     );
     expect(screen.queryByRole('link', { name: /carrito/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /panel/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /inicio/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /resumen/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /pedidos/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /platos/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /perfil/i })).toBeInTheDocument();
   });

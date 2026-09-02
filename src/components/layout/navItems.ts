@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Home, ShoppingCart, LayoutDashboard, Settings, Store, UserRound, Building2, UtensilsCrossed, ListChecks } from 'lucide-react';
+import { Home, ShoppingCart, LayoutDashboard, Settings, Store, UserRound, Building2, UtensilsCrossed, ListChecks, ClipboardList } from 'lucide-react';
 import type { MerchantStaffPermissions, UserRole } from '../../types/database';
 
 export interface NavItem {
@@ -19,7 +19,8 @@ export const customerNavItems: NavItem[] = [
 ];
 
 export const merchantNavItems: NavItem[] = [
-  { to: '/admin', label: 'Inicio', icon: LayoutDashboard },
+  { to: '/admin/dashboard', label: 'Resumen', icon: LayoutDashboard },
+  { to: '/admin', label: 'Pedidos', icon: ClipboardList },
   { to: '/admin/dishes', label: 'Platos', icon: UtensilsCrossed, requiredPermission: 'can_manage_menu' },
   { to: '/admin/settings', label: 'Configuración', icon: Settings, ownerOnly: true },
   { to: '/admin/profile', label: 'Perfil', icon: Store },

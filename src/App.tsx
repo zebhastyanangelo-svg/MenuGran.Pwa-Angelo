@@ -30,8 +30,8 @@ const MerchantSettingsPage = lazy(() =>
 const MerchantDishesPage = lazy(() =>
   import('./pages/merchant/MerchantDishesPage').then((mod) => ({ default: mod.MerchantDishesPage })),
 );
-const MerchantDashboardHomePage = lazy(() =>
-  import('./pages/merchant/MerchantDashboardPage').then((mod) => ({ default: mod.MerchantDashboardPage })),
+const MerchantResumenPage = lazy(() =>
+  import('./pages/merchant/MerchantResumenPage').then((mod) => ({ default: mod.MerchantResumenPage })),
 );
 const MerchantProfilePage = lazy(() =>
   import('./pages/merchant/MerchantProfilePage').then((mod) => ({ default: mod.MerchantProfilePage })),
@@ -119,7 +119,7 @@ export function App() {
                   <Route path="/admin" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantDashboardPage /></ProtectedRoute>} />
                   <Route path="/admin/settings" element={<ProtectedRoute requiredRole={['merchant_owner', 'superadmin']}><MerchantSettingsPage /></ProtectedRoute>} />
                   <Route path="/admin/dishes" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantDishesPage /></ProtectedRoute>} />
-                  <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantDashboardHomePage /></ProtectedRoute>} />
+                  <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantResumenPage /></ProtectedRoute>} />
                   <Route path="/merchant/profile" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantProfilePage /></ProtectedRoute>} />
                   <Route path="/admin/profile" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantProfilePage /></ProtectedRoute>} />
                   <Route path="/super-admin" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminMerchantsPage /></ProtectedRoute>} />

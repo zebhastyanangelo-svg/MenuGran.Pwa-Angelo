@@ -1,145 +1,32 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import {
-  ClipboardList,
-  DollarSign,
-  KeyRound,
-  Loader2,
-  LogOut,
-  Mail,
-  Plus,
-  Settings,
-  ShieldCheck,
-  Store,
-  UserCircle2,
-  Users,
-} from 'lucide-react';
+import { KeyRound, LogOut, Mail, ShieldCheck, Store, UserCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import type { MerchantStaffPermissions } from '../../types/database';
-import { Badge } from '../../components/ui/Badge';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Modal } from '../../components/ui/Modal';
-import {
-  createEmployee,
-  deleteStaff,
-  fetchMerchantMetrics,
-  getMerchantContext,
-  listStaff,
-  setStaffActive,
-  updateStaffPermissions,
-  type MerchantContext,
-  type MerchantMetrics,
-  type StaffListItem,
-} from '../../services/merchantStaffService';
-import {
-  fetchMerchantAnalytics,
-  type MerchantAnalytics,
-} from '../../services/merchantAnalyticsService';
+import type { MerchantContext } from '../../services/merchantStaffService';
+import { getMerchantContext } from '../../services/merchantStaffService';
 import { updateAuthPassword } from '../../services/superAdminMetricsService';
-import {
-  PERMISSION_LABELS,
-  validateEmployeeInput,
-  type EmployeeFormInput,
-  type EmployeeRole,
-} from '../../utils/staffPermissions';
 import {
   validatePasswordChange,
   type PasswordChangeInput,
 } from '../../utils/passwordChange';
-import { DateRangePicker, getDefaultDateRange } from '../../components/merchant/DateRangePicker';
-import { SalesTrendChart } from '../../components/merchant/SalesTrendChart';
-import { OrdersDonutChart } from '../../components/merchant/OrdersDonutChart';
-import { UpdateStaffModal } from '../../components/merchant/UpdateStaffModal';
-import { DeleteStaffConfirmModal } from '../../components/merchant/DeleteStaffConfirmModal';
-
-const EMPTY_EMPLOYEE: EmployeeFormInput = {
-  fullName: '',
-  email: '',
-  password: '',
-  role: 'merchant_staff',
-  permissions: { can_manage_orders: false, can_manage_menu: false, can_manage_settings: false, can_view_metrics: false },
-};
-
-function formatCurrency(value: number): string {
-  return `$${value.toLocaleString('es-VE', { maximumFractionDigits: 2 })}`;
-}
 
 export function MerchantProfilePage() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [context, setContext] = useState<MerchantContext | null>(null);
-  const [metrics, setMetrics] = useState<MerchantMetrics | null>(null);
-  const [analytics, setAnalytics] = useState<MerchantAnalytics | null>(null);
-  const [staff, setStaff] = useState<StaffListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
-
-  const [dateRange, setDateRange] = useState(() => getDefaultDateRange());
-
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [employeeInput, setEmployeeInput] =
-    useState<EmployeeFormInput>(EMPTY_EMPLOYEE);
-  const [isCreating, setIsCreating] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-
-  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-  const [staffToUpdate, setStaffToUpdate] = useState<StaffListItem | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [updateError, setUpdateError] = useState<string | null>(null);
-
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [staffToDelete, setStaffToDelete] = useState<StaffListItem | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  const [busyStaffId, setBusyStaffId] = useState<string | null>(null);
 
   const [passwords, setPasswords] = useState<PasswordChangeInput>({
     newPassword: '',
     confirmPassword: '',
   });
-  const [passwordFeedback, setPasswordFeedback] = useState<{ kind: 'ok' | 'error'; message: string } | null>(null);
+  const [passwordFeedback, setPasswordFeedback] = useState<{
+    kind: 'ok' | 'error';
+    message: string;
+  } | null>(null);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
-
-  const refetchMetrics = useCallback(
-    async (merchantId: string) => {
-      const [staffList, metricsData] = await Promise.all([
-        listStaff(merchantId),
-        fetchMerchantMetrics(merchantId, dateRange.startDate, dateRange.endDate),
-      ]);
-      setStaff(staffList);
-      setMetrics(metricsData);
-    },
-    [dateRange.startDate, dateRange.endDate],
-  );
-
-  const loadAnalytics = useCallback(
-    async (merchantId: string) => {
-      setIsAnalyticsLoading(true);
-      setAnalyticsError(null);
-      try {
-        const data = await fetchMerchantAnalytics(
-          merchantId,
-          dateRange.startDate,
-          dateRange.endDate,
-        );
-        setAnalytics(data);
-      } catch (caught) {
-        setAnalyticsError(
-          caught instanceof Error
-            ? caught.message
-            : 'No se pudieron cargar las analíticas.',
-        );
-      } finally {
-        setIsAnalyticsLoading(false);
-      }
-    },
-    [dateRange.startDate, dateRange.endDate],
-  );
 
   useEffect(() => {
     if (user === null) return;
@@ -150,12 +37,6 @@ export function MerchantProfilePage() {
         const merchantContext = await getMerchantContext(user.id);
         if (cancelled) return;
         setContext(merchantContext);
-        if (merchantContext !== null) {
-          await Promise.all([
-            refetchMetrics(merchantContext.merchantId),
-            loadAnalytics(merchantContext.merchantId),
-          ]);
-        }
         if (!cancelled) setError(null);
       } catch (caught) {
         if (!cancelled) {
@@ -172,140 +53,18 @@ export function MerchantProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [user, refetchMetrics, loadAnalytics]);
+  }, [user]);
 
-  useEffect(() => {
-    if (context === null) return;
-    void (async () => {
-      try {
-        await Promise.all([
-          refetchMetrics(context.merchantId),
-          loadAnalytics(context.merchantId),
-        ]);
-      } catch (caught) {
-        if (caught instanceof Error) {
-          setError(caught.message);
-        }
-      }
-    })();
-  }, [context, refetchMetrics, loadAnalytics]);
+  const updatePasswordField = useCallback(
+    (field: keyof PasswordChangeInput, value: string): void => {
+      setPasswords((previous) => ({ ...previous, [field]: value }));
+    },
+    [],
+  );
 
-  const handleDateChange = useCallback((start: string, end: string) => {
-    setDateRange({ startDate: start, endDate: end });
-  }, []);
-
-  const openAddModal = useCallback(() => {
-    setEmployeeInput(EMPTY_EMPLOYEE);
-    setFormError(null);
-    setIsAddModalOpen(true);
-  }, []);
-
-  const openUpdateModal = useCallback((employee: StaffListItem) => {
-    setStaffToUpdate(employee);
-    setUpdateError(null);
-    setIsUpdateModalOpen(true);
-  }, []);
-
-  const openDeleteModal = useCallback((employee: StaffListItem) => {
-    setStaffToDelete(employee);
-    setDeleteError(null);
-    setIsDeleteModalOpen(true);
-  }, []);
-
-  const handleCreateEmployee = useCallback(async () => {
-    if (context === null) return;
-    const validationError = validateEmployeeInput(employeeInput);
-    if (validationError !== null) {
-      setFormError(validationError);
-      return;
-    }
-    setIsCreating(true);
-    setFormError(null);
-    try {
-      await createEmployee(context.merchantId, employeeInput);
-      await refetchMetrics(context.merchantId);
-      setIsAddModalOpen(false);
-      setEmployeeInput(EMPTY_EMPLOYEE);
-    } catch (caught) {
-      setFormError(
-        caught instanceof Error
-          ? caught.message
-          : 'No se pudo crear al empleado.',
-      );
-    } finally {
-      setIsCreating(false);
-    }
-  }, [context, employeeInput, refetchMetrics]);
-
-  const handleRevoke = useCallback(async (employee: StaffListItem) => {
-    setBusyStaffId(employee.id);
-    try {
-      await setStaffActive(employee.id, !employee.isActive);
-      setStaff((previous) =>
-        previous.map((item) =>
-          item.id === employee.id ? { ...item, isActive: !item.isActive } : item,
-        ),
-      );
-    } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : 'No se pudo actualizar el acceso.',
-      );
-    } finally {
-      setBusyStaffId(null);
-    }
-  }, []);
-
-  const handleConfirmDelete = useCallback(async () => {
-    if (staffToDelete === null) return;
-    setIsDeleting(true);
-    setDeleteError(null);
-    try {
-      await deleteStaff(staffToDelete.id);
-      setStaff((previous) =>
-        previous.filter((item) => item.id !== staffToDelete.id),
-      );
-      setIsDeleteModalOpen(false);
-      setStaffToDelete(null);
-    } catch (caught) {
-      setDeleteError(
-        caught instanceof Error
-          ? caught.message
-          : 'No se pudo eliminar al empleado.',
-      );
-    } finally {
-      setIsDeleting(false);
-    }
-  }, [staffToDelete]);
-
-  const handleSavePermissions = useCallback(async (permissions: MerchantStaffPermissions) => {
-    if (staffToUpdate === null || context === null) return;
-    setIsSaving(true);
-    setUpdateError(null);
-    try {
-      await updateStaffPermissions(staffToUpdate.id, permissions);
-      setStaff((previous) =>
-        previous.map((item) =>
-          item.id === staffToUpdate.id ? { ...item, permissions } : item,
-        ),
-      );
-      setIsUpdateModalOpen(false);
-      setStaffToUpdate(null);
-    } catch (caught) {
-      setUpdateError(
-        caught instanceof Error
-          ? caught.message
-          : 'No se pudo actualizar los permisos.',
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  }, [staffToUpdate, context]);
-
-  function updatePasswordField(field: keyof PasswordChangeInput, value: string): void {
-    setPasswords((previous) => ({ ...previous, [field]: value }));
-  }
-
-  async function handlePasswordChange(event: FormEvent<HTMLFormElement>): Promise<void> {
+  async function handlePasswordChange(
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> {
     event.preventDefault();
     const validationError = validatePasswordChange(passwords);
     if (validationError !== null) {
@@ -316,12 +75,18 @@ export function MerchantProfilePage() {
     setPasswordFeedback(null);
     try {
       await updateAuthPassword(passwords.newPassword);
-      setPasswordFeedback({ kind: 'ok', message: 'Contraseña actualizada correctamente.' });
+      setPasswordFeedback({
+        kind: 'ok',
+        message: 'Contraseña actualizada correctamente.',
+      });
       setPasswords({ newPassword: '', confirmPassword: '' });
     } catch (caught) {
       setPasswordFeedback({
         kind: 'error',
-        message: caught instanceof Error ? caught.message : 'No se pudo actualizar la contraseña.',
+        message:
+          caught instanceof Error
+            ? caught.message
+            : 'No se pudo actualizar la contraseña.',
       });
     } finally {
       setIsSavingPassword(false);
@@ -340,7 +105,10 @@ export function MerchantProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="py-8 text-center text-gray-500 font-medium" role="status">
+      <div
+        className="py-8 text-center text-gray-500 font-medium"
+        role="status"
+      >
         Cargando perfil del comercio...
       </div>
     );
@@ -348,7 +116,10 @@ export function MerchantProfilePage() {
 
   if (error !== null && context === null) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded text-red-700" role="alert">
+      <div
+        className="p-4 bg-red-50 border border-red-200 rounded text-red-700"
+        role="alert"
+      >
         {error}
       </div>
     );
@@ -356,496 +127,151 @@ export function MerchantProfilePage() {
 
   if (context === null) {
     return (
-      <div className="py-8 text-center text-gray-500 font-medium" role="status">
+      <div
+        className="py-8 text-center text-gray-500 font-medium"
+        role="status"
+      >
         No se encontró un comercio asociado a tu cuenta.
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
-      <section className="mx-auto max-w-xl space-y-6">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <div className="mb-6 flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-brand-red">
-              <UserCircle2 className="h-9 w-9" aria-hidden="true" />
-            </div>
-            <div>
-              <p className="flex items-center gap-1.5 text-sm font-medium uppercase tracking-[0.12em] text-slate-500">
-                <ShieldCheck className="h-4 w-4 text-brand-red" aria-hidden="true" />
-                {context?.isOwner ? 'Dueño de Comercio' : 'Empleado'}
-              </p>
-              <h1 className="text-2xl font-bold text-slate-900" data-testid="profile-name">
-                {profile?.full_name ?? user?.email ?? 'Comercio'}
-              </h1>
-            </div>
+    <div className="mx-auto max-w-xl space-y-6 p-4 sm:p-6">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+        <div className="mb-6 flex items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-brand-red">
+            <UserCircle2 className="h-9 w-9" aria-hidden="true" />
           </div>
-
-          <div className="space-y-4">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
-                <UserCircle2 className="h-4 w-4" aria-hidden="true" />
-                Nombre
-              </div>
-              <p className="text-base font-semibold text-slate-900">
-                {profile?.full_name ?? user?.email ?? 'Sin nombre'}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
-                <Mail className="h-4 w-4" aria-hidden="true" />
-                Correo
-              </div>
-              <p className="text-base font-semibold text-slate-900" data-testid="profile-email">
-                {profile?.email ?? user?.email ?? 'Sin correo asociado'}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
-                <Store className="h-4 w-4" aria-hidden="true" />
-                Comercio
-              </div>
-              <p className="text-base font-semibold text-slate-900">
-                {context?.merchantName ?? 'Sin comercio asociado'}
-              </p>
-            </div>
+          <div>
+            <p className="flex items-center gap-1.5 text-sm font-medium uppercase tracking-[0.12em] text-slate-500">
+              <ShieldCheck className="h-4 w-4 text-brand-red" aria-hidden="true" />
+              {context.isOwner ? 'Dueño de Comercio' : 'Empleado'}
+            </p>
+            <h1
+              className="text-2xl font-bold text-slate-900"
+              data-testid="profile-name"
+            >
+              {profile?.full_name ?? user?.email ?? 'Comercio'}
+            </h1>
           </div>
         </div>
 
-        {context?.isOwner && (
-          <form
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6 space-y-4"
-            aria-label="Formulario de cambio de contraseña"
-            noValidate
-            onSubmit={(event) => void handlePasswordChange(event)}
-          >
-            <legend className="mb-1 flex items-center gap-2 text-base font-semibold text-slate-900">
-              <KeyRound className="h-4 w-4 text-brand-red" aria-hidden="true" />
-              Cambiar contraseña
-            </legend>
-            <input
-              type="password"
-              name="newPassword"
-              placeholder="Nueva contraseña (mínimo 8 caracteres)"
-              autoComplete="new-password"
-              value={passwords.newPassword}
-              onChange={(event) => updatePasswordField('newPassword', event.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red"
-            />
-            <input
-              type="password"
-              name="confirmPassword"
-              placeholder="Confirmar nueva contraseña"
-              autoComplete="new-password"
-              value={passwords.confirmPassword}
-              onChange={(event) => updatePasswordField('confirmPassword', event.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red"
-            />
-            {passwordFeedback !== null && (
-              <p
-                role={passwordFeedback.kind === 'error' ? 'alert' : 'status'}
-                data-testid="password-feedback"
-                className={`rounded-xl px-3 py-2 text-sm ${
-                  passwordFeedback.kind === 'error'
-                    ? 'bg-red-50 text-red-600'
-                    : 'bg-green-50 text-green-700'
-                }`}
-              >
-                {passwordFeedback.message}
-              </p>
-            )}
-            <button
-              type="submit"
-              disabled={isSavingPassword}
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-red px-4 text-sm font-medium text-white transition hover:bg-[#c80024] disabled:pointer-events-none disabled:opacity-50"
+        <div className="space-y-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
+              <UserCircle2 className="h-4 w-4" aria-hidden="true" />
+              Nombre
+            </div>
+            <p className="text-base font-semibold text-slate-900">
+              {profile?.full_name ?? user?.email ?? 'Sin nombre'}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
+              <Mail className="h-4 w-4" aria-hidden="true" />
+              Correo
+            </div>
+            <p
+              className="text-base font-semibold text-slate-900"
+              data-testid="profile-email"
             >
-              {isSavingPassword ? 'Guardando...' : 'Actualizar contraseña'}
-            </button>
-          </form>
-        )}
+              {profile?.email ?? user?.email ?? 'Sin correo asociado'}
+            </p>
+          </div>
 
-        <button
-          type="button"
-          onClick={() => void handleLogout()}
-          disabled={isLoggingOut}
-          data-testid="merchant-logout"
-          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
-        >
-          <LogOut className="h-4 w-4" aria-hidden="true" />
-          {isLoggingOut ? 'Cerrando sesión...' : 'Cerrar sesión'}
-        </button>
-      </section>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
+              <Store className="h-4 w-4" aria-hidden="true" />
+              Comercio
+            </div>
+            <p className="text-base font-semibold text-slate-900">
+              {context.merchantName ?? 'Sin comercio asociado'}
+            </p>
+          </div>
 
-      {error !== null && (
-        <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
-          {error}
-        </p>
-      )}
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
+              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+              Rol
+            </div>
+            <p
+              className="text-base font-semibold text-slate-900"
+              data-testid="profile-role"
+            >
+              {context.isOwner ? 'Dueño de Comercio' : 'Empleado'}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {context.isOwner && (
-        <>
-          <section aria-label="Métricas del comercio" data-testid="merchant-metrics">
-            <div className="mb-4 flex items-end justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Resumen</h2>
-              <DateRangePicker
-                startDate={dateRange.startDate}
-                endDate={dateRange.endDate}
-                onChange={handleDateChange}
-                isLoading={isAnalyticsLoading}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <MetricCard
-                testId="metric-total-sales"
-                icon={<DollarSign className="h-5 w-5 text-green-600" />}
-                label="Total de ventas"
-                value={formatCurrency(metrics?.totalSales ?? 0)}
-              />
-              <MetricCard
-                testId="metric-orders-today"
-                icon={<ClipboardList className="h-5 w-5 text-indigo-600" />}
-                label="Pedidos en rango"
-                value={String(metrics?.ordersToday ?? 0)}
-              />
-              <MetricCard
-                testId="metric-active-products"
-                icon={<Store className="h-5 w-5 text-brand-red" />}
-                label="Platos activos"
-                value={String(metrics?.activeProducts ?? 0)}
-              />
-            </div>
-          </section>
-
-          <section aria-label="Analíticas de ventas" data-testid="analytics-section" className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">Analíticas de ventas</h2>
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <div data-testid="chart-sales-trend">
-                <SalesTrendChart
-                  data={analytics?.dailyRevenue ?? []}
-                  isLoading={isAnalyticsLoading}
-                  error={analyticsError}
-                />
-              </div>
-              <div data-testid="chart-orders-donut">
-                <OrdersDonutChart
-                  data={analytics?.statusBreakdown ?? []}
-                  isLoading={isAnalyticsLoading}
-                />
-              </div>
-            </div>
-          </section>
-        </>
-      )}
-
-      <section aria-label="Gestión de empleados" data-testid="staff-section">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Gestión de Empleados
-          </h2>
-          {context.isOwner && (
-            <Button onClick={openAddModal} size="sm" data-testid="open-add-employee">
-              <Plus className="h-4 w-4" />
-              Agregar Empleado
-            </Button>
-          )}
-        </div>
-
-        {staff.length === 0 ? (
-          <p className="text-sm text-gray-600" role="status">
-            Aún no hay empleados vinculados a este negocio.
-          </p>
-        ) : (
-          <ul className="divide-y divide-gray-100 rounded-xl border border-gray-100 bg-white" data-testid="staff-list">
-            {staff.map((employee) => (
-              <li key={employee.id} data-testid="staff-row" className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">
-                    {employee.fullName ?? 'Sin nombre'}
-                    {!employee.isActive && (
-                      <span className="ml-2 text-xs text-red-500">(acceso revocado)</span>
-                    )}
-                  </p>
-                  <p className="text-sm text-gray-500">{employee.email ?? 'sin email'}</p>
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    {(Object.keys(PERMISSION_LABELS) as Array<keyof MerchantStaffPermissions>)
-                      .filter((key) => employee.permissions?.[key] === true)
-                      .map((key) => (
-                        <Badge key={key} variant="neutral">
-                          {PERMISSION_LABELS[key]}
-                        </Badge>
-                      ))}
-                  </div>
-                </div>
-                {context.isOwner && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      data-testid={`modify-staff-${employee.id}`}
-                      onClick={() => openUpdateModal(employee)}
-                    >
-                      <Settings className="h-4 w-4" />
-                      Permisos
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={busyStaffId === employee.id}
-                      onClick={() => void handleRevoke(employee)}
-                      data-testid={`revoke-staff-${employee.id}`}
-                    >
-                      {busyStaffId === employee.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : employee.isActive ? (
-                        'Revocar acceso'
-                      ) : (
-                        'Restaurar acceso'
-                      )}
-                    </Button>
-                    <button
-                      type="button"
-                      aria-label={`Eliminar ${employee.fullName ?? employee.email}`}
-                      title={`Eliminar ${employee.fullName ?? employee.email}`}
-                      disabled={busyStaffId === employee.id}
-                      onClick={() => openDeleteModal(employee)}
-                      data-testid={`delete-staff-${employee.id}`}
-                      className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-200 disabled:opacity-50"
-                    >
-                      <Users className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="Agregar Empleado"
-      >
         <form
-          className="space-y-4"
-          aria-label="Formulario de alta de empleado"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void handleCreateEmployee();
-          }}
+          className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6"
+          aria-label="Formulario de cambio de contraseña"
+          noValidate
+          onSubmit={(event) => void handlePasswordChange(event)}
         >
-          <Input
-            label="Nombre completo"
-            name="employeeFullName"
-            autoComplete="name"
-            value={employeeInput.fullName}
-            onChange={(event) =>
-              setEmployeeInput((prev) => ({
-                ...prev,
-                fullName: event.target.value,
-              }))
-            }
-          />
-          <Input
-            label="Correo electrónico"
-            name="employeeEmail"
-            type="email"
-            autoComplete="email"
-            helperText="El empleado iniciará sesión con este correo."
-            value={employeeInput.email}
-            onChange={(event) =>
-              setEmployeeInput((prev) => ({ ...prev, email: event.target.value }))
-            }
-          />
-          <Input
-            label="Contraseña inicial"
-            name="employeePassword"
+          <legend className="mb-1 flex items-center gap-2 text-base font-semibold text-slate-900">
+            <KeyRound className="h-4 w-4 text-brand-red" aria-hidden="true" />
+            Cambiar contraseña
+          </legend>
+          <input
             type="password"
+            name="newPassword"
+            placeholder="Nueva contraseña (mínimo 8 caracteres)"
             autoComplete="new-password"
-            value={employeeInput.password}
+            value={passwords.newPassword}
             onChange={(event) =>
-              setEmployeeInput((prev) => ({
-                ...prev,
-                password: event.target.value,
-              }))
+              updatePasswordField('newPassword', event.target.value)
             }
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red"
           />
-
-          <label className="block space-y-1">
-            <span className="text-sm font-medium text-gray-700">Rol</span>
-            <select
-              name="employeeRole"
-              value={employeeInput.role}
-              onChange={(event) => {
-                const newRole = event.target.value as EmployeeRole;
-                setEmployeeInput((prev) => ({
-                  ...prev,
-                  role: newRole,
-                  permissions: newRole === 'driver'
-                    ? {
-                        can_manage_orders: true,
-                        can_manage_menu: false,
-                        can_manage_settings: false,
-                        can_view_metrics: false,
-                      }
-                    : prev.permissions,
-                }));
-              }}
-              className="block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              data-testid="employee-role"
+          <input
+            type="password"
+            name="confirmPassword"
+            placeholder="Confirmar nueva contraseña"
+            autoComplete="new-password"
+            value={passwords.confirmPassword}
+            onChange={(event) =>
+              updatePasswordField('confirmPassword', event.target.value)
+            }
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red"
+          />
+          {passwordFeedback !== null && (
+            <p
+              role={passwordFeedback.kind === 'error' ? 'alert' : 'status'}
+              data-testid="password-feedback"
+              className={`rounded-xl px-3 py-2 text-sm ${
+                passwordFeedback.kind === 'error'
+                  ? 'bg-red-50 text-red-600'
+                  : 'bg-green-50 text-green-700'
+              }`}
             >
-              <option value="merchant_staff">Empleado de Staff</option>
-              <option value="driver">Repartidor</option>
-            </select>
-          </label>
-
-          <fieldset className="space-y-2 rounded-xl border border-gray-200 p-3">
-            <legend className="px-1 text-sm font-medium text-gray-700">
-              Permisos de acceso
-            </legend>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                data-testid="permission-orders"
-                checked={employeeInput.permissions.can_manage_orders}
-                onChange={(event) =>
-                  setEmployeeInput((prev) => ({
-                    ...prev,
-                    permissions: {
-                      ...prev.permissions,
-                      can_manage_orders: event.target.checked,
-                    },
-                  }))
-                }
-              />
-              {PERMISSION_LABELS.can_manage_orders}
-            </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                data-testid="permission-menu"
-                checked={employeeInput.permissions.can_manage_menu}
-                onChange={(event) =>
-                  setEmployeeInput((prev) => ({
-                    ...prev,
-                    permissions: {
-                      ...prev.permissions,
-                      can_manage_menu: event.target.checked,
-                    },
-                  }))
-                }
-              />
-              {PERMISSION_LABELS.can_manage_menu}
-            </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                data-testid="permission-settings"
-                checked={employeeInput.permissions.can_manage_settings}
-                onChange={(event) =>
-                  setEmployeeInput((prev) => ({
-                    ...prev,
-                    permissions: {
-                      ...prev.permissions,
-                      can_manage_settings: event.target.checked,
-                    },
-                  }))
-                }
-              />
-              {PERMISSION_LABELS.can_manage_settings}
-            </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                data-testid="permission-metrics"
-                checked={employeeInput.permissions.can_view_metrics}
-                onChange={(event) =>
-                  setEmployeeInput((prev) => ({
-                    ...prev,
-                    permissions: {
-                      ...prev.permissions,
-                      can_view_metrics: event.target.checked,
-                    },
-                  }))
-                }
-              />
-              {PERMISSION_LABELS.can_view_metrics}
-            </label>
-          </fieldset>
-
-          {formError !== null && (
-            <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
-              {formError}
+              {passwordFeedback.message}
             </p>
           )}
-
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsAddModalOpen(false)}
-              disabled={isCreating}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" isLoading={isCreating} data-testid="confirm-add-employee">
-              <UserCircle2 className="h-4 w-4" />
-              Crear empleado
-            </Button>
-          </div>
+          <button
+            type="submit"
+            disabled={isSavingPassword}
+            className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-red px-4 text-sm font-medium text-white transition hover:bg-[#c80024] disabled:pointer-events-none disabled:opacity-50"
+          >
+            {isSavingPassword ? 'Guardando...' : 'Actualizar contraseña'}
+          </button>
         </form>
-      </Modal>
-
-        <UpdateStaffModal
-          staff={staffToUpdate}
-          isOpen={isUpdateModalOpen}
-          onClose={() => {
-            setIsUpdateModalOpen(false);
-            setStaffToUpdate(null);
-          }}
-          onSave={handleSavePermissions}
-          isSaving={isSaving}
-          error={updateError}
-        />
-
-      {staffToDelete !== null && (
-        <DeleteStaffConfirmModal
-          staffName={staffToDelete.fullName ?? staffToDelete.email}
-          staffEmail={staffToDelete.email}
-          isOpen={isDeleteModalOpen}
-          onClose={() => {
-            setIsDeleteModalOpen(false);
-            setStaffToDelete(null);
-          }}
-          onConfirm={handleConfirmDelete}
-          isDeleting={isDeleting}
-          error={deleteError}
-        />
       )}
-    </div>
-  );
-}
 
-interface MetricCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  testId: string;
-}
-
-function MetricCard({ icon, label, value, testId }: MetricCardProps) {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-2">
-        {icon}
-        <span className="text-sm text-gray-500">{label}</span>
-      </div>
-      <p className="mt-2 text-2xl font-bold text-gray-900" data-testid={testId}>
-        {value}
-      </p>
+      <button
+        type="button"
+        onClick={() => void handleLogout()}
+        disabled={isLoggingOut}
+        data-testid="merchant-logout"
+        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
+      >
+        <LogOut className="h-4 w-4" aria-hidden="true" />
+        {isLoggingOut ? 'Cerrando sesión...' : 'Cerrar sesión'}
+      </button>
     </div>
   );
 }

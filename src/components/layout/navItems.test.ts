@@ -14,6 +14,7 @@ const FULL_PERMISSIONS: MerchantStaffPermissions = {
 describe('getNavItemsForRole', () => {
   it('muestra el panel completo al propietario', () => {
     const items = getNavItemsForRole('merchant_owner').map((i) => i.to);
+    expect(items).toContain('/admin/dashboard');
     expect(items).toContain('/admin');
     expect(items).toContain('/admin/dishes');
     expect(items).toContain('/admin/settings');
@@ -25,6 +26,12 @@ describe('getNavItemsForRole', () => {
     expect(profileItem).toBeDefined();
   });
 
+  it('incluye la ruta de Resumen (/admin/dashboard) con el label "Resumen"', () => {
+    const resumenItem = merchantNavItems.find((i) => i.to === '/admin/dashboard');
+    expect(resumenItem).toBeDefined();
+    expect(resumenItem?.label).toBe('Resumen');
+  });
+
   it('filtra secciones de empleados según permisos granularizados', () => {
     const staffItems = getNavItemsForRole('merchant_staff', FULL_PERMISSIONS).map(
       (i) => i.to,
@@ -32,9 +39,10 @@ describe('getNavItemsForRole', () => {
     expect(staffItems).toContain('/admin/dishes'); // can_manage_menu
     expect(staffItems).not.toContain('/admin/settings'); // ownerOnly
     expect(staffItems).toContain('/admin/profile'); // visible para todo merchant
+    expect(staffItems).toContain('/admin/dashboard'); // resumen visible para staff
   });
 
-  it('oculta Platos a empleados sin can_manage_menu pero mantiene Perfil', () => {
+  it('oculta Platos a empleados sin can_manage_menu pero mantiene Perfil y Resumen', () => {
     const limited: MerchantStaffPermissions = {
       can_manage_menu: false,
       can_view_orders: true,
@@ -45,6 +53,7 @@ describe('getNavItemsForRole', () => {
     expect(items).not.toContain('/admin/settings');
     expect(items).toContain('/admin/profile'); // siempre visible para merchant
     expect(items).toContain('/admin');
+    expect(items).toContain('/admin/dashboard'); // resumen siempre visible
   });
 
   it('no muestra secciones de administración mientras los permisos cargan', () => {
@@ -52,12 +61,14 @@ describe('getNavItemsForRole', () => {
     expect(items).not.toContain('/admin/dishes');
     expect(items).not.toContain('/admin/settings');
     expect(items).toContain('/admin/profile'); // visible sin permisos cargados
+    expect(items).toContain('/admin/dashboard'); // resumen visible sin permisos
   });
 
   it('muestra /admin/profile a merchant_staff con permisos completos', () => {
     const items = getNavItemsForRole('merchant_staff', FULL_PERMISSIONS).map((i) => i.to);
     expect(items).toContain('/admin/profile');
     expect(items).toContain('/admin');
+    expect(items).toContain('/admin/dashboard');
     expect(items).toContain('/admin/dishes');
   });
 
