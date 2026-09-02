@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ClipboardList,
   DollarSign,
@@ -322,6 +323,7 @@ function EmployeeManagementSection({
   onStaffChanged,
   onError,
 }: EmployeeManagementSectionProps) {
+  const queryClient = useQueryClient();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [employeeInput, setEmployeeInput] =
     useState<EmployeeFormInput>(EMPTY_EMPLOYEE);
@@ -399,6 +401,7 @@ function EmployeeManagementSection({
               : item,
           ),
         );
+        await queryClient.invalidateQueries({ queryKey: ['staffPermissions'] });
       } catch (caught) {
         onError(
           caught instanceof Error
@@ -409,7 +412,7 @@ function EmployeeManagementSection({
         setBusyStaffId(null);
       }
     },
-    [onError],
+    [onError, queryClient],
   );
 
   const handleConfirmDelete = useCallback(async () => {
@@ -421,6 +424,7 @@ function EmployeeManagementSection({
       setLocalStaff((previous) =>
         previous.filter((item) => item.id !== staffToDelete.id),
       );
+      await queryClient.invalidateQueries({ queryKey: ['staffPermissions'] });
       setIsDeleteModalOpen(false);
       setStaffToDelete(null);
     } catch (caught) {
@@ -432,7 +436,7 @@ function EmployeeManagementSection({
     } finally {
       setIsDeleting(false);
     }
-  }, [staffToDelete]);
+  }, [staffToDelete, queryClient]);
 
   const handleSavePermissions = useCallback(
     async (permissions: MerchantStaffPermissions) => {
@@ -446,6 +450,7 @@ function EmployeeManagementSection({
             item.id === staffToUpdate.id ? { ...item, permissions } : item,
           ),
         );
+        await queryClient.invalidateQueries({ queryKey: ['staffPermissions'] });
         setIsUpdateModalOpen(false);
         setStaffToUpdate(null);
       } catch (caught) {
@@ -458,7 +463,7 @@ function EmployeeManagementSection({
         setIsSaving(false);
       }
     },
-    [staffToUpdate],
+    [staffToUpdate, queryClient],
   );
 
   const displayStaff = useMemo(() => localStaff, [localStaff]);

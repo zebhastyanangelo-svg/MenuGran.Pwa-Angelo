@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ProfileRow, UserRole } from '../types/database';
+import type { MerchantStaffPermissions, ProfileRow, UserRole } from '../types/database';
 import { ProtectedRoute } from './ProtectedRoute';
 
 const authState: {
@@ -16,6 +16,16 @@ const authState: {
 
 vi.mock('../hooks/useAuth', () => ({
   useAuth: () => authState,
+}));
+
+let mockStaffPermissions: MerchantStaffPermissions | null = null;
+let mockIsLoadingPermissions = false;
+
+vi.mock('../hooks/useStaffPermissions', () => ({
+  useStaffPermissions: () => ({
+    permissions: mockStaffPermissions,
+    isLoading: mockIsLoadingPermissions,
+  }),
 }));
 
 function buildProfile(role: UserRole): ProfileRow {
@@ -79,6 +89,8 @@ describe('ProtectedRoute (ruta /super-admin)', () => {
     authState.user = null;
     authState.profile = null;
     authState.isLoading = false;
+    mockStaffPermissions = null;
+    mockIsLoadingPermissions = false;
   });
 
   it('renderiza el panel cuando el rol de la sesión es superadmin', () => {
@@ -145,5 +157,90 @@ describe('ProtectedRoute (ruta /super-admin)', () => {
 
     expect(screen.queryByTestId('panel')).not.toBeInTheDocument();
     expect(screen.getByTestId('driver')).toBeInTheDocument();
+  });
+});
+
+describe('ProtectedRoute (permisos de staff)', () => {
+  beforeEach(() => {
+    authState.user = null;
+    authState.profile = null;
+    authState.isLoading = false;
+    mockStaffPermissions = null;
+    mockIsLoadingPermissions = false;
+  });
+
+  function renderPermissionRoute(permission?: keyof MerchantStaffPermissions): void {
+    render(
+      <MemoryRouter initialEntries={['/admin/dashboard']}>
+        <Routes>
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute
+                requiredRole={['merchant_owner', 'merchant_staff']}
+                requiredPermission={permission}
+              >
+                <p data-testid="resumen-panel">Resumen Panel</p>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/admin" element={<p data-testid="admin-home">Admin Home</p>} />
+          <Route path="/" element={<p data-testid="home">Inicio</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  it('permite el acceso a merchant_owner sin verificar permisos', () => {
+    authState.user = { id: 'owner-1', email: 'owner@menugram.com' };
+    authState.profile = buildProfile('merchant_owner');
+
+    renderPermissionRoute('can_view_metrics');
+
+    expect(screen.getByTestId('resumen-panel')).toBeInTheDocument();
+  });
+
+  it('permite el acceso a merchant_staff con el permiso requerido', () => {
+    authState.user = { id: 'staff-1', email: 'staff@menugram.com' };
+    authState.profile = buildProfile('merchant_staff');
+    mockStaffPermissions = {
+      can_manage_menu: true,
+      can_view_orders: true,
+      can_manage_orders: true,
+      can_manage_settings: true,
+      can_view_metrics: true,
+    };
+
+    renderPermissionRoute('can_view_metrics');
+
+    expect(screen.getByTestId('resumen-panel')).toBeInTheDocument();
+  });
+
+  it('redirige a /admin a merchant_staff sin el permiso requerido', () => {
+    authState.user = { id: 'staff-2', email: 'staff2@menugram.com' };
+    authState.profile = buildProfile('merchant_staff');
+    mockStaffPermissions = {
+      can_manage_menu: true,
+      can_view_orders: true,
+      can_manage_orders: false,
+      can_manage_settings: false,
+      can_view_metrics: false,
+    };
+
+    renderPermissionRoute('can_view_metrics');
+
+    expect(screen.queryByTestId('resumen-panel')).not.toBeInTheDocument();
+    expect(screen.getByTestId('admin-home')).toBeInTheDocument();
+  });
+
+  it('redirige a /admin a merchant_staff sin permisos cargados', () => {
+    authState.user = { id: 'staff-3', email: 'staff3@menugram.com' };
+    authState.profile = buildProfile('merchant_staff');
+    mockStaffPermissions = null;
+
+    renderPermissionRoute('can_view_metrics');
+
+    expect(screen.queryByTestId('resumen-panel')).not.toBeInTheDocument();
+    expect(screen.getByTestId('admin-home')).toBeInTheDocument();
   });
 });

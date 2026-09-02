@@ -1,11 +1,14 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import type { UserRole } from '../types/database';
+import { useStaffPermissions } from '../hooks/useStaffPermissions';
+import type { MerchantStaffPermissions, UserRole } from '../types/database';
 
 export interface ProtectedRouteProps {
   children: ReactNode;
   requiredRole?: UserRole | UserRole[];
+  /** Permiso granular requerido para merchant_staff. Ignorado para otros roles. */
+  requiredPermission?: keyof MerchantStaffPermissions;
   /**
    * Destino alternativo cuando el rol no cumple. Por defecto cada rol va a su
    * inicio (customer → /, merchant → /admin).
@@ -14,15 +17,19 @@ export interface ProtectedRouteProps {
 }
 
 /**
- * Componente wrapper para proteger rutas según autenticación y roles de usuario.
+ * Componente wrapper para proteger rutas según autenticación, roles y permisos
+ * de usuario. Los permisos solo se verifican para el rol merchant_staff.
  */
 export function ProtectedRoute({
   children,
   requiredRole,
+  requiredPermission,
   redirectTo,
 }: ProtectedRouteProps) {
   const { user, profile, isLoading } = useAuth();
   const location = useLocation();
+  const { permissions: staffPermissions, isLoading: isLoadingPermissions } =
+    useStaffPermissions();
 
   if (isLoading) {
     return (
@@ -37,6 +44,7 @@ export function ProtectedRoute({
     return <Navigate to={`/login?from=${encodeURIComponent(from)}`} replace />;
   }
 
+  // Verificar rol requerido
   if (requiredRole !== undefined) {
     const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
     const isAllowed = profile !== null && roles.includes(profile.role);
@@ -50,6 +58,18 @@ export function ProtectedRoute({
       if (profile.role === 'driver') {
         return <Navigate to="/driver" replace />;
       }
+      return <Navigate to="/admin" replace />;
+    }
+  }
+
+  // Verificar permiso granular para merchant_staff
+  if (
+    requiredPermission !== undefined &&
+    profile?.role === 'merchant_staff' &&
+    !isLoadingPermissions
+  ) {
+    const hasPermission = staffPermissions?.[requiredPermission] === true;
+    if (!hasPermission) {
       return <Navigate to="/admin" replace />;
     }
   }

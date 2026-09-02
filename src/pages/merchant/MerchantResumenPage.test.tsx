@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MerchantResumenPage } from './MerchantResumenPage';
 import type { MerchantContext, StaffListItem } from '../../services/merchantStaffService';
 import type { MerchantAnalytics } from '../../services/merchantAnalyticsService';
@@ -77,10 +78,18 @@ const defaultAnalytics: MerchantAnalytics = {
 };
 
 function renderPage() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
   return render(
-    <MemoryRouter>
-      <MerchantResumenPage />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <MerchantResumenPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 

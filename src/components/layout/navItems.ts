@@ -19,8 +19,8 @@ export const customerNavItems: NavItem[] = [
 ];
 
 export const merchantNavItems: NavItem[] = [
-  { to: '/admin/dashboard', label: 'Resumen', icon: LayoutDashboard },
-  { to: '/admin', label: 'Pedidos', icon: ClipboardList },
+  { to: '/admin/dashboard', label: 'Resumen', icon: LayoutDashboard, requiredPermission: 'can_view_metrics' },
+  { to: '/admin', label: 'Pedidos', icon: ClipboardList, requiredPermission: 'can_manage_orders' },
   { to: '/admin/dishes', label: 'Platos', icon: UtensilsCrossed, requiredPermission: 'can_manage_menu' },
   { to: '/admin/settings', label: 'Configuración', icon: Settings, ownerOnly: true },
   { to: '/admin/profile', label: 'Perfil', icon: Store },
@@ -42,8 +42,11 @@ const merchantRoles: UserRole[] = ['merchant_owner', 'merchant_staff'];
 /**
  * Resuelve los items del panel según el rol. Los empleados (merchant_staff)
  * solo ven las secciones habilitadas por sus permisos granularizados:
+ * - can_view_metrics → Resumen
+ * - can_manage_orders → Pedidos
  * - can_manage_menu → Platos
  * - Configuración queda reservada al propietario (ownerOnly).
+ * - Perfil siempre visible.
  */
 export function getNavItemsForRole(
   role: UserRole | null | undefined,
