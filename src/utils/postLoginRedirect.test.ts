@@ -40,6 +40,15 @@ describe('getPostLoginPath', () => {
     expect(getPostLoginPath('/orders/123', 'driver')).toBe('/orders/123');
   });
 
+  it('redirige al driver a /admin cuando "from" es ruta de comercio', () => {
+    expect(getPostLoginPath('/admin', 'driver')).toBe(DRIVER_HOME);
+    expect(getPostLoginPath('/admin/dishes', 'driver')).toBe(DRIVER_HOME);
+    expect(getPostLoginPath('/merchant/dashboard', 'driver')).toBe(DRIVER_HOME);
+    expect(getPostLoginPath('/merchant/profile', 'driver')).toBe(DRIVER_HOME);
+    expect(getPostLoginPath('/super-admin', 'driver')).toBe(DRIVER_HOME);
+    expect(getPostLoginPath('/super-admin/dashboard', 'driver')).toBe(DRIVER_HOME);
+  });
+
   it('ignora una ruta "from" vacía y aplica el destino por rol', () => {
     expect(getPostLoginPath('', 'superadmin')).toBe(SUPER_ADMIN_HOME);
     expect(getPostLoginPath('', 'customer')).toBe(CUSTOMER_HOME);

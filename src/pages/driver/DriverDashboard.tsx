@@ -1,7 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Package, LogOut, Loader2, AlertCircle, MapPin } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useDriverDashboard } from '../../hooks/useDriverDashboard';
+import { useGpsTracking } from '../../hooks/useGpsTracking';
 import { DriverOrderCard } from '../../components/driver/DriverOrderCard';
 import { Button } from '../../components/ui/Button';
 
@@ -15,18 +16,47 @@ export function DriverDashboard() {
     actionLoading,
     actionError,
     takeOrder,
-     markDelivered,
-   } = useDriverDashboard(user);
+    markDelivered,
+  } = useDriverDashboard(user);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // GPS tracking for the active delivery
+  const activeOrder = orders.find((o) => o.status === 'on_the_way' && o.driver_id === user?.id);
+  const { position, error: gpsError, tracking, startTracking, stopTracking } =
+    useGpsTracking(activeOrder?.id ?? null);
+
+  // Auto-start GPS when there's an active order assigned to this driver
+  useEffect(() => {
+    if (activeOrder && !tracking && !gpsError) {
+      startTracking();
+    }
+  }, [activeOrder, tracking, gpsError, startTracking]);
+
+  const handleTakeOrder = useCallback(
+    async (orderId: string) => {
+      await takeOrder(orderId);
+      // GPS will auto-start via useEffect once order becomes on_the_way
+    },
+    [takeOrder],
+  );
+
+  const handleMarkDelivered = useCallback(
+    async (orderId: string) => {
+      stopTracking();
+      await markDelivered(orderId);
+    },
+    [markDelivered, stopTracking],
+  );
+
   const handleLogout = useCallback(async () => {
+    stopTracking();
     setIsLoggingOut(true);
     try {
       await signOut();
     } finally {
       setIsLoggingOut(false);
     }
-  }, [signOut]);
+  }, [signOut, stopTracking]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -92,6 +122,27 @@ export function DriverDashboard() {
           </div>
         )}
 
+        {gpsError && (
+          <div
+            className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700"
+            role="alert"
+            data-testid="driver-gps-error"
+          >
+            <MapPin className="h-4 w-4 inline mr-2" />
+            {gpsError}
+          </div>
+        )}
+
+        {tracking && position && (
+          <div
+            className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 flex items-center gap-2"
+            data-testid="driver-gps-active"
+          >
+            <MapPin className="h-4 w-4" />
+            GPS activo — Lat: {position.lat.toFixed(5)}, Lng: {position.lng.toFixed(5)}
+          </div>
+        )}
+
         {!loading && !error && (
           <>
             {orders.length === 0 ? (
@@ -115,8 +166,8 @@ export function DriverDashboard() {
                   <DriverOrderCard
                     key={order.id}
                     order={order}
-                    onTakeOrder={takeOrder}
-                    onMarkDelivered={markDelivered}
+                    onTakeOrder={handleTakeOrder}
+                    onMarkDelivered={handleMarkDelivered}
                     actionDisabled={actionLoading}
                   />
                 ))}

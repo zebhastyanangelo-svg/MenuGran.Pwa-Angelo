@@ -13,16 +13,24 @@ export interface OrderWithCustomer extends OrderRow {
   profiles?: CustomerProfile | null
 }
 
+export interface DriverProfile {
+  id: string
+  full_name: string | null
+  email: string | null
+}
+
 export interface MerchantDashboardPageData {
   merchantId: string | null
   merchantName: string | null
   isOpen: boolean
   activeProducts: number
   orders: OrderWithCustomer[]
+  drivers: DriverProfile[]
   loading: boolean
   error: string | null
   toggleStoreOpen: (open: boolean) => Promise<void>
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>
+  assignDriver: (orderId: string, driverId: string | null) => Promise<void>
 }
 
 export interface UseMerchantDashboardPageOptions {
@@ -77,6 +85,27 @@ export function useMerchantDashboardPage(
         .order('created_at', { ascending: false })
       if (result.error) throw result.error
       return (result.data ?? []) as OrderWithCustomer[]
+    },
+  })
+
+  const { data: drivers = [] } = useQuery<DriverProfile[]>({
+    queryKey: ['merchantDrivers', merchantIds.join('-')],
+    enabled: merchantIds.length > 0,
+    queryFn: async (): Promise<DriverProfile[]> => {
+      const result = await supabase
+        .from(TABLE_NAMES.merchantStaff)
+        .select('user_id, profiles!user_id(full_name, email)')
+        .in('merchant_id', merchantIds)
+        .eq('is_active', true)
+        .eq('role', 'driver')
+      if (result.error) throw result.error
+      return (result.data ?? []).map(
+        (row: Record<string, unknown>) => ({
+          id: row.user_id as string,
+          full_name: ((row.profiles as Record<string, unknown>)?.full_name as string) ?? null,
+          email: ((row.profiles as Record<string, unknown>)?.email as string) ?? null,
+        }),
+      )
     },
   })
 
@@ -171,6 +200,27 @@ export function useMerchantDashboardPage(
     },
   })
 
+  const { mutateAsync: assignDriver } = useMutation<
+    void,
+    Error,
+    { orderId: string; driverId: string | null },
+    unknown
+  >({
+    mutationKey: ['assignDriver'],
+    mutationFn: async ({ orderId, driverId }) => {
+      const result = await supabase
+        .from(TABLE_NAMES.orders)
+        .update({ driver_id: driverId })
+        .eq('id', orderId)
+      if (result.error) throw result.error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['merchantOrders', user?.id, merchantIds.join('-')],
+      })
+    },
+  })
+
   // Realtime subscription for order changes
   const channelRef = useRef<RealtimeChannel | null>(null)
   useEffect(() => {
@@ -226,11 +276,14 @@ export function useMerchantDashboardPage(
     isOpen,
     activeProducts,
     orders: orders ?? [],
+    drivers: drivers ?? [],
     loading: isLoading || isToggling || isUpdating,
     error: isError ? (error instanceof Error ? error.message : String(error)) : null,
     toggleStoreOpen: async (open: boolean) => await toggleStoreOpen(open),
     updateOrderStatus: async (orderId: string, status: OrderStatus) =>
       await updateOrderStatus({ orderId, status }),
+    assignDriver: async (orderId: string, driverId: string | null) =>
+      await assignDriver({ orderId, driverId }),
   }
 }
 

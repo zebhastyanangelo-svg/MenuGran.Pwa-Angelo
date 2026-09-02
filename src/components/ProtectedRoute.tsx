@@ -47,6 +47,9 @@ export function ProtectedRoute({
       if (profile === null || profile.role === 'customer') {
         return <Navigate to="/" replace />;
       }
+      if (profile.role === 'driver') {
+        return <Navigate to="/driver" replace />;
+      }
       return <Navigate to="/admin" replace />;
     }
   }

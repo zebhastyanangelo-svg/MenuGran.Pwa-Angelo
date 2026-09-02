@@ -19,6 +19,7 @@ function buildOrder(
     id,
     merchant_id: 'merchant-1',
     customer_id: 'customer-1',
+    driver_id: null,
     type: 'delivery',
     status: 'confirmed',
     payment_method: 'card',

@@ -30,8 +30,6 @@ export interface UseDriverDashboardOptions {
   onNewReadyOrder?: (order: DriverOrder) => void
 }
 
-const DRIVER_ACTIVE_STATUSES: readonly OrderStatus[] = ['ready', 'on_the_way']
-
 interface MerchantStaffWithMerchant {
   merchant_id: string
   merchants: { id: string; name: string } | null
@@ -53,21 +51,34 @@ async function fetchDriverMerchant(
   return { id: row.merchants.id, name: row.merchants.name }
 }
 
-async function fetchDriverOrders(merchantId: string): Promise<DriverOrder[]> {
+async function fetchDriverOrders(
+  merchantId: string,
+  userId: string,
+): Promise<DriverOrder[]> {
   const result = await supabase
     .from(TABLE_NAMES.orders)
     .select('*, profiles!customer_id(full_name, email, phone)')
     .eq('merchant_id', merchantId)
-    .in('status', [...DRIVER_ACTIVE_STATUSES])
+    .or(
+      `status.eq.ready,and(status.eq.on_the_way,driver_id.eq.${userId})`,
+    )
     .order('created_at', { ascending: false })
   if (result.error) throw result.error
   return (result.data ?? []) as DriverOrder[]
 }
 
-async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<void> {
+async function updateOrderStatus(
+  orderId: string,
+  status: OrderStatus,
+  driverId?: string | null,
+): Promise<void> {
+  const update: Record<string, unknown> = { status }
+  if (driverId !== undefined) {
+    update.driver_id = driverId
+  }
   const result = await supabase
     .from(TABLE_NAMES.orders)
-    .update({ status })
+    .update(update)
     .eq('id', orderId)
   if (result.error) throw result.error
 }
@@ -103,7 +114,7 @@ export function useDriverDashboard(
       setMerchantId(merchant.id)
       setMerchantName(merchant.name)
 
-      const data = await fetchDriverOrders(merchant.id)
+      const data = await fetchDriverOrders(merchant.id, user.id)
       setOrders(data)
     } catch (err) {
       setError(
@@ -172,13 +183,14 @@ export function useDriverDashboard(
 
   const takeOrder = useCallback(
     async (orderId: string): Promise<void> => {
+      if (!user) return
       setActionLoading(true)
       setActionError(null)
       try {
-        await updateOrderStatus(orderId, 'on_the_way')
+        await updateOrderStatus(orderId, 'on_the_way', user.id)
         setOrders((prev) =>
           prev.map((o) =>
-            o.id === orderId ? { ...o, status: 'on_the_way' } : o,
+            o.id === orderId ? { ...o, status: 'on_the_way', driver_id: user.id } : o,
           ),
         )
       } catch (err) {

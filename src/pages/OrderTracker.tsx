@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import type { OrderRow, OrderStatus } from '../types/database';
+import type { GeoPoint } from '../types/database';
 import { useAuth } from '../hooks/useAuth';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import {
@@ -17,10 +18,34 @@ import { statusDisplayMap } from '../utils/statusDisplayMap';
 import { getOrderStatusLabel } from '../utils/orderStatus';
 import { OrderStatusStep } from '../components/orders/OrderStatusStep';
 import { getAllowedTransitions, getTransitionLabel, getTransitionButtonClass } from '../utils/orderStatus';
-import { PartyPopper, ArrowLeft } from 'lucide-react';
+import { PartyPopper, ArrowLeft, Navigation } from 'lucide-react';
+import { MapView } from '../components/map/MapView';
+import type { MapMarker } from '../components/map/MapView';
 
 interface ProductNameMap {
   [productId: string]: string;
+}
+
+function buildDeliveryMarkers(
+  driverPos: GeoPoint,
+  destination: GeoPoint | null,
+): MapMarker[] {
+  const markers: MapMarker[] = [
+    {
+      id: 'driver',
+      position: [driverPos.y, driverPos.x],
+      title: 'Repartidor',
+      subtitle: 'Ubicación en tiempo real',
+    },
+  ];
+  if (destination) {
+    markers.push({
+      id: 'destination',
+      position: [destination.y, destination.x],
+      title: 'Destino de entrega',
+    });
+  }
+  return markers;
 }
 
 export function OrderTracker() {
@@ -35,6 +60,7 @@ export function OrderTracker() {
   const [productNames, setProductNames] = useState<ProductNameMap>({});
   const [merchantName, setMerchantName] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState<string | null>(null);
+  const [driverLocation, setDriverLocation] = useState<GeoPoint | null>(null);
 
   const { showToast } = useNotificationToast();
   const { permission, showNotification } = useNotifications();
@@ -192,6 +218,25 @@ export function OrderTracker() {
     };
   }, [loadOrder, orderId, handleStatusChange]);
 
+  // Subscribe to driver GPS location broadcast
+  useEffect(() => {
+    if (!orderId) return undefined;
+
+    const channel = supabase
+      .channel(`driver_locations:${orderId}`)
+      .on('broadcast', { event: 'driver_location' }, (payload) => {
+        const data = payload.payload as { lat: number; lng: number } | undefined;
+        if (data && typeof data.lat === 'number' && typeof data.lng === 'number') {
+          setDriverLocation({ x: data.lng, y: data.lat });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [orderId]);
+
   if (authLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50 text-gray-600">
@@ -277,6 +322,23 @@ export function OrderTracker() {
           ))}
         </div>
       </div>
+
+      {order.status === 'on_the_way' && driverLocation && (
+        <section className="mb-8 bg-white rounded-lg shadow-md p-4 border border-gray-200">
+          <div className="flex items-center gap-2 mb-3">
+            <Navigation className="h-5 w-5 text-blue-600" />
+            <h2 className="text-lg font-bold text-gray-800">Repartidor en camino</h2>
+          </div>
+          <div className="h-64 rounded-lg overflow-hidden">
+            <MapView
+              markers={buildDeliveryMarkers(driverLocation, order.delivery_location)}
+              center={[driverLocation.y, driverLocation.x]}
+              zoom={15}
+              className="h-full w-full"
+            />
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-6">
         <section className="bg-white rounded-lg shadow-md p-6 border border-gray-200">

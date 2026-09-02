@@ -124,10 +124,12 @@ export function MerchantDashboardPage() {
     isOpen,
     activeProducts,
     orders,
+    drivers,
     loading,
     error,
     toggleStoreOpen,
     updateOrderStatus,
+    assignDriver,
   } = useMerchantDashboardPage(user, dashboardOptions);
   const [activeTab, setActiveTab] = useState<TabKey>('pending');
   const greetingName = merchantName ?? profile?.full_name ?? 'Comercio';
@@ -409,6 +411,33 @@ return (
                         </button>
                       ))}
                     </div>
+                    {order.status === 'ready' && drivers.length > 0 && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <label
+                          htmlFor={`driver-${order.id}`}
+                          className="text-xs font-medium text-gray-500"
+                        >
+                          Repartidor:
+                        </label>
+                        <select
+                          id={`driver-${order.id}`}
+                          value={order.driver_id ?? ''}
+                          onChange={(e) => {
+                            const value = e.target.value || null;
+                            void assignDriver(order.id, value);
+                          }}
+                          className="flex-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          data-testid={`driver-select-${order.id}`}
+                        >
+                          <option value="">Sin asignar</option>
+                          {drivers.map((driver) => (
+                            <option key={driver.id} value={driver.id}>
+                              {driver.full_name ?? driver.email ?? driver.id}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

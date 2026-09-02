@@ -44,10 +44,31 @@ function renderRoute(redirectTo?: string): void {
         />
         <Route path="/" element={<p data-testid="home">Inicio</p>} />
         <Route path="/admin" element={<p data-testid="admin">Admin merchant</p>} />
+        <Route path="/driver" element={<p data-testid="driver">Panel Reparto</p>} />
         <Route
           path="/login"
           element={<p data-testid="login">Iniciar sesión</p>}
         />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+function renderAdminRoute(): void {
+  render(
+    <MemoryRouter initialEntries={['/admin']}>
+      <Routes>
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}>
+              <p data-testid="admin-panel">Admin Panel</p>
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/" element={<p data-testid="home">Inicio</p>} />
+        <Route path="/driver" element={<p data-testid="driver">Panel Reparto</p>} />
+        <Route path="/login" element={<p data-testid="login">Login</p>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -104,5 +125,25 @@ describe('ProtectedRoute (ruta /super-admin)', () => {
 
     expect(screen.getByTestId('home')).toBeInTheDocument();
     expect(screen.queryByTestId('panel')).not.toBeInTheDocument();
+  });
+
+  it('redirige al driver a /driver cuando intenta acceder a /admin', () => {
+    authState.user = { id: 'user-5', email: 'driver@menugram.com' };
+    authState.profile = buildProfile('driver');
+
+    renderAdminRoute();
+
+    expect(screen.queryByTestId('admin-panel')).not.toBeInTheDocument();
+    expect(screen.getByTestId('driver')).toBeInTheDocument();
+  });
+
+  it('redirige al driver a /driver cuando intenta acceder a /super-admin', () => {
+    authState.user = { id: 'user-6', email: 'driver@menugram.com' };
+    authState.profile = buildProfile('driver');
+
+    renderRoute();
+
+    expect(screen.queryByTestId('panel')).not.toBeInTheDocument();
+    expect(screen.getByTestId('driver')).toBeInTheDocument();
   });
 });

@@ -176,6 +176,7 @@ export interface OrderRow {
   id: string;
   merchant_id: string;
   customer_id: string | null;
+  driver_id: string | null;
   type: OrderType;
   status: OrderStatus;
   payment_method: PaymentMethod;
@@ -236,6 +237,7 @@ export type OrderInsert = Pick<
     Pick<
       OrderRow,
       | 'customer_id'
+      | 'driver_id'
       | 'type'
       | 'status'
       | 'payment_reference'
