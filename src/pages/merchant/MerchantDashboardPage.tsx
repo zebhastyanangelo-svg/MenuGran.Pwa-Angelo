@@ -442,7 +442,7 @@ return (
                             <Truck className="h-4 w-4" />
                             Asignado a {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
                           </span>
-                        ) : (
+                        ) : (order.status === 'confirmed' || order.status === 'preparing') ? (
                           <button
                             type="button"
                             onClick={() => void handleOpenDriverModal(order)}
@@ -450,9 +450,9 @@ return (
                             data-testid={`assign-driver-${order.id}`}
                           >
                             <Truck className="h-4 w-4" />
-                            Asignar Delivery
+                            Asignar a Rider
                           </button>
-                        )}
+                        ) : null}
                       </div>
                     )}
                   </li>
@@ -473,7 +473,7 @@ return (
       <Modal
         isOpen={driverModalOpen}
         onClose={handleCloseDriverModal}
-        title="Asignar Repartidor"
+        title="Asignar a Rider"
       >
         <div className="space-y-2">
           <p className="text-sm text-gray-600 mb-3">

@@ -60,6 +60,7 @@ async function fetchDriverOrders(
     .from(TABLE_NAMES.orders)
     .select('*, profiles!customer_id(full_name, email, phone)')
     .eq('merchant_id', merchantId)
+    .eq('type', 'delivery')
     .or(
       `and(status.eq.ready,or(driver_id.is.null,driver_id.eq.${userId})),and(status.eq.on_the_way,driver_id.eq.${userId})`,
     )

@@ -167,6 +167,10 @@ export function DriverDashboard() {
           <AssignedOrderCard
             order={assignedReadyOrder}
             onStartDelivery={() => void handleStartDelivery(assignedReadyOrder.id)}
+            onViewRoute={() => {
+              const address = getDeliveryAddress(assignedReadyOrder);
+              window.open(buildMapsUrl(address), '_blank');
+            }}
             actionDisabled={actionLoading}
           />
         </main>
@@ -213,10 +217,10 @@ export function DriverDashboard() {
             <section className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm text-center">
               <PackageCheck className="h-12 w-12 text-gray-300 mx-auto mb-3" />
               <h2 className="text-base font-semibold text-gray-700 mb-1">
-                Sin entregas pendientes
+                Sin entregas asignadas
               </h2>
               <p className="text-sm text-gray-500" data-testid="driver-no-orders">
-                Cuando el comercio te asigne un pedido, aparecerá aquí automáticamente.
+                Cuando el comercio te asigne un pedido de delivery, aparecerá aquí automáticamente.
               </p>
             </section>
           )}
@@ -369,10 +373,11 @@ function ActiveDeliveryView({
 interface AssignedOrderCardProps {
   order: DriverOrder;
   onStartDelivery: () => void;
+  onViewRoute: () => void;
   actionDisabled: boolean;
 }
 
-function AssignedOrderCard({ order, onStartDelivery, actionDisabled }: AssignedOrderCardProps) {
+function AssignedOrderCard({ order, onStartDelivery, onViewRoute, actionDisabled }: AssignedOrderCardProps) {
   const customerName = getCustomerName(order);
   const customerPhone = getCustomerPhone(order);
   const address = getDeliveryAddress(order);
@@ -421,6 +426,18 @@ function AssignedOrderCard({ order, onStartDelivery, actionDisabled }: AssignedO
           <span className="text-brand-red">{formatPrice(order.total_amount)}</span>
         </div>
       </section>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onViewRoute}
+          className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex-1"
+          data-testid="view-route"
+        >
+          <ExternalLink className="h-4 w-4" />
+          Ver Ruta GPS
+        </button>
+      </div>
 
       <Button
         data-testid="start-delivery"

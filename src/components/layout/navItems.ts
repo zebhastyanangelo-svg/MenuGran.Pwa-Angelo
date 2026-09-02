@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Home, ShoppingCart, LayoutDashboard, Settings, Store, UserRound, Building2, UtensilsCrossed, ListChecks, ClipboardList } from 'lucide-react';
+import { Home, ShoppingCart, LayoutDashboard, Settings, Store, UserRound, Building2, UtensilsCrossed, Bike, ClipboardList } from 'lucide-react';
 import type { MerchantStaffPermissions, UserRole } from '../../types/database';
 
 export interface NavItem {
@@ -33,7 +33,7 @@ export const superadminNavItems: NavItem[] = [
 ];
 
 export const driverNavItems: NavItem[] = [
-  { to: '/driver', label: 'Entregas', icon: ListChecks },
+  { to: '/driver', label: 'Entregas', icon: Bike },
   { to: '/profile', label: 'Perfil', icon: UserRound },
 ];
 
