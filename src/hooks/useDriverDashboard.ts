@@ -22,6 +22,7 @@ export interface DriverDashboardData {
   actionLoading: boolean
   actionError: string | null
   takeOrder: (orderId: string) => Promise<void>
+  startDelivery: (orderId: string) => Promise<void>
   markDelivered: (orderId: string) => Promise<void>
   refresh: () => void
 }
@@ -60,7 +61,7 @@ async function fetchDriverOrders(
     .select('*, profiles!customer_id(full_name, email, phone)')
     .eq('merchant_id', merchantId)
     .or(
-      `status.eq.ready,and(status.eq.on_the_way,driver_id.eq.${userId})`,
+      `and(status.eq.ready,or(driver_id.is.null,driver_id.eq.${userId})),and(status.eq.on_the_way,driver_id.eq.${userId})`,
     )
     .order('created_at', { ascending: false })
   if (result.error) throw result.error
@@ -204,6 +205,29 @@ export function useDriverDashboard(
     [],
   )
 
+  const startDelivery = useCallback(
+    async (orderId: string): Promise<void> => {
+      if (!user) return
+      setActionLoading(true)
+      setActionError(null)
+      try {
+        await updateOrderStatus(orderId, 'on_the_way', user.id)
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId ? { ...o, status: 'on_the_way', driver_id: user.id } : o,
+          ),
+        )
+      } catch (err) {
+        setActionError(
+          err instanceof Error ? err.message : 'Error al iniciar entrega',
+        )
+      } finally {
+        setActionLoading(false)
+      }
+    },
+    [],
+  )
+
   const markDelivered = useCallback(
     async (orderId: string): Promise<void> => {
       setActionLoading(true)
@@ -237,6 +261,7 @@ export function useDriverDashboard(
     actionLoading,
     actionError,
     takeOrder,
+    startDelivery,
     markDelivered,
     refresh,
   }

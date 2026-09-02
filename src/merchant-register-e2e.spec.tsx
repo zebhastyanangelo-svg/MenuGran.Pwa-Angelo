@@ -63,10 +63,12 @@ function mockDashboardData(overrides: Record<string, unknown> = {}) {
     isOpen: false,
     activeProducts: 0,
     orders: [],
+    drivers: [],
     loading: false,
     error: null,
     toggleStoreOpen: vi.fn(),
     updateOrderStatus: vi.fn(),
+    assignDriver: vi.fn(),
   };
   const useMerchantMock = useMerchantDashboardPage as unknown as ReturnType<
     typeof vi.fn

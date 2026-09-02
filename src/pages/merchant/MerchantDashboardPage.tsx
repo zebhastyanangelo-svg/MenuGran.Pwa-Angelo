@@ -5,7 +5,8 @@ import { useMerchantDashboardPage } from '../../hooks/useMerchantDashboardPage';
 import { useToast } from '../../hooks/useToast';
 import { supabase } from '../../services/supabase';
 import { PaymentProofLightbox } from '../../components/merchant/PaymentProofLightbox';
-import { Store, Loader2, Package, ClipboardList, TrendingUp, LogOut, Image as ImageIcon } from 'lucide-react';
+import { Modal } from '../../components/ui/Modal';
+import { Store, Loader2, Package, ClipboardList, TrendingUp, LogOut, Image as ImageIcon, Truck, User } from 'lucide-react';
 import type { OrderStatus } from '../../types/database';
 import type { OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 
@@ -124,7 +125,7 @@ export function MerchantDashboardPage() {
     isOpen,
     activeProducts,
     orders,
-    drivers,
+    drivers = [],
     loading,
     error,
     toggleStoreOpen,
@@ -139,6 +140,10 @@ export function MerchantDashboardPage() {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithCustomer | null>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [proofError, setProofError] = useState<string | null>(null);
+
+  // Driver assignment modal state
+  const [driverModalOpen, setDriverModalOpen] = useState(false);
+  const [driverModalOrder, setDriverModalOrder] = useState<OrderWithCustomer | null>(null);
 
   const handleOpenProof = useCallback(async (order: OrderWithCustomer) => {
     setSelectedOrder(order);
@@ -166,6 +171,25 @@ export function MerchantDashboardPage() {
     setProofUrl(null);
     setProofError(null);
   }, []);
+
+  const handleOpenDriverModal = useCallback((order: OrderWithCustomer) => {
+    setDriverModalOrder(order);
+    setDriverModalOpen(true);
+  }, []);
+
+  const handleCloseDriverModal = useCallback(() => {
+    setDriverModalOpen(false);
+    setDriverModalOrder(null);
+  }, []);
+
+  const handleAssignDriver = useCallback(
+    async (driverId: string | null) => {
+      if (!driverModalOrder) return;
+      await assignDriver(driverModalOrder.id, driverId);
+      handleCloseDriverModal();
+    },
+    [driverModalOrder, assignDriver, handleCloseDriverModal],
+  );
 
   // Check if the merchant has a store assigned
   const hasStore = !!merchantName;
@@ -413,29 +437,22 @@ return (
                     </div>
                     {order.status === 'ready' && drivers.length > 0 && (
                       <div className="flex items-center gap-2 mt-1">
-                        <label
-                          htmlFor={`driver-${order.id}`}
-                          className="text-xs font-medium text-gray-500"
-                        >
-                          Repartidor:
-                        </label>
-                        <select
-                          id={`driver-${order.id}`}
-                          value={order.driver_id ?? ''}
-                          onChange={(e) => {
-                            const value = e.target.value || null;
-                            void assignDriver(order.id, value);
-                          }}
-                          className="flex-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                          data-testid={`driver-select-${order.id}`}
-                        >
-                          <option value="">Sin asignar</option>
-                          {drivers.map((driver) => (
-                            <option key={driver.id} value={driver.id}>
-                              {driver.full_name ?? driver.email ?? driver.id}
-                            </option>
-                          ))}
-                        </select>
+                        {order.driver_id ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 rounded font-medium">
+                            <Truck className="h-3.5 w-3.5" />
+                            Asignado a {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => void handleOpenDriverModal(order)}
+                            className="inline-flex items-center gap-1.5 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded font-medium transition-colors"
+                            data-testid={`assign-driver-${order.id}`}
+                          >
+                            <Truck className="h-3.5 w-3.5" />
+                            Asignar Delivery
+                          </button>
+                        )}
                       </div>
                     )}
                   </li>
@@ -453,6 +470,41 @@ return (
           onClose={handleCloseProof}
         />
       )}
+      <Modal
+        isOpen={driverModalOpen}
+        onClose={handleCloseDriverModal}
+        title="Asignar Repartidor"
+      >
+        <div className="space-y-2">
+          <p className="text-sm text-gray-600 mb-3">
+            Pedido #{driverModalOrder?.id?.slice(0, 8).toUpperCase()} — Selecciona un repartidor:
+          </p>
+          <button
+            type="button"
+            onClick={() => void handleAssignDriver(null)}
+            className="w-full text-left px-3 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+            data-testid="assign-driver-none"
+          >
+            Sin asignar
+          </button>
+          {drivers.map((driver) => (
+            <button
+              key={driver.id}
+              type="button"
+              onClick={() => void handleAssignDriver(driver.id)}
+              className={`w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors flex items-center gap-3 ${
+                driverModalOrder?.driver_id === driver.id
+                  ? 'border-indigo-300 bg-indigo-50 text-indigo-800'
+                  : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+              }`}
+              data-testid={`assign-driver-option-${driver.id}`}
+            >
+              <User className="h-4 w-4 shrink-0 text-gray-400" />
+              <span className="font-medium">{driver.full_name ?? driver.email ?? driver.id}</span>
+            </button>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 }
