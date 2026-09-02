@@ -192,14 +192,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
       isNewUser = true;
     } else {
       // El error "User Already Registered" (o similar) indica que ya existe.
+      const rawMsg = createError?.message?.toLowerCase() ?? '';
       const alreadyExists =
-        createError?.message?.toLowerCase().includes('already') === true ||
-        createError?.message?.toLowerCase().includes('registered') === true ||
-        createError?.message?.toLowerCase().includes('exists') === true;
+        rawMsg.includes('already') ||
+        rawMsg.includes('registered') ||
+        rawMsg.includes('exists') ||
+        rawMsg.includes('duplicate') ||
+        rawMsg.includes('unique');
 
       if (!alreadyExists) {
         return jsonResponse(
-          { error: `Error al crear la cuenta del empleado: ${createError?.message ?? 'sin datos'}` },
+          { error: `Error al crear la cuenta del empleado: ${createError?.message ?? 'Error desconocido al crear la cuenta.'}` },
           400,
         );
       }
@@ -207,8 +210,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const existingId = await findUserByEmail(serviceClient, validated.email);
       if (existingId === null) {
         return jsonResponse(
-          { error: `Error al crear la cuenta del empleado: ${createError?.message}` },
-          400,
+          { error: 'El correo electrónico ya está registrado en el sistema, pero no se pudo resolver la cuenta existente.' },
+          422,
         );
       }
       employeeUserId = existingId;
@@ -262,8 +265,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (existingStaff !== null) {
       if (existingStaff.is_active) {
         return jsonResponse(
-          { error: 'Este usuario ya está registrado como empleado en tu negocio.' },
-          400,
+          { error: 'El correo electrónico ya está registrado como empleado activo en este negocio. Si deseas modificar sus permisos, edita su perfil desde la lista de empleados.' },
+          409,
         );
       }
       // Estaba desactivado: reactivar con los nuevos permisos.

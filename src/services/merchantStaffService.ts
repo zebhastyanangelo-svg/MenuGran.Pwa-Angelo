@@ -130,7 +130,10 @@ export async function createEmployee(
     throw new Error(validationError);
   }
 
-  const { data, error } = await supabase.functions.invoke('create-employee', {
+  const { data, error, response } = await supabase.functions.invoke<{
+    staffId?: string;
+    error?: string;
+  }>('create-employee', {
     body: {
       merchantId,
       email: input.email.trim(),
@@ -143,29 +146,42 @@ export async function createEmployee(
     },
   });
 
-  // Cuando el Edge Function devuelve HTTP 4xx con JSON { error: "..." },
-  // supabase.functions.invoke lo devuelve tanto en `error` como en `data`.
-  // Priorizamos el cuerpo JSON del Edge Function para mostrar el mensaje
-  // real de validación al usuario en el modal.
-  if (data !== null && typeof data === 'object' && 'error' in data) {
-    const serverMessage = (data as { error: unknown }).error;
-    if (typeof serverMessage === 'string') {
-      throw new Error(serverMessage);
+  // Cuando el Edge Function devuelve HTTP 4xx/5xx, supabase-js (v2.112+)
+  // retorna { data: null, error: FunctionsHttpError, response: Response }.
+  // El cuerpo JSON con el mensaje detallado vive en response.json(),
+  // NO en data (que siempre es null para respuestas no-2xx).
+  if (error !== null) {
+    let serverMessage: string | null = null;
+    try {
+      const errorBody: unknown = await response?.json();
+      if (
+        errorBody !== undefined &&
+        errorBody !== null &&
+        typeof errorBody === 'object' &&
+        'error' in errorBody
+      ) {
+        const msg = (errorBody as { error: unknown }).error;
+        if (typeof msg === 'string') {
+          serverMessage = msg;
+        }
+      }
+    } catch {
+      // La respuesta podría no ser JSON o ya haber sido consumida.
     }
+    throw new Error(
+      serverMessage ?? `Error al crear el empleado: ${error.message}`,
+    );
   }
 
-  if (error !== null) {
-    throw new Error(`Error al crear el empleado: ${error.message}`);
-  }
   if (
     data === null ||
     typeof data !== 'object' ||
     !('staffId' in data) ||
-    typeof (data as { staffId: unknown }).staffId !== 'string'
+    typeof data.staffId !== 'string'
   ) {
     throw new Error('No se pudo registrar al empleado.');
   }
-  return (data as { staffId: string }).staffId;
+  return data.staffId;
 }
 
 /** Revoca o restaura el acceso de un empleado sin eliminar su cuenta. */

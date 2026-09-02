@@ -234,13 +234,34 @@ describe('createEmployee', () => {
   });
 
   it('propaga el error del Edge Function', async () => {
+    const mockResponse = {
+      json: vi.fn().mockResolvedValue({
+        error: 'El correo electrónico ya está registrado como empleado activo en este negocio.',
+      }),
+    };
     supabaseMocks.functionsInvoke.mockResolvedValue({
       data: null,
-      error: new Error('email already registered'),
+      error: new Error('Edge Function returned a non-2xx status code'),
+      response: mockResponse,
     });
 
     await expect(createEmployee('m-1', buildValidInput())).rejects.toThrow(
-      'Error al crear el empleado: email already registered',
+      'El correo electrónico ya está registrado como empleado activo en este negocio.',
+    );
+  });
+
+  it('usa el mensaje genérico si response.json() no devuelve un error legible', async () => {
+    const mockResponse = {
+      json: vi.fn().mockRejectedValue(new Error('not json')),
+    };
+    supabaseMocks.functionsInvoke.mockResolvedValue({
+      data: null,
+      error: new Error('Edge Function returned a non-2xx status code'),
+      response: mockResponse,
+    });
+
+    await expect(createEmployee('m-1', buildValidInput())).rejects.toThrow(
+      'Error al crear el empleado: Edge Function returned a non-2xx status code',
     );
   });
 });

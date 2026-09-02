@@ -297,7 +297,7 @@ describe('MerchantResumenPage', () => {
 
     it('muestra el error devuelto por el Edge Function', async () => {
       serviceMocks.createEmployee.mockRejectedValue(
-        new Error('Error al crear el empleado: email already registered'),
+        new Error('El correo electrónico ya está registrado como empleado activo en este negocio.'),
       );
       const user = userEvent.setup();
       await openModalAndFill();
@@ -305,7 +305,7 @@ describe('MerchantResumenPage', () => {
       await user.click(screen.getByTestId('confirm-add-employee'));
 
       expect(await screen.findByRole('alert')).toHaveTextContent(
-        'Error al crear el empleado: email already registered',
+        'El correo electrónico ya está registrado como empleado activo en este negocio.',
       );
     });
 
