@@ -173,6 +173,17 @@ export function useDriverDashboard(
           )
         },
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: TABLE_NAMES.deliveries,
+        },
+        () => {
+          void loadOrders()
+        },
+      )
       .subscribe()
 
     channelRef.current = channel
@@ -181,7 +192,7 @@ export function useDriverDashboard(
       supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [merchantId, options])
+  }, [merchantId, options, loadOrders])
 
   const takeOrder = useCallback(
     async (orderId: string): Promise<void> => {

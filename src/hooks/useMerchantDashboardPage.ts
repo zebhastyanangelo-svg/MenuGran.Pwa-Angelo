@@ -213,6 +213,40 @@ export function useMerchantDashboardPage(
         .update({ driver_id: driverId })
         .eq('id', orderId)
       if (result.error) throw result.error
+
+      if (driverId) {
+        const { data: existing } = await supabase
+          .from(TABLE_NAMES.deliveries)
+          .select('id')
+          .eq('order_id', orderId)
+          .maybeSingle()
+
+        if (existing?.id) {
+          const updateResult = await supabase
+            .from(TABLE_NAMES.deliveries)
+            .update({ driver_id: driverId, status: 'assigned' })
+            .eq('id', existing.id)
+          if (updateResult.error) throw updateResult.error
+        } else {
+          const insertResult = await supabase
+            .from(TABLE_NAMES.deliveries)
+            .insert({ order_id: orderId, driver_id: driverId, status: 'assigned' })
+          if (insertResult.error) throw insertResult.error
+        }
+      } else {
+        const { data: existing } = await supabase
+          .from(TABLE_NAMES.deliveries)
+          .select('id')
+          .eq('order_id', orderId)
+          .maybeSingle()
+        if (existing?.id) {
+          const updateResult = await supabase
+            .from(TABLE_NAMES.deliveries)
+            .update({ driver_id: null, status: 'unassigned' })
+            .eq('id', existing.id)
+          if (updateResult.error) throw updateResult.error
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

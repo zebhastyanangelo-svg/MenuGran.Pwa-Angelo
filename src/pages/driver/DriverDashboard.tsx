@@ -154,13 +154,13 @@ export function DriverDashboard() {
             </p>
           )}
 
-          <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-4">
+          <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-4" data-testid="driver-pending-banner">
             <div className="flex items-center gap-2 mb-2">
               <Navigation className="h-5 w-5 text-blue-600" />
-              <h2 className="text-sm font-bold text-blue-800">Pedido asignado — Listo para salir</h2>
+              <h2 className="text-sm font-bold text-blue-800">Tienes una entrega pendiente</h2>
             </div>
             <p className="text-xs text-blue-600 mb-3">
-              Este pedido te fue asignado. Revisa los detalles y presiona "Empezar Entrega" cuando estés listo.
+              Este pedido te fue asignado. Revisa los detalles y presiona "Iniciar Entrega" cuando estés listo.
             </p>
           </div>
 
@@ -447,7 +447,7 @@ function AssignedOrderCard({ order, onStartDelivery, onViewRoute, actionDisabled
         disabled={actionDisabled}
         onClick={onStartDelivery}
       >
-        Empezar Entrega
+        Iniciar Entrega
       </Button>
     </article>
   );

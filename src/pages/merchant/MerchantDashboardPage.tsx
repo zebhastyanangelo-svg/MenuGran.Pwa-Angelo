@@ -144,6 +144,9 @@ export function MerchantDashboardPage() {
   // Driver assignment modal state
   const [driverModalOpen, setDriverModalOpen] = useState(false);
   const [driverModalOrder, setDriverModalOrder] = useState<OrderWithCustomer | null>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  const [assignSubmitting, setAssignSubmitting] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
 
   const handleOpenProof = useCallback(async (order: OrderWithCustomer) => {
     setSelectedOrder(order);
@@ -174,22 +177,55 @@ export function MerchantDashboardPage() {
 
   const handleOpenDriverModal = useCallback((order: OrderWithCustomer) => {
     setDriverModalOrder(order);
+    const currentDriverId = order.driver_id ?? null;
+    if (currentDriverId) {
+      setSelectedDriverId(currentDriverId);
+    } else if (drivers.length === 1) {
+      setSelectedDriverId(drivers[0]?.id ?? null);
+    } else {
+      setSelectedDriverId(null);
+    }
+    setAssignError(null);
     setDriverModalOpen(true);
-  }, []);
+  }, [drivers]);
 
   const handleCloseDriverModal = useCallback(() => {
     setDriverModalOpen(false);
     setDriverModalOrder(null);
+    setSelectedDriverId(null);
+    setAssignError(null);
+    setAssignSubmitting(false);
   }, []);
 
-  const handleAssignDriver = useCallback(
-    async (driverId: string | null) => {
-      if (!driverModalOrder) return;
-      await assignDriver(driverModalOrder.id, driverId);
+  const handleConfirmAssignDriver = useCallback(async () => {
+    if (!driverModalOrder) return;
+    if (!selectedDriverId) {
+      setAssignError('Selecciona un repartidor antes de enviar.');
+      return;
+    }
+    setAssignSubmitting(true);
+    setAssignError(null);
+    try {
+      await assignDriver(driverModalOrder.id, selectedDriverId);
       handleCloseDriverModal();
-    },
-    [driverModalOrder, assignDriver, handleCloseDriverModal],
-  );
+    } catch (err) {
+      setAssignError(err instanceof Error ? err.message : 'No se pudo asignar el repartidor');
+      setAssignSubmitting(false);
+    }
+  }, [driverModalOrder, selectedDriverId, assignDriver, handleCloseDriverModal]);
+
+  const handleUnassignDriver = useCallback(async () => {
+    if (!driverModalOrder) return;
+    setAssignSubmitting(true);
+    setAssignError(null);
+    try {
+      await assignDriver(driverModalOrder.id, null);
+      handleCloseDriverModal();
+    } catch (err) {
+      setAssignError(err instanceof Error ? err.message : 'No se pudo quitar la asignación');
+      setAssignSubmitting(false);
+    }
+  }, [driverModalOrder, assignDriver, handleCloseDriverModal]);
 
   // Check if the merchant has a store assigned
   const hasStore = !!merchantName;
@@ -450,7 +486,7 @@ return (
                             data-testid={`assign-driver-${order.id}`}
                           >
                             <Truck className="h-4 w-4" />
-                            Asignar a Rider
+                            Asignar al repartidor
                           </button>
                         ) : null}
                       </div>
@@ -473,36 +509,97 @@ return (
       <Modal
         isOpen={driverModalOpen}
         onClose={handleCloseDriverModal}
-        title="Asignar a Rider"
+        title="Asignar repartidor"
+        footer={
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {driverModalOrder?.driver_id ? (
+              <button
+                type="button"
+                onClick={() => void handleUnassignDriver()}
+                disabled={assignSubmitting}
+                className="text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+                data-testid="assign-driver-unassign"
+              >
+                Quitar asignación
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleCloseDriverModal}
+                disabled={assignSubmitting}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                data-testid="assign-driver-cancel"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmAssignDriver()}
+                disabled={assignSubmitting || !selectedDriverId}
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-300"
+                data-testid="assign-driver-submit"
+              >
+                {assignSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                Enviar
+              </button>
+            </div>
+          </div>
+        }
       >
         <div className="space-y-2">
           <p className="text-sm text-gray-600 mb-3">
             Pedido #{driverModalOrder?.id?.slice(0, 8).toUpperCase()} — Selecciona un repartidor:
           </p>
-          <button
-            type="button"
-            onClick={() => void handleAssignDriver(null)}
-            className="w-full text-left px-3 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
-            data-testid="assign-driver-none"
-          >
-            Sin asignar
-          </button>
-          {drivers.map((driver) => (
+          {drivers.length === 0 ? (
+            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Este comercio aún no tiene repartidores registrados.
+            </p>
+          ) : drivers.length === 1 ? (
             <button
-              key={driver.id}
               type="button"
-              onClick={() => void handleAssignDriver(driver.id)}
-              className={`w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors flex items-center gap-3 ${
-                driverModalOrder?.driver_id === driver.id
-                  ? 'border-indigo-300 bg-indigo-50 text-indigo-800'
-                  : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-              }`}
-              data-testid={`assign-driver-option-${driver.id}`}
+              onClick={() => setSelectedDriverId(drivers[0]?.id ?? null)}
+              className="w-full text-left px-3 py-2.5 rounded-lg border border-indigo-300 bg-indigo-50 text-sm text-indigo-800 flex items-center gap-3"
+              data-testid={`assign-driver-option-${drivers[0]?.id ?? 'single'}`}
             >
-              <User className="h-4 w-4 shrink-0 text-gray-400" />
-              <span className="font-medium">{driver.full_name ?? driver.email ?? driver.id}</span>
+              <User className="h-4 w-4 shrink-0 text-indigo-500" />
+              <span className="font-medium">
+                {drivers[0]?.full_name ?? drivers[0]?.email ?? drivers[0]?.id}
+              </span>
+              <span className="ml-auto text-xs font-semibold text-indigo-600">Listo para enviar</span>
             </button>
-          ))}
+          ) : (
+            drivers.map((driver) => {
+              const isSelected = selectedDriverId === driver.id;
+              return (
+                <button
+                  key={driver.id}
+                  type="button"
+                  onClick={() => setSelectedDriverId(driver.id)}
+                  aria-pressed={isSelected}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg border text-sm flex items-center gap-3 transition-colors ${
+                    isSelected
+                      ? 'border-indigo-300 bg-indigo-50 text-indigo-800'
+                      : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+                  data-testid={`assign-driver-option-${driver.id}`}
+                >
+                  <User className="h-4 w-4 shrink-0 text-gray-400" />
+                  <span className="font-medium">{driver.full_name ?? driver.email ?? driver.id}</span>
+                  {isSelected && (
+                    <span className="ml-auto text-xs font-semibold text-indigo-600">Seleccionado</span>
+                  )}
+                </button>
+              );
+            })
+          )}
+          {assignError && (
+            <p className="text-sm text-red-600 mt-2" role="alert" data-testid="assign-driver-error">
+              {assignError}
+            </p>
+          )}
         </div>
       </Modal>
     </div>

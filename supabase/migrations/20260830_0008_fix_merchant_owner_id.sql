@@ -21,7 +21,6 @@ SELECT
   m.is_active
 FROM public.merchants m
 WHERE m.owner_id IS NULL
-   OR m.owner_id = ''
    OR m.owner_id NOT IN (SELECT id FROM public.profiles);
 
 -- 1b. Merchants cuyo owner_id apunta a un perfil con rol incorrecto

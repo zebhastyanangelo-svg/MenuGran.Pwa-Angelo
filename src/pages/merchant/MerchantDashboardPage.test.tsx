@@ -538,4 +538,114 @@ describe('MerchantDashboardPage', () => {
       expect(within(dialog).getByText(/Ref: REF-12345/)).toBeInTheDocument();
     });
   });
+
+  it('muestra el botón "Asignar al repartidor" en pedidos delivery con drivers disponibles', () => {
+    (useMerchantDashboardPage as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      merchantId: 'm-1',
+      merchantName: 'La Pizza',
+      isOpen: true,
+      activeProducts: 0,
+      orders: [createOrder({ id: 'd-1', type: 'delivery', status: 'payment_pending' })],
+      drivers: [{ id: 'driver-1', full_name: 'Carlos R', email: null }],
+      loading: false,
+      error: null,
+      toggleStoreOpen: vi.fn(),
+      updateOrderStatus: vi.fn(),
+      assignDriver: vi.fn(),
+    });
+
+    renderPage();
+
+    expect(screen.getByTestId('assign-driver-d-1')).toBeInTheDocument();
+    expect(screen.getByText('Asignar al repartidor')).toBeInTheDocument();
+  });
+
+  it('abre el modal con el único driver preseleccionado y envía la asignación', async () => {
+    const assignDriver = vi.fn().mockResolvedValue(undefined);
+    (useMerchantDashboardPage as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      merchantId: 'm-1',
+      merchantName: 'La Pizza',
+      isOpen: true,
+      activeProducts: 0,
+      orders: [createOrder({ id: 'd-1', type: 'delivery', status: 'payment_pending' })],
+      drivers: [{ id: 'driver-1', full_name: 'Carlos R', email: null }],
+      loading: false,
+      error: null,
+      toggleStoreOpen: vi.fn(),
+      updateOrderStatus: vi.fn(),
+      assignDriver,
+    });
+
+    renderPage();
+
+    await user.click(screen.getByTestId('assign-driver-d-1'));
+
+    const dialog = await screen.findByRole('dialog', { name: /asignar repartidor/i });
+    expect(within(dialog).getByText('Carlos R')).toBeInTheDocument();
+    expect(within(dialog).getByText(/Listo para enviar/i)).toBeInTheDocument();
+
+    await user.click(within(dialog).getByTestId('assign-driver-submit'));
+
+    await waitFor(() => {
+      expect(assignDriver).toHaveBeenCalledWith('d-1', 'driver-1');
+    });
+  });
+
+  it('permite seleccionar entre varios drivers antes de Enviar', async () => {
+    const assignDriver = vi.fn().mockResolvedValue(undefined);
+    (useMerchantDashboardPage as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      merchantId: 'm-1',
+      merchantName: 'La Pizza',
+      isOpen: true,
+      activeProducts: 0,
+      orders: [createOrder({ id: 'd-2', type: 'delivery', status: 'confirmed' })],
+      drivers: [
+        { id: 'driver-1', full_name: 'Carlos R', email: null },
+        { id: 'driver-2', full_name: 'Ana D', email: null },
+      ],
+      loading: false,
+      error: null,
+      toggleStoreOpen: vi.fn(),
+      updateOrderStatus: vi.fn(),
+      assignDriver,
+    });
+
+    renderPage();
+
+    await user.click(screen.getByTestId('assign-driver-d-2'));
+
+    const dialog = await screen.findByRole('dialog', { name: /asignar repartidor/i });
+    const submit = within(dialog).getByTestId('assign-driver-submit');
+    expect(submit).toBeDisabled();
+
+    await user.click(within(dialog).getByTestId('assign-driver-option-driver-2'));
+    expect(submit).not.toBeDisabled();
+
+    await user.click(submit);
+
+    await waitFor(() => {
+      expect(assignDriver).toHaveBeenCalledWith('d-2', 'driver-2');
+    });
+  });
+
+  it('muestra mensaje informativo cuando el comercio no tiene repartidores', async () => {
+    (useMerchantDashboardPage as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      merchantId: 'm-1',
+      merchantName: 'La Pizza',
+      isOpen: true,
+      activeProducts: 0,
+      orders: [createOrder({ id: 'd-3', type: 'delivery', status: 'ready' })],
+      drivers: [],
+      loading: false,
+      error: null,
+      toggleStoreOpen: vi.fn(),
+      updateOrderStatus: vi.fn(),
+      assignDriver: vi.fn(),
+    });
+
+    renderPage();
+
+    // Sin drivers, no aparece el botón "Asignar al repartidor"
+    expect(screen.queryByTestId('assign-driver-d-3')).not.toBeInTheDocument();
+  });
 });
