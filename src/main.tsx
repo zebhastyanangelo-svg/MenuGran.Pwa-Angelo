@@ -27,6 +27,11 @@ if ('serviceWorker' in navigator) {
       console.error('[PWA] Error al registrar el Service Worker:', error)
     },
   })
+
+  // When a new Service Worker takes control, reload to pick up the new version.
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload()
+  })
 }
 
 document.addEventListener('visibilitychange', () => {

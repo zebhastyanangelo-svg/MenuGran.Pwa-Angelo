@@ -30,28 +30,38 @@ export function useActiveOrder(): ActiveOrderInfo {
   // Subscribe to Realtime changes on the cached order so the banner
   // disappears immediately when status becomes delivered / cancelled.
   useEffect(() => {
-    if (!cachedOrder) return;
+    if (!cachedOrder?.id) return;
 
-    const channel = supabase
-      .channel(`active-order-banner-${cachedOrder.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `id=eq.${cachedOrder.id}`,
-        },
-        (payload) => {
-          const updated = payload.new as OrderRow;
-          setCachedOrder(updated);
-          saveOrder(updated);
-        },
-      )
-      .subscribe();
+    const orderId = cachedOrder.id;
+
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    try {
+      channel = supabase
+        .channel(`active-order-banner-${orderId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'orders',
+            filter: `id=eq.${orderId}`,
+          },
+          (payload) => {
+            const updated = payload.new as OrderRow;
+            setCachedOrder(updated);
+            saveOrder(updated);
+          },
+        )
+        .subscribe();
+    } catch {
+      channel = null;
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [cachedOrder?.id]);
 
