@@ -17,6 +17,7 @@ export function IncompleteProfileBanner() {
   const { profile } = useAuth();
   const navigate = useNavigate();
 
+  if (profile?.role !== 'customer') return null;
   if (!isProfileIncomplete(profile)) return null;
 
   return (
