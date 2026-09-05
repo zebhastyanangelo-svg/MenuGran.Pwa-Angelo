@@ -5,6 +5,7 @@ import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { authRoutes } from './navItems';
 import { ActiveOrderBanner } from '../orders/ActiveOrderBanner';
+import { IncompleteProfileBanner } from '../IncompleteProfileBanner';
 import { useActiveOrder } from '../../hooks/useActiveOrder';
 
 export function Layout() {
@@ -43,6 +44,7 @@ export function Layout() {
     <div className="min-h-screen bg-slate-50">
       {!isAuthRoute && <Sidebar />}
       <ActiveOrderBanner />
+      <IncompleteProfileBanner />
       <main className="mx-auto w-full max-w-5xl px-4 pb-24 pt-4 md:pb-4 md:pl-64">
         <Outlet />
       </main>

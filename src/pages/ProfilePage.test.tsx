@@ -10,6 +10,14 @@ vi.mock('../hooks/useAuth', () => ({
   useAuth: vi.fn(),
 }));
 
+vi.mock('../hooks/useUpdateProfile', () => ({
+  useUpdateProfile: vi.fn(() => ({
+    updateProfile: vi.fn(),
+    isSaving: false,
+    error: null,
+  })),
+}));
+
 const { useAuth } = await import('../hooks/useAuth');
 
 describe('ProfilePage', () => {
@@ -28,6 +36,8 @@ describe('ProfilePage', () => {
         id: 'user-1',
         email: 'cliente@menugram.com',
         full_name: 'Ana García',
+        ci: 'V-12345678',
+        phone: '+584121234567',
         avatar_url: null,
         role: 'customer',
         created_at: '2026-01-01T00:00:00.000Z',
@@ -51,7 +61,10 @@ describe('ProfilePage', () => {
 
     expect(screen.getByText('Perfil del cliente')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Ana García/i })).toBeInTheDocument();
-    expect(screen.getByText('cliente@menugram.com')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('cliente@menugram.com')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('V-12345678')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('+584121234567')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /guardar cambios/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /cerrar sesión/i })).toBeInTheDocument();
   });
 
@@ -84,5 +97,42 @@ describe('ProfilePage', () => {
     await userEvent.click(screen.getByRole('button', { name: /cerrar sesión/i }));
 
     expect(mockSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('muestra campos vacíos cuando el perfil no tiene ci ni phone', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        id: 'user-2',
+        email: 'oauth@test.com',
+        user_metadata: { full_name: 'Carlos López' },
+      },
+      profile: {
+        id: 'user-2',
+        email: 'oauth@test.com',
+        full_name: 'Carlos López',
+        avatar_url: null,
+        role: 'customer',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+      isLoading: false,
+      signInWithGoogle: vi.fn(),
+      signInWithPassword: vi.fn(),
+      signUpWithPassword: vi.fn(),
+      resendConfirmationEmail: vi.fn(),
+      signOut: vi.fn(),
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/profile']}>
+        <Routes>
+          <Route path="/profile" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByDisplayValue('oauth@test.com')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Ej. V-12345678')).toHaveValue('');
+    expect(screen.getByPlaceholderText('Ej. +584121234567')).toHaveValue('');
   });
 });

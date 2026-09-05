@@ -112,8 +112,10 @@ export interface ProfileRow {
   id: string;
   email: string;
   full_name: string | null;
-  /** Cédula de identidad del usuario (capturada al crear comercios). */
+  /** Cédula de identidad del usuario. */
   ci?: string | null;
+  /** Teléfono del usuario (ej. +584121234567). */
+  phone?: string | null;
   avatar_url: string | null;
   role: UserRole;
   created_at: IsoTimestamp;
@@ -204,7 +206,7 @@ export interface DeliveryRow {
 /* ---------- INSERT (tipos de escritura parciales) ---------- */
 
 export type ProfileInsert = Pick<ProfileRow, 'id' | 'email'> &
-  Partial<Pick<ProfileRow, 'full_name' | 'avatar_url' | 'role'>>;
+  Partial<Pick<ProfileRow, 'full_name' | 'avatar_url' | 'role' | 'ci' | 'phone'>>;
 
 export type MerchantInsert = Pick<
   MerchantRow,
