@@ -45,6 +45,9 @@ const SuperAdminDashboardPage = lazy(() =>
 const SuperAdminProfilePage = lazy(() =>
   import('./pages/superadmin/SuperAdminProfilePage').then((mod) => ({ default: mod.SuperAdminProfilePage })),
 );
+const SuperAdminUsersPage = lazy(() =>
+  import('./pages/superadmin/SuperAdminUsersPage').then((mod) => ({ default: mod.SuperAdminUsersPage })),
+);
 const DriverDashboard = lazy(() =>
   import('./pages/driver/DriverDashboard').then((mod) => ({ default: mod.DriverDashboard })),
 );
@@ -124,6 +127,7 @@ export function App() {
                   <Route path="/admin/profile" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantProfilePage /></ProtectedRoute>} />
                   <Route path="/super-admin" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminMerchantsPage /></ProtectedRoute>} />
                   <Route path="/super-admin/dashboard" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminDashboardPage /></ProtectedRoute>} />
+                  <Route path="/super-admin/users" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminUsersPage /></ProtectedRoute>} />
                   <Route path="/super-admin/profile" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminProfilePage /></ProtectedRoute>} />
                   <Route
                     path="/driver"
