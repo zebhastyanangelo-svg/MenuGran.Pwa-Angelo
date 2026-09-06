@@ -51,6 +51,9 @@ const SuperAdminUsersPage = lazy(() =>
 const DriverDashboard = lazy(() =>
   import('./pages/driver/DriverDashboard').then((mod) => ({ default: mod.DriverDashboard })),
 );
+const DriverDeliveriesPage = lazy(() =>
+  import('./pages/driver/DriverDeliveriesPage').then((mod) => ({ default: mod.DriverDeliveriesPage })),
+);
 
 function RootRedirect() {
   const { user, profile, isLoading } = useAuth();
@@ -78,7 +81,7 @@ function RootRedirect() {
       return <Navigate to="/super-admin/dashboard" replace />;
     }
     if (profile.role === 'driver') {
-      return <Navigate to="/driver" replace />;
+      return <Navigate to="/driver/deliveries" replace />;
     }
     return <Navigate to="/admin" replace />;
   }
@@ -134,6 +137,14 @@ export function App() {
                     element={
                       <ProtectedRoute requiredRole="driver">
                         <DriverDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/driver/deliveries"
+                    element={
+                      <ProtectedRoute requiredRole="driver">
+                        <DriverDeliveriesPage />
                       </ProtectedRoute>
                     }
                   />

@@ -34,7 +34,7 @@ export const superadminNavItems: NavItem[] = [
 ];
 
 export const driverNavItems: NavItem[] = [
-  { to: '/driver', label: 'Entregas', icon: Bike },
+  { to: '/driver/deliveries', label: 'Entregas', icon: Bike },
   { to: '/profile', label: 'Perfil', icon: UserRound },
 ];
 
