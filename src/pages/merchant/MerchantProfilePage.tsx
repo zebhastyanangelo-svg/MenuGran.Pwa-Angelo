@@ -9,6 +9,7 @@ import {
   validatePasswordChange,
   type PasswordChangeInput,
 } from '../../utils/passwordChange';
+import { NoMerchantWarning } from '../../components/merchant/NoMerchantWarning';
 
 export function MerchantProfilePage() {
   const { user, profile, signOut } = useAuth();
@@ -126,14 +127,7 @@ export function MerchantProfilePage() {
   }
 
   if (context === null) {
-    return (
-      <div
-        className="py-8 text-center text-gray-500 font-medium"
-        role="status"
-      >
-        No se encontró un comercio asociado a tu cuenta.
-      </div>
-    );
+    return <NoMerchantWarning />;
   }
 
   return (

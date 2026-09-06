@@ -1,5 +1,6 @@
 import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { useAuth } from './hooks/useAuth';
@@ -12,6 +13,7 @@ import { PageLoader } from './components/PageLoader';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/layout/Layout';
 import { CartFab } from './components/cart/CartFab';
+import { supabase, TABLE_NAMES } from './services/supabase';
 
 const LoginPage = lazy(() => import('./pages/LoginPage').then((mod) => ({ default: mod.LoginPage })));
 const RegisterPage = lazy(() => import('./pages/RegisterPage').then((mod) => ({ default: mod.RegisterPage })));
@@ -59,6 +61,35 @@ function RootRedirect() {
   const { user, profile, isLoading } = useAuth();
   const location = useLocation();
 
+  const isMerchantRole =
+    profile?.role === 'merchant_owner' || profile?.role === 'merchant_staff';
+
+  const { data: hasMerchant, isLoading: isMerchantChecking } = useQuery<boolean>({
+    queryKey: ['merchantExists', user?.id],
+    enabled: !!user && isMerchantRole,
+    queryFn: async (): Promise<boolean> => {
+      if (!user) return false;
+      const [ownerResult, staffResult] = await Promise.all([
+        supabase
+          .from(TABLE_NAMES.merchants)
+          .select('id')
+          .eq('owner_id', user.id)
+          .eq('is_active', true)
+          .limit(1),
+        supabase
+          .from(TABLE_NAMES.merchantStaff)
+          .select('merchant_id')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .limit(1),
+      ]);
+      const hasOwner = !ownerResult.error && ownerResult.data && ownerResult.data.length > 0;
+      const hasStaff = !staffResult.error && staffResult.data && staffResult.data.length > 0;
+      return hasOwner || hasStaff;
+    },
+    staleTime: 60_000,
+  });
+
   if (isLoading) {
     return <PageLoader message="Comprobando sesión..." />;
   }
@@ -82,6 +113,15 @@ function RootRedirect() {
     }
     if (profile.role === 'driver') {
       return <Navigate to="/driver/deliveries" replace />;
+    }
+    // Merchant roles: only redirect to admin if they actually have a merchant
+    if (isMerchantRole) {
+      if (isMerchantChecking) {
+        return <PageLoader message="Verificando comercio..." />;
+      }
+      if (hasMerchant === false) {
+        return <Navigate to="/marketplace" replace />;
+      }
     }
     return <Navigate to="/admin" replace />;
   }

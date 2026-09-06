@@ -275,7 +275,7 @@ return (
           <p className="text-slate-500 mb-6">
             Si aún no has registrado tu negocio, contáctanos
           </p>
-          <div className="mt-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
             <a
               href="https://wa.me/58414xxxxxxx"
               target="_blank"
@@ -284,6 +284,20 @@ return (
             >
               Contactar por WhatsApp
             </a>
+            <button
+              type="button"
+              onClick={() => navigate('/', { replace: true })}
+              className="border border-slate-200 bg-white text-slate-700 px-4 py-2 rounded-xl font-medium text-sm hover:bg-slate-50 transition-colors"
+            >
+              Ir al Inicio
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className="text-red-600 border border-red-200 bg-white px-4 py-2 rounded-xl font-medium text-sm hover:bg-red-50 transition-colors"
+            >
+              Cerrar Sesión
+            </button>
           </div>
         </div>
       )}

@@ -47,6 +47,7 @@ import { SalesTrendChart } from '../../components/merchant/SalesTrendChart';
 import { OrdersDonutChart } from '../../components/merchant/OrdersDonutChart';
 import { UpdateStaffModal } from '../../components/merchant/UpdateStaffModal';
 import { DeleteStaffConfirmModal } from '../../components/merchant/DeleteStaffConfirmModal';
+import { NoMerchantWarning } from '../../components/merchant/NoMerchantWarning';
 
 const EMPTY_EMPLOYEE: EmployeeFormInput = {
   fullName: '',
@@ -189,14 +190,7 @@ export function MerchantResumenPage() {
   }
 
   if (context === null) {
-    return (
-      <div
-        className="py-8 text-center text-gray-500 font-medium"
-        role="status"
-      >
-        No se encontró un comercio asociado a tu cuenta.
-      </div>
-    );
+    return <NoMerchantWarning />;
   }
 
   return (

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { MerchantSettingsPage } from './MerchantSettingsPage';
 import type { MerchantRow, MerchantUpdate } from '../../types/database';
 
@@ -119,10 +120,18 @@ describe('MerchantSettingsPage', () => {
     });
   }
 
+  function renderPage() {
+    return render(
+      <MemoryRouter>
+        <MerchantSettingsPage />
+      </MemoryRouter>,
+    );
+  }
+
   it('muestra el estado de carga mientras se obtienen los datos', async () => {
     await setMockState({ isLoading: true, merchant: null });
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     expect(screen.getByText(/Cargando configuración/i)).toBeInTheDocument();
   });
@@ -130,7 +139,7 @@ describe('MerchantSettingsPage', () => {
   it('muestra el error si la carga falla', async () => {
     await setMockState({ isLoading: false, error: 'Fallo de red', merchant: null });
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     expect(
       screen.getByText(/Fallo de red/i),
@@ -140,17 +149,17 @@ describe('MerchantSettingsPage', () => {
   it('muestra mensaje cuando no hay comercio', async () => {
     await setMockState({ isLoading: false, merchant: null });
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
-    expect(
-      screen.getByText(/No se encontró el comercio/i),
-    ).toBeInTheDocument();
+     expect(
+       screen.getByText(/No se encontró un comercio/i),
+     ).toBeInTheDocument();
   });
 
   it('renderiza los tres tabs con las etiquetas correctas', async () => {
     await setMockState();
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     expect(
       screen.getByRole('button', { name: /Datos Generales/i }),
@@ -166,7 +175,7 @@ describe('MerchantSettingsPage', () => {
   it('cambia de tab al hacer clic', async () => {
     await setMockState();
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     expect(screen.getByText(/Nombre del Negocio/i)).toBeInTheDocument();
 
@@ -191,7 +200,7 @@ describe('MerchantSettingsPage', () => {
    it('precarga los campos con los datos del comercio existente', async () => {
      await setMockState({ merchant: mockMerchant });
 
-     render(<MerchantSettingsPage />);
+     renderPage();
 
      expect(screen.getByDisplayValue('Pizzería La Trattoria')).toBeInTheDocument();
      expect(screen.getByDisplayValue('J-12345678-0')).toBeInTheDocument();
@@ -218,7 +227,7 @@ describe('MerchantSettingsPage', () => {
    it('muestra el enlace Vista Previa con href al store del comercio', async () => {
      await setMockState({ merchant: mockMerchant });
 
-     render(<MerchantSettingsPage />);
+     renderPage();
 
      const previewLink = screen.getByRole('link', { name: /Vista Previa/i });
      expect(previewLink).toHaveAttribute('href', '/merchant/merchant-123');
@@ -229,7 +238,7 @@ describe('MerchantSettingsPage', () => {
   it('envia los cambios al guardar y muestra toast de exito', async () => {
     await setMockState();
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     await screen.findByText('Guardar cambios');
 
@@ -269,7 +278,7 @@ describe('MerchantSettingsPage', () => {
       saveSettings: vi.fn().mockRejectedValue(new Error('Error de guardado')),
     });
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     await screen.findByText('Guardar cambios');
 
@@ -288,7 +297,7 @@ describe('MerchantSettingsPage', () => {
   it('sube el logo a ImgBB al seleccionar un archivo', async () => {
     await setMockState();
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     await screen.findByText('Guardar cambios');
 
@@ -312,7 +321,7 @@ describe('MerchantSettingsPage', () => {
     };
     await setMockState({ merchant: merchantWithLogo });
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     await screen.findByText('Guardar cambios');
 
@@ -331,7 +340,7 @@ describe('MerchantSettingsPage', () => {
   it('deshabilita el boton de guardar mientras se sube una imagen', async () => {
     await setMockState();
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     await screen.findByText('Guardar cambios');
 
@@ -363,7 +372,7 @@ describe('MerchantSettingsPage', () => {
   it('cambia el estado activo del checkbox', async () => {
     await setMockState();
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     await screen.findByText('Guardar cambios');
 
@@ -382,7 +391,7 @@ describe('MerchantSettingsPage', () => {
   it('envia is_active en false cuando se desmarca', async () => {
     await setMockState();
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     await screen.findByText('Guardar cambios');
 
@@ -404,7 +413,7 @@ describe('MerchantSettingsPage', () => {
   it('muestra el nombre del comercio en el encabezado', async () => {
     await setMockState();
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     expect(screen.getByText(/Configuración del Comercio/i)).toBeInTheDocument();
   });
@@ -414,7 +423,7 @@ describe('MerchantSettingsPage', () => {
       merchant: { ...mockMerchant, location: { x: -66.9036, y: 10.4806 } },
     });
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: /Ubicación/i }));
     expect(screen.getByTestId('captured-coordinates')).toBeInTheDocument();
@@ -464,7 +473,7 @@ describe('MerchantSettingsPage', () => {
       } as unknown as MerchantRow,
     });
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     expect(screen.getByText(/Configuración del Comercio/i)).toBeInTheDocument();
 
@@ -493,7 +502,7 @@ describe('MerchantSettingsPage', () => {
         } as unknown as MerchantRow,
       });
 
-      render(<MerchantSettingsPage />);
+      renderPage();
 
       await screen.findByText('Guardar cambios');
       fireEvent.click(
@@ -511,7 +520,7 @@ describe('MerchantSettingsPage', () => {
   it('envía location en null cuando el comercio nunca capturó coordenadas', async () => {
     await setMockState({ merchant: mockMerchant });
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: /Ubicación/i }));
     expect(
@@ -533,7 +542,7 @@ describe('MerchantSettingsPage', () => {
       success({ coords: { latitude: 8.6, longitude: -71.15 } });
     });
 
-    render(<MerchantSettingsPage />);
+    renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: /Ubicación/i }));
     fireEvent.click(screen.getByTestId('use-current-location'));

@@ -13,6 +13,7 @@ import { ImageUploadField } from '../../components/merchant/ImageUploadField';
 import { LocationSettingsForm } from '../../components/merchant/LocationSettingsForm';
 import { formatGeoPointOrNull } from '../../utils/distance';
 import { parseGeoPoint } from '../../utils/geoPoint';
+import { NoMerchantWarning } from '../../components/merchant/NoMerchantWarning';
 import type {
   GeoPoint,
   MerchantCategory,
@@ -178,11 +179,7 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
   }
 
   if (!merchant) {
-    return (
-      <div className="py-8 text-center text-gray-500 font-medium" role="status">
-        No se encontró el comercio.
-      </div>
-    );
+    return <NoMerchantWarning />;
   }
 
   return (
