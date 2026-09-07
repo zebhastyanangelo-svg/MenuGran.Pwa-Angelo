@@ -4,6 +4,14 @@ import { supabase, TABLE_NAMES } from '../services/supabase'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { OrderRow, OrderStatus } from '../types/database'
 
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+  if (typeof err === 'object' && err !== null && 'message' in err) {
+    return String((err as { message: unknown }).message)
+  }
+  return String(err)
+}
+
 export interface CustomerProfile {
   full_name: string | null
   email: string | null
@@ -312,7 +320,7 @@ export function useMerchantDashboardPage(
     orders: orders ?? [],
     drivers: drivers ?? [],
     loading: isLoading || isToggling || isUpdating,
-    error: isError ? (error instanceof Error ? error.message : String(error)) : null,
+    error: isError ? getErrorMessage(error) : null,
     toggleStoreOpen: async (open: boolean) => await toggleStoreOpen(open),
     updateOrderStatus: async (orderId: string, status: OrderStatus) =>
       await updateOrderStatus({ orderId, status }),

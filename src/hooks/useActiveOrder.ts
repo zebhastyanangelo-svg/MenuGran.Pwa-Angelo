@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getLastOrder, saveOrder } from '../utils/offlineStorage';
+import { getLastOrder, saveOrder, removeOrder } from '../utils/offlineStorage';
 import { supabase } from '../services/supabase';
 import type { OrderRow, OrderStatus } from '../types/database';
 
@@ -49,8 +49,13 @@ export function useActiveOrder(): ActiveOrderInfo {
           },
           (payload) => {
             const updated = payload.new as OrderRow;
-            setCachedOrder(updated);
-            saveOrder(updated);
+            if (updated.status === 'delivered' || updated.status === 'cancelled') {
+              removeOrder(updated.id);
+              setCachedOrder(null);
+            } else {
+              setCachedOrder(updated);
+              saveOrder(updated);
+            }
           },
         )
         .subscribe();

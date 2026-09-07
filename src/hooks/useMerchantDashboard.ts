@@ -7,6 +7,14 @@ import type { OrderWithCustomer } from './useMerchantDashboardPage'
 
 const PAYMENT_PROOF_BUCKET = 'payment-proofs'
 
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+  if (typeof err === 'object' && err !== null && 'message' in err) {
+    return String((err as { message: unknown }).message)
+  }
+  return String(err)
+}
+
 export interface MerchantDashboardData {
   merchantIds: string[]
   orders: OrderWithCustomer[]
@@ -153,7 +161,7 @@ export function useMerchantDashboard(
     merchantIds,
     orders: orders ?? [],
     loading: isLoading,
-    error: isError ? (error instanceof Error ? error.message : String(error)) : null,
+    error: isError ? getErrorMessage(error) : null,
     updateOrderStatus: async (orderId: string, status: OrderStatus) =>
       await updateOrderStatus({ orderId, status }),
   }

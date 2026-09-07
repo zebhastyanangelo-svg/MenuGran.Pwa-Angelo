@@ -6,6 +6,7 @@ import {
   getOrderHistory,
   clearOrderCache,
   getOrderCacheSize,
+  removeOrder,
 } from './offlineStorage';
 import type { OrderRow } from '../types/database';
 
@@ -213,6 +214,44 @@ describe('offlineStorage', () => {
       const invalid = buildOrder('order-1');
       delete (invalid as Partial<OrderRow>).id;
       expect(saveOrder(invalid)).toBe(false);
+    });
+  });
+
+  describe('removeOrder', () => {
+    beforeEach(() => {
+      clearOrderCache();
+    });
+
+    it('elimina un pedido específico del caché por id', () => {
+      saveOrder(buildOrder('order-1'));
+      saveOrder(buildOrder('order-2'));
+      expect(getOrderCacheSize()).toBe(2);
+
+      expect(removeOrder('order-1')).toBe(true);
+      expect(getOrderCacheSize()).toBe(1);
+      expect(getOrder('order-1')).toBeNull();
+      expect(getOrder('order-2')).not.toBeNull();
+    });
+
+    it('retorna false cuando el pedido no existe', () => {
+      expect(removeOrder('nonexistent')).toBe(true);
+      expect(getOrderCacheSize()).toBe(0);
+    });
+
+    it('retorna false para un id vacío', () => {
+      expect(removeOrder('')).toBe(false);
+    });
+
+    it('no afecta otros pedidos', () => {
+      saveOrder(buildOrder('order-a'));
+      saveOrder(buildOrder('order-b'));
+      saveOrder(buildOrder('order-c'));
+
+      removeOrder('order-b');
+
+      expect(getOrder('order-a')).not.toBeNull();
+      expect(getOrder('order-b')).toBeNull();
+      expect(getOrder('order-c')).not.toBeNull();
     });
   });
 });

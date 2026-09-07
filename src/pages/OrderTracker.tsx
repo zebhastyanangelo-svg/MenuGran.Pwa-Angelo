@@ -8,6 +8,7 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import {
   saveOrder,
   getOrder,
+  removeOrder,
 } from '../utils/offlineStorage';
 import {
   useNotifications,
@@ -237,6 +238,18 @@ export function OrderTracker() {
     };
   }, [orderId]);
 
+  // Auto-clear cached order after delivery/cancellation
+  useEffect(() => {
+    if (!order) return;
+    if (order.status !== 'delivered' && order.status !== 'cancelled') return;
+
+    const timer = setTimeout(() => {
+      removeOrder(order.id);
+    }, order.status === 'delivered' ? 60_000 : 0);
+
+    return () => clearTimeout(timer);
+  }, [order?.id, order?.status]);
+
   if (authLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50 text-gray-600">
@@ -299,7 +312,10 @@ export function OrderTracker() {
           </p>
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={() => {
+              removeOrder(order.id);
+              navigate('/');
+            }}
             className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow hover:bg-emerald-700 transition-colors"
             data-testid="back-to-marketplace"
           >

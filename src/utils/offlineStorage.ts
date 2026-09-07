@@ -130,6 +130,13 @@ export function clearOrderCache(): boolean {
   return writeCache({ orders: [] });
 }
 
+export function removeOrder(orderId: string): boolean {
+  if (!orderId) return false;
+  const cache = readCache();
+  const filtered = cache.orders.filter((entry) => entry.order.id !== orderId);
+  return writeCache({ orders: filtered });
+}
+
 export function getOrderCacheSize(): number {
   const cache = readCache();
   return cache.orders.length;
