@@ -52,7 +52,7 @@ async function fetchDriverDeliveries(
 ): Promise<DriverOrder[]> {
   const result = await supabase
     .from(TABLE_NAMES.orders)
-    .select('*, profiles!customer_id(full_name, email, phone)')
+    .select('id, merchant_id, customer_id, driver_id, type, status, payment_method, payment_reference, payment_proof_url, total_amount, table_number, delivery_location, delivery_address_notes, items, created_at, profiles!customer_id(full_name, email, phone)')
     .eq('merchant_id', merchantId)
     .eq('type', 'delivery')
     .or(
@@ -60,7 +60,7 @@ async function fetchDriverDeliveries(
     )
     .order('created_at', { ascending: false })
   if (result.error) throw result.error
-  return (result.data ?? []) as DriverOrder[]
+  return (result.data ?? []) as unknown as DriverOrder[]
 }
 
 async function updateOrderStatus(

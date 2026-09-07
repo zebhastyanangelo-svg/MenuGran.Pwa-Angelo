@@ -1,61 +1,71 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [
-    react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'logo.svg'],
-      injectRegister: false,
-      manifest: {
-        name: 'MenuGram - Menús digitales',
-        short_name: 'MenuGram',
-        description:
-          'Plataforma multi-comercio para menús digitales con pedidos en tiempo real y seguimiento de entrega.',
-        lang: 'es',
-        dir: 'ltr',
-        categories: ['food', 'shopping', 'business'],
-        display: 'standalone',
-        orientation: 'portrait',
-        start_url: '/',
-        scope: '/',
-        background_color: '#ffffff',
-        theme_color: '#f97316',
-        icons: [
-          {
-            src: '/pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any',
-          },
-          {
-            src: '/pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any',
-          },
-          {
-            src: '/maskable-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-        ],
-      },
-      workbox: {
-        cleanupOutdatedCaches: true,
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-        navigateFallback: '/index.html',
-        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-        skipWaiting: true,
-        clientsClaim: true,
-      },
-      devOptions: {
-        enabled: false,
-      },
-    }),
-  ],
+export default defineConfig(({ mode }) => {
+  const config: UserConfig = {
+    plugins: [
+      react(),
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: ['favicon.svg', 'logo.svg'],
+        injectRegister: false,
+        manifest: {
+          name: 'MenuGram - Menús digitales',
+          short_name: 'MenuGram',
+          description:
+            'Plataforma multi-comercio para menús digitales con pedidos en tiempo real y seguimiento de entrega.',
+          lang: 'es',
+          dir: 'ltr',
+          categories: ['food', 'shopping', 'business'],
+          display: 'standalone',
+          orientation: 'portrait',
+          start_url: '/',
+          scope: '/',
+          background_color: '#ffffff',
+          theme_color: '#f97316',
+          icons: [
+            {
+              src: '/pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'any',
+            },
+            {
+              src: '/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any',
+            },
+            {
+              src: '/maskable-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+          ],
+        },
+        workbox: {
+          cleanupOutdatedCaches: true,
+          globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+          navigateFallback: '/index.html',
+          maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+          skipWaiting: true,
+          clientsClaim: true,
+        },
+        devOptions: {
+          enabled: false,
+        },
+      }),
+    ],
+  }
+
+  // Elimina console.* y debugger del bundle de producción
+  // (no afecta el entorno de desarrollo, donde los logs son útiles)
+  if (mode === 'production') {
+    config.esbuild = { drop: ['console', 'debugger'] }
+  }
+
+  return config
 })

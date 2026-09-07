@@ -43,8 +43,6 @@ export async function createOrder(params: CreateOrderParams): Promise<string> {
     table_number: params.tableNumber ?? undefined,
   };
 
-  console.log('[createOrder] PAYLOAD:', JSON.stringify(orderData, null, 2));
-
   const { data, error } = await supabase
     .from(TABLE_NAMES.orders)
     .insert(orderData)
@@ -56,7 +54,6 @@ export async function createOrder(params: CreateOrderParams): Promise<string> {
     throw error;
   }
 
-  console.log('[createOrder] SUCCESS:', data.id);
   return data.id;
 }
 
