@@ -73,11 +73,26 @@ function merchantStaffSelectChain() {
         ),
       }),
       in: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue(
-            mockQueryResult([{ merchant_id: 'm-1' }]),
-          ),
-        }),
+        eq: vi.fn().mockResolvedValue(
+          mockQueryResult([
+            {
+              user_id: 'driver-1',
+              profiles: {
+                full_name: 'Test Driver',
+                email: 'driver@test.com',
+                role: 'driver',
+              },
+            },
+            {
+              user_id: 'staff-1',
+              profiles: {
+                full_name: 'Staff User',
+                email: 'staff@test.com',
+                role: 'merchant_staff',
+              },
+            },
+          ]),
+        ),
       }),
     }),
   }
@@ -240,5 +255,42 @@ describe('useMerchantDashboardPage.assignDriver', () => {
 
     expect(deliveriesSelect).toHaveBeenCalled()
     expect(deliveriesInsert).not.toHaveBeenCalled()
+  })
+})
+
+describe('useMerchantDashboardPage.drivers', () => {
+  beforeEach(() => {
+    mockSupabase.from.mockReset()
+    mockSupabase.channel.mockReset()
+    mockSupabase.removeChannel.mockReset()
+    mockSupabase.channel.mockImplementation(() => {
+      const ch = {
+        on: vi.fn().mockReturnThis(),
+        subscribe: vi.fn().mockReturnThis(),
+      }
+      return ch
+    })
+  })
+
+  it('filtra solo los empleados con role driver del profiles join', async () => {
+    mockSupabase.from.mockImplementation((table: string) => {
+      if (table === 'merchants') return merchantSelectChain()
+      if (table === 'merchant_staff') return merchantStaffSelectChain()
+      if (table === 'orders') return ordersChain()
+      if (table === 'products') return productsChain()
+      return {}
+    })
+
+    const client = buildQueryClient()
+    const { result } = renderHook(
+      () => useMerchantDashboardPage({ id: 'u-1' } as never),
+      { wrapper: buildWrapper(client) },
+    )
+
+    await waitFor(() => {
+      expect(result.current.drivers).toHaveLength(1)
+    })
+    expect(result.current.drivers[0].id).toBe('driver-1')
+    expect(result.current.drivers[0].full_name).toBe('Test Driver')
   })
 })

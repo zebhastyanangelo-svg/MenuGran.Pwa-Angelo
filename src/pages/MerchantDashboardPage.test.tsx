@@ -74,7 +74,7 @@ vi.mock('../hooks/useAuth', () => ({
             };
           })
         };
-      } else if (_tableName === 'merchantStaff') {
+      } else if (_tableName === 'merchant_staff') {
         // Return an object that mimics the chained calls for merchantStaff query
         return {
           select: vi.fn().mockReturnThis(),
@@ -97,7 +97,10 @@ vi.mock('../hooks/useAuth', () => ({
                 return Promise.resolve({ data: null, error: null });
               })
             };
-          })
+          }),
+          in: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
         };
       } else if (_tableName === 'orders') {
         // Return an object that mimics the chained calls for orders query
@@ -320,5 +323,29 @@ describe('MerchantDashboardPage', () => {
       // But we can at least verify that no error is shown
       expect(screen.queryByText(/Error/i)).not.toBeInTheDocument();
     });
+  });
+
+  it('muestra "Sin repartidores disponibles" en el select de repartidor cuando no hay drivers', async () => {
+    const mockOrder = createMockOrder({
+      id: 'order-delivery-1',
+      type: 'delivery',
+      status: 'payment_pending',
+      driver_id: null,
+    });
+    supabaseModule.__setMockOrdersData([mockOrder]);
+
+    render(
+      <BrowserRouter>
+        <MerchantDashboardPage />
+      </BrowserRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/order-delivery-1/i)).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText(/Sin repartidores disponibles/i),
+    ).toBeInTheDocument();
   });
 });

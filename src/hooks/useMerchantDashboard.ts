@@ -94,18 +94,21 @@ export function useMerchantDashboard(
     queryFn: async (): Promise<DriverProfile[]> => {
       const result = await supabase
         .from(TABLE_NAMES.merchantStaff)
-        .select('user_id, profiles!user_id(full_name, email)')
+        .select('user_id, profiles!user_id(full_name, email, role)')
         .in('merchant_id', merchantIds)
         .eq('is_active', true)
-        .eq('role', 'driver')
       if (result.error) throw result.error
-      return (result.data ?? []).map(
-        (row: Record<string, unknown>) => ({
+      return (result.data ?? [])
+        .filter(
+          (row: Record<string, unknown>) =>
+            (row.profiles as Record<string, unknown> | null | undefined)
+              ?.role === 'driver',
+        )
+        .map((row: Record<string, unknown>) => ({
           id: row.user_id as string,
           full_name: ((row.profiles as Record<string, unknown>)?.full_name as string) ?? null,
           email: ((row.profiles as Record<string, unknown>)?.email as string) ?? null,
-        }),
-      )
+        }))
     },
   })
 

@@ -173,11 +173,17 @@ export function OrdersBoard({
                               <option value="" disabled>
                                 Asignar repartidor
                               </option>
-                              {drivers.map((driver) => (
-                                <option key={driver.id} value={driver.id}>
-                                  {driver.full_name ?? driver.email ?? driver.id}
+                              {drivers.length === 0 ? (
+                                <option value="" disabled className="text-gray-400">
+                                  Sin repartidores disponibles
                                 </option>
-                              ))}
+                              ) : (
+                                drivers.map((driver) => (
+                                  <option key={driver.id} value={driver.id}>
+                                    {driver.full_name ?? driver.email ?? driver.id}
+                                  </option>
+                                ))
+                              )}
                             </select>
                           ) : null}
                         </div>
