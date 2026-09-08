@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { OrderStatus } from '../../types/database';
-import type { OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
+import type { DriverProfile, OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 import { formatPrice } from '../../types/cart';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import {
@@ -13,7 +13,9 @@ import {
 
 export interface OrdersBoardProps {
   orders: OrderWithCustomer[];
+  drivers?: DriverProfile[];
   onUpdateStatus: (orderId: string, status: OrderStatus) => void;
+  onAssignDriver?: (orderId: string, driverId: string | null) => void;
   onOpenProof: (order: OrderWithCustomer) => void;
 }
 
@@ -41,7 +43,9 @@ function getCustomerLabel(order: OrderWithCustomer): string {
 
 export function OrdersBoard({
   orders,
+  drivers = [],
   onUpdateStatus,
+  onAssignDriver,
   onOpenProof,
 }: OrdersBoardProps) {
   const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('');
@@ -148,6 +152,36 @@ export function OrdersBoard({
                   </td>
                   <td className="px-4 py-3 block sm:table-cell">
                     <div className="flex flex-wrap items-center gap-2">
+                      {order.type === 'delivery' && onAssignDriver && (
+                        <div className="w-full mb-1">
+                          {order.driver_id ? (
+                            <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded font-medium">
+                              🚗 {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
+                            </span>
+                          ) : order.status !== 'delivered' && order.status !== 'cancelled' ? (
+                            <select
+                              className="w-full text-xs border border-indigo-200 rounded px-2 py-1 bg-indigo-50 text-indigo-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              data-testid={`driver-select-${order.id}`}
+                              defaultValue=""
+                              onChange={(e) => {
+                                const driverId = e.target.value;
+                                if (driverId) {
+                                  onAssignDriver(order.id, driverId);
+                                }
+                              }}
+                            >
+                              <option value="" disabled>
+                                Asignar repartidor
+                              </option>
+                              {drivers.map((driver) => (
+                                <option key={driver.id} value={driver.id}>
+                                  {driver.full_name ?? driver.email ?? driver.id}
+                                </option>
+                              ))}
+                            </select>
+                          ) : null}
+                        </div>
+                      )}
                       {getAllowedTransitions(order.status).map((nextStatus) => (
                         <button
                           key={nextStatus}

@@ -3,7 +3,7 @@ import type { User, RealtimeChannel } from '@supabase/supabase-js'
 import { supabase, TABLE_NAMES } from '../services/supabase'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { OrderRow, OrderStatus } from '../types/database'
-import type { OrderWithCustomer } from './useMerchantDashboardPage'
+import type { DriverProfile, OrderWithCustomer } from './useMerchantDashboardPage'
 
 const PAYMENT_PROOF_BUCKET = 'payment-proofs'
 
@@ -18,9 +18,11 @@ function getErrorMessage(err: unknown): string {
 export interface MerchantDashboardData {
   merchantIds: string[]
   orders: OrderWithCustomer[]
+  drivers: DriverProfile[]
   loading: boolean
   error: string | null
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>
+  assignDriver: (orderId: string, driverId: string | null) => Promise<void>
 }
 
 export interface UseMerchantDashboardOptions {
@@ -86,6 +88,27 @@ export function useMerchantDashboard(
     },
   })
 
+  const { data: drivers = [] } = useQuery<DriverProfile[]>({
+    queryKey: ['merchantDrivers', merchantIds.join('-')],
+    enabled: merchantIds.length > 0,
+    queryFn: async (): Promise<DriverProfile[]> => {
+      const result = await supabase
+        .from(TABLE_NAMES.merchantStaff)
+        .select('user_id, profiles!user_id(full_name, email)')
+        .in('merchant_id', merchantIds)
+        .eq('is_active', true)
+        .eq('role', 'driver')
+      if (result.error) throw result.error
+      return (result.data ?? []).map(
+        (row: Record<string, unknown>) => ({
+          id: row.user_id as string,
+          full_name: ((row.profiles as Record<string, unknown>)?.full_name as string) ?? null,
+          email: ((row.profiles as Record<string, unknown>)?.email as string) ?? null,
+        }),
+      )
+    },
+  })
+
   const { mutateAsync: updateOrderStatus } = useMutation<
     void,
     Error,
@@ -99,6 +122,61 @@ export function useMerchantDashboard(
         .update({ status })
         .eq('id', orderId)
       if (result.error) throw result.error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['merchantOrders', user?.id, merchantIds.join('-')],
+      })
+    },
+  })
+
+  const { mutateAsync: assignDriver } = useMutation<
+    void,
+    Error,
+    { orderId: string; driverId: string | null },
+    unknown
+  >({
+    mutationKey: ['assignDriver'],
+    mutationFn: async ({ orderId, driverId }) => {
+      const result = await supabase
+        .from(TABLE_NAMES.orders)
+        .update({ driver_id: driverId })
+        .eq('id', orderId)
+      if (result.error) throw result.error
+
+      if (driverId) {
+        const { data: existing } = await supabase
+          .from(TABLE_NAMES.deliveries)
+          .select('id')
+          .eq('order_id', orderId)
+          .maybeSingle()
+
+        if (existing?.id) {
+          const updateResult = await supabase
+            .from(TABLE_NAMES.deliveries)
+            .update({ driver_id: driverId, status: 'assigned' })
+            .eq('id', existing.id)
+          if (updateResult.error) throw updateResult.error
+        } else {
+          const insertResult = await supabase
+            .from(TABLE_NAMES.deliveries)
+            .insert({ order_id: orderId, driver_id: driverId, status: 'assigned' })
+          if (insertResult.error) throw insertResult.error
+        }
+      } else {
+        const { data: existing } = await supabase
+          .from(TABLE_NAMES.deliveries)
+          .select('id')
+          .eq('order_id', orderId)
+          .maybeSingle()
+        if (existing?.id) {
+          const updateResult = await supabase
+            .from(TABLE_NAMES.deliveries)
+            .update({ driver_id: null, status: 'unassigned' })
+            .eq('id', existing.id)
+          if (updateResult.error) throw updateResult.error
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -160,10 +238,13 @@ export function useMerchantDashboard(
   return {
     merchantIds,
     orders: orders ?? [],
+    drivers: drivers ?? [],
     loading: isLoading,
     error: isError ? getErrorMessage(error) : null,
     updateOrderStatus: async (orderId: string, status: OrderStatus) =>
       await updateOrderStatus({ orderId, status }),
+    assignDriver: async (orderId: string, driverId: string | null) =>
+      await assignDriver({ orderId, driverId }),
   }
 }
 
