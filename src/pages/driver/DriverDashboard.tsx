@@ -6,6 +6,7 @@ import { useGpsTracking } from '../../hooks/useGpsTracking';
 import { Button } from '../../components/ui/Button';
 import { formatPrice } from '../../types/cart';
 import { getOrderTypeLabel } from '../../utils/orderType';
+import { MapView } from '../../components/map/MapView';
 import type { DriverOrder } from '../../hooks/useDriverDashboard';
 
 function getCustomerName(order: DriverOrder): string {
@@ -304,12 +305,35 @@ function ActiveDeliveryView({
       {/* Map area */}
       <div className="flex-1 relative bg-gray-200">
         {position ? (
-          <iframe
-            title="Mapa de entrega"
-            className="w-full h-full border-0"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            src={`https://www.openstreetmap.org/export/embed.html?bbox=${position.lng - 0.01},${position.lat - 0.01},${position.lng + 0.01},${position.lat + 0.01}&layer=mapnik&marker=${position.lat},${position.lng}`}
+          <MapView
+            center={[position.lat, position.lng]}
+            zoom={15}
+            userLocation={[position.lat, position.lng]}
+            markers={
+              order.delivery_location
+                ? [{
+                    id: 'delivery-dest',
+                    position: [
+                      (order.delivery_location as { x: number; y: number }).y,
+                      (order.delivery_location as { x: number; y: number }).x,
+                    ],
+                    title: 'Destino de entrega',
+                    subtitle: address,
+                  }]
+                : []
+            }
+            routeRequest={
+              order.delivery_location
+                ? {
+                    from: [position.lat, position.lng],
+                    to: [
+                      (order.delivery_location as { x: number; y: number }).y,
+                      (order.delivery_location as { x: number; y: number }).x,
+                    ],
+                  }
+                : undefined
+            }
+            className="h-full w-full"
           />
         ) : (
           <div className="flex items-center justify-center h-full text-gray-400 text-sm">

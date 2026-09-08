@@ -539,7 +539,7 @@ describe('MerchantDashboardPage', () => {
     });
   });
 
-  it('muestra el botón "Asignar al repartidor" en pedidos delivery con drivers disponibles', () => {
+  it('muestra el select de repartidor en pedidos delivery con drivers disponibles', () => {
     (useMerchantDashboardPage as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       merchantId: 'm-1',
       merchantName: 'La Pizza',
@@ -556,8 +556,9 @@ describe('MerchantDashboardPage', () => {
 
     renderPage();
 
+    expect(screen.getByTestId('driver-select-d-1')).toBeInTheDocument();
+    expect(screen.getByText('Seleccionar repartidor')).toBeInTheDocument();
     expect(screen.getByTestId('assign-driver-d-1')).toBeInTheDocument();
-    expect(screen.getByText('Asignar al repartidor')).toBeInTheDocument();
   });
 
   it('abre el modal con el único driver preseleccionado y envía la asignación', async () => {

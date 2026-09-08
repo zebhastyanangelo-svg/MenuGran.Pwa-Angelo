@@ -1,9 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { MerchantRow } from '../../types/database';
 import {
   MapView,
   MerchantMapView,
+  fetchOsrmRoute,
 } from './MapView';
 import { merchantsByDistance } from '../../utils/distance';
 
@@ -45,9 +46,11 @@ vi.mock('leaflet', () => {
       map: vi.fn(() => mockMap),
       marker: markerFn,
       circleMarker: circleMarkerFn,
+      polyline: vi.fn(() => ({ addTo: vi.fn() })),
       icon: iconFn,
       Marker: class {},
       CircleMarker: class {},
+      Polyline: class {},
     },
     __layers: layers,
     __instanceMap: instanceMap,
@@ -67,6 +70,113 @@ describe('MapView', () => {
   it('renderiza sin marcadores sin errores', () => {
     render(<MapView markers={[]} center={[19.43, -99.13]} zoom={10} />);
     expect(document.querySelector('.h-64.w-full')).toBeInTheDocument();
+  });
+
+  it('renderiza con ruta polilínea sin errores', () => {
+    render(
+      <MapView
+        markers={[]}
+        center={[19.43, -99.13]}
+        zoom={10}
+        route={[[19.43, -99.13], [19.44, -99.14]]}
+      />,
+    );
+    expect(document.querySelector('.h-64.w-full')).toBeInTheDocument();
+  });
+
+  it('renderiza con routeRequest sin errores', () => {
+    render(
+      <MapView
+        markers={[]}
+        center={[19.43, -99.13]}
+        zoom={10}
+        routeRequest={{ from: [19.43, -99.13], to: [19.44, -99.14] }}
+      />,
+    );
+    expect(document.querySelector('.h-64.w-full')).toBeInTheDocument();
+  });
+});
+
+describe('fetchOsrmRoute', () => {
+  const realFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+    vi.useRealTimers();
+  });
+
+  it('devuelve coordenadas de la ruta cuando OSRM responde Ok', async () => {
+    const osrmCoords: Array<[number, number]> = [
+      [-99.13, 19.43],
+      [-99.135, 19.435],
+      [-99.14, 19.44],
+    ];
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        code: 'Ok',
+        routes: [{ geometry: { type: 'LineString', coordinates: osrmCoords } }],
+      }),
+    });
+
+    const result = await fetchOsrmRoute([19.43, -99.13], [19.44, -99.14]);
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('router.project-osrm.org/route/v1/driving/'),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(result).toEqual([
+      [19.43, -99.13],
+      [19.435, -99.135],
+      [19.44, -99.14],
+    ]);
+  });
+
+  it('devuelve fallback línea recta cuando fetch falla por red', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+
+    const result = await fetchOsrmRoute([19.43, -99.13], [19.44, -99.14]);
+
+    expect(result).toEqual([[19.43, -99.13], [19.44, -99.14]]);
+  });
+
+  it('devuelve fallback línea recta cuando OSRM responde con error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ code: 'NoRoute', routes: [] }),
+    });
+
+    const result = await fetchOsrmRoute([19.43, -99.13], [19.44, -99.14]);
+
+    expect(result).toEqual([[19.43, -99.13], [19.44, -99.14]]);
+  });
+
+  it('devuelve fallback línea recta cuando HTTP no es ok', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 });
+
+    const result = await fetchOsrmRoute([19.43, -99.13], [19.44, -99.14]);
+
+    expect(result).toEqual([[19.43, -99.13], [19.44, -99.14]]);
+  });
+
+  it('devuelve fallback línea recta cuando fetch aborta por timeout', async () => {
+    globalThis.fetch = vi.fn().mockImplementation((_url: string, opts: { signal?: AbortSignal } | undefined) => {
+      return new Promise((_resolve, reject) => {
+        opts?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('The operation was aborted.', 'AbortError'));
+        });
+      });
+    });
+
+    const promise = fetchOsrmRoute([19.43, -99.13], [19.44, -99.14]);
+    vi.advanceTimersByTime(6000);
+    const result = await promise;
+
+    expect(result).toEqual([[19.43, -99.13], [19.44, -99.14]]);
   });
 });
 

@@ -493,15 +493,37 @@ return (
                             Asignado a {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
                           </span>
                         ) : order.status !== 'delivered' && order.status !== 'cancelled' ? (
-                          <button
-                            type="button"
-                            onClick={() => void handleOpenDriverModal(order)}
-                            className="inline-flex items-center gap-1.5 text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-lg font-semibold transition-colors"
-                            data-testid={`assign-driver-${order.id}`}
-                          >
-                            <Truck className="h-4 w-4" />
-                            Asignar al repartidor
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <select
+                              className="text-sm border border-indigo-200 rounded-lg px-3 py-1.5 bg-indigo-50 text-indigo-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              data-testid={`driver-select-${order.id}`}
+                              defaultValue=""
+                              onChange={(e) => {
+                                const driverId = e.target.value;
+                                if (driverId) {
+                                  void assignDriver(order.id, driverId);
+                                }
+                              }}
+                            >
+                              <option value="" disabled>
+                                Seleccionar repartidor
+                              </option>
+                              {drivers.map((driver) => (
+                                <option key={driver.id} value={driver.id}>
+                                  {driver.full_name ?? driver.email ?? driver.id}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => void handleOpenDriverModal(order)}
+                              className="inline-flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700"
+                              data-testid={`assign-driver-${order.id}`}
+                              title="Más opciones"
+                            >
+                              <Truck className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         ) : null}
                       </div>
                     )}
