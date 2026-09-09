@@ -54,6 +54,7 @@ const defaultStaffMember: StaffListItem = {
   userId: 'u-9',
   fullName: 'Carlos Ruiz',
   email: 'carlos@pizzeria.com',
+  role: 'merchant_staff',
   permissions: {
     can_manage_menu: true,
     can_view_orders: true,
@@ -201,14 +202,35 @@ describe('MerchantResumenPage', () => {
     expect(endInput.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it('lista los empleados con estado y badges de permisos', async () => {
+  it('lista los empleados con estado, badges de permisos y badge de rol', async () => {
     renderPage();
 
     const row = await screen.findByTestId('staff-row', undefined, { timeout: 5000 });
     expect(row).toHaveTextContent('Carlos Ruiz');
     expect(row).toHaveTextContent('carlos@pizzeria.com');
+    expect(row).toHaveTextContent('Empleado');
     expect(row).toHaveTextContent('Gestión de menú');
     expect(row).toHaveTextContent('Ver métricas');
+  });
+
+  it('muestra el badge "Repartidor" para empleados con rol driver', async () => {
+    const driverStaff: StaffListItem = {
+      ...defaultStaffMember,
+      id: 's-2',
+      fullName: 'Luis Mensajero',
+      email: 'luis@pizzeria.com',
+      role: 'driver',
+    };
+    serviceMocks.listStaff.mockResolvedValue([defaultStaffMember, driverStaff]);
+
+    renderPage();
+
+    const rows = await screen.findAllByTestId('staff-row', undefined, { timeout: 5000 });
+    const driverRow = rows.find((r) => r.textContent?.includes('Luis Mensajero'));
+    expect(driverRow).toBeDefined();
+    expect(driverRow).toHaveTextContent('Repartidor');
+    const staffRow = rows.find((r) => r.textContent?.includes('Carlos Ruiz'));
+    expect(staffRow).toHaveTextContent('Empleado');
   });
 
   it('muestra el error de carga de la lista de empleados', async () => {

@@ -72,11 +72,12 @@ function validatePayload(payload: CreateEmployeePayload):
       ? payload.permissions as Record<string, unknown>
       : {};
 
-  // Los repartidores siempre reciben permisos de pedidos, ignorando lo enviado.
+   // Los repartidores siempre reciben permisos de pedidos, ignorando lo enviado.
   const permissions = role === 'driver'
     ? {
         can_manage_orders: true,
         can_manage_menu: false,
+        can_view_orders: true,
         can_manage_settings: false,
         can_view_metrics: false,
       }
@@ -269,12 +270,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
           409,
         );
       }
-      // Estaba desactivado: reactivar con los nuevos permisos.
+      // Estaba desactivado: reactivar con los nuevos permisos y rol.
       const { error: reactivateError } = await serviceClient
         .from('merchant_staff')
         .update({
           is_active: true,
           permissions: validated.permissions,
+          role: validated.role,
         })
         .eq('id', existingStaff.id);
       if (reactivateError !== null) {
@@ -286,12 +288,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return jsonResponse({ userId: employeeUserId, staffId: existingStaff.id });
     }
 
-    const { data: staffRow, error: staffError } = await serviceClient
+     const { data: staffRow, error: staffError } = await serviceClient
       .from('merchant_staff')
       .insert({
         merchant_id: validated.merchantId,
         user_id: employeeUserId,
         permissions: validated.permissions,
+        role: validated.role,
         is_active: true,
       })
       .select('id')

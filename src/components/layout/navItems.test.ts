@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getNavItemsForRole,
   merchantNavItems,
+  driverNavItems,
 } from './navItems';
 import type { MerchantStaffPermissions } from '../../types/database';
 
@@ -76,10 +77,25 @@ describe('getNavItemsForRole', () => {
     expect(items).toContain('/admin/dishes');
   });
 
-  it('mantiene la navegación de cliente y superadmin intacta', () => {
-    expect(getNavItemsForRole('customer')[0].to).toBe('/marketplace');
-    expect(getNavItemsForRole('superadmin')[0].to).toBe(
-      '/super-admin/dashboard',
-    );
-  });
+   it('mantiene la navegación de cliente y superadmin intacta', () => {
+     expect(getNavItemsForRole('customer')[0].to).toBe('/marketplace');
+     expect(getNavItemsForRole('superadmin')[0].to).toBe(
+       '/super-admin/dashboard',
+     );
+   });
+
+   it('muestra solo el panel de repartidor y no rutas de admin', () => {
+     const items = getNavItemsForRole('driver').map((i) => i.to);
+     expect(items).toContain('/driver/deliveries');
+     expect(items).toContain('/profile');
+     expect(items).not.toContain('/admin');
+     expect(items).not.toContain('/admin/dashboard');
+     expect(items).not.toContain('/admin/dishes');
+     expect(items).not.toContain('/admin/settings');
+   });
+
+   it('devuelve driverNavItems cuando el rol es driver', () => {
+     const items = getNavItemsForRole('driver');
+     expect(items).toEqual(driverNavItems);
+   });
 });

@@ -7,6 +7,7 @@ import { supabase, TABLE_NAMES } from './supabase';
 import type {
   MerchantStaffPermissions,
   MerchantStaffRow,
+  UserRole,
 } from '../types/database';
 import {
   DRIVER_PERMISSIONS,
@@ -26,10 +27,12 @@ export interface StaffListItem {
   userId: string;
   fullName: string | null;
   email: string | null;
+  role: UserRole;
   permissions: MerchantStaffPermissions;
   isActive: boolean;
-}interface StaffQueryRow extends MerchantStaffRow {
-  profiles: { email: string | null; full_name: string | null } | null;
+}
+interface StaffQueryRow extends MerchantStaffRow {
+  profiles: { email: string | null; full_name: string | null; role: UserRole } | null;
 }
 
 export interface MerchantMetrics {
@@ -89,7 +92,7 @@ export async function getMerchantContext(
 export async function listStaff(merchantId: string): Promise<StaffListItem[]> {
   const { data, error } = await supabase
     .from(TABLE_NAMES.merchantStaff)
-    .select('id, user_id, permissions, is_active, profiles:user_id ( full_name, email )')
+    .select('id, user_id, permissions, is_active, role, profiles:user_id ( full_name, email, role )')
     .eq('merchant_id', merchantId)
     .order('created_at', { ascending: true });
 
@@ -110,6 +113,7 @@ export async function listStaff(merchantId: string): Promise<StaffListItem[]> {
       userId: row.user_id,
       fullName,
       email: profileEmail,
+      role: row.profiles?.role ?? row.role ?? 'merchant_staff',
       permissions: row.permissions,
       isActive: row.is_active,
     };

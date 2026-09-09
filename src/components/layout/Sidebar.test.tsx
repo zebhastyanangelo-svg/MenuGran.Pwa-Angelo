@@ -93,4 +93,21 @@ describe('Sidebar', () => {
       screen.queryByRole('button', { name: /cerrar sesión/i }),
     ).not.toBeInTheDocument();
   });
+
+  it('muestra la navegación de repartidor (Entregas y Perfil) y no rutas de admin', () => {
+    useAuthMock.mockReturnValue({
+      profile: buildProfile('driver'),
+      signOut: vi.fn(),
+    });
+    render(
+      <MemoryRouter>
+        <Sidebar />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: /entregas/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /perfil/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /resumen/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /pedidos/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /platos/i })).not.toBeInTheDocument();
+  });
 });

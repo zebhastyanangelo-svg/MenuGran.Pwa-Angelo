@@ -149,6 +149,8 @@ export interface MerchantStaffRow {
   id: string;
   merchant_id: string;
   user_id: string;
+  /** Rol del empleado dentro del comercio (merchant_staff | driver). */
+  role: UserRole;
   permissions: MerchantStaffPermissions;
   is_active: boolean;
   created_at: IsoTimestamp;
@@ -215,10 +217,10 @@ export type MerchantInsert = Pick<
   Partial<Pick<MerchantRow, 'logo_url' | 'banner_url' | 'status' | 'is_active' | 'is_open' | 'location'>>;
 
 export type MerchantStaffInsert = Pick<
-  MerchantStaffRow,
-  'merchant_id' | 'user_id'
-> &
-  Partial<Pick<MerchantStaffRow, 'permissions' | 'is_active'>>;
+    MerchantStaffRow,
+    'merchant_id' | 'user_id'
+  > &
+  Partial<Pick<MerchantStaffRow, 'permissions' | 'role' | 'is_active'>>;
 
 export type CategoryInsert = Pick<CategoryRow, 'merchant_id' | 'name'> &
   Partial<Pick<CategoryRow, 'sort_order'>>;

@@ -502,14 +502,19 @@ function EmployeeManagementSection({
               className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
-                <p className="font-medium text-gray-900">
-                  {employee.fullName ?? 'Sin nombre'}
-                  {!employee.isActive && (
-                    <span className="ml-2 text-xs text-red-500">
-                      (acceso revocado)
-                    </span>
-                  )}
-                </p>
+<p className="font-medium text-gray-900">
+                   {employee.fullName ?? 'Sin nombre'}
+                   {!employee.isActive && (
+                     <span className="ml-2 text-xs text-red-500">
+                       (acceso revocado)
+                     </span>
+                   )}
+                 </p>
+                 <div className="mt-0.5 flex flex-wrap gap-1.5">
+                   <Badge variant="neutral" data-testid={`role-badge-${employee.id}`}>
+                     {employee.role === 'driver' ? 'Repartidor' : 'Empleado'}
+                   </Badge>
+                 </div>
                 <p className="text-sm text-gray-500">
                   {employee.email ?? 'sin email'}
                 </p>
