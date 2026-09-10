@@ -88,7 +88,7 @@ describe('DriverDeliveriesPage', () => {
     expect(screen.getByTestId('driver-merchant-name')).toHaveTextContent('La Pizza')
   })
 
-  it('muestra la sección "Nuevas" con pedidos asignados', () => {
+  it('muestra tabs de navegación (Nuevas, En camino, Completadas)', () => {
     ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultHookReturn,
       assigned: [createOrder()],
@@ -96,31 +96,72 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    expect(screen.getByRole('heading', { name: /Nuevas/i })).toBeInTheDocument()
-    expect(screen.getByTestId('delivery-card')).toBeInTheDocument()
+    expect(screen.getByTestId('tab-assigned')).toBeInTheDocument()
+    expect(screen.getByTestId('tab-inTransit')).toBeInTheDocument()
+    expect(screen.getByTestId('tab-delivered')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /Nuevas/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /En camino/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /Completadas/i })).toBeInTheDocument()
   })
 
-  it('muestra la sección "En Camino" con pedidos en tránsito', () => {
+  it('muestra contador de pedidos en cada tab', () => {
     ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultHookReturn,
-      inTransit: [createOrder({ status: 'on_the_way' })],
+      assigned: [createOrder(), createOrder({ id: 'order-2' })],
+      inTransit: [createOrder({ id: 'order-3', status: 'on_the_way' })],
+      delivered: [createOrder({ id: 'order-4', status: 'delivered' }), createOrder({ id: 'order-5', status: 'delivered' }), createOrder({ id: 'order-6', status: 'delivered' })],
     })
 
     renderPage()
 
-    expect(screen.getByRole('heading', { name: /En Camino/i })).toBeInTheDocument()
-    expect(screen.getByTestId('delivery-card')).toBeInTheDocument()
+    expect(screen.getByTestId('tab-assigned')).toHaveTextContent('2')
+    expect(screen.getByTestId('tab-inTransit')).toHaveTextContent('1')
+    expect(screen.getByTestId('tab-delivered')).toHaveTextContent('3')
   })
 
-  it('muestra la sección "Historial" con pedidos entregados', () => {
+  it('muestra la sección "Nuevas" con pedidos asignados por defecto', () => {
     ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultHookReturn,
-      delivered: [createOrder({ status: 'delivered' })],
+      assigned: [createOrder()],
     })
 
     renderPage()
 
-    expect(screen.getByRole('heading', { name: /Historial/i })).toBeInTheDocument()
+    expect(screen.getByTestId('orders-panel-assigned')).toBeInTheDocument()
+    expect(screen.getByTestId('delivery-card')).toBeInTheDocument()
+  })
+
+  it('permite cambiar a tab "En camino" y muestra pedidos en tránsito', async () => {
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      assigned: [createOrder()],
+      inTransit: [createOrder({ id: 'order-2', status: 'on_the_way' })],
+    })
+
+    renderPage()
+
+    // Click on "En camino" tab
+    screen.getByTestId('tab-inTransit').click()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('orders-panel-inTransit')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('delivery-card')).toBeInTheDocument()
+  })
+
+  it('permite cambiar a tab "Completadas" y muestra historial', async () => {
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      delivered: [createOrder({ id: 'order-2', status: 'delivered' })],
+    })
+
+    renderPage()
+
+    screen.getByTestId('tab-delivered').click()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('orders-panel-delivered')).toBeInTheDocument()
+    })
     expect(screen.getByTestId('delivery-card')).toBeInTheDocument()
   })
 
@@ -157,6 +198,63 @@ describe('DriverDeliveriesPage', () => {
     renderPage()
 
     expect(screen.getByText(/120/)).toBeInTheDocument()
+  })
+
+  it('muestra botones de Maps y Waze en cada tarjeta', () => {
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      assigned: [createOrder()],
+    })
+
+    renderPage()
+
+    expect(screen.getByTestId('open-maps-order-1')).toBeInTheDocument()
+    expect(screen.getByTestId('open-waze-order-1')).toBeInTheDocument()
+    expect(screen.getByText('Maps')).toBeInTheDocument()
+    expect(screen.getByText('Waze')).toBeInTheDocument()
+  })
+
+  it('muestra botón "Iniciar viaje" para pedidos asignados (ready)', () => {
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      assigned: [createOrder()],
+    })
+
+    renderPage()
+
+    expect(screen.getByTestId('start-trip-order-1')).toBeInTheDocument()
+    expect(screen.getByText('Iniciar viaje')).toBeInTheDocument()
+  })
+
+  it('muestra botón "Marcar como entregado" para pedidos en camino', async () => {
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      inTransit: [createOrder({ id: 'order-2', status: 'on_the_way' })],
+    })
+
+    renderPage()
+
+    screen.getByTestId('tab-inTransit').click()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('confirm-delivery-order-2')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Marcar como entregado')).toBeInTheDocument()
+  })
+
+  it('muestra "Entrega completada" para pedidos entregados', async () => {
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      delivered: [createOrder({ id: 'order-2', status: 'delivered' })],
+    })
+
+    renderPage()
+
+    screen.getByTestId('tab-delivered').click()
+
+    await waitFor(() => {
+      expect(screen.getByText(/Entrega completada/i)).toBeInTheDocument()
+    })
   })
 
   it('muestra el botón "Actualizar" y llama a refresh', async () => {
@@ -199,7 +297,7 @@ describe('DriverDeliveriesPage', () => {
     expect(screen.getByText('Error al cargar')).toBeInTheDocument()
   })
 
-  it('muestra el estado vacío cuando no hay pedidos', () => {
+  it('muestra el estado vacío cuando no hay pedidos en la pestaña activa', () => {
     ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultHookReturn,
     })
@@ -208,5 +306,46 @@ describe('DriverDeliveriesPage', () => {
 
     expect(screen.getByTestId('driver-no-orders')).toBeInTheDocument()
     expect(screen.getByText(/Sin entregas asignadas/)).toBeInTheDocument()
+  })
+
+  it('llama a takeOrder al hacer clic en "Iniciar viaje"', async () => {
+    const takeOrder = vi.fn()
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      assigned: [createOrder()],
+      takeOrder,
+    })
+
+    renderPage()
+
+    // Find and click the "Iniciar viaje" button
+    const startButton = screen.getByTestId('start-trip-order-1')
+    startButton.click()
+
+    await waitFor(() => {
+      expect(takeOrder).toHaveBeenCalledWith('order-1')
+    })
+  })
+
+  it('llama a markDelivered al hacer clic en "Marcar como entregado"', async () => {
+    const markDelivered = vi.fn()
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      inTransit: [createOrder({ id: 'order-2', status: 'on_the_way' })],
+      markDelivered,
+    })
+
+    renderPage()
+
+    screen.getByTestId('tab-inTransit').click()
+
+    await waitFor(() => {
+      const confirmButton = screen.getByTestId('confirm-delivery-order-2')
+      confirmButton.click()
+    })
+
+    await waitFor(() => {
+      expect(markDelivered).toHaveBeenCalledWith('order-2')
+    })
   })
 })

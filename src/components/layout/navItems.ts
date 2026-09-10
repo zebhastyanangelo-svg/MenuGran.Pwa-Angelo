@@ -22,6 +22,7 @@ export const merchantNavItems: NavItem[] = [
   { to: '/admin/dashboard', label: 'Resumen', icon: LayoutDashboard, requiredPermission: 'can_view_metrics' },
   { to: '/admin', label: 'Pedidos', icon: ClipboardList, requiredPermission: 'can_manage_orders' },
   { to: '/admin/dishes', label: 'Platos', icon: UtensilsCrossed, requiredPermission: 'can_manage_menu' },
+  { to: '/driver/deliveries', label: 'Entregas', icon: Bike, requiredPermission: 'can_view_assigned_deliveries' },
   { to: '/admin/settings', label: 'Configuración', icon: Settings, ownerOnly: true },
   { to: '/admin/profile', label: 'Perfil', icon: Store },
 ];
