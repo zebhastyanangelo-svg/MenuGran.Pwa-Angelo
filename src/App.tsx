@@ -175,7 +175,7 @@ export function App() {
                   <Route
                     path="/driver"
                     element={
-                      <ProtectedRoute requiredRole="driver">
+                      <ProtectedRoute requiredRole="driver" requiredPermission="can_view_assigned_deliveries">
                         <DriverDashboard />
                       </ProtectedRoute>
                     }
@@ -183,7 +183,7 @@ export function App() {
                   <Route
                     path="/driver/deliveries"
                     element={
-                      <ProtectedRoute requiredRole="driver">
+                      <ProtectedRoute requiredRole="driver" requiredPermission="can_view_assigned_deliveries">
                         <DriverDeliveriesPage />
                       </ProtectedRoute>
                     }

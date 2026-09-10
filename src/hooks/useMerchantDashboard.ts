@@ -191,8 +191,11 @@ export function useMerchantDashboard(
   // Realtime subscription for order changes
   const channelRef = useRef<RealtimeChannel | null>(null)
 
+  const userId = user?.id
+  const onNewOrder = options?.onNewOrder
+
   useEffect(() => {
-    if (merchantIds.length === 0 || !user) return undefined
+    if (merchantIds.length === 0 || userId === undefined) return undefined
 
     const channel = supabase
       .channel(`merchant-orders-${merchantIds.join('-')}`)
@@ -206,11 +209,11 @@ export function useMerchantDashboard(
         },
         (payload) => {
           queryClient.invalidateQueries({
-            queryKey: ['merchantOrders', user?.id, merchantIds.join('-')],
+            queryKey: ['merchantOrders', userId, merchantIds.join('-')],
           })
           const newOrder = payload.new as OrderRow | undefined
           if (newOrder && newOrder.status === 'payment_pending') {
-            options?.onNewOrder?.(newOrder)
+            onNewOrder?.(newOrder)
           }
         },
       )
@@ -224,7 +227,7 @@ export function useMerchantDashboard(
         },
         () => {
           queryClient.invalidateQueries({
-            queryKey: ['merchantOrders', user?.id, merchantIds.join('-')],
+            queryKey: ['merchantOrders', userId, merchantIds.join('-')],
           })
         },
       )
@@ -236,7 +239,7 @@ export function useMerchantDashboard(
       supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [merchantIds, user?.id, queryClient, options?.onNewOrder])
+  }, [merchantIds, userId, queryClient, onNewOrder])
 
   return {
     merchantIds,

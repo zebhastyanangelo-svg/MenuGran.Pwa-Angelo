@@ -1,17 +1,7 @@
 import { AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-
-/**
- * Evalúa si el perfil del usuario tiene datos obligatorios faltantes.
- * Retorna `true` cuando falta `phone` o `ci` (cédula de identidad).
- */
-export function isProfileIncomplete(
-  profile: { phone?: string | null; ci?: string | null } | null,
-): boolean {
-  if (profile === null) return false;
-  return !profile.phone || !profile.ci;
-}
+import { isProfileIncomplete } from '../utils/profileUtils';
 
 export function IncompleteProfileBanner() {
   const { profile } = useAuth();

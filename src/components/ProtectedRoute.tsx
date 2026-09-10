@@ -18,7 +18,7 @@ export interface ProtectedRouteProps {
 
 /**
  * Componente wrapper para proteger rutas según autenticación, roles y permisos
- * de usuario. Los permisos solo se verifican para el rol merchant_staff.
+ * de usuario. Los permisos se verifican para merchant_staff y driver.
  */
 export function ProtectedRoute({
   children,
@@ -62,14 +62,17 @@ export function ProtectedRoute({
     }
   }
 
-  // Verificar permiso granular para merchant_staff
+  // Verificar permiso granular para merchant_staff y driver
   if (
     requiredPermission !== undefined &&
-    profile?.role === 'merchant_staff' &&
+    (profile?.role === 'merchant_staff' || profile?.role === 'driver') &&
     !isLoadingPermissions
   ) {
     const hasPermission = staffPermissions?.[requiredPermission] === true;
     if (!hasPermission) {
+      if (profile?.role === 'driver') {
+        return <Navigate to="/" replace />;
+      }
       return <Navigate to="/admin" replace />;
     }
   }

@@ -64,25 +64,43 @@ function renderRoute(redirectTo?: string): void {
   );
 }
 
-function renderAdminRoute(): void {
-  render(
-    <MemoryRouter initialEntries={['/admin']}>
-      <Routes>
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}>
-              <p data-testid="admin-panel">Admin Panel</p>
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/" element={<p data-testid="home">Inicio</p>} />
-        <Route path="/driver" element={<p data-testid="driver">Panel Reparto</p>} />
-        <Route path="/login" element={<p data-testid="login">Login</p>} />
-      </Routes>
-    </MemoryRouter>,
-  );
-}
+function renderDriverRoute(permission?: keyof MerchantStaffPermissions): void {
+    render(
+      <MemoryRouter initialEntries={['/driver']}>
+        <Routes>
+          <Route
+            path="/driver"
+            element={
+              <ProtectedRoute requiredRole="driver" requiredPermission={permission}>
+                <p data-testid="driver-panel">Driver Panel</p>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/" element={<p data-testid="home">Inicio</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  function renderAdminRoute(): void {
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <Routes>
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}>
+                <p data-testid="admin-panel">Admin Panel</p>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/" element={<p data-testid="home">Inicio</p>} />
+          <Route path="/driver" element={<p data-testid="driver">Panel Reparto</p>} />
+          <Route path="/login" element={<p data-testid="login">Login</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
 
 describe('ProtectedRoute (ruta /super-admin)', () => {
   beforeEach(() => {
@@ -160,6 +178,51 @@ describe('ProtectedRoute (ruta /super-admin)', () => {
   });
 });
 
+describe('ProtectedRoute (permisos de driver)', () => {
+  beforeEach(() => {
+    authState.user = null;
+    authState.profile = null;
+    authState.isLoading = false;
+    mockStaffPermissions = null;
+    mockIsLoadingPermissions = false;
+  });
+
+  it('permite el acceso al driver con can_view_assigned_deliveries', () => {
+    authState.user = { id: 'driver-1', email: 'driver@menugram.com' };
+    authState.profile = buildProfile('driver');
+    mockStaffPermissions = {
+      can_manage_menu: false,
+      can_view_orders: true,
+      can_manage_orders: true,
+      can_manage_settings: false,
+      can_view_metrics: false,
+      can_view_assigned_deliveries: true,
+    };
+
+    renderDriverRoute('can_view_assigned_deliveries');
+
+    expect(screen.getByTestId('driver-panel')).toBeInTheDocument();
+  });
+
+    it('redirige al driver sin can_view_assigned_deliveries', () => {
+    authState.user = { id: 'driver-2', email: 'driver2@menugram.com' };
+    authState.profile = buildProfile('driver');
+    mockStaffPermissions = {
+      can_manage_menu: false,
+      can_view_orders: true,
+      can_manage_orders: true,
+      can_manage_settings: false,
+      can_view_metrics: false,
+      can_view_assigned_deliveries: false,
+    };
+
+    renderDriverRoute('can_view_assigned_deliveries');
+
+    expect(screen.queryByTestId('driver-panel')).not.toBeInTheDocument();
+    expect(screen.getByTestId('home')).toBeInTheDocument();
+  });
+});
+
 describe('ProtectedRoute (permisos de staff)', () => {
   beforeEach(() => {
     authState.user = null;
@@ -209,6 +272,7 @@ describe('ProtectedRoute (permisos de staff)', () => {
       can_manage_orders: true,
       can_manage_settings: true,
       can_view_metrics: true,
+      can_view_assigned_deliveries: false,
     };
 
     renderPermissionRoute('can_view_metrics');
@@ -225,6 +289,7 @@ describe('ProtectedRoute (permisos de staff)', () => {
       can_manage_orders: false,
       can_manage_settings: false,
       can_view_metrics: false,
+      can_view_assigned_deliveries: false,
     };
 
     renderPermissionRoute('can_view_metrics');

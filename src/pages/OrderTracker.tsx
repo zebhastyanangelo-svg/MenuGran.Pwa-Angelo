@@ -248,7 +248,7 @@ export function OrderTracker() {
     }, order.status === 'delivered' ? 60_000 : 0);
 
     return () => clearTimeout(timer);
-  }, [order?.id, order?.status]);
+  }, [order]);
 
   if (authLoading) {
     return (

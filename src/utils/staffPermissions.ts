@@ -16,6 +16,7 @@ export interface EmployeeFormInput {
     can_manage_menu: boolean;
     can_manage_settings: boolean;
     can_view_metrics: boolean;
+    can_view_assigned_deliveries: boolean;
   };
 }
 
@@ -28,15 +29,17 @@ export const DEFAULT_STAFF_PERMISSIONS: MerchantStaffPermissions = {
   can_view_orders: true,
   can_manage_settings: false,
   can_view_metrics: false,
+  can_view_assigned_deliveries: false,
 };
 
-/** Permisos de repartidor: solo gestión de pedidos. */
+/** Permisos de repartidor: gestión de pedidos y entregas asignadas. */
 export const DRIVER_PERMISSIONS: MerchantStaffPermissions = {
   can_manage_menu: false,
   can_view_orders: true,
   can_manage_orders: true,
   can_manage_settings: false,
   can_view_metrics: false,
+  can_view_assigned_deliveries: true,
 };
 
 export interface PermissionOption {
@@ -50,6 +53,7 @@ export const PERMISSION_OPTIONS: PermissionOption[] = [
   { key: 'can_manage_menu', label: 'Gestión de menú' },
   { key: 'can_manage_settings', label: 'Configuración' },
   { key: 'can_view_metrics', label: 'Ver métricas' },
+  { key: 'can_view_assigned_deliveries', label: 'Entregas asignadas' },
 ];
 
 export function toStaffPermissions(
@@ -61,6 +65,7 @@ export function toStaffPermissions(
     can_manage_orders: input.can_manage_orders,
     can_manage_settings: input.can_manage_settings,
     can_view_metrics: input.can_view_metrics,
+    can_view_assigned_deliveries: input.can_view_assigned_deliveries,
   };
 }
 
@@ -72,6 +77,7 @@ export function permissionsToFormInput(
     can_manage_menu: permissions.can_manage_menu,
     can_manage_settings: permissions.can_manage_settings ?? false,
     can_view_metrics: permissions.can_view_metrics ?? false,
+    can_view_assigned_deliveries: permissions.can_view_assigned_deliveries ?? false,
   };
 }
 
@@ -100,4 +106,5 @@ export const PERMISSION_LABELS: Record<string, string> = {
   can_manage_menu: 'Gestión de menú',
   can_manage_settings: 'Configuración',
   can_view_metrics: 'Ver métricas',
+  can_view_assigned_deliveries: 'Entregas asignadas',
 };

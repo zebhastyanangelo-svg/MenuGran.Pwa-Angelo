@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import type { MerchantRow } from '../../types/database';
 import 'leaflet/dist/leaflet.css';
+import { fetchOsrmRoute } from '../../utils/osrmRoute';
 
 const DEFAULT_CENTER: [number, number] = [19.4326, -99.1332];
 const DEFAULT_ZOOM = 13;
@@ -13,47 +14,12 @@ const DEFAULT_ICON = L.icon({
   popupAnchor: [0, -32],
 });
 
-const OSRM_TIMEOUT_MS = 5000;
-
 export interface MapMarker {
   id: string;
   position: [number, number];
   title: string;
   subtitle?: string;
   onClick?: () => void;
-}
-
-interface OsrmRouteResponse {
-  code: string;
-  routes: Array<{
-    geometry: {
-      coordinates: Array<[number, number]>;
-      type: string;
-    };
-  }>;
-}
-
-export async function fetchOsrmRoute(
-  from: [number, number],
-  to: [number, number],
-): Promise<readonly [number, number][]> {
-  const url = `https://router.project-osrm.org/route/v1/driving/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson`;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), OSRM_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(url, { signal: controller.signal });
-    if (!response.ok) return [from, to];
-    const data: OsrmRouteResponse = await response.json();
-    if (data.code !== 'Ok' || data.routes.length === 0) return [from, to];
-    return data.routes[0].geometry.coordinates.map(
-      (coord) => [coord[1], coord[0]] as [number, number],
-    );
-  } catch {
-    return [from, to];
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 export interface MapViewProps {
@@ -79,21 +45,23 @@ export function MapView({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const [resolvedRoute, setResolvedRoute] = useState<readonly [number, number][] | null>(null);
 
+  const routeFrom = routeRequest?.from;
+  const routeTo = routeRequest?.to;
+
   useEffect(() => {
-    if (routeRequest === undefined) {
+    if (routeFrom === undefined || routeTo === undefined) {
       setResolvedRoute(null);
       return;
     }
 
     let cancelled = false;
-    const { from, to } = routeRequest;
 
-    fetchOsrmRoute(from, to).then((coords) => {
+    fetchOsrmRoute(routeFrom, routeTo).then((coords) => {
       if (!cancelled) setResolvedRoute(coords);
     });
 
     return () => { cancelled = true; };
-  }, [routeRequest?.from[0], routeRequest?.from[1], routeRequest?.to[0], routeRequest?.to[1]]);
+  }, [routeFrom, routeTo]);
 
   const activeRoute = resolvedRoute ?? route ?? null;
 

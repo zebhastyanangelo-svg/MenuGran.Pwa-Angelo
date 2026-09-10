@@ -44,6 +44,7 @@ export function UpdateStaffModal({
             can_manage_orders: formData.get('can_manage_orders') === 'true',
             can_manage_settings: formData.get('can_manage_settings') === 'true',
             can_view_metrics: formData.get('can_view_metrics') === 'true',
+            can_view_assigned_deliveries: formData.get('can_view_assigned_deliveries') === 'true',
           };
           await onSave(nextPermissions);
         }}

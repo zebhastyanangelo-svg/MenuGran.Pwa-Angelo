@@ -72,21 +72,23 @@ function validatePayload(payload: CreateEmployeePayload):
       ? payload.permissions as Record<string, unknown>
       : {};
 
-   // Los repartidores siempre reciben permisos de pedidos, ignorando lo enviado.
-  const permissions = role === 'driver'
-    ? {
-        can_manage_orders: true,
-        can_manage_menu: false,
-        can_view_orders: true,
-        can_manage_settings: false,
-        can_view_metrics: false,
-      }
-    : {
-        can_manage_orders: rawPermissions.can_manage_orders === true,
-        can_manage_menu: rawPermissions.can_manage_menu === true,
-        can_manage_settings: rawPermissions.can_manage_settings === true,
-        can_view_metrics: rawPermissions.can_view_metrics === true,
-      };
+   // Los repartidores siempre reciben permisos de pedidos y entregas asignadas, ignorando lo enviado.
+   const permissions = role === 'driver'
+     ? {
+         can_manage_orders: true,
+         can_manage_menu: false,
+         can_view_orders: true,
+         can_manage_settings: false,
+         can_view_metrics: false,
+         can_view_assigned_deliveries: true,
+       }
+     : {
+         can_manage_orders: rawPermissions.can_manage_orders === true,
+         can_manage_menu: rawPermissions.can_manage_menu === true,
+         can_manage_settings: rawPermissions.can_manage_settings === true,
+         can_view_metrics: rawPermissions.can_view_metrics === true,
+         can_view_assigned_deliveries: rawPermissions.can_view_assigned_deliveries === true,
+       };
 
   return { merchantId, email, password, fullName, role, permissions };
 }

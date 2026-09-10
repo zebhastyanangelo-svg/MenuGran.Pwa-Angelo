@@ -1,6 +1,7 @@
 import { type ChangeEvent } from 'react';
 import { Calendar, X } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { getDefaultDateRange } from '../../utils/dateUtils';
 
 export interface DateRangePickerProps {
   startDate: string;
@@ -9,29 +10,12 @@ export interface DateRangePickerProps {
   isLoading?: boolean;
 }
 
-function getDefaultStartDate(): string {
-  const date = new Date();
-  date.setDate(date.getDate() - 7);
-  return date.toISOString().slice(0, 10);
-}
-
-function getDefaultEndDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function formatDateForDisplay(value: string): string {
   if (!value) return '';
   const parts = value.split('-');
   if (parts.length !== 3) return value;
   const [, month, day] = parts;
   return `${day}/${month}`;
-}
-
-export function getDefaultDateRange(): { startDate: string; endDate: string } {
-  return {
-    startDate: getDefaultStartDate(),
-    endDate: getDefaultEndDate(),
-  };
 }
 
 export function DateRangePicker({

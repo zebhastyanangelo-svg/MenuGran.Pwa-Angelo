@@ -4,8 +4,8 @@ import type { MerchantRow } from '../../types/database';
 import {
   MapView,
   MerchantMapView,
-  fetchOsrmRoute,
 } from './MapView';
+import { fetchOsrmRoute } from '../../utils/osrmRoute';
 import { merchantsByDistance } from '../../utils/distance';
 
 vi.mock('leaflet', () => {

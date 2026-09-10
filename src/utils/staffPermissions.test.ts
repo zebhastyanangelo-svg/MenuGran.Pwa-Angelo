@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_STAFF_PERMISSIONS,
+  DRIVER_PERMISSIONS,
   toStaffPermissions,
   validateEmployeeInput,
   type EmployeeFormInput,
@@ -12,7 +13,7 @@ function buildValidInput(): EmployeeFormInput {
     email: 'ana@pizzeria.com',
     password: 'Clave123',
     role: 'merchant_staff',
-    permissions: { can_manage_orders: true, can_manage_menu: false, can_manage_settings: false, can_view_metrics: false },
+    permissions: { can_manage_orders: true, can_manage_menu: false, can_manage_settings: false, can_view_metrics: false, can_view_assigned_deliveries: false },
   };
 }
 
@@ -41,32 +42,39 @@ describe('validateEmployeeInput', () => {
 });
 
 describe('toStaffPermissions', () => {
-  it('normaliza los checkboxes al contrato JSONB', () => {
-    expect(
-      toStaffPermissions({ can_manage_orders: true, can_manage_menu: true, can_manage_settings: false, can_view_metrics: false }),
-    ).toEqual({
-      can_manage_menu: true,
-      can_view_orders: true,
-      can_manage_orders: true,
-      can_manage_settings: false,
-      can_view_metrics: false,
+    it('normaliza los checkboxes al contrato JSONB', () => {
+      expect(
+        toStaffPermissions({ can_manage_orders: true, can_manage_menu: true, can_manage_settings: false, can_view_metrics: false, can_view_assigned_deliveries: false }),
+      ).toEqual({
+        can_manage_menu: true,
+        can_view_orders: true,
+        can_manage_orders: true,
+        can_manage_settings: false,
+        can_view_metrics: false,
+        can_view_assigned_deliveries: false,
+      });
+    });
+
+    it('siempre concede ver pedidos', () => {
+      expect(
+        toStaffPermissions({ can_manage_orders: false, can_manage_menu: false, can_manage_settings: false, can_view_metrics: false, can_view_assigned_deliveries: false }),
+      ).toEqual({
+        can_manage_menu: false,
+        can_view_orders: true,
+        can_manage_orders: false,
+        can_manage_settings: false,
+        can_view_metrics: false,
+        can_view_assigned_deliveries: false,
+      });
+    });
+
+    it('expone permisos por defecto de solo lectura', () => {
+      expect(DEFAULT_STAFF_PERMISSIONS.can_manage_menu).toBe(false);
+      expect(DEFAULT_STAFF_PERMISSIONS.can_view_orders).toBe(true);
+    });
+
+    it('los repartidores tienen can_view_assigned_deliveries activo por defecto', () => {
+      expect(DRIVER_PERMISSIONS.can_view_assigned_deliveries).toBe(true);
+      expect(DRIVER_PERMISSIONS.can_manage_orders).toBe(true);
     });
   });
-
-  it('siempre concede ver pedidos', () => {
-    expect(
-      toStaffPermissions({ can_manage_orders: false, can_manage_menu: false, can_manage_settings: false, can_view_metrics: false }),
-    ).toEqual({
-      can_manage_menu: false,
-      can_view_orders: true,
-      can_manage_orders: false,
-      can_manage_settings: false,
-      can_view_metrics: false,
-    });
-  });
-
-  it('expone permisos por defecto de solo lectura', () => {
-    expect(DEFAULT_STAFF_PERMISSIONS.can_manage_menu).toBe(false);
-    expect(DEFAULT_STAFF_PERMISSIONS.can_view_orders).toBe(true);
-  });
-});

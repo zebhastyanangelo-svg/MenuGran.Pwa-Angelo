@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { IncompleteProfileBanner, isProfileIncomplete } from './IncompleteProfileBanner';
+import { IncompleteProfileBanner } from './IncompleteProfileBanner';
+import { isProfileIncomplete } from '../utils/profileUtils';
 import type { UserRole } from '../types/database';
 
 vi.mock('../hooks/useAuth', () => ({

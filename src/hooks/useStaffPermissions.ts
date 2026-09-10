@@ -10,14 +10,14 @@ export interface UseStaffPermissionsResult {
 
 export function useStaffPermissions(): UseStaffPermissionsResult {
   const { user, profile } = useAuth()
-  const isStaff = profile?.role === 'merchant_staff'
+  const hasStaffRole = profile?.role === 'merchant_staff' || profile?.role === 'driver'
 
   const { data, isLoading, isError } = useQuery<
     MerchantStaffPermissions | null,
     Error
   >({
     queryKey: ['staffPermissions', user?.id],
-    enabled: !!user && isStaff,
+    enabled: !!user && hasStaffRole,
     queryFn: async (): Promise<MerchantStaffPermissions | null> => {
       if (!user) return null
 

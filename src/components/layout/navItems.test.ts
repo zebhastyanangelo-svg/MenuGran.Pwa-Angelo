@@ -12,6 +12,7 @@ const FULL_PERMISSIONS: MerchantStaffPermissions = {
   can_manage_orders: true,
   can_manage_settings: true,
   can_view_metrics: true,
+  can_view_assigned_deliveries: true,
 };
 
 describe('getNavItemsForRole', () => {
@@ -51,6 +52,7 @@ describe('getNavItemsForRole', () => {
       can_manage_menu: false,
       can_view_orders: true,
       can_manage_orders: false,
+      can_view_assigned_deliveries: false,
     };
     const items = getNavItemsForRole('merchant_staff', limited).map((i) => i.to);
     expect(items).not.toContain('/admin/dishes'); // sin can_manage_menu

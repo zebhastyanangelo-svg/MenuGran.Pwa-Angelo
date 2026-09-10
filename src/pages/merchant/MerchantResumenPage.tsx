@@ -41,8 +41,8 @@ import {
 } from '../../utils/staffPermissions';
 import {
   DateRangePicker,
-  getDefaultDateRange,
 } from '../../components/merchant/DateRangePicker';
+import { getDefaultDateRange } from '../../utils/dateUtils';
 import { SalesTrendChart } from '../../components/merchant/SalesTrendChart';
 import { OrdersDonutChart } from '../../components/merchant/OrdersDonutChart';
 import { UpdateStaffModal } from '../../components/merchant/UpdateStaffModal';
@@ -59,6 +59,7 @@ const EMPTY_EMPLOYEE: EmployeeFormInput = {
     can_manage_menu: false,
     can_manage_settings: false,
     can_view_metrics: false,
+    can_view_assigned_deliveries: false,
   },
 };
 
@@ -646,6 +647,7 @@ function EmployeeManagementSection({
                           can_manage_menu: false,
                           can_manage_settings: false,
                           can_view_metrics: false,
+                          can_view_assigned_deliveries: true,
                         }
                       : prev.permissions,
                 }));

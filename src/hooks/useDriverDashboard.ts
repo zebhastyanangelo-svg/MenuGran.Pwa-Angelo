@@ -194,16 +194,18 @@ export function useDriverDashboard(
     }
   }, [merchantId, options, loadOrders])
 
+  const userId = user?.id
+
   const takeOrder = useCallback(
     async (orderId: string): Promise<void> => {
-      if (!user) return
+      if (userId === undefined) return
       setActionLoading(true)
       setActionError(null)
       try {
-        await updateOrderStatus(orderId, 'on_the_way', user.id)
+        await updateOrderStatus(orderId, 'on_the_way', userId)
         setOrders((prev) =>
           prev.map((o) =>
-            o.id === orderId ? { ...o, status: 'on_the_way', driver_id: user.id } : o,
+            o.id === orderId ? { ...o, status: 'on_the_way', driver_id: userId } : o,
           ),
         )
       } catch (err) {
@@ -214,19 +216,19 @@ export function useDriverDashboard(
         setActionLoading(false)
       }
     },
-    [],
+    [userId],
   )
 
   const startDelivery = useCallback(
     async (orderId: string): Promise<void> => {
-      if (!user) return
+      if (userId === undefined) return
       setActionLoading(true)
       setActionError(null)
       try {
-        await updateOrderStatus(orderId, 'on_the_way', user.id)
+        await updateOrderStatus(orderId, 'on_the_way', userId)
         setOrders((prev) =>
           prev.map((o) =>
-            o.id === orderId ? { ...o, status: 'on_the_way', driver_id: user.id } : o,
+            o.id === orderId ? { ...o, status: 'on_the_way', driver_id: userId } : o,
           ),
         )
       } catch (err) {
@@ -237,7 +239,7 @@ export function useDriverDashboard(
         setActionLoading(false)
       }
     },
-    [],
+    [userId],
   )
 
   const markDelivered = useCallback(

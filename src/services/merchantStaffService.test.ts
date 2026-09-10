@@ -74,7 +74,7 @@ function buildValidInput(): EmployeeFormInput {
     email: 'carlos@pizzeria.com',
     password: 'Clave123',
     role: 'merchant_staff',
-    permissions: { can_manage_orders: true, can_manage_menu: false, can_manage_settings: false, can_view_metrics: false },
+    permissions: { can_manage_orders: true, can_manage_menu: false, can_manage_settings: false, can_view_metrics: false, can_view_assigned_deliveries: false },
   };
 }
 
@@ -218,63 +218,66 @@ describe('createEmployee', () => {
    it('invoca create-employee con credenciales y permisos normalizados', async () => {
      await createEmployee('m-1', buildValidInput());
 
-     expect(supabaseMocks.functionsInvoke).toHaveBeenCalledWith(
-       'create-employee',
-       {
-         body: {
-           merchantId: 'm-1',
-           email: 'carlos@pizzeria.com',
-           password: 'Clave123',
-           fullName: 'Carlos Ruiz',
-           role: 'merchant_staff',
-           permissions: {
-             can_manage_menu: false,
-             can_view_orders: true,
-             can_manage_orders: true,
-             can_manage_settings: false,
-             can_view_metrics: false,
-           },
-         },
-       },
-     );
-   });
+      expect(supabaseMocks.functionsInvoke).toHaveBeenCalledWith(
+        'create-employee',
+        {
+          body: {
+            merchantId: 'm-1',
+            email: 'carlos@pizzeria.com',
+            password: 'Clave123',
+            fullName: 'Carlos Ruiz',
+            role: 'merchant_staff',
+            permissions: {
+              can_manage_menu: false,
+              can_view_orders: true,
+              can_manage_orders: true,
+              can_manage_settings: false,
+              can_view_metrics: false,
+              can_view_assigned_deliveries: false,
+            },
+          },
+        },
+      );
+    });
 
-   it('envía el rol driver con DRIVER_PERMISSIONS incluyendo can_view_orders', async () => {
-     const driverInput: EmployeeFormInput = {
-       fullName: 'Luis Mensajero',
-       email: 'luis@pizzeria.com',
-       password: 'Clave123',
-       role: 'driver',
-       permissions: {
-         can_manage_orders: false,
-         can_manage_menu: false,
-         can_manage_settings: false,
-         can_view_metrics: false,
-       },
-     };
+    it('envía el rol driver con DRIVER_PERMISSIONS incluyendo can_view_assigned_deliveries', async () => {
+      const driverInput: EmployeeFormInput = {
+        fullName: 'Luis Mensajero',
+        email: 'luis@pizzeria.com',
+        password: 'Clave123',
+        role: 'driver',
+        permissions: {
+          can_manage_orders: false,
+          can_manage_menu: false,
+          can_manage_settings: false,
+          can_view_metrics: false,
+          can_view_assigned_deliveries: false,
+        },
+      };
 
-     await createEmployee('m-1', driverInput);
+      await createEmployee('m-1', driverInput);
 
-     expect(supabaseMocks.functionsInvoke).toHaveBeenCalledWith(
-       'create-employee',
-       {
-         body: {
-           merchantId: 'm-1',
-           email: 'luis@pizzeria.com',
-           password: 'Clave123',
-           fullName: 'Luis Mensajero',
-           role: 'driver',
-           permissions: {
-             can_manage_menu: false,
-             can_view_orders: true,
-             can_manage_orders: true,
-             can_manage_settings: false,
-             can_view_metrics: false,
-           },
-         },
-       },
-     );
-   });
+      expect(supabaseMocks.functionsInvoke).toHaveBeenCalledWith(
+        'create-employee',
+        {
+          body: {
+            merchantId: 'm-1',
+            email: 'luis@pizzeria.com',
+            password: 'Clave123',
+            fullName: 'Luis Mensajero',
+            role: 'driver',
+            permissions: {
+              can_manage_menu: false,
+              can_view_orders: true,
+              can_manage_orders: true,
+              can_manage_settings: false,
+              can_view_metrics: false,
+              can_view_assigned_deliveries: true,
+            },
+          },
+        },
+      );
+    });
 
   it('propaga el error del Edge Function', async () => {
     const mockResponse = {

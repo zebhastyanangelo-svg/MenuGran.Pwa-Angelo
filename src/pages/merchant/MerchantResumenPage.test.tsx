@@ -61,6 +61,7 @@ const defaultStaffMember: StaffListItem = {
     can_manage_orders: false,
     can_manage_settings: false,
     can_view_metrics: true,
+    can_view_assigned_deliveries: true,
   },
   isActive: true,
 };
@@ -301,6 +302,7 @@ describe('MerchantResumenPage', () => {
             can_manage_menu: true,
             can_manage_settings: true,
             can_view_metrics: false,
+            can_view_assigned_deliveries: false,
           },
         });
       });
@@ -359,6 +361,7 @@ describe('MerchantResumenPage', () => {
             can_manage_menu: false,
             can_manage_settings: false,
             can_view_metrics: false,
+            can_view_assigned_deliveries: true,
           },
         });
       });
@@ -458,6 +461,7 @@ describe('MerchantResumenPage', () => {
           can_manage_orders: true,
           can_manage_settings: true,
           can_view_metrics: true,
+          can_view_assigned_deliveries: true,
         });
       });
     });

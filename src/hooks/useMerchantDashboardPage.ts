@@ -102,15 +102,17 @@ export function useMerchantDashboardPage(
     queryFn: async (): Promise<DriverProfile[]> => {
       const result = await supabase
         .from(TABLE_NAMES.merchantStaff)
-        .select('user_id, profiles!user_id(full_name, email, role)')
+        .select('user_id, profiles!user_id(full_name, email, role), permissions')
         .in('merchant_id', merchantIds)
         .eq('is_active', true)
       if (result.error) throw result.error
       return (result.data ?? [])
         .filter(
-          (row: Record<string, unknown>) =>
-            (row.profiles as Record<string, unknown> | null | undefined)
-              ?.role === 'driver',
+          (row: Record<string, unknown>) => {
+            const permissions = (row.permissions as Record<string, unknown>) ?? {}
+            const role = (row.profiles as Record<string, unknown>)?.role
+            return role === 'driver' || permissions.can_view_assigned_deliveries === true
+          },
         )
         .map((row: Record<string, unknown>) => ({
           id: row.user_id as string,
@@ -268,6 +270,10 @@ export function useMerchantDashboardPage(
 
   // Realtime subscription for order changes
   const channelRef = useRef<RealtimeChannel | null>(null)
+
+  const userId = user?.id
+  const onNewOrder = options?.onNewOrder
+
   useEffect(() => {
     if (merchantIds.length === 0) return undefined
 
@@ -283,11 +289,11 @@ export function useMerchantDashboardPage(
         },
         (payload) => {
           queryClient.invalidateQueries({
-            queryKey: ['merchantOrders', user?.id, merchantIds.join('-')],
+            queryKey: ['merchantOrders', userId, merchantIds.join('-')],
           })
           const newOrder = payload.new as OrderRow | undefined
           if (newOrder && newOrder.status === 'payment_pending') {
-            options?.onNewOrder?.(newOrder)
+            onNewOrder?.(newOrder)
           }
         },
       )
@@ -301,7 +307,7 @@ export function useMerchantDashboardPage(
         },
         () => {
           queryClient.invalidateQueries({
-            queryKey: ['merchantOrders', user?.id, merchantIds.join('-')],
+            queryKey: ['merchantOrders', userId, merchantIds.join('-')],
           })
         },
       )
@@ -313,7 +319,7 @@ export function useMerchantDashboardPage(
       supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [merchantIds, user?.id, queryClient, options?.onNewOrder])
+  }, [merchantIds, userId, queryClient, onNewOrder])
 
   return {
     merchantId: merchantIds[0] ?? null,

@@ -94,6 +94,8 @@ export interface MerchantStaffPermissions {
   can_manage_settings?: boolean;
   /** Permiso para visualizar métricas y reportes del comercio. */
   can_view_metrics?: boolean;
+  /** Permiso para visualizar las entregas asignadas al repartidor. */
+  can_view_assigned_deliveries: boolean;
 }
 
 /** Payload de un item dentro del JSONB `orders.items`. */
