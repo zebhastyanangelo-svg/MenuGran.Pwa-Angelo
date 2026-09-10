@@ -77,5 +77,19 @@ export function ProtectedRoute({
     }
   }
 
+  // Bloquear acceso a /admin/dashboard si el usuario solo tiene
+  // can_view_assigned_deliveries y no tiene can_manage_orders
+  if (
+    location.pathname === '/admin/dashboard' &&
+    (profile?.role === 'driver' ||
+      staffPermissions?.can_view_assigned_deliveries === true) &&
+    staffPermissions?.can_manage_orders !== true
+  ) {
+    if (profile?.role === 'driver') {
+      return <Navigate to="/driver" replace />;
+    }
+    return <Navigate to="/admin" replace />;
+  }
+
   return <>{children}</>;
 }

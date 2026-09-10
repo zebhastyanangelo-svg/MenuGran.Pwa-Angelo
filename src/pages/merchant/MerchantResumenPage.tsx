@@ -640,16 +640,16 @@ function EmployeeManagementSection({
                 setEmployeeInput((prev) => ({
                   ...prev,
                   role: newRole,
-                  permissions:
-                    newRole === 'driver'
-                      ? {
-                          can_manage_orders: true,
-                          can_manage_menu: false,
-                          can_manage_settings: false,
-                          can_view_metrics: false,
-                          can_view_assigned_deliveries: true,
-                        }
-                      : prev.permissions,
+                      permissions:
+                        newRole === 'driver'
+                          ? {
+                              can_manage_orders: false,
+                              can_manage_menu: false,
+                              can_manage_settings: false,
+                              can_view_metrics: false,
+                              can_view_assigned_deliveries: true,
+                            }
+                          : prev.permissions,
                 }));
               }}
               className="block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -715,23 +715,40 @@ function EmployeeManagementSection({
               />
               {PERMISSION_LABELS.can_manage_settings}
             </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                data-testid="permission-metrics"
-                checked={employeeInput.permissions.can_view_metrics}
-                onChange={(event) =>
-                  setEmployeeInput((prev) => ({
-                    ...prev,
-                    permissions: {
-                      ...prev.permissions,
-                      can_view_metrics: event.target.checked,
-                    },
-                  }))
-                }
-              />
-              {PERMISSION_LABELS.can_view_metrics}
-            </label>
+<label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  data-testid="permission-deliveries"
+                  checked={employeeInput.permissions.can_view_assigned_deliveries}
+                  onChange={(event) =>
+                    setEmployeeInput((prev) => ({
+                      ...prev,
+                      permissions: {
+                        ...prev.permissions,
+                        can_view_assigned_deliveries: event.target.checked,
+                      },
+                    }))
+                  }
+                />
+                {PERMISSION_LABELS.can_view_assigned_deliveries}
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  data-testid="permission-metrics"
+                  checked={employeeInput.permissions.can_view_metrics}
+                  onChange={(event) =>
+                    setEmployeeInput((prev) => ({
+                      ...prev,
+                      permissions: {
+                        ...prev.permissions,
+                        can_view_metrics: event.target.checked,
+                      },
+                    }))
+                  }
+                />
+                {PERMISSION_LABELS.can_view_metrics}
+              </label>
           </fieldset>
 
           {formError !== null && (

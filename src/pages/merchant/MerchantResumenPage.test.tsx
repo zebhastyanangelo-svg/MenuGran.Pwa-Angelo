@@ -356,13 +356,13 @@ describe('MerchantResumenPage', () => {
           email: 'ana@pizzeria.com',
           password: 'Clave123',
           role: 'driver',
-          permissions: {
-            can_manage_orders: true,
-            can_manage_menu: false,
-            can_manage_settings: false,
-            can_view_metrics: false,
-            can_view_assigned_deliveries: true,
-          },
+permissions: {
+             can_manage_orders: false,
+             can_manage_menu: false,
+             can_manage_settings: false,
+             can_view_metrics: false,
+             can_view_assigned_deliveries: true,
+           },
         });
       });
     });

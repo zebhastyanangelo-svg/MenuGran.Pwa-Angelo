@@ -73,8 +73,8 @@ describe('toStaffPermissions', () => {
       expect(DEFAULT_STAFF_PERMISSIONS.can_view_orders).toBe(true);
     });
 
-    it('los repartidores tienen can_view_assigned_deliveries activo por defecto', () => {
-      expect(DRIVER_PERMISSIONS.can_view_assigned_deliveries).toBe(true);
-      expect(DRIVER_PERMISSIONS.can_manage_orders).toBe(true);
-    });
+it('los repartidores tienen can_view_assigned_deliveries activo y can_manage_orders desactivado por defecto', () => {
+       expect(DRIVER_PERMISSIONS.can_view_assigned_deliveries).toBe(true);
+       expect(DRIVER_PERMISSIONS.can_manage_orders).toBe(false);
+     });
   });

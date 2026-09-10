@@ -32,11 +32,11 @@ export const DEFAULT_STAFF_PERMISSIONS: MerchantStaffPermissions = {
   can_view_assigned_deliveries: false,
 };
 
-/** Permisos de repartidor: gestión de pedidos y entregas asignadas. */
+/** Permisos de repartidor: solo entregas asignadas, sin gestión de pedidos. */
 export const DRIVER_PERMISSIONS: MerchantStaffPermissions = {
   can_manage_menu: false,
   can_view_orders: true,
-  can_manage_orders: true,
+  can_manage_orders: false,
   can_manage_settings: false,
   can_view_metrics: false,
   can_view_assigned_deliveries: true,
@@ -53,7 +53,7 @@ export const PERMISSION_OPTIONS: PermissionOption[] = [
   { key: 'can_manage_menu', label: 'Gestión de menú' },
   { key: 'can_manage_settings', label: 'Configuración' },
   { key: 'can_view_metrics', label: 'Ver métricas' },
-  { key: 'can_view_assigned_deliveries', label: 'Entregas asignadas' },
+  { key: 'can_view_assigned_deliveries', label: 'Entregas' },
 ];
 
 export function toStaffPermissions(
@@ -106,5 +106,5 @@ export const PERMISSION_LABELS: Record<string, string> = {
   can_manage_menu: 'Gestión de menú',
   can_manage_settings: 'Configuración',
   can_view_metrics: 'Ver métricas',
-  can_view_assigned_deliveries: 'Entregas asignadas',
+  can_view_assigned_deliveries: 'Entregas',
 };
