@@ -110,8 +110,9 @@ export function useMerchantDashboardPage(
         .filter(
           (row: Record<string, unknown>) => {
             const permissions = (row.permissions as Record<string, unknown>) ?? {}
-            const role = (row.profiles as Record<string, unknown>)?.role
-            return role === 'driver' || permissions.can_view_assigned_deliveries === true
+            const merchantStaffRole = (row.role as string)
+            const profileRole = (row.profiles as Record<string, unknown>)?.role
+            return merchantStaffRole === 'driver' || profileRole === 'driver' || permissions.can_view_assigned_deliveries === true
           },
         )
         .map((row: Record<string, unknown>) => ({
