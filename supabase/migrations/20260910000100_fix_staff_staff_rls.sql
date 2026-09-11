@@ -15,28 +15,12 @@
 --    merchant_staff activo de un comercio al que auth.uid()
 --    tiene acceso (dueño o staff)
 -- ============================================================
-CREATE OR REPLACE FUNCTION public.is_profile_visible_by_merchant()
+CREATE OR REPLACE FUNCTION public.is_profile_visible_by_merchant(target_user_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
 STABLE SECURITY DEFINER
 SET search_path = public
-AS $$
-    SELECT EXISTS (
-        SELECT 1 FROM public.merchant_staff ms
-        JOIN public.merchants m ON m.id = ms.merchant_id
-        WHERE ms.user_id = profiles.id
-          AND ms.is_active = true
-          AND (
-            m.owner_id = auth.uid()
-            OR EXISTS (
-                SELECT 1 FROM public.merchant_staff ms2
-                WHERE ms2.merchant_id = m.id
-                  AND ms2.user_id = auth.uid()
-                  AND ms2.is_active = true
-            )
-          )
-    );
-$$;
+AS $$SELECT EXISTS (         SELECT 1          FROM public.merchant_staff target_ms         WHERE target_ms.user_id = target_user_id           AND public.is_merchant_staff_or_owner(target_ms.merchant_id)     );$$;
 
 -- ============================================================
 -- 2. Fix RLS en merchant_staff: permitir que staff vea todos los
@@ -75,7 +59,7 @@ CREATE POLICY profiles_select_own ON public.profiles
     FOR SELECT
     USING (
         id = auth.uid()
-        OR public.is_profile_visible_by_merchant()
+        OR public.is_profile_visible_by_merchant(profiles.id)
     );
 
 -- Mantener las policies de update sin cambios (solo el propio perfil)
