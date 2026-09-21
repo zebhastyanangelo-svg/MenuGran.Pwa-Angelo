@@ -293,4 +293,54 @@ describe('useMerchantDashboardPage.drivers', () => {
     expect(result.current.drivers[0].id).toBe('driver-1')
     expect(result.current.drivers[0].full_name).toBe('Test Driver')
   })
+
+  it('incluye repartidores detectados por merchant_staff.role aunque profiles venga null', async () => {
+    const staffChain = {
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue(
+            mockQueryResult([{ merchant_id: 'm-1' }]),
+          ),
+        }),
+        in: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue(
+            mockQueryResult([
+              // JOIN a profiles falló por RLS: solo merchant_staff.role identifica al repartidor.
+              {
+                user_id: 'driver-sin-perfil',
+                role: 'driver',
+                permissions: {},
+                profiles: null,
+              },
+              {
+                user_id: 'staff-1',
+                role: 'merchant_staff',
+                permissions: {},
+                profiles: { full_name: 'Ana', email: 'a@t.com', role: 'merchant_staff' },
+              },
+            ]),
+          ),
+        }),
+      }),
+    }
+
+    mockSupabase.from.mockImplementation((table: string) => {
+      if (table === 'merchants') return merchantSelectChain()
+      if (table === 'merchant_staff') return staffChain
+      if (table === 'orders') return ordersChain()
+      if (table === 'products') return productsChain()
+      return {}
+    })
+
+    const client = buildQueryClient()
+    const { result } = renderHook(
+      () => useMerchantDashboardPage({ id: 'u-1' } as never),
+      { wrapper: buildWrapper(client) },
+    )
+
+    await waitFor(() => {
+      expect(result.current.drivers).toHaveLength(1)
+    })
+    expect(result.current.drivers[0].id).toBe('driver-sin-perfil')
+  })
 })

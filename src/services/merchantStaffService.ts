@@ -35,6 +35,67 @@ interface StaffQueryRow extends MerchantStaffRow {
   profiles: { email: string | null; full_name: string | null; role: UserRole } | null;
 }
 
+/** Ítem de repartidor para los selectores de asignación de pedidos. */
+export interface DriverListItem {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+}
+
+export interface DriverStaffQueryRow {
+  user_id: string;
+  role: UserRole | null;
+  permissions: MerchantStaffPermissions | null;
+  profiles: { email: string | null; full_name: string | null; role: UserRole } | null;
+}
+
+/**
+ * Un empleado actúa como repartidor si su rol en merchant_staff es `driver`,
+ * si su perfil lo marca como `driver`, o si tiene el permiso
+ * `can_view_assigned_deliveries` (respaldo para registros antiguos o cuando
+ * el JOIN a profiles viene NULL por RLS).
+ */
+export function isDriverStaffRow(row: DriverStaffQueryRow): boolean {
+  return (
+    row.role === 'driver' ||
+    row.profiles?.role === 'driver' ||
+    row.permissions?.can_view_assigned_deliveries === true
+  );
+}
+
+/**
+ * Lista los repartidores activos de los comercios dados.
+ * Consolida la consulta usada por los paneles del comercio para asignar
+ * pedidos de delivery.
+ */
+export async function fetchMerchantDrivers(
+  merchantIds: string[],
+): Promise<DriverListItem[]> {
+  if (merchantIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from(TABLE_NAMES.merchantStaff)
+    .select('user_id, role, permissions, profiles:user_id ( full_name, email, role )')
+    .in('merchant_id', merchantIds)
+    .eq('is_active', true);
+
+  if (error !== null) {
+    console.error(
+      '[merchantStaffService] Error al cargar los repartidores:',
+      error,
+    );
+    throw new Error(`Error al cargar los repartidores: ${error.message}`);
+  }
+
+  return ((data ?? []) as unknown as DriverStaffQueryRow[])
+    .filter(isDriverStaffRow)
+    .map((row) => ({
+      id: row.user_id,
+      full_name: row.profiles?.full_name ?? null,
+      email: row.profiles?.email ?? null,
+    }));
+}
+
 export interface MerchantMetrics {
   totalSales: number;
   ordersToday: number;

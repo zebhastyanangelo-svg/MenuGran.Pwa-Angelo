@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { User, RealtimeChannel } from '@supabase/supabase-js'
 import { supabase, TABLE_NAMES } from '../services/supabase'
+import { fetchMerchantDrivers } from '../services/merchantStaffService'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { OrderRow, OrderStatus } from '../types/database'
 import type { DriverProfile, OrderWithCustomer } from './useMerchantDashboardPage'
@@ -91,25 +92,8 @@ export function useMerchantDashboard(
   const { data: drivers = [] } = useQuery<DriverProfile[]>({
     queryKey: ['merchantDrivers', merchantIds.join('-')],
     enabled: merchantIds.length > 0,
-    queryFn: async (): Promise<DriverProfile[]> => {
-      const result = await supabase
-        .from(TABLE_NAMES.merchantStaff)
-        .select('user_id, profiles!user_id(full_name, email, role)')
-        .in('merchant_id', merchantIds)
-        .eq('is_active', true)
-      if (result.error) throw result.error
-      return (result.data ?? [])
-        .filter(
-          (row: Record<string, unknown>) =>
-            (row.profiles as Record<string, unknown> | null | undefined)
-              ?.role === 'driver',
-        )
-        .map((row: Record<string, unknown>) => ({
-          id: row.user_id as string,
-          full_name: ((row.profiles as Record<string, unknown>)?.full_name as string) ?? null,
-          email: ((row.profiles as Record<string, unknown>)?.email as string) ?? null,
-        }))
-    },
+    queryFn: async (): Promise<DriverProfile[]> =>
+      fetchMerchantDrivers(merchantIds),
   })
 
   const { mutateAsync: updateOrderStatus } = useMutation<

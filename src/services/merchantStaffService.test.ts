@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createEmployee,
   deleteStaff,
+  fetchMerchantDrivers,
   fetchMerchantMetrics,
   getMerchantContext,
+  isDriverStaffRow,
   listStaff,
   setStaffActive,
 } from './merchantStaffService';
@@ -34,6 +36,7 @@ interface Chain {
   update: ReturnType<typeof vi.fn>;
   delete: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
+  in: ReturnType<typeof vi.fn>;
   gte: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
   maybeSingle: ReturnType<typeof vi.fn>;
@@ -47,6 +50,7 @@ function buildChain(): Chain {
     update: vi.fn(),
     delete: vi.fn(),
     eq: vi.fn(),
+    in: vi.fn(),
     gte: vi.fn(),
     order: vi.fn(),
     maybeSingle: vi.fn(),
@@ -57,6 +61,7 @@ function buildChain(): Chain {
   chain.update.mockReturnValue(chain);
   chain.delete.mockReturnValue(chain);
   chain.eq.mockReturnValue(chain);
+  chain.in.mockReturnValue(chain);
   return chain;
 }
 
@@ -409,5 +414,138 @@ describe('fetchMerchantMetrics', () => {
     await expect(fetchMerchantMetrics('m-1')).rejects.toThrow(
       'Error al calcular las métricas del comercio.',
     );
+  });
+});
+
+describe('isDriverStaffRow', () => {
+  it('reconoce repartidores por role en merchant_staff aunque profiles sea null', () => {
+    expect(
+      isDriverStaffRow({
+        user_id: 'u-1',
+        role: 'driver',
+        permissions: null,
+        profiles: null,
+      }),
+    ).toBe(true);
+  });
+
+  it('reconoce repartidores por role en profiles', () => {
+    expect(
+      isDriverStaffRow({
+        user_id: 'u-1',
+        role: 'merchant_staff',
+        permissions: null,
+        profiles: { full_name: 'Ana', email: 'a@t.com', role: 'driver' },
+      }),
+    ).toBe(true);
+  });
+
+  it('reconoce repartidores por el permiso can_view_assigned_deliveries', () => {
+    expect(
+      isDriverStaffRow({
+        user_id: 'u-1',
+        role: 'merchant_staff',
+        permissions: {
+          can_manage_menu: false,
+          can_view_orders: true,
+          can_view_assigned_deliveries: true,
+        },
+        profiles: null,
+      }),
+    ).toBe(true);
+  });
+
+  it('rechaza empleados de staff sin rol ni permiso de repartidor', () => {
+    expect(
+      isDriverStaffRow({
+        user_id: 'u-1',
+        role: 'merchant_staff',
+        permissions: {
+          can_manage_menu: true,
+          can_view_orders: true,
+          can_view_assigned_deliveries: false,
+        },
+        profiles: { full_name: 'Carlos', email: 'c@t.com', role: 'merchant_staff' },
+      }),
+    ).toBe(false);
+  });
+});
+
+describe('fetchMerchantDrivers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    tables.clear();
+    supabaseMocks.from.mockImplementation((t: string) => tables.get(t));
+  });
+
+  it('devuelve lista vacía sin consultar cuando no hay comercios', async () => {
+    await expect(fetchMerchantDrivers([])).resolves.toEqual([]);
+    expect(supabaseMocks.from).not.toHaveBeenCalled();
+  });
+
+  it('filtra solo repartidores combinando role y permisos (profiles null tolerado)', async () => {
+    const staff = register('merchant_staff');
+    staff.in.mockReturnValue({
+      eq: vi.fn().mockResolvedValue({
+        data: [
+          // Driver identificado por merchant_staff.role, join a profiles vacío (RLS).
+          { user_id: 'driver-role', role: 'driver', permissions: {}, profiles: null },
+          // Driver identificado solo por el permiso.
+          {
+            user_id: 'driver-permisos',
+            role: 'merchant_staff',
+            permissions: { can_view_assigned_deliveries: true },
+            profiles: null,
+          },
+          // Driver identificado solo por profiles.role.
+          {
+            user_id: 'driver-perfil',
+            role: 'merchant_staff',
+            permissions: {},
+            profiles: { full_name: 'Luis', email: 'luis@t.com', role: 'driver' },
+          },
+          // Empleado regular: debe excluirse.
+          {
+            user_id: 'staff-1',
+            role: 'merchant_staff',
+            permissions: { can_view_assigned_deliveries: false },
+            profiles: { full_name: 'Cecilia', email: 'c@t.com', role: 'merchant_staff' },
+          },
+        ],
+        error: null,
+      }),
+    });
+
+    const drivers = await fetchMerchantDrivers(['m-1']);
+
+    expect(drivers.map((d) => d.id)).toEqual([
+      'driver-role',
+      'driver-permisos',
+      'driver-perfil',
+    ]);
+    expect(drivers[2]).toEqual({
+      id: 'driver-perfil',
+      full_name: 'Luis',
+      email: 'luis@t.com',
+    });
+  });
+
+  it('lanza error legible y registra en consola cuando la consulta falla', async () => {
+    const staff = register('merchant_staff');
+    staff.in.mockReturnValue({
+      eq: vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: 'RLS denegado' },
+      }),
+    });
+    const consoleSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+
+    await expect(fetchMerchantDrivers(['m-1'])).rejects.toThrow(
+      'Error al cargar los repartidores: RLS denegado',
+    );
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
   });
 });
