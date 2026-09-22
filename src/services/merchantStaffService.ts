@@ -79,6 +79,13 @@ export async function fetchMerchantDrivers(
     .in('merchant_id', merchantIds)
     .eq('is_active', true);
 
+  // Diagnóstico temporal: qué devuelve Supabase exactamente al listar el personal.
+  console.log('[DEBUG DRIVERS]', {
+    merchantIds,
+    rawStaffData: data,
+    error,
+  });
+
   if (error !== null) {
     console.error(
       '[merchantStaffService] Error al cargar los repartidores:',
