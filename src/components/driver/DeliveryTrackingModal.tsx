@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react'
+import L from 'leaflet'
 import {
   X,
   MapPin,
@@ -19,6 +20,33 @@ import {
   getOrderDeliveryCoordinates,
 } from '../../utils/delivery'
 import type { DriverOrder } from '../../hooks/useDriverDeliveries'
+
+// Custom icons for map markers
+const DESTINATION_ICON = L.divIcon({
+  className: 'custom-marker',
+  html: `
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C8.13401 2 5 5.13401 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13401 15.866 2 12 2Z" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="9" r="3" fill="#ef4444"/>
+    </svg>
+  `,
+  iconSize: [30, 30],
+  iconAnchor: [15, 30],
+  popupAnchor: [0, -30],
+})
+
+const DRIVER_ICON = L.divIcon({
+  className: 'custom-marker',
+  html: `
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" stroke="#10b981" stroke-width="2" fill="#10b981"/>
+      <path d="M12 8V12L15 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `,
+  iconSize: [30, 30],
+  iconAnchor: [15, 15],
+  popupAnchor: [0, -15],
+})
 
 function getCustomerName(order: DriverOrder): string {
   const profile = order.profiles
@@ -93,7 +121,7 @@ export function DeliveryTrackingModal({
   }, [isOpen, stopTracking])
 
   const markers = useMemo(() => {
-    const result: Array<{ id: string; position: [number, number]; title: string; subtitle?: string }> = []
+    const result: Array<{ id: string; position: [number, number]; title: string; subtitle?: string; icon?: any }> = []
 
     if (destination) {
       result.push({
@@ -101,6 +129,7 @@ export function DeliveryTrackingModal({
         position: destination,
         title: 'Destino',
         subtitle: address,
+        icon: DESTINATION_ICON,
       })
     }
 
@@ -109,6 +138,7 @@ export function DeliveryTrackingModal({
         id: 'driver',
         position: [position.lat, position.lng],
         title: 'Mi posición',
+        icon: DRIVER_ICON,
       })
     }
 

@@ -80,6 +80,12 @@ export function MapView({
         zoom,
         zoomControl: true,
       });
+      // Add OpenStreetMap tile layer (guard for environments where L.tileLayer is unavailable)
+      if (typeof L.tileLayer === 'function') {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
+      }
       mapInstanceRef.current = map;
     } else {
       const map = mapInstanceRef.current;
@@ -96,8 +102,9 @@ export function MapView({
     });
 
     markers.forEach((marker) => {
+      const markerIcon = (marker as any).icon ?? DEFAULT_ICON;
       const markerInstance = L.marker(marker.position, {
-        icon: DEFAULT_ICON,
+        icon: markerIcon,
         title: marker.title,
       });
 

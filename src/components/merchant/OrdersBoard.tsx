@@ -188,7 +188,7 @@ export function OrdersBoard({
                           ) : null}
                         </div>
                       )}
-                      {getAllowedTransitions(order.status).map((nextStatus) => (
+                      {getAllowedTransitions(order.status).filter(s => s !== 'delivered').map((nextStatus) => (
                         <button
                           key={nextStatus}
                           type="button"

@@ -55,6 +55,7 @@ vi.mock('leaflet', () => {
       marker: markerFn,
       circleMarker: circleMarkerFn,
       polyline: vi.fn(() => ({ addTo: vi.fn() })),
+      tileLayer: vi.fn().mockReturnValue({ addTo: vi.fn() }),
       icon: iconFn,
       Marker: class {},
       CircleMarker: class {},
