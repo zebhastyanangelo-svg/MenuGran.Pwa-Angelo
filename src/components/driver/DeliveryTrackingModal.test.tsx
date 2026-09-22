@@ -54,7 +54,6 @@ const defaultProps = {
   isOpen: true,
   onClose: vi.fn(),
   onStartTrip: vi.fn().mockResolvedValue(undefined),
-  onConfirmDelivery: vi.fn().mockResolvedValue(undefined),
   actionLoading: false,
 }
 
@@ -95,24 +94,22 @@ describe('DeliveryTrackingModal', () => {
     )
   })
 
-  it('muestra el botón de Google Maps con la URL correcta', () => {
+  it('no muestra enlace a mapas externos (Google Maps)', () => {
     renderModal()
-    const mapsLink = screen.getByTestId('open-maps')
-    expect(mapsLink).toHaveAttribute('target', '_blank')
-    expect(mapsLink).toHaveAttribute(
-      'href',
-      expect.stringContaining('google.com/maps/search'),
-    )
+    expect(screen.queryByTestId('open-maps')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Google Maps/i)).not.toBeInTheDocument()
   })
 
-  it('muestra el botón "Iniciar viaje" para pedidos asignados', () => {
+  it('muestra el botón "En camino" para pedidos asignados', () => {
     renderModal()
     expect(screen.getByTestId('start-trip')).toBeInTheDocument()
+    expect(screen.getByTestId('start-trip')).toHaveTextContent('En camino')
   })
 
-  it('muestra el botón "Confirmar entrega" para pedidos en tránsito', () => {
+  it('no muestra botón "Confirmar entrega" (solo el cliente confirma)', () => {
     renderModal({ order: createOrder({ status: 'on_the_way' }) })
-    expect(screen.getByTestId('confirm-delivery')).toBeInTheDocument()
+    expect(screen.queryByTestId('confirm-delivery')).not.toBeInTheDocument()
+    expect(screen.queryByText('Confirmar entrega')).not.toBeInTheDocument()
   })
 
   it('muestra "Entrega completada" para pedidos entregados', () => {
@@ -127,21 +124,11 @@ describe('DeliveryTrackingModal', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('llama a onStartTrip al pulsar "Iniciar viaje"', async () => {
+  it('llama a onStartTrip al pulsar "En camino"', async () => {
     const onStartTrip = vi.fn().mockResolvedValue(undefined)
     renderModal({ onStartTrip })
     screen.getByTestId('start-trip').click()
     expect(onStartTrip).toHaveBeenCalledWith('order-12345678-9abc-def0-1234-56789abcdef0')
-  })
-
-  it('llama a onConfirmDelivery al pulsar "Confirmar entrega"', async () => {
-    const onConfirmDelivery = vi.fn().mockResolvedValue(undefined)
-    renderModal({
-      order: createOrder({ status: 'on_the_way' }),
-      onConfirmDelivery,
-    })
-    screen.getByTestId('confirm-delivery').click()
-    expect(onConfirmDelivery).toHaveBeenCalledWith('order-12345678-9abc-def0-1234-56789abcdef0')
   })
 
   it('muestra el badge con el estado del pedido', () => {
@@ -167,6 +154,25 @@ describe('DeliveryTrackingModal', () => {
     renderModal({ order: createOrder({ status: 'on_the_way' }) })
 
     expect(startTracking).toHaveBeenCalled()
+  })
+
+  it('renderiza marcadores del destino (latitude/longitude) y del repartidor (GPS)', () => {
+    ;(useGpsTracking as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      position: { lat: 10.4806, lng: -66.9036 },
+      error: null,
+      tracking: true,
+      startTracking: vi.fn(),
+      stopTracking: vi.fn(),
+    })
+
+    renderModal({
+      order: createOrder({ status: 'on_the_way', latitude: 10.5, longitude: -66.9 }),
+    })
+
+    const map = screen.getByTestId('map-view')
+    const markers = map.getAttribute('data-markers') ?? ''
+    expect(markers).toContain('destination')
+    expect(markers).toContain('driver')
   })
 
   it('muestra la posición GPS cuando está disponible', () => {

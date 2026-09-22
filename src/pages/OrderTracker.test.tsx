@@ -155,6 +155,28 @@ describe('OrderTracker', () => {
     expect(statusP).toHaveTextContent(/estado actual: confirmado/i);
   });
 
+  it('should display the delivery code prominently for the customer', async () => {
+    const mockFrom = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
+    };
+    (supabase.from as Mock).mockReturnValue(mockFrom);
+
+    const { wrapper } = createWrapper();
+    render(<OrderTracker />, { wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('delivery-code-card')).toBeInTheDocument();
+    });
+
+    const codeCard = screen.getByTestId('delivery-code-card');
+    expect(within(codeCard).getByText(/tu código de entrega/i)).toBeInTheDocument();
+    expect(within(codeCard).getByText('#TEST-ORD')).toBeInTheDocument();
+    expect(within(codeCard).getByText(/repartidor/i)).toBeInTheDocument();
+  });
+
   it('should render animated order status stepper', async () => {
     const mockFrom = {
       select: vi.fn().mockReturnThis(),

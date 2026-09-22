@@ -3,7 +3,6 @@ import {
   X,
   MapPin,
   Phone,
-  ExternalLink,
   Navigation,
   Loader2,
   Package,
@@ -18,7 +17,6 @@ import {
   NEW_DELIVERY_STATUSES,
   getOrderDeliveryAddress,
   getOrderDeliveryCoordinates,
-  buildDeliveryMapsUrl,
 } from '../../utils/delivery'
 import type { DriverOrder } from '../../hooks/useDriverDeliveries'
 
@@ -62,7 +60,6 @@ interface DeliveryTrackingModalProps {
   isOpen: boolean
   onClose: () => void
   onStartTrip: (orderId: string) => Promise<void>
-  onConfirmDelivery: (orderId: string) => Promise<void>
   actionLoading: boolean
 }
 
@@ -71,13 +68,11 @@ export function DeliveryTrackingModal({
   isOpen,
   onClose,
   onStartTrip,
-  onConfirmDelivery,
   actionLoading,
 }: DeliveryTrackingModalProps) {
   const customerName = getCustomerName(order)
   const customerPhone = getCustomerPhone(order)
   const address = getOrderDeliveryAddress(order)
-  const mapsUrl = buildDeliveryMapsUrl(order)
   const destination = getOrderDeliveryCoordinates(order)
   const isActive = order.status === 'on_the_way'
   const isAssigned = NEW_DELIVERY_STATUSES.includes(order.status)
@@ -140,11 +135,6 @@ export function DeliveryTrackingModal({
 
   const handleStartTrip = async () => {
     await onStartTrip(order.id)
-  }
-
-  const handleConfirmDelivery = async () => {
-    await onConfirmDelivery(order.id)
-    onClose()
   }
 
   return (
@@ -236,21 +226,7 @@ export function DeliveryTrackingModal({
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex gap-2">
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex-1"
-            data-testid="open-maps"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Google Maps
-          </a>
-        </div>
-
-        {/* Primary action */}
+        {/* Primary action: marcar "En camino" abre el mapa nativo */}
         {isAssigned && (
           <Button
             data-testid="start-trip"
@@ -260,21 +236,14 @@ export function DeliveryTrackingModal({
             disabled={actionLoading}
             onClick={() => void handleStartTrip()}
           >
-            Iniciar viaje
+            En camino
           </Button>
         )}
 
         {isActive && (
-          <Button
-            data-testid="confirm-delivery"
-            variant="primary"
-            fullWidth
-            isLoading={actionLoading}
-            disabled={actionLoading}
-            onClick={() => void handleConfirmDelivery()}
-          >
-            Confirmar entrega
-          </Button>
+          <p className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-center text-xs text-blue-700">
+            Cuando entregues el pedido, el cliente confirmará la recepción desde su aplicación.
+          </p>
         )}
 
         {order.status === 'delivered' && (

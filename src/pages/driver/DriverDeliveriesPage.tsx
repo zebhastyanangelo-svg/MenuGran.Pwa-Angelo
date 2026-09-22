@@ -9,7 +9,6 @@ import {
   Navigation,
   ShoppingBasket,
   PackageCheck,
-  ExternalLink,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useDriverDeliveries } from '../../hooks/useDriverDeliveries'
@@ -22,8 +21,6 @@ import { getOrderTypeLabel } from '../../utils/orderType'
 import {
   NEW_DELIVERY_STATUSES,
   getOrderDeliveryAddress,
-  buildDeliveryMapsUrl,
-  buildDeliveryWazeUrl,
 } from '../../utils/delivery'
 import type { DriverOrder } from '../../hooks/useDriverDeliveries'
 
@@ -89,7 +86,6 @@ export function DriverDeliveriesPage() {
     actionLoading,
     actionError,
     takeOrder,
-    markDelivered,
     refresh,
   } = useDriverDeliveries(user)
 
@@ -124,20 +120,18 @@ export function DriverDeliveriesPage() {
     [takeOrder],
   )
 
-  const handleConfirmDelivery = useCallback(
-    async (orderId: string) => {
-      await markDelivered(orderId)
+  const handleStartRoute = useCallback(
+    async (order: DriverOrder) => {
+      if (NEW_DELIVERY_STATUSES.includes(order.status)) {
+        await takeOrder(order.id)
+      }
+      setSelectedOrder((prev) =>
+        prev && prev.id === order.id ? { ...prev, status: 'on_the_way' } : { ...order, status: 'on_the_way' },
+      )
+      setIsModalOpen(true)
     },
-    [markDelivered],
+    [takeOrder],
   )
-
-  const handleOpenMaps = useCallback((order: DriverOrder) => {
-    window.open(buildDeliveryMapsUrl(order), '_blank')
-  }, [])
-
-  const handleOpenWaze = useCallback((order: DriverOrder) => {
-    window.open(buildDeliveryWazeUrl(order), '_blank')
-  }, [])
 
   const getOrdersForTab = (tab: TabKey): DriverOrder[] => {
     switch (tab) {
@@ -265,10 +259,7 @@ export function DriverDeliveriesPage() {
                 key={order.id}
                 order={order}
                 onOpen={handleOpenOrder}
-                onStartTrip={handleStartTrip}
-                onConfirmDelivery={handleConfirmDelivery}
-                onOpenMaps={handleOpenMaps}
-                onOpenWaze={handleOpenWaze}
+                onStartRoute={handleStartRoute}
                 actionLoading={actionLoading}
               />
             ))
@@ -297,7 +288,6 @@ export function DriverDeliveriesPage() {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           onStartTrip={handleStartTrip}
-          onConfirmDelivery={handleConfirmDelivery}
           actionLoading={actionLoading}
         />
       )}
@@ -310,26 +300,19 @@ export function DriverDeliveriesPage() {
 interface DeliveryCardProps {
   order: DriverOrder
   onOpen: (order: DriverOrder) => void
-  onStartTrip: (orderId: string) => Promise<void>
-  onConfirmDelivery: (orderId: string) => Promise<void>
-  onOpenMaps: (order: DriverOrder) => void
-  onOpenWaze: (order: DriverOrder) => void
+  onStartRoute: (order: DriverOrder) => Promise<void>
   actionLoading: boolean
 }
 
 function DeliveryCard({
   order,
   onOpen,
-  onStartTrip,
-  onConfirmDelivery,
-  onOpenMaps,
-  onOpenWaze,
+  onStartRoute,
   actionLoading,
 }: DeliveryCardProps) {
   const customerName = getCustomerName(order)
   const customerPhone = getCustomerPhone(order)
   const address = getOrderDeliveryAddress(order)
-  const isAssigned = NEW_DELIVERY_STATUSES.includes(order.status)
   const isInTransit = order.status === 'on_the_way'
   const isDelivered = order.status === 'delivered'
 
@@ -388,66 +371,21 @@ function DeliveryCard({
           </span>
         </div>
 
-        {/* Navigation buttons */}
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onOpenMaps(order)
-            }}
-            className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-            data-testid={`open-maps-${order.id}`}
-            aria-label="Abrir en Google Maps"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            Maps
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onOpenWaze(order)
-            }}
-            className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-green-300 bg-green-50 px-3 py-2 text-xs font-medium text-green-700 hover:bg-green-100 transition-colors"
-            data-testid={`open-waze-${order.id}`}
-            aria-label="Abrir en Waze"
-          >
-            <Navigation className="h-3.5 w-3.5" />
-            Waze
-          </button>
-        </div>
-
-        {/* Status-specific action buttons */}
-        {isAssigned && (
+        {/* Primary route action (native in-app map) */}
+        {!isDelivered && (
           <Button
-            data-testid={`start-trip-${order.id}`}
+            data-testid={`start-route-${order.id}`}
             variant="primary"
             fullWidth
             isLoading={actionLoading}
             disabled={actionLoading}
             onClick={(e) => {
               e.stopPropagation()
-              onStartTrip(order.id)
+              void onStartRoute(order)
             }}
           >
-            Iniciar viaje
-          </Button>
-        )}
-
-        {isInTransit && (
-          <Button
-            data-testid={`confirm-delivery-${order.id}`}
-            variant="primary"
-            fullWidth
-            isLoading={actionLoading}
-            disabled={actionLoading}
-            onClick={(e) => {
-              e.stopPropagation()
-              onConfirmDelivery(order.id)
-            }}
-          >
-            Marcar como entregado
+            <Navigation className="mr-2 h-4 w-4" />
+            {isInTransit ? 'Ver ruta en mapa' : 'En camino'}
           </Button>
         )}
 

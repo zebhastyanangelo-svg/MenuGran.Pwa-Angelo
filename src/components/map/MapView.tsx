@@ -129,6 +129,16 @@ export function MapView({
     }
   }, [markers, center, zoom, userLocation, activeRoute]);
 
+  // Al renderizarse dentro de un modal, el contenedor puede montarse con
+  // dimensiones no calculadas: invalidar el tamaño tras un breve delay evita
+  // que el mapa quede sombreado en gris.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      mapInstanceRef.current?.invalidateSize();
+    }, 200);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     return () => {
       if (mapInstanceRef.current !== null) {

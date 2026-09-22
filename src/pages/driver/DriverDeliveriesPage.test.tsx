@@ -6,6 +6,10 @@ vi.mock('../../hooks/useAuth', () => ({ useAuth: vi.fn() }))
 vi.mock('../../hooks/useDriverDeliveries', () => ({
   useDriverDeliveries: vi.fn(),
 }))
+vi.mock('../../components/driver/DeliveryTrackingModal', () => ({
+  DeliveryTrackingModal: ({ order, isOpen }: { order: { id: string; status: string }; isOpen: boolean }) =>
+    isOpen ? <div data-testid="delivery-tracking-modal" data-status={order.status} /> : null,
+}))
 
 import { useAuth } from '../../hooks/useAuth'
 import { useDriverDeliveries } from '../../hooks/useDriverDeliveries'
@@ -203,7 +207,7 @@ describe('DriverDeliveriesPage', () => {
     expect(screen.getByText(/120/)).toBeInTheDocument()
   })
 
-  it('muestra botones de Maps y Waze en cada tarjeta', () => {
+  it('muestra botón "En camino" para pedidos asignados (ready)', () => {
     ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultHookReturn,
       assigned: [createOrder()],
@@ -211,13 +215,11 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    expect(screen.getByTestId('open-maps-order-1')).toBeInTheDocument()
-    expect(screen.getByTestId('open-waze-order-1')).toBeInTheDocument()
-    expect(screen.getByText('Maps')).toBeInTheDocument()
-    expect(screen.getByText('Waze')).toBeInTheDocument()
+    expect(screen.getByTestId('start-route-order-1')).toBeInTheDocument()
+    expect(screen.getByTestId('start-route-order-1')).toHaveTextContent('En camino')
   })
 
-  it('muestra botón "Iniciar viaje" para pedidos asignados (ready)', () => {
+  it('no muestra botones de mapas externos (Google Maps / Waze)', () => {
     ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultHookReturn,
       assigned: [createOrder()],
@@ -225,11 +227,13 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    expect(screen.getByTestId('start-trip-order-1')).toBeInTheDocument()
-    expect(screen.getByText('Iniciar viaje')).toBeInTheDocument()
+    expect(screen.queryByTestId('open-maps-order-1')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('open-waze-order-1')).not.toBeInTheDocument()
+    expect(screen.queryByText('Maps')).not.toBeInTheDocument()
+    expect(screen.queryByText('Waze')).not.toBeInTheDocument()
   })
 
-  it('muestra botón "Marcar como entregado" para pedidos en camino', async () => {
+  it('no muestra botón "Marcar como entregado" en pedidos en camino', async () => {
     ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultHookReturn,
       inTransit: [createOrder({ id: 'order-2', status: 'on_the_way' })],
@@ -240,9 +244,10 @@ describe('DriverDeliveriesPage', () => {
     screen.getByTestId('tab-inTransit').click()
 
     await waitFor(() => {
-      expect(screen.getByTestId('confirm-delivery-order-2')).toBeInTheDocument()
+      expect(screen.getByTestId('start-route-order-2')).toBeInTheDocument()
     })
-    expect(screen.getByText('Marcar como entregado')).toBeInTheDocument()
+    expect(screen.queryByText('Marcar como entregado')).not.toBeInTheDocument()
+    expect(screen.getByText('Ver ruta en mapa')).toBeInTheDocument()
   })
 
   it('muestra "Entrega completada" para pedidos entregados', async () => {
@@ -311,53 +316,7 @@ describe('DriverDeliveriesPage', () => {
     expect(screen.getByText(/Sin entregas asignadas/)).toBeInTheDocument()
   })
 
-  it('usa las coordenadas de la orden en los enlaces de Maps y Waze', async () => {
-    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
-    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      ...defaultHookReturn,
-      assigned: [
-        createOrder({
-          delivery_location: { x: -66.9036, y: 10.4806 },
-        }),
-      ],
-    })
-
-    renderPage()
-
-    screen.getByTestId('open-maps-order-1').click()
-    expect(openSpy).toHaveBeenCalledWith(
-      'https://www.google.com/maps/search/?api=1&query=10.4806%2C-66.9036',
-      '_blank',
-    )
-
-    screen.getByTestId('open-waze-order-1').click()
-    expect(openSpy).toHaveBeenCalledWith(
-      'https://waze.com/ul?ll=10.4806,-66.9036&navigate=yes',
-      '_blank',
-    )
-
-    openSpy.mockRestore()
-  })
-
-  it('usa la dirección de texto cuando no hay coordenadas', async () => {
-    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
-    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      ...defaultHookReturn,
-      assigned: [createOrder()],
-    })
-
-    renderPage()
-
-    screen.getByTestId('open-maps-order-1').click()
-    expect(openSpy).toHaveBeenCalledWith(
-      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Av. Principal 123, Caracas')}`,
-      '_blank',
-    )
-
-    openSpy.mockRestore()
-  })
-
-  it('muestra "Iniciar viaje" para pedidos asignados en preparación', () => {
+  it('muestra "En camino" para pedidos asignados en preparación', () => {
     ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultHookReturn,
       assigned: [createOrder({ status: 'confirmed' })],
@@ -365,11 +324,11 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    expect(screen.getByTestId('start-trip-order-1')).toBeInTheDocument()
+    expect(screen.getByTestId('start-route-order-1')).toBeInTheDocument()
   })
 
-  it('llama a takeOrder al hacer clic en "Iniciar viaje"', async () => {
-    const takeOrder = vi.fn()
+  it('marca la orden "on_the_way" y abre el mapa interno al pulsar "En camino"', async () => {
+    const takeOrder = vi.fn().mockResolvedValue(undefined)
     ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultHookReturn,
       assigned: [createOrder()],
@@ -378,16 +337,43 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    // Find and click the "Iniciar viaje" button
-    const startButton = screen.getByTestId('start-trip-order-1')
-    startButton.click()
+    screen.getByTestId('start-route-order-1').click()
 
     await waitFor(() => {
       expect(takeOrder).toHaveBeenCalledWith('order-1')
+      expect(screen.getByTestId('delivery-tracking-modal')).toBeInTheDocument()
     })
+    expect(screen.getByTestId('delivery-tracking-modal')).toHaveAttribute(
+      'data-status',
+      'on_the_way',
+    )
   })
 
-  it('llama a markDelivered al hacer clic en "Marcar como entregado"', async () => {
+  it('abre el mapa interno sin cambiar estado para pedidos ya en camino', async () => {
+    const takeOrder = vi.fn().mockResolvedValue(undefined)
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      inTransit: [createOrder({ id: 'order-2', status: 'on_the_way' })],
+      takeOrder,
+    })
+
+    renderPage()
+
+    screen.getByTestId('tab-inTransit').click()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('start-route-order-2')).toBeInTheDocument()
+    })
+
+    screen.getByTestId('start-route-order-2').click()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('delivery-tracking-modal')).toBeInTheDocument()
+    })
+    expect(takeOrder).not.toHaveBeenCalled()
+  })
+
+  it('no llama a markDelivered (la entrega solo la confirma el cliente)', async () => {
     const markDelivered = vi.fn()
     ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultHookReturn,
@@ -400,12 +386,8 @@ describe('DriverDeliveriesPage', () => {
     screen.getByTestId('tab-inTransit').click()
 
     await waitFor(() => {
-      const confirmButton = screen.getByTestId('confirm-delivery-order-2')
-      confirmButton.click()
+      expect(screen.queryByTestId('confirm-delivery-order-2')).not.toBeInTheDocument()
     })
-
-    await waitFor(() => {
-      expect(markDelivered).toHaveBeenCalledWith('order-2')
-    })
+    expect(markDelivered).not.toHaveBeenCalled()
   })
 })

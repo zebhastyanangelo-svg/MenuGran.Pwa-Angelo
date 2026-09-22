@@ -299,6 +299,21 @@ export function OrderTracker() {
         </p>
       </header>
 
+      <section
+        className="mb-8 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50 p-6 text-center shadow-sm"
+        data-testid="delivery-code-card"
+      >
+        <p className="text-sm font-medium uppercase tracking-wide text-amber-700">
+          Tu código de entrega
+        </p>
+        <p className="mt-1 font-mono text-4xl font-extrabold tracking-widest text-amber-900">
+          #{order.id.slice(0, 8).toUpperCase()}
+        </p>
+        <p className="mt-2 text-sm text-amber-700">
+          Comparte este código con el repartidor al recibir tu pedido.
+        </p>
+      </section>
+
       {order.status === 'delivered' && (
         <div className="mb-8 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 p-8 text-center shadow-md">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
