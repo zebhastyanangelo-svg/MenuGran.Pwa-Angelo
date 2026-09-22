@@ -30,6 +30,10 @@ export interface MapViewProps {
   route?: readonly [number, number][];
   routeRequest?: { from: [number, number]; to: [number, number] };
   className?: string;
+  /** Show a friendly placeholder when no markers/coordinates are available */
+  showFallback?: boolean;
+  /** Custom fallback message */
+  fallbackMessage?: string;
 }
 
 export function MapView({
@@ -40,6 +44,8 @@ export function MapView({
   route,
   routeRequest,
   className = 'h-64 w-full',
+  showFallback = true,
+  fallbackMessage = 'No hay coordenadas disponibles para mostrar el mapa.',
 }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -129,14 +135,23 @@ export function MapView({
     }
   }, [markers, center, zoom, userLocation, activeRoute]);
 
-  // Al renderizarse dentro de un modal, el contenedor puede montarse con
-  // dimensiones no calculadas: invalidar el tamaño tras un breve delay evita
-  // que el mapa quede sombreado en gris.
+  // Invalidate size on mount and when container resizes (modal, tabs, etc.)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      mapInstanceRef.current?.invalidateSize();
-    }, 200);
-    return () => clearTimeout(timer);
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    map.invalidateSize();
+
+    const ro = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    if (mapRef.current) ro.observe(mapRef.current);
+
+    const timer = setTimeout(() => map.invalidateSize(), 200);
+    return () => {
+      clearTimeout(timer);
+      ro.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -147,6 +162,17 @@ export function MapView({
       }
     };
   }, []);
+
+  // Show fallback when no markers, no userLocation, no route, and no center override
+  const hasAnyData = markers.length > 0 || userLocation !== null || activeRoute !== null || routeRequest !== undefined;
+
+  if (!hasAnyData && showFallback) {
+    return (
+      <div className={`${className} flex items-center justify-center rounded-lg border border-gray-200 bg-gray-50`}>
+        <p className="text-sm text-gray-500 text-center px-4">{fallbackMessage}</p>
+      </div>
+    );
+  }
 
   return <div ref={mapRef} className={className} />;
 }

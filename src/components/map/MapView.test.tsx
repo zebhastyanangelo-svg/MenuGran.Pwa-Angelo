@@ -8,6 +8,13 @@ import {
 import { fetchOsrmRoute } from '../../utils/osrmRoute';
 import { merchantsByDistance } from '../../utils/distance';
 
+// Mock ResizeObserver for tests
+global.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}));
+
 vi.mock('leaflet', () => {
   const layers: Record<string, unknown[]> = {};
   const instanceMap: Record<string, unknown[]> = {};
@@ -22,6 +29,7 @@ vi.mock('leaflet', () => {
     removeLayer: vi.fn(),
     on: vi.fn(),
     off: vi.fn(),
+    invalidateSize: vi.fn(),
   };
 
   const markerFn = vi.fn((_latlng: unknown, _options?: unknown) => {

@@ -19,9 +19,10 @@ import { statusDisplayMap } from '../utils/statusDisplayMap';
 import { getOrderStatusLabel } from '../utils/orderStatus';
 import { OrderStatusStep } from '../components/orders/OrderStatusStep';
 import { getAllowedTransitions, getTransitionLabel, getTransitionButtonClass } from '../utils/orderStatus';
-import { PartyPopper, ArrowLeft, Navigation } from 'lucide-react';
+import { PartyPopper, ArrowLeft, Navigation, PackageCheck } from 'lucide-react';
 import { MapView } from '../components/map/MapView';
 import type { MapMarker } from '../components/map/MapView';
+import { MapErrorBoundary } from '../components/map/MapErrorBoundary';
 
 interface ProductNameMap {
   [productId: string]: string;
@@ -61,6 +62,8 @@ export function OrderTracker() {
   const [productNames, setProductNames] = useState<ProductNameMap>({});
   const [merchantName, setMerchantName] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState<string | null>(null);
+  const [customerPhone, setCustomerPhone] = useState<string | null>(null);
+  const [customerDocumentId, setCustomerDocumentId] = useState<string | null>(null);
   const [driverLocation, setDriverLocation] = useState<GeoPoint | null>(null);
 
   const { showToast } = useNotificationToast();
@@ -95,6 +98,39 @@ export function OrderTracker() {
     },
     [permission, showNotification, showToast],
   );
+
+  const confirmDeliveryByClient = useCallback(async () => {
+    if (!orderId || !order) return;
+
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'delivered' })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      showToast({
+        title: '¡Entrega confirmada!',
+        message: 'Gracias por confirmar la recepción de tu pedido.',
+        variant: 'success',
+        durationMs: 5000,
+      });
+
+      // Trigger realtime update will refresh the order
+    } catch (err) {
+      console.error('Error confirming delivery:', err);
+      showToast({
+        title: 'Error',
+        message: 'No se pudo confirmar la entrega. Intenta de nuevo.',
+        variant: 'error',
+        durationMs: 5000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [orderId, order, showToast]);
 
   const orderStatusSteps: OrderStatus[] = [
     'payment_pending',
@@ -142,7 +178,7 @@ export function OrderTracker() {
           : { data: [], error: null },
         supabase.from('merchants').select('name').eq('id', data.merchant_id).single(),
         data.customer_id
-          ? supabase.from('profiles').select('full_name').eq('id', data.customer_id).single()
+          ? supabase.from('profiles').select('full_name, phone, document_id').eq('id', data.customer_id).single()
           : { data: null, error: null },
       ]);
 
@@ -160,6 +196,8 @@ export function OrderTracker() {
 
       if (customerResult.data) {
         setCustomerName(customerResult.data.full_name);
+        setCustomerPhone(customerResult.data.phone ?? null);
+        setCustomerDocumentId(customerResult.data.document_id ?? null);
       }
     } catch (err) {
       console.error('Error loading order:', err);
@@ -309,10 +347,37 @@ export function OrderTracker() {
         <p className="mt-1 font-mono text-4xl font-extrabold tracking-widest text-amber-900">
           #{order.id.slice(0, 8).toUpperCase()}
         </p>
-        <p className="mt-2 text-sm text-amber-700">
-          Comparte este código con el repartidor al recibir tu pedido.
-        </p>
-      </section>
+<p className="mt-2 text-sm text-amber-700">
+            Comparte este código con el repartidor al recibir tu pedido.
+          </p>
+        </section>
+
+      {/* Cliente confirma recepción del pedido */}
+      {(!isCompleted &&
+        (order.status === 'on_the_way' || order.status === 'ready') &&
+        order.customer_id === user?.id) && (
+        <section className="mb-8 bg-white rounded-lg shadow-md p-6 border border-emerald-200 bg-emerald-50">
+          <div className="flex items-center gap-3 mb-4">
+            <PackageCheck className="h-8 w-8 text-emerald-600" />
+            <div>
+              <h3 className="text-lg font-bold text-emerald-800">Confirmar recepción del pedido</h3>
+              <p className="text-sm text-emerald-700">
+                Al recibir tu pedido, confirma la entrega con el código de arriba.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={confirmDeliveryByClient}
+            disabled={loading}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-4 text-lg font-semibold text-white shadow hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid="confirm-delivery"
+          >
+            <PackageCheck className="h-5 w-5" />
+            Confirmar pedido recibido
+          </button>
+        </section>
+      )}
 
       {order.status === 'delivered' && (
         <div className="mb-8 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 p-8 text-center shadow-md">
@@ -354,19 +419,23 @@ export function OrderTracker() {
         </div>
       </div>
 
-      {order.status === 'on_the_way' && driverLocation && (
+      {order.status === 'on_the_way' && driverLocation && order.delivery_location && (
         <section className="mb-8 bg-white rounded-lg shadow-md p-4 border border-gray-200">
           <div className="flex items-center gap-2 mb-3">
             <Navigation className="h-5 w-5 text-blue-600" />
             <h2 className="text-lg font-bold text-gray-800">Repartidor en camino</h2>
           </div>
           <div className="h-64 rounded-lg overflow-hidden">
-            <MapView
-              markers={buildDeliveryMarkers(driverLocation, order.delivery_location)}
-              center={[driverLocation.y, driverLocation.x]}
-              zoom={15}
-              className="h-full w-full"
-            />
+            <MapErrorBoundary fallbackMessage="No se pudo mostrar la ubicación del repartidor.">
+              <MapView
+                markers={buildDeliveryMarkers(driverLocation, order.delivery_location)}
+                center={[driverLocation.y, driverLocation.x]}
+                zoom={15}
+                className="h-full w-full"
+                showFallback
+                fallbackMessage="Esperando ubicación del repartidor..."
+              />
+            </MapErrorBoundary>
           </div>
         </section>
       )}
@@ -462,6 +531,18 @@ export function OrderTracker() {
                 {customerName ?? (order.customer_id ? `Cliente #${order.customer_id.slice(0, 8)}` : 'Cliente invitado')}
               </span>
             </div>
+            {customerPhone && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Teléfono:</span>
+                <span className="font-medium">{customerPhone}</span>
+              </div>
+            )}
+            {customerDocumentId && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Cédula:</span>
+                <span className="font-medium font-mono">{customerDocumentId}</span>
+              </div>
+            )}
           </div>
         </section>
 

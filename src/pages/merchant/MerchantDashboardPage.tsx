@@ -50,7 +50,8 @@ function getOrderActions(status: OrderStatus): OrderAction[] {
         { label: 'Cancelar', next: 'cancelled' },
       ];
     case 'ready':
-      return [{ label: 'Listo', next: 'delivered' }];
+      // El cliente confirma la recepción; el comercio no marca como entregado
+      return [];
     default:
       return [];
   }
