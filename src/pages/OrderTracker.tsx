@@ -23,6 +23,7 @@ import { PartyPopper, ArrowLeft, Navigation, PackageCheck } from 'lucide-react';
 import { MapView } from '../components/map/MapView';
 import type { MapMarker } from '../components/map/MapView';
 import { MapErrorBoundary } from '../components/map/MapErrorBoundary';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ProductNameMap {
   [productId: string]: string;
@@ -54,6 +55,7 @@ export function OrderTracker() {
   const { user, profile, isLoading: authLoading } = useAuth();
   const { id: orderId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [order, setOrder] = useState<OrderRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -118,7 +120,8 @@ export function OrderTracker() {
         durationMs: 5000,
       });
 
-      // Trigger realtime update will refresh the order
+      // Invalidate merchant orders query so the panel updates instantly
+      await queryClient.invalidateQueries({ queryKey: ['orders'] });
     } catch (err) {
       console.error('Error confirming delivery:', err);
       showToast({
@@ -130,7 +133,7 @@ export function OrderTracker() {
     } finally {
       setLoading(false);
     }
-  }, [orderId, order, showToast]);
+  }, [orderId, order, showToast, queryClient]);
 
   const orderStatusSteps: OrderStatus[] = [
     'payment_pending',
@@ -431,6 +434,10 @@ export function OrderTracker() {
                 markers={buildDeliveryMarkers(driverLocation, order.delivery_location)}
                 center={[driverLocation.y, driverLocation.x]}
                 zoom={15}
+                routeRequest={{
+                  from: [driverLocation.y, driverLocation.x],
+                  to: [order.delivery_location.y, order.delivery_location.x],
+                }}
                 className="h-full w-full"
                 showFallback
                 fallbackMessage="Esperando ubicación del repartidor..."

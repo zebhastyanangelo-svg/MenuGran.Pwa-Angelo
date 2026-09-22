@@ -6,6 +6,8 @@ import { NotificationToastProvider } from '../components/pwa/NotificationToast';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { createTestQueryClient } from '../test/test-query-client';
+import { QueryClientProvider } from '@tanstack/react-query';
 
 let channelCallbackRef = { current: null as any };
 
@@ -63,19 +65,24 @@ vi.mock('../hooks/useAuth', () => ({
 }));
 
 const createWrapper = () => ({
-  wrapper: ({ children }: { children: React.ReactNode }) => (
-    <AuthProvider>
-      <CartProvider>
-        <NotificationToastProvider>
-          <MemoryRouter initialEntries={['/orders/test-order-id']}>
-            <Routes>
-              <Route path="/orders/:id" element={children} />
-            </Routes>
-          </MemoryRouter>
-        </NotificationToastProvider>
-      </CartProvider>
-    </AuthProvider>
-  ),
+  wrapper: ({ children }: { children: React.ReactNode }) => {
+    const queryClient = createTestQueryClient();
+    return (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <CartProvider>
+            <NotificationToastProvider>
+              <MemoryRouter initialEntries={['/orders/test-order-id']}>
+                <Routes>
+                  <Route path="/orders/:id" element={children} />
+                </Routes>
+              </MemoryRouter>
+            </NotificationToastProvider>
+          </CartProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+  },
 });
 
 describe('OrderTracker', () => {

@@ -212,14 +212,22 @@ export function DeliveryTrackingModal({
 
       {/* Map area */}
       <div className="flex-1 relative bg-gray-200">
-        {markers.length > 0 ? (
-          <MapView
-            markers={markers}
-            center={mapCenter}
-            zoom={mapZoom}
-            userLocation={position ? [position.lat, position.lng] : null}
-            className="h-full w-full"
-          />
+{markers.length > 0 ? (
+            <MapView
+              markers={markers}
+              center={mapCenter}
+              zoom={mapZoom}
+              userLocation={position ? [position.lat, position.lng] : null}
+              routeRequest={
+                position && destination
+                  ? {
+                      from: [position.lat, position.lng],
+                      to: destination,
+                    }
+                  : undefined
+              }
+              className="h-full w-full"
+            />
         ) : (
           <div className="flex items-center justify-center h-full text-gray-400 text-sm">
             <Loader2 className="h-5 w-5 animate-spin mr-2" />
