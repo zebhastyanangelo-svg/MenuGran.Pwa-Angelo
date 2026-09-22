@@ -35,7 +35,10 @@ const createOrder = (overrides: Record<string, unknown> = {}) => ({
   total_amount: '120',
   table_number: null,
   delivery_location: null,
+  delivery_address: null,
   delivery_address_notes: 'Av. Principal 123, Caracas',
+  latitude: null,
+  longitude: null,
   items: [{ product_id: 'p-1', quantity: 2, unit_price: 60 }],
   created_at: today,
   profiles: {

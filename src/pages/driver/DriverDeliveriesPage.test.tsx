@@ -34,7 +34,10 @@ const createOrder = (overrides: Record<string, unknown> = {}) => ({
   total_amount: 120,
   table_number: null,
   delivery_location: null,
+  delivery_address: 'Av. Principal 123, Caracas',
   delivery_address_notes: 'Av. Principal 123, Caracas',
+  latitude: null,
+  longitude: null,
   items: [{ product_id: 'p-1', quantity: 2, unit_price: 60 }],
   created_at: today,
   profiles: {
@@ -306,6 +309,63 @@ describe('DriverDeliveriesPage', () => {
 
     expect(screen.getByTestId('driver-no-orders')).toBeInTheDocument()
     expect(screen.getByText(/Sin entregas asignadas/)).toBeInTheDocument()
+  })
+
+  it('usa las coordenadas de la orden en los enlaces de Maps y Waze', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      assigned: [
+        createOrder({
+          delivery_location: { x: -66.9036, y: 10.4806 },
+        }),
+      ],
+    })
+
+    renderPage()
+
+    screen.getByTestId('open-maps-order-1').click()
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://www.google.com/maps/search/?api=1&query=10.4806%2C-66.9036',
+      '_blank',
+    )
+
+    screen.getByTestId('open-waze-order-1').click()
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://waze.com/ul?ll=10.4806,-66.9036&navigate=yes',
+      '_blank',
+    )
+
+    openSpy.mockRestore()
+  })
+
+  it('usa la dirección de texto cuando no hay coordenadas', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      assigned: [createOrder()],
+    })
+
+    renderPage()
+
+    screen.getByTestId('open-maps-order-1').click()
+    expect(openSpy).toHaveBeenCalledWith(
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Av. Principal 123, Caracas')}`,
+      '_blank',
+    )
+
+    openSpy.mockRestore()
+  })
+
+  it('muestra "Iniciar viaje" para pedidos asignados en preparación', () => {
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      assigned: [createOrder({ status: 'confirmed' })],
+    })
+
+    renderPage()
+
+    expect(screen.getByTestId('start-trip-order-1')).toBeInTheDocument()
   })
 
   it('llama a takeOrder al hacer clic en "Iniciar viaje"', async () => {

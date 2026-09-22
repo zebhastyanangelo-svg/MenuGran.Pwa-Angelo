@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { User, RealtimeChannel } from '@supabase/supabase-js'
 import { supabase, TABLE_NAMES } from '../services/supabase'
+import { NEW_DELIVERY_STATUSES, TRACKED_DELIVERY_STATUSES } from '../utils/delivery'
 import type { OrderRow, OrderStatus } from '../types/database'
 import type { DriverOrder } from './useDriverDashboard'
 
@@ -52,10 +53,10 @@ async function fetchDriverDeliveries(
 ): Promise<DriverOrder[]> {
   const result = await supabase
     .from(TABLE_NAMES.orders)
-    .select('id, merchant_id, customer_id, driver_id, type, status, payment_method, payment_reference, payment_proof_url, total_amount, table_number, delivery_location, delivery_address_notes, items, created_at, profiles!customer_id(full_name, email, phone)')
+    .select('id, merchant_id, customer_id, driver_id, type, status, payment_method, payment_reference, payment_proof_url, total_amount, table_number, delivery_location, delivery_address, delivery_address_notes, latitude, longitude, items, created_at, profiles!customer_id(full_name, email, phone)')
     .eq('merchant_id', merchantId)
     .eq('type', 'delivery')
-    .in('status', ['ready', 'on_the_way', 'delivered'])
+    .in('status', [...TRACKED_DELIVERY_STATUSES])
     .eq('driver_id', userId)
     .order('created_at', { ascending: false })
   if (result.error) throw result.error
@@ -140,7 +141,11 @@ export function useDriverDeliveries(
         },
         (payload) => {
           const newOrder = payload.new as OrderRow
-          if (newOrder.status === 'ready' && newOrder.type === 'delivery') {
+          if (
+            newOrder.type === 'delivery' &&
+            newOrder.driver_id === user?.id &&
+            (NEW_DELIVERY_STATUSES as readonly string[]).includes(newOrder.status)
+          ) {
             setOrders((prev) => {
               if (prev.find((o) => o.id === newOrder.id)) return prev
               return [newOrder as DriverOrder, ...prev]
@@ -159,11 +164,33 @@ export function useDriverDeliveries(
         },
         (payload) => {
           const updated = payload.new as Partial<DriverOrder>
-          setOrders((prev) =>
-            prev.map((o) =>
+          setOrders((prev) => {
+            const exists = prev.some((o) => o.id === updated.id)
+            if (!exists) {
+              if (
+                updated.driver_id === user?.id &&
+                updated.type === 'delivery' &&
+                updated.status != null &&
+                (TRACKED_DELIVERY_STATUSES as readonly string[]).includes(
+                  updated.status,
+                )
+              ) {
+                void loadOrders()
+              }
+              return prev
+            }
+            if (
+              updated.status != null &&
+              !(TRACKED_DELIVERY_STATUSES as readonly string[]).includes(
+                updated.status,
+              )
+            ) {
+              return prev.filter((o) => o.id !== updated.id)
+            }
+            return prev.map((o) =>
               o.id === updated.id ? { ...o, ...updated } : o,
-            ),
-          )
+            )
+          })
         },
       )
       .on(
@@ -262,7 +289,9 @@ export function useDriverDeliveries(
   }, [loadOrders])
 
   const assigned = orders.filter(
-    (o) => o.status === 'ready' && o.driver_id === user?.id,
+    (o) =>
+      o.driver_id === user?.id &&
+      (NEW_DELIVERY_STATUSES as readonly string[]).includes(o.status),
   )
   const inTransit = orders.filter(
     (o) => o.status === 'on_the_way' && o.driver_id === user?.id,

@@ -36,6 +36,7 @@ export function Checkout() {
   const [bank, setBank] = useState('');
   const [reference, setReference] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState<GeoPoint | null>(null);
+  const [deliveryAddress, setDeliveryAddress] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -90,6 +91,10 @@ export function Checkout() {
           unit_price: parseFloat(item.product.price),
         })),
         deliveryLocation: orderType === 'delivery' ? deliveryLocation : null,
+        deliveryAddress:
+          orderType === 'delivery' && deliveryAddress.trim() !== ''
+            ? deliveryAddress.trim()
+            : null,
         paymentProofUrl: proofPath,
       });
 
@@ -200,11 +205,32 @@ export function Checkout() {
               <MapPin className="h-4 w-4 text-brand-red" aria-hidden="true" />
               Ubicación de entrega
             </legend>
-            <LocationPicker
-              initialLocation={deliveryLocation}
-              onLocationChange={setDeliveryLocation}
-              userLocation={null}
-            />
+            <div className="space-y-3">
+              <div>
+                <label htmlFor="delivery-address" className="mb-1 block text-sm font-medium text-slate-700">
+                  Dirección de entrega
+                </label>
+                <input
+                  id="delivery-address"
+                  type="text"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  placeholder="Ej. Av. Principal, Edif. Azul, Piso 2"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red"
+                />
+              </div>
+              <LocationPicker
+                initialLocation={deliveryLocation}
+                onLocationChange={setDeliveryLocation}
+                userLocation={null}
+                autoLocate
+              />
+              {deliveryLocation && (
+                <p className="text-xs text-slate-500" data-testid="delivery-coordinates">
+                  Coordenadas: {deliveryLocation.y.toFixed(5)}, {deliveryLocation.x.toFixed(5)}
+                </p>
+              )}
+            </div>
           </fieldset>
         )}
 

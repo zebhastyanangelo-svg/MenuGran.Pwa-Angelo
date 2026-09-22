@@ -14,6 +14,12 @@ import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { formatPrice } from '../../types/cart'
 import { getOrderStatusLabel } from '../../utils/orderStatus'
+import {
+  NEW_DELIVERY_STATUSES,
+  getOrderDeliveryAddress,
+  getOrderDeliveryCoordinates,
+  buildDeliveryMapsUrl,
+} from '../../utils/delivery'
 import type { DriverOrder } from '../../hooks/useDriverDeliveries'
 
 function getCustomerName(order: DriverOrder): string {
@@ -28,27 +34,16 @@ function getCustomerPhone(order: DriverOrder): string | null {
   return order.profiles?.phone ?? null
 }
 
-function getDeliveryAddress(order: DriverOrder): string {
-  return order.delivery_address_notes ?? 'Dirección no disponible'
-}
-
 function getOrderNumber(orderId: string): string {
   return `#${orderId.slice(0, 8).toUpperCase()}`
 }
 
-function buildMapsUrl(address: string): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
-}
-
-function getDeliveryDestination(order: DriverOrder): [number, number] | null {
-  if (order.delivery_location) {
-    return [order.delivery_location.y, order.delivery_location.x]
-  }
-  return null
-}
-
 function getBadgeVariant(status: DriverOrder['status']): 'success' | 'info' | 'warning' | 'danger' | 'primary' | 'neutral' {
   switch (status) {
+    case 'confirmed':
+      return 'warning'
+    case 'preparing':
+      return 'info'
     case 'ready':
       return 'success'
     case 'on_the_way':
@@ -81,11 +76,11 @@ export function DeliveryTrackingModal({
 }: DeliveryTrackingModalProps) {
   const customerName = getCustomerName(order)
   const customerPhone = getCustomerPhone(order)
-  const address = getDeliveryAddress(order)
-  const mapsUrl = buildMapsUrl(address)
-  const destination = getDeliveryDestination(order)
+  const address = getOrderDeliveryAddress(order)
+  const mapsUrl = buildDeliveryMapsUrl(order)
+  const destination = getOrderDeliveryCoordinates(order)
   const isActive = order.status === 'on_the_way'
-  const isAssigned = order.status === 'ready'
+  const isAssigned = NEW_DELIVERY_STATUSES.includes(order.status)
 
   const { position, error: gpsError, tracking, startTracking, stopTracking } =
     useGpsTracking(isActive ? order.id : null)

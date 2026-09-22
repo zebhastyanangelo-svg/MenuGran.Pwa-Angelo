@@ -192,6 +192,12 @@ export interface OrderRow {
   table_number: string | null;
   delivery_location: GeoPoint | null;
   delivery_address_notes: string | null;
+  /** Dirección textual de entrega escrita por el cliente. */
+  delivery_address: string | null;
+  /** Latitud del punto de entrega (GeoPoint.y de delivery_location). */
+  latitude: number | null;
+  /** Longitud del punto de entrega (GeoPoint.x de delivery_location). */
+  longitude: number | null;
   items: readonly OrderItem[];
   created_at: IsoTimestamp;
 }
@@ -250,6 +256,9 @@ export type OrderInsert = Pick<
       | 'payment_proof_url'
       | 'table_number'
       | 'delivery_address_notes'
+      | 'delivery_address'
+      | 'latitude'
+      | 'longitude'
     > & {
       delivery_location?: DbPoint | null;
     }

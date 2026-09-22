@@ -13,6 +13,7 @@ interface CreateOrderParams {
   totalAmount: number;
   items: OrderItem[];
   deliveryLocation?: GeoPoint | null;
+  deliveryAddress?: string | null;
   deliveryAddressNotes?: string | null;
   tableNumber?: string | null;
   paymentProofUrl?: string | null;
@@ -39,6 +40,9 @@ export async function createOrder(params: CreateOrderParams): Promise<string> {
       params.deliveryLocation != null
         ? `(${params.deliveryLocation.x},${params.deliveryLocation.y})`
         : undefined,
+    latitude: params.deliveryLocation?.y ?? undefined,
+    longitude: params.deliveryLocation?.x ?? undefined,
+    delivery_address: params.deliveryAddress ?? undefined,
     delivery_address_notes: params.deliveryAddressNotes ?? undefined,
     table_number: params.tableNumber ?? undefined,
   };

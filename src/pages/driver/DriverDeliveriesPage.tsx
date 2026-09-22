@@ -19,6 +19,12 @@ import { DeliveryTrackingModal } from '../../components/driver/DeliveryTrackingM
 import { formatPrice } from '../../types/cart'
 import { getOrderStatusLabel } from '../../utils/orderStatus'
 import { getOrderTypeLabel } from '../../utils/orderType'
+import {
+  NEW_DELIVERY_STATUSES,
+  getOrderDeliveryAddress,
+  buildDeliveryMapsUrl,
+  buildDeliveryWazeUrl,
+} from '../../utils/delivery'
 import type { DriverOrder } from '../../hooks/useDriverDeliveries'
 
 function getCustomerName(order: DriverOrder): string {
@@ -33,24 +39,16 @@ function getCustomerPhone(order: DriverOrder): string | null {
   return order.profiles?.phone ?? null
 }
 
-function getDeliveryAddress(order: DriverOrder): string {
-  return order.delivery_address_notes ?? 'Dirección no disponible'
-}
-
 function getOrderNumber(orderId: string): string {
   return `#${orderId.slice(0, 8).toUpperCase()}`
 }
 
-function buildMapsUrl(address: string): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
-}
-
-function buildWazeUrl(address: string): string {
-  return `https://waze.com/ul?q=${encodeURIComponent(address)}`
-}
-
 function getBadgeVariant(status: DriverOrder['status']): 'success' | 'info' | 'warning' | 'danger' | 'primary' | 'neutral' {
   switch (status) {
+    case 'confirmed':
+      return 'warning'
+    case 'preparing':
+      return 'info'
     case 'ready':
       return 'success'
     case 'on_the_way':
@@ -133,12 +131,12 @@ export function DriverDeliveriesPage() {
     [markDelivered],
   )
 
-  const handleOpenMaps = useCallback((address: string) => {
-    window.open(buildMapsUrl(address), '_blank')
+  const handleOpenMaps = useCallback((order: DriverOrder) => {
+    window.open(buildDeliveryMapsUrl(order), '_blank')
   }, [])
 
-  const handleOpenWaze = useCallback((address: string) => {
-    window.open(buildWazeUrl(address), '_blank')
+  const handleOpenWaze = useCallback((order: DriverOrder) => {
+    window.open(buildDeliveryWazeUrl(order), '_blank')
   }, [])
 
   const getOrdersForTab = (tab: TabKey): DriverOrder[] => {
@@ -314,8 +312,8 @@ interface DeliveryCardProps {
   onOpen: (order: DriverOrder) => void
   onStartTrip: (orderId: string) => Promise<void>
   onConfirmDelivery: (orderId: string) => Promise<void>
-  onOpenMaps: (address: string) => void
-  onOpenWaze: (address: string) => void
+  onOpenMaps: (order: DriverOrder) => void
+  onOpenWaze: (order: DriverOrder) => void
   actionLoading: boolean
 }
 
@@ -330,8 +328,8 @@ function DeliveryCard({
 }: DeliveryCardProps) {
   const customerName = getCustomerName(order)
   const customerPhone = getCustomerPhone(order)
-  const address = getDeliveryAddress(order)
-  const isAssigned = order.status === 'ready'
+  const address = getOrderDeliveryAddress(order)
+  const isAssigned = NEW_DELIVERY_STATUSES.includes(order.status)
   const isInTransit = order.status === 'on_the_way'
   const isDelivered = order.status === 'delivered'
 
@@ -396,7 +394,7 @@ function DeliveryCard({
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              onOpenMaps(address)
+              onOpenMaps(order)
             }}
             className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
             data-testid={`open-maps-${order.id}`}
@@ -409,7 +407,7 @@ function DeliveryCard({
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              onOpenWaze(address)
+              onOpenWaze(order)
             }}
             className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-green-300 bg-green-50 px-3 py-2 text-xs font-medium text-green-700 hover:bg-green-100 transition-colors"
             data-testid={`open-waze-${order.id}`}

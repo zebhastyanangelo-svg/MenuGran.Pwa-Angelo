@@ -123,6 +123,9 @@ CREATE TABLE public.orders (
     table_number TEXT,
     delivery_location POINT,
     delivery_address_notes TEXT,
+    delivery_address TEXT,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
     items JSONB NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
