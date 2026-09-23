@@ -13,6 +13,19 @@ const DEFAULT_ICON = L.icon({
   popupAnchor: [0, -32],
 });
 
+const RIDER_ICON = L.divIcon({
+  className: 'custom-marker',
+  html: `
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" stroke="#10b981" stroke-width="2" fill="#10b981"/>
+      <path d="M12 8V12L15 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `,
+  iconSize: [30, 30],
+  iconAnchor: [15, 15],
+  popupAnchor: [0, -15],
+});
+
 export interface MapMarker {
   id: string;
   position: [number, number];
@@ -132,12 +145,12 @@ export function MapView({
     });
 
     if (userLocation !== null) {
-      L.circleMarker(userLocation, {
-        color: '#10b981',
-        fillColor: '#10b981',
-        radius: 6,
-        weight: 2,
-      }).addTo(map);
+      const riderMarker = L.marker(userLocation, {
+        icon: RIDER_ICON,
+        title: 'Tu ubicación',
+      });
+      riderMarker.bindPopup('<div class="p-1 text-sm"><div class="font-semibold">Tu ubicación</div></div>');
+      riderMarker.addTo(map);
     }
 
     if (activeRoute && activeRoute.length >= 2) {

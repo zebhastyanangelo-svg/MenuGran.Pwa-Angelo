@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Package, LogOut, Loader2, AlertCircle, MapPin, Phone, Navigation, ShoppingBasket, ExternalLink, PackageCheck } from 'lucide-react';
+import { Package, LogOut, Loader2, AlertCircle, MapPin, Phone, Navigation, ShoppingBasket, ExternalLink, PackageCheck, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useDriverDashboard } from '../../hooks/useDriverDashboard';
 import { useGpsTracking } from '../../hooks/useGpsTracking';
 import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
 import { formatPrice } from '../../types/cart';
 import { getOrderTypeLabel } from '../../utils/orderType';
 import { MapView } from '../../components/map/MapView';
@@ -227,6 +228,7 @@ export function DriverDashboard() {
           )}
         </main>
       )}
+      <CompletedDeliveriesList orders={orders} user={user} />
     </div>
   );
 }
@@ -474,6 +476,38 @@ function AssignedOrderCard({ order, onStartDelivery, onViewRoute, actionDisabled
         Iniciar Entrega
       </Button>
     </article>
+  );
+}
+
+function CompletedDeliveriesList({ orders, user }: { orders: DriverOrder[]; user: any }) {
+  const delivered = orders.filter(
+    (o) => o.status === 'delivered' && o.driver_id === user?.id,
+  );
+  if (delivered.length === 0) return null;
+  return (
+    <section className="mx-auto max-w-3xl px-4 py-6 space-y-4" data-testid="completed-deliveries">
+      <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+        <CheckCircle className="h-5 w-5 text-emerald-600" />
+        Completadas ({delivered.length})
+      </h2>
+      <div className="space-y-3">
+        {delivered.map((order) => (
+          <article key={order.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <header className="mb-3 flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium text-gray-600">{getOrderTypeLabel(order.type)}</p>
+                <p className="text-xs text-gray-500">{new Date(order.created_at).toLocaleDateString()}</p>
+              </div>
+              <span className="text-lg font-bold text-gray-900">{getOrderNumber(order.id)}</span>
+            </header>
+            <Badge variant="success" className="flex items-center gap-1">
+              <CheckCircle className="h-3 w-3" />
+              Entrega completada
+            </Badge>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
