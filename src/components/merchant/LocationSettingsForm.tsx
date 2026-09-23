@@ -10,8 +10,8 @@ import {
 } from '../../utils/geolocation';
 import 'leaflet/dist/leaflet.css';
 
-const DEFAULT_CENTER: [number, number] = [10.4806, -66.9036];
 const DEFAULT_ZOOM = 13;
+const NEUTRAL_CENTER: [number, number] = [0, 0];
 const CAPTURED_ZOOM = 16;
 
 const PIN_ICON = L.icon({
@@ -86,7 +86,7 @@ export function LocationSettingsForm({
     if (mapInstanceRef.current === null) {
       mapInstanceRef.current = createMap(
         mapRef.current,
-        location !== null ? [location.y, location.x] : DEFAULT_CENTER,
+        location !== null ? [location.y, location.x] : NEUTRAL_CENTER,
       );
     }
     const map = mapInstanceRef.current;

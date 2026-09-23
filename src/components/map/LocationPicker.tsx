@@ -5,8 +5,8 @@ import { useToast } from '../../hooks/useToast';
 import type { GeoPoint } from '../../types/database';
 import 'leaflet/dist/leaflet.css';
 
-const DEFAULT_CENTER: [number, number] = [19.4326, -99.1332];
 const DEFAULT_ZOOM = 13;
+const NEUTRAL_CENTER: [number, number] = [0, 0];
 const USER_LOCATION_ZOOM = 16;
 
 const PIN_ICON = L.icon({
@@ -145,7 +145,7 @@ export function LocationPicker({
         ? [initialLocation.y, initialLocation.x]
         : userLocation !== null
           ? userLocation
-          : DEFAULT_CENTER;
+          : NEUTRAL_CENTER;
 
     if (mapInstanceRef.current === null) {
       const map = createMap(mapRef.current, initialCenter, DEFAULT_ZOOM);
