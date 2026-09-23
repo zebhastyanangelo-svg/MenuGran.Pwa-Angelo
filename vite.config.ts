@@ -47,6 +47,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
+          cacheId: 'menu-pwa-v1',
           cleanupOutdatedCaches: true,
           globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
           navigateFallback: '/index.html',

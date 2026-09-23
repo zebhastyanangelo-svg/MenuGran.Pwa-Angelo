@@ -10,6 +10,7 @@ let swRegistration: ServiceWorkerRegistration | undefined
 
 if ('serviceWorker' in navigator) {
   registerSW({
+    immediate: true,
     onNeedRefresh() {
       window.dispatchEvent(new CustomEvent('pwa:need-refresh'))
     },
