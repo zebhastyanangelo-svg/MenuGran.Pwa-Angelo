@@ -25,6 +25,7 @@ export function useGpsTracking(
   const [tracking, setTracking] = useState(false)
   const watchIdRef = useRef<number | null>(null)
   const channelRef = useRef<RealtimeChannel | null>(null)
+  const retriedRef = useRef(false)
 
   const broadcastPosition = useCallback(
     (pos: GpsPosition) => {
@@ -43,12 +44,46 @@ export function useGpsTracking(
     [orderId],
   )
 
+  const startWatch = useCallback(
+    (options: PositionOptions) => {
+      if (!orderId || !navigator.geolocation) {
+        setError('Geolocalización no disponible en este dispositivo')
+        return
+      }
+
+      const watchId = navigator.geolocation.watchPosition(
+        (geo) => {
+          const newPos: GpsPosition = {
+            lat: geo.coords.latitude,
+            lng: geo.coords.longitude,
+          }
+          setPosition(newPos)
+          broadcastPosition(newPos)
+        },
+        (err) => {
+          if (err.code === err.TIMEOUT && !retriedRef.current) {
+            retriedRef.current = true
+            // retry with longer timeout
+            startWatch({ ...options, timeout: 60000 })
+            return
+          }
+          setError(`Error de GPS: ${err.message}`)
+          setTracking(false)
+        },
+        options,
+      )
+      watchIdRef.current = watchId
+    },
+    [orderId, broadcastPosition],
+  )
+
   const startTracking = useCallback(() => {
     if (!orderId || !navigator.geolocation) {
       setError('Geolocalización no disponible en este dispositivo')
       return
     }
 
+    retriedRef.current = false
     setError(null)
     setTracking(true)
 
@@ -57,28 +92,12 @@ export function useGpsTracking(
     channelRef.current = channel
     void channel.subscribe()
 
-    const watchId = navigator.geolocation.watchPosition(
-      (geo) => {
-        const newPos: GpsPosition = {
-          lat: geo.coords.latitude,
-          lng: geo.coords.longitude,
-        }
-        setPosition(newPos)
-        broadcastPosition(newPos)
-      },
-      (err) => {
-        setError(`Error de GPS: ${err.message}`)
-        setTracking(false)
-      },
-      {
-        enableHighAccuracy: false,
-        maximumAge: 5000,
-        timeout: 30000,
-      },
-    )
-
-    watchIdRef.current = watchId
-  }, [orderId, broadcastPosition])
+    startWatch({
+      enableHighAccuracy: false,
+      maximumAge: 5000,
+      timeout: 30000,
+    })
+  }, [orderId, startWatch])
 
   const stopTracking = useCallback(() => {
     if (watchIdRef.current !== null) {

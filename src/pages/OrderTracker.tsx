@@ -113,6 +113,9 @@ export function OrderTracker() {
 
       if (error) throw error;
 
+      // Update local state immediately so UI switches to celebration view
+      setOrder((prev) => (prev ? { ...prev, status: 'delivered' as const } : null));
+
       showToast({
         title: '¡Entrega confirmada!',
         message: 'Gracias por confirmar la recepción de tu pedido.',
