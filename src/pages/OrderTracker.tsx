@@ -260,9 +260,9 @@ export function OrderTracker() {
     };
   }, [loadOrder, orderId, handleStatusChange]);
 
-  // Subscribe to driver GPS location broadcast
+  // Subscribe to driver GPS location broadcast only while order is on the way
   useEffect(() => {
-    if (!orderId) return undefined;
+    if (!orderId || order?.status !== 'on_the_way') return undefined;
 
     const channel = supabase
       .channel(`driver_locations:${orderId}`)
@@ -277,7 +277,7 @@ export function OrderTracker() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [orderId]);
+  }, [orderId, order?.status]);
 
   // Auto-clear cached order after delivery/cancellation
   useEffect(() => {
@@ -388,10 +388,10 @@ export function OrderTracker() {
             <PartyPopper className="h-8 w-8 text-emerald-600" aria-hidden="true" />
           </div>
           <h2 className="text-2xl font-bold text-emerald-800 mb-2">
-            ¡Pedido Entregado!
+            ¡Pedido entregado con éxito!
           </h2>
           <p className="text-emerald-700 mb-6 text-lg">
-            ¡Gracias por tu compra, buen provecho!
+            ¡Gracias por tu compra!
           </p>
           <button
             type="button"
@@ -403,7 +403,7 @@ export function OrderTracker() {
             data-testid="back-to-marketplace"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Explorar más comercios
+            Volver al catálogo
           </button>
         </div>
       )}

@@ -145,16 +145,16 @@ export function DeliveryTrackingModal({
     return result
   }, [destination, position, address])
 
-  const mapCenter: [number, number] = useMemo(() => {
+  const mapCenter = useMemo(() => {
     if (position && destination) {
       return [
         (position.lat + destination[0]) / 2,
         (position.lng + destination[1]) / 2,
-      ]
+      ] as [number, number]
     }
-    if (destination) return destination
-    if (position) return [position.lat, position.lng]
-    return [19.4326, -99.1332]
+    if (destination) return destination as [number, number]
+    if (position) return [position.lat, position.lng] as [number, number]
+    return undefined
   }, [position, destination])
 
   const mapZoom = useMemo(() => {
