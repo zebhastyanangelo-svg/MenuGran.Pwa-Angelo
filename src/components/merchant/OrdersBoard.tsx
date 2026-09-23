@@ -158,7 +158,7 @@ export function OrdersBoard({
                             <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded font-medium">
                               🚗 {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
                             </span>
-                          ) : order.status !== 'delivered' && order.status !== 'cancelled' ? (
+                          ) : order.status !== 'delivered' && order.status !== 'cancelled' && order.status !== 'on_the_way' ? (
                             <select
                               className="w-full text-xs border border-indigo-200 rounded px-2 py-1 bg-indigo-50 text-indigo-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               data-testid={`driver-select-${order.id}`}

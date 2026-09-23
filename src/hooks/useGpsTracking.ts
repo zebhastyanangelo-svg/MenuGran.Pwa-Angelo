@@ -71,9 +71,9 @@ export function useGpsTracking(
         setTracking(false)
       },
       {
-        enableHighAccuracy: true,
+        enableHighAccuracy: false,
         maximumAge: 5000,
-        timeout: 15000,
+        timeout: 30000,
       },
     )
 
