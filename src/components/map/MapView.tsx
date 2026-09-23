@@ -4,7 +4,6 @@ import type { MerchantRow } from '../../types/database';
 import 'leaflet/dist/leaflet.css';
 import { fetchOsrmRoute } from '../../utils/osrmRoute';
 
-const DEFAULT_CENTER: [number, number] = [19.4326, -99.1332];
 const DEFAULT_ZOOM = 13;
 
 const DEFAULT_ICON = L.icon({
@@ -38,7 +37,7 @@ export interface MapViewProps {
 
 export function MapView({
   markers = [],
-  center = DEFAULT_CENTER,
+  center,
   zoom = DEFAULT_ZOOM,
   userLocation = null,
   route,
@@ -71,12 +70,21 @@ export function MapView({
 
   const activeRoute = resolvedRoute ?? route ?? null;
 
+  // Determine a center for the map if not explicitly provided
+  const effectiveCenter = center ??
+    (markers[0]?.position) ??
+    userLocation ??
+    (activeRoute && activeRoute[0]) ??
+    null;
+
   useEffect(() => {
     if (mapRef.current === null || L === undefined) return;
 
+    if (effectiveCenter === null) return; // wait for a valid center
+
     if (mapInstanceRef.current === null) {
       const map = L.map(mapRef.current, {
-        center,
+        center: effectiveCenter,
         zoom,
         zoomControl: true,
       });
@@ -89,7 +97,7 @@ export function MapView({
       mapInstanceRef.current = map;
     } else {
       const map = mapInstanceRef.current;
-      map.setView(center, zoom);
+      map.setView(effectiveCenter, zoom);
     }
 
     const map = mapInstanceRef.current;
@@ -215,9 +223,9 @@ export function MerchantMapView({
     );
   }
 
-  const center: [number, number] = markers.length > 0
-    ? [markers[0].position[0], markers[0].position[1]]
-    : DEFAULT_CENTER;
+  const center = markers.length > 0
+    ? markers[0].position
+    : undefined;
 
   return (
     <MapView
