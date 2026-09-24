@@ -76,7 +76,7 @@ const TABS: TabConfig[] = [
 ]
 
 export function DriverDeliveriesPage() {
-  const { user, signOut } = useAuth()
+  const { user, profile, signOut } = useAuth()
   const {
     merchantName,
     assigned,
@@ -88,7 +88,7 @@ export function DriverDeliveriesPage() {
     actionError,
     takeOrder,
     refresh,
-  } = useDriverDeliveries(user)
+  } = useDriverDeliveries(user, { role: profile?.role })
 
   const { showToast } = useNotificationToast()
 

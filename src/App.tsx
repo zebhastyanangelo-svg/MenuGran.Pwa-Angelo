@@ -183,7 +183,10 @@ export function App() {
                   <Route
                     path="/driver/deliveries"
                     element={
-                      <ProtectedRoute requiredRole="driver" requiredPermission="can_view_assigned_deliveries">
+                      <ProtectedRoute
+                        requiredRole={['driver', 'merchant_owner', 'merchant_staff', 'superadmin']}
+                        requiredPermission="can_view_assigned_deliveries"
+                      >
                         <DriverDeliveriesPage />
                       </ProtectedRoute>
                     }

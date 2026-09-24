@@ -12,6 +12,8 @@ const createQuery = () => {
     in: () => query,
     order: () => query,
     update: () => query,
+    limit: () => Promise.resolve({ data: [], error: null }),
+    maybeSingle: () => Promise.resolve({ data: null, error: null }),
     then: (resolve: (v: unknown) => unknown) => {
       resolve({ data: [], error: null });
     },
@@ -169,6 +171,30 @@ describe('App Router Integration', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /Panel de Comercio/i })).toBeInTheDocument();
     }, { timeout: 30000 });
+  }, 45000);
+
+  it('permite al comerciante (merchant_owner) acceder a /driver/deliveries sin redirigir a /admin', async () => {
+    setAuth({
+      ...baseAuthValue,
+      user: { id: 'owner-1', email: 'owner@menugram.com' } as never,
+      profile: {
+        id: 'owner-1',
+        role: 'merchant_owner',
+        email: 'owner@menugram.com',
+        full_name: null,
+        avatar_url: null,
+        created_at: '',
+        updated_at: '',
+      },
+    });
+
+    window.history.pushState({}, '', '/driver/deliveries');
+    render(<App />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Entregas' }, { timeout: 30000 }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Panel de Comercio/i })).not.toBeInTheDocument();
   }, 45000);
 
   it('resolves lazy login route through Suspense and renders its content', async () => {

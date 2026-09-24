@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { User, RealtimeChannel } from '@supabase/supabase-js'
 import { supabase, TABLE_NAMES } from '../services/supabase'
 import { NEW_DELIVERY_STATUSES, TRACKED_DELIVERY_STATUSES } from '../utils/delivery'
-import type { OrderRow, OrderStatus } from '../types/database'
+import type { OrderRow, OrderStatus, UserRole } from '../types/database'
 import type { DriverOrder } from './useDriverDashboard'
 
 export type { DriverOrder }
@@ -24,6 +24,12 @@ export interface UseDriverDeliveriesResult {
 
 export interface UseDriverDeliveriesOptions {
   onNewReadyOrder?: (order: DriverOrder) => void
+  /**
+   * Rol del usuario. Con rol 'driver' (o sin rol) solo ve sus entregas
+   * asignadas; con roles de comercio (merchant_owner/merchant_staff/
+   * superadmin) ve todas las entregas de su comercio.
+   */
+  role?: UserRole
 }
 
 interface MerchantStaffWithMerchant {
@@ -47,18 +53,46 @@ async function fetchDriverMerchant(
   return { id: row.merchants.id, name: row.merchants.name }
 }
 
+async function fetchOwnedMerchant(
+  userId: string,
+): Promise<{ id: string; name: string } | null> {
+  const result = await supabase
+    .from(TABLE_NAMES.merchants)
+    .select('id, name')
+    .eq('owner_id', userId)
+    .eq('is_active', true)
+    .limit(1)
+  if (result.error || !result.data || result.data.length === 0) return null
+  const row = result.data[0] as { id: string; name: string }
+  return { id: row.id, name: row.name }
+}
+
+/**
+ * Resuelve el comercio del usuario: primero como empleado/repartidor
+ * (merchant_staff) y, para roles de comercio, como propietario (merchants).
+ */
+async function resolveUserMerchant(
+  userId: string,
+  merchantScope: boolean,
+): Promise<{ id: string; name: string } | null> {
+  const staffMerchant = await fetchDriverMerchant(userId)
+  if (staffMerchant !== null || !merchantScope) return staffMerchant
+  return fetchOwnedMerchant(userId)
+}
+
 async function fetchDriverDeliveries(
   merchantId: string,
   userId: string,
+  merchantScope: boolean,
 ): Promise<DriverOrder[]> {
-  const result = await supabase
+  const baseQuery = supabase
     .from(TABLE_NAMES.orders)
     .select('id, merchant_id, customer_id, driver_id, type, status, payment_method, payment_reference, payment_proof_url, total_amount, table_number, delivery_location, delivery_address, delivery_address_notes, latitude, longitude, items, created_at, profiles!customer_id(full_name, email, phone)')
     .eq('merchant_id', merchantId)
     .eq('type', 'delivery')
     .in('status', [...TRACKED_DELIVERY_STATUSES])
-    .eq('driver_id', userId)
-    .order('created_at', { ascending: false })
+  const scopedQuery = merchantScope ? baseQuery : baseQuery.eq('driver_id', userId)
+  const result = await scopedQuery.order('created_at', { ascending: false })
   if (result.error) throw result.error
   return (result.data ?? []) as unknown as DriverOrder[]
 }
@@ -92,6 +126,10 @@ export function useDriverDeliveries(
   const [actionError, setActionError] = useState<string | null>(null)
   const channelRef = useRef<RealtimeChannel | null>(null)
 
+  const role = options?.role
+  const merchantScope = role !== undefined && role !== 'driver'
+  const onNewReadyOrder = options?.onNewReadyOrder
+
   const loadOrders = useCallback(async () => {
     if (!user) return
 
@@ -99,7 +137,7 @@ export function useDriverDeliveries(
       setLoading(true)
       setError(null)
 
-      const merchant = await fetchDriverMerchant(user.id)
+      const merchant = await resolveUserMerchant(user.id, merchantScope)
       if (!merchant) {
         setMerchantId(null)
         setMerchantName(null)
@@ -110,7 +148,7 @@ export function useDriverDeliveries(
       setMerchantId(merchant.id)
       setMerchantName(merchant.name)
 
-      const data = await fetchDriverDeliveries(merchant.id, user.id)
+      const data = await fetchDriverDeliveries(merchant.id, user.id, merchantScope)
       setOrders(data)
     } catch (err) {
       setError(
@@ -120,7 +158,7 @@ export function useDriverDeliveries(
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [user, merchantScope])
 
   useEffect(() => {
     void loadOrders()
@@ -143,14 +181,14 @@ export function useDriverDeliveries(
           const newOrder = payload.new as OrderRow
           if (
             newOrder.type === 'delivery' &&
-            newOrder.driver_id === user?.id &&
+            (merchantScope || newOrder.driver_id === user?.id) &&
             (NEW_DELIVERY_STATUSES as readonly string[]).includes(newOrder.status)
           ) {
             setOrders((prev) => {
               if (prev.find((o) => o.id === newOrder.id)) return prev
               return [newOrder as DriverOrder, ...prev]
             })
-            options?.onNewReadyOrder?.(newOrder as DriverOrder)
+            onNewReadyOrder?.(newOrder as DriverOrder)
           }
         },
       )
@@ -168,7 +206,7 @@ export function useDriverDeliveries(
             const exists = prev.some((o) => o.id === updated.id)
             if (!exists) {
               if (
-                updated.driver_id === user?.id &&
+                (merchantScope || updated.driver_id === user?.id) &&
                 updated.type === 'delivery' &&
                 updated.status != null &&
                 (TRACKED_DELIVERY_STATUSES as readonly string[]).includes(
@@ -212,7 +250,7 @@ export function useDriverDeliveries(
       supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [merchantId, options, loadOrders])
+  }, [merchantId, merchantScope, onNewReadyOrder, loadOrders, user?.id])
 
   const takeOrder = useCallback(
     async (orderId: string): Promise<void> => {
@@ -288,16 +326,18 @@ export function useDriverDeliveries(
     void loadOrders()
   }, [loadOrders])
 
+  const belongsToScope = (order: DriverOrder): boolean =>
+    merchantScope || order.driver_id === user?.id
   const assigned = orders.filter(
     (o) =>
-      o.driver_id === user?.id &&
+      belongsToScope(o) &&
       (NEW_DELIVERY_STATUSES as readonly string[]).includes(o.status),
   )
   const inTransit = orders.filter(
-    (o) => o.status === 'on_the_way' && o.driver_id === user?.id,
+    (o) => o.status === 'on_the_way' && belongsToScope(o),
   )
   const delivered = orders.filter(
-    (o) => o.status === 'delivered' && o.driver_id === user?.id,
+    (o) => o.status === 'delivered' && belongsToScope(o),
   )
 
   return {
