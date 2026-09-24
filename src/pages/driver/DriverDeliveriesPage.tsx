@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Package,
   LogOut,
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useDriverDeliveries } from '../../hooks/useDriverDeliveries'
+import { useNotificationToast } from '../../components/pwa/useNotificationToast'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { DeliveryTrackingModal } from '../../components/driver/DeliveryTrackingModal'
@@ -89,10 +90,40 @@ export function DriverDeliveriesPage() {
     refresh,
   } = useDriverDeliveries(user)
 
+  const { showToast } = useNotificationToast()
+
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<DriverOrder | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<TabKey>('assigned')
+
+  // Vista en vivo de todas las órdenes rastreadas (se actualiza por Realtime)
+  const allOrders = useMemo(
+    () => [...assigned, ...inTransit, ...delivered],
+    [assigned, inTransit, delivered],
+  )
+
+  // Cuando el cliente confirma la recepción (status -> 'delivered') con el
+  // mapa activo abierto: cerrar el modal, mover la orden a "Completadas"
+  // y notificar al repartidor.
+  useEffect(() => {
+    if (!isModalOpen || !selectedOrder || selectedOrder.status === 'delivered') {
+      return
+    }
+    const latest = allOrders.find((o) => o.id === selectedOrder.id)
+    if (!latest || latest.status !== 'delivered') {
+      return
+    }
+    setIsModalOpen(false)
+    setSelectedOrder(null)
+    setActiveTab('delivered')
+    showToast({
+      title: 'Pedido entregado',
+      message: '¡El cliente ha confirmado la recepción del pedido!',
+      variant: 'success',
+      durationMs: 6000,
+    })
+  }, [allOrders, isModalOpen, selectedOrder, showToast])
 
   const handleLogout = useCallback(async () => {
     setIsLoggingOut(true)

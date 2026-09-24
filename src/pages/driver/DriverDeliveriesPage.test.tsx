@@ -2,9 +2,14 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 
+const toastMocks = vi.hoisted(() => ({ showToast: vi.fn() }))
+
 vi.mock('../../hooks/useAuth', () => ({ useAuth: vi.fn() }))
 vi.mock('../../hooks/useDriverDeliveries', () => ({
   useDriverDeliveries: vi.fn(),
+}))
+vi.mock('../../components/pwa/useNotificationToast', () => ({
+  useNotificationToast: () => toastMocks,
 }))
 vi.mock('../../components/driver/DeliveryTrackingModal', () => ({
   DeliveryTrackingModal: ({ order, isOpen }: { order: { id: string; status: string }; isOpen: boolean }) =>
@@ -371,6 +376,51 @@ describe('DriverDeliveriesPage', () => {
       expect(screen.getByTestId('delivery-tracking-modal')).toBeInTheDocument()
     })
     expect(takeOrder).not.toHaveBeenCalled()
+  })
+
+  it('cierra el mapa, mueve a "Completadas" y avisa cuando el cliente confirma la entrega', async () => {
+    toastMocks.showToast.mockClear()
+    const hookReturn = {
+      ...defaultHookReturn,
+      inTransit: [createOrder({ id: 'order-2', status: 'on_the_way' })],
+      delivered: [] as ReturnType<typeof createOrder>[],
+    }
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      () => ({ ...hookReturn, inTransit: [...hookReturn.inTransit], delivered: [...hookReturn.delivered] }),
+    )
+
+    const { rerender } = renderPage()
+
+    screen.getByTestId('tab-inTransit').click()
+    await waitFor(() => {
+      expect(screen.getByTestId('start-route-order-2')).toBeInTheDocument()
+    })
+    screen.getByTestId('start-route-order-2').click()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('delivery-tracking-modal')).toBeInTheDocument()
+    })
+
+    // El cliente confirma la recepción: la orden pasa a delivered
+    hookReturn.inTransit = []
+    hookReturn.delivered = [createOrder({ id: 'order-2', status: 'delivered' })]
+    rerender(
+      <BrowserRouter>
+        <DriverDeliveriesPage />
+      </BrowserRouter>,
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('delivery-tracking-modal')).not.toBeInTheDocument()
+      expect(screen.getByTestId('orders-panel-delivered')).toBeInTheDocument()
+    })
+    expect(toastMocks.showToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: '¡El cliente ha confirmado la recepción del pedido!',
+        variant: 'success',
+      }),
+    )
+    expect(screen.getByText(/Entrega completada/i)).toBeInTheDocument()
   })
 
   it('no llama a markDelivered (la entrega solo la confirma el cliente)', async () => {

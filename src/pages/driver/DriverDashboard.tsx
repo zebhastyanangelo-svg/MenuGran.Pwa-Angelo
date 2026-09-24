@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Package, LogOut, Loader2, AlertCircle, MapPin, Phone, Navigation, ShoppingBasket, ExternalLink, PackageCheck, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useDriverDashboard } from '../../hooks/useDriverDashboard';
 import { useGpsTracking } from '../../hooks/useGpsTracking';
+import { useNotificationToast } from '../../components/pwa/useNotificationToast';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { formatPrice } from '../../types/cart';
@@ -47,6 +48,28 @@ export function DriverDashboard() {
     markDelivered,
   } = useDriverDashboard(user);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { showToast } = useNotificationToast();
+  const prevStatusRef = useRef<Map<string, DriverOrder['status']>>(new Map());
+  const selfMarkedRef = useRef<Set<string>>(new Set());
+
+  // Cuando el cliente confirma la recepción vía Realtime, la orden sale de
+  // "on_the_way": el mapa activo se cierra (activeDeliveryOrder → null), la
+  // orden pasa a "Completadas" y se notifica al repartidor.
+  useEffect(() => {
+    for (const order of orders) {
+      const prevStatus = prevStatusRef.current.get(order.id);
+      prevStatusRef.current.set(order.id, order.status);
+      const markedByDriver = selfMarkedRef.current.delete(order.id);
+      if (prevStatus === 'on_the_way' && order.status === 'delivered' && !markedByDriver) {
+        showToast({
+          title: 'Pedido entregado',
+          message: '¡El cliente ha confirmado la recepción del pedido!',
+          variant: 'success',
+          durationMs: 6000,
+        });
+      }
+    }
+  }, [orders, showToast]);
 
   // Separate orders by state
   const assignedReadyOrder = useMemo(
@@ -80,6 +103,7 @@ export function DriverDashboard() {
 
   const handleMarkDelivered = useCallback(
     async (orderId: string) => {
+      selfMarkedRef.current.add(orderId);
       stopTracking();
       await markDelivered(orderId);
     },

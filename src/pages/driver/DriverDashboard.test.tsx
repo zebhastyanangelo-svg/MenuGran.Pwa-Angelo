@@ -2,9 +2,14 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 
+const toastMocks = vi.hoisted(() => ({ showToast: vi.fn() }))
+
 vi.mock('../../hooks/useAuth', () => ({ useAuth: vi.fn() }))
 vi.mock('../../hooks/useDriverDashboard', () => ({
   useDriverDashboard: vi.fn(),
+}))
+vi.mock('../../components/pwa/useNotificationToast', () => ({
+  useNotificationToast: () => toastMocks,
 }))
 vi.mock('../../hooks/useGpsTracking', () => ({
   useGpsTracking: vi.fn().mockReturnValue({
@@ -164,6 +169,52 @@ describe('DriverDashboard', () => {
     await waitFor(() => {
       expect(startDelivery).toHaveBeenCalledWith('order-1')
     })
+  })
+
+  it('cierra el mapa activo y notifica cuando el cliente confirma la entrega', async () => {
+    toastMocks.showToast.mockClear()
+    const hookReturn = {
+      merchantId: 'm-1',
+      merchantName: 'La Pizza',
+      orders: [createOrder({ id: 'order-1', status: 'on_the_way' })],
+      loading: false,
+      error: null,
+      actionLoading: false,
+      actionError: null,
+      takeOrder: vi.fn(),
+      startDelivery: vi.fn(),
+      markDelivered: vi.fn(),
+      refresh: vi.fn(),
+    }
+    ;(useDriverDashboard as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      () => ({ ...hookReturn, orders: [...hookReturn.orders] }),
+    )
+
+    const { rerender } = renderPage()
+
+    // Mapa activo visible mientras la orden está on_the_way
+    await waitFor(() => {
+      expect(screen.getByTestId('mark-delivered')).toBeInTheDocument()
+    })
+
+    // El cliente confirma la recepción: la orden pasa a delivered
+    hookReturn.orders = [createOrder({ id: 'order-1', status: 'delivered' })]
+    rerender(
+      <BrowserRouter>
+        <DriverDashboard />
+      </BrowserRouter>,
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('mark-delivered')).not.toBeInTheDocument()
+      expect(screen.getByTestId('completed-deliveries')).toBeInTheDocument()
+    })
+    expect(toastMocks.showToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: '¡El cliente ha confirmado la recepción del pedido!',
+        variant: 'success',
+      }),
+    )
   })
 
   it('muestra estado vacío cuando no hay pedidos asignados', () => {

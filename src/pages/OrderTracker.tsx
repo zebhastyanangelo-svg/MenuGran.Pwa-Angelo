@@ -17,6 +17,7 @@ import {
 import { useNotificationToast } from '../components/pwa/useNotificationToast';
 import { statusDisplayMap } from '../utils/statusDisplayMap';
 import { getOrderStatusLabel } from '../utils/orderStatus';
+import { confirmOrderDelivery } from '../services/orderDeliveryService';
 import { OrderStatusStep } from '../components/orders/OrderStatusStep';
 import { getAllowedTransitions, getTransitionLabel, getTransitionButtonClass } from '../utils/orderStatus';
 import { PartyPopper, ArrowLeft, Navigation, PackageCheck } from 'lucide-react';
@@ -106,15 +107,12 @@ export function OrderTracker() {
 
     try {
       setLoading(true);
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: 'delivered' })
-        .eq('id', orderId);
-
-      if (error) throw error;
+      // UPDATE explícito ANTES de cambiar la vista local; lanza error si
+      // RLS bloquea la fila (0 filas sin error) o si la mutación falla.
+      const updated = await confirmOrderDelivery(orderId);
 
       // Update local state immediately so UI switches to celebration view
-      setOrder((prev) => (prev ? { ...prev, status: 'delivered' as const } : null));
+      setOrder((prev) => (prev ? { ...prev, status: updated.status } : null));
 
       showToast({
         title: '¡Entrega confirmada!',
