@@ -1,6 +1,10 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, beforeAll, afterAll } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  QueryClient,
+  QueryClientProvider,
+  notifyManager,
+} from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 vi.mock('../services/supabase', () => {
@@ -342,5 +346,149 @@ describe('useMerchantDashboardPage.drivers', () => {
       expect(result.current.drivers).toHaveLength(1)
     })
     expect(result.current.drivers[0].id).toBe('driver-sin-perfil')
+  })
+})
+
+describe('useMerchantDashboardPage.realtime', () => {
+  const realtimeHandlers = new Map<string, (payload: unknown) => void>()
+
+  beforeAll(() => {
+    notifyManager.setScheduler((callback) => callback())
+  })
+
+  afterAll(() => {
+    notifyManager.setScheduler((callback) => {
+      setTimeout(callback, 0)
+    })
+  })
+
+  function buildOnTheWayOrder(): Record<string, unknown> {
+    return {
+      id: 'order-1',
+      merchant_id: 'm-1',
+      customer_id: 'c-1',
+      driver_id: 'driver-1',
+      type: 'delivery',
+      status: 'on_the_way',
+      payment_method: 'pago_movil',
+      payment_reference: null,
+      payment_proof_url: null,
+      total_amount: '150.00',
+      table_number: null,
+      delivery_location: null,
+      delivery_address_notes: null,
+      delivery_address: null,
+      latitude: null,
+      longitude: null,
+      items: [],
+      created_at: '2026-09-23T10:00:00.000Z',
+      profiles: { full_name: 'Cliente Prueba', email: 'cliente@test.com' },
+    }
+  }
+
+  function realtimeOrdersChain(initial: Record<string, unknown>[]) {
+    let fetchCount = 0
+    return {
+      select: vi.fn().mockReturnValue({
+        in: vi.fn().mockReturnValue({
+          order: vi.fn().mockImplementation(() => {
+            fetchCount += 1
+            if (fetchCount === 1) {
+              return Promise.resolve(mockQueryResult(initial))
+            }
+            return new Promise(() => {})
+          }),
+        }),
+      }),
+      update: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue(mockQueryResult(null)),
+      }),
+    }
+  }
+
+  function installFromMocks(initial: Record<string, unknown>[]): void {
+    const ordersChain = realtimeOrdersChain(initial)
+    mockSupabase.from.mockImplementation((table: string) => {
+      if (table === 'merchants') return merchantSelectChain()
+      if (table === 'merchant_staff') return merchantStaffSelectChain()
+      if (table === 'orders') return ordersChain
+      if (table === 'products') return productsChain()
+      if (table === 'deliveries')
+        return deliveriesChain({
+          deliveriesSelect: vi.fn().mockResolvedValue(mockQueryResult(null)),
+          deliveriesInsert: vi.fn().mockResolvedValue(mockQueryResult(null)),
+        })
+      return {}
+    })
+  }
+
+  beforeEach(() => {
+    mockSupabase.from.mockReset()
+    mockSupabase.channel.mockReset()
+    mockSupabase.removeChannel.mockReset()
+    realtimeHandlers.clear()
+    mockSupabase.channel.mockImplementation(() => {
+      const ch: Record<string, unknown> = {
+        on: vi.fn().mockImplementation((...args: unknown[]) => {
+          const [type, config, handler] = args
+          if (type === 'postgres_changes' && typeof handler === 'function') {
+            const event = (config as { event: string }).event
+            realtimeHandlers.set(event, handler as (payload: unknown) => void)
+          }
+          return ch
+        }),
+        subscribe: vi.fn().mockImplementation((...args: unknown[]) => {
+          const callback = args[0]
+          if (typeof callback === 'function') {
+            ;(callback as (status: string) => void)('SUBSCRIBED')
+          }
+          return ch
+        }),
+      }
+      return ch
+    })
+  })
+
+  it('aplica en memoria el estado delivered al recibir un UPDATE de postgres_changes', async () => {
+    installFromMocks([buildOnTheWayOrder()])
+
+    const client = buildQueryClient()
+    const { result } = renderHook(
+      () => useMerchantDashboardPage({ id: 'u-1' } as never),
+      { wrapper: buildWrapper(client) },
+    )
+
+    await waitFor(() => {
+      expect(result.current.orders).toHaveLength(1)
+    })
+    expect(result.current.orders[0].status).toBe('on_the_way')
+
+    await act(async () => {
+      realtimeHandlers.get('UPDATE')?.({
+        new: { id: 'order-1', status: 'delivered' },
+      })
+    })
+
+    expect(result.current.orders[0].status).toBe('delivered')
+  })
+
+  it('ignora payloads UPDATE inválidos sin corromper la lista de pedidos', async () => {
+    installFromMocks([buildOnTheWayOrder()])
+
+    const client = buildQueryClient()
+    const { result } = renderHook(
+      () => useMerchantDashboardPage({ id: 'u-1' } as never),
+      { wrapper: buildWrapper(client) },
+    )
+
+    await waitFor(() => {
+      expect(result.current.orders).toHaveLength(1)
+    })
+
+    await act(async () => {
+      realtimeHandlers.get('UPDATE')?.({ new: { status: 'delivered' } })
+    })
+
+    expect(result.current.orders[0].status).toBe('on_the_way')
   })
 })

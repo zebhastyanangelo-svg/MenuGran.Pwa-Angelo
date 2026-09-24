@@ -1,9 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { User, RealtimeChannel } from '@supabase/supabase-js'
 import { supabase, TABLE_NAMES } from '../services/supabase'
 import { fetchMerchantDrivers } from '../services/merchantStaffService'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query'
 import type { OrderRow, OrderStatus } from '../types/database'
+import {
+  mergeRealtimeOrderUpdate,
+  parseRealtimeOrderUpdate,
+} from '../utils/realtimeOrders'
 
 function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message
@@ -44,6 +53,82 @@ export interface MerchantDashboardPageData {
 
 export interface UseMerchantDashboardPageOptions {
   onNewOrder?: (order: OrderRow) => void
+}
+
+type MerchantOrdersQueryKey = readonly ['merchantOrders', string, string]
+
+interface MerchantRealtimeHandlers {
+  onInsert: (payload: unknown) => void
+  onUpdate: (payload: unknown) => void
+}
+
+let merchantOrdersSubscriptionCounter = 0
+
+function buildOrdersRealtimeConfig(
+  event: 'INSERT' | 'UPDATE',
+  realtimeFilter: string,
+): {
+  event: 'INSERT' | 'UPDATE'
+  schema: 'public'
+  table: typeof TABLE_NAMES.orders
+  filter: string
+} {
+  return {
+    event,
+    schema: 'public',
+    table: TABLE_NAMES.orders,
+    filter: realtimeFilter,
+  }
+}
+
+function subscribeToMerchantOrders(
+  merchantIds: readonly string[],
+  subscriptionIndex: number,
+  handlers: MerchantRealtimeHandlers,
+): RealtimeChannel {
+  const channelName = `merchant-orders-${merchantIds.join('-')}-${subscriptionIndex}`
+  const realtimeFilter = `merchant_id=in.(${merchantIds.join(',')})`
+  const insertConfig = buildOrdersRealtimeConfig('INSERT', realtimeFilter)
+  const updateConfig = buildOrdersRealtimeConfig('UPDATE', realtimeFilter)
+  return supabase
+    .channel(channelName)
+    .on('postgres_changes', insertConfig, (payload) => handlers.onInsert(payload))
+    .on('postgres_changes', updateConfig, (payload) => handlers.onUpdate(payload))
+    .subscribe((status, error) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.error(
+          '[merchant-orders] suscripción realtime falló:',
+          error?.message ?? status,
+        )
+      }
+    })
+}
+
+function applyRealtimeOrderUpdate(
+  payload: unknown,
+  queryClient: QueryClient,
+  ordersQueryKey: MerchantOrdersQueryKey,
+): void {
+  const update = parseRealtimeOrderUpdate(payload)
+  if (update) {
+    queryClient.setQueryData<OrderWithCustomer[]>(ordersQueryKey, (current) =>
+      mergeRealtimeOrderUpdate(current ?? [], update),
+    )
+  }
+  void queryClient.invalidateQueries({ queryKey: ordersQueryKey })
+}
+
+function handleRealtimeOrderInsert(
+  payload: unknown,
+  queryClient: QueryClient,
+  ordersQueryKey: MerchantOrdersQueryKey,
+  onNewOrder?: (order: OrderRow) => void,
+): void {
+  void queryClient.invalidateQueries({ queryKey: ordersQueryKey })
+  const inserted = parseRealtimeOrderUpdate(payload)
+  if (inserted?.status === 'payment_pending') {
+    onNewOrder?.(inserted as unknown as OrderRow)
+  }
 }
 
 export function useMerchantDashboardPage(
@@ -250,56 +335,31 @@ export function useMerchantDashboardPage(
     },
   })
 
-  // Realtime subscription for order changes
-  const channelRef = useRef<RealtimeChannel | null>(null)
-
   const userId = user?.id
   const onNewOrder = options?.onNewOrder
 
   useEffect(() => {
-    if (merchantIds.length === 0) return undefined
+    if (merchantIds.length === 0 || userId === undefined) return undefined
 
-    const channel = supabase
-      .channel(`merchant-orders-${merchantIds.join('-')}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: TABLE_NAMES.orders,
-          filter: `merchant_id=in.(${merchantIds.join(',')})`,
-        },
-        (payload) => {
-          queryClient.invalidateQueries({
-            queryKey: ['merchantOrders', userId, merchantIds.join('-')],
-          })
-          const newOrder = payload.new as OrderRow | undefined
-          if (newOrder && newOrder.status === 'payment_pending') {
-            onNewOrder?.(newOrder)
-          }
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: TABLE_NAMES.orders,
-          filter: `merchant_id=in.(${merchantIds.join(',')})`,
-        },
-        () => {
-          queryClient.invalidateQueries({
-            queryKey: ['merchantOrders', userId, merchantIds.join('-')],
-          })
-        },
-      )
-      .subscribe()
-
-    channelRef.current = channel
+    merchantOrdersSubscriptionCounter += 1
+    const ordersQueryKey = [
+      'merchantOrders',
+      userId,
+      merchantIds.join('-'),
+    ] as const
+    const channel = subscribeToMerchantOrders(
+      merchantIds,
+      merchantOrdersSubscriptionCounter,
+      {
+        onInsert: (payload) =>
+          handleRealtimeOrderInsert(payload, queryClient, ordersQueryKey, onNewOrder),
+        onUpdate: (payload) =>
+          applyRealtimeOrderUpdate(payload, queryClient, ordersQueryKey),
+      },
+    )
 
     return () => {
-      supabase.removeChannel(channel)
-      channelRef.current = null
+      void supabase.removeChannel(channel)
     }
   }, [merchantIds, userId, queryClient, onNewOrder])
 

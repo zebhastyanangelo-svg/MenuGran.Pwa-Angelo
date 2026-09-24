@@ -69,6 +69,10 @@ export function getAllowedTransitions(status: OrderStatus): OrderStatus[] {
   }
 }
 
+export function isTerminalOrderStatus(status: OrderStatus): boolean {
+  return status === 'delivered' || status === 'cancelled';
+}
+
 export function getTransitionLabel(status: OrderStatus): string {
   switch (status) {
     case 'confirmed':

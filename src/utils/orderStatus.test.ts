@@ -6,6 +6,7 @@ import {
   getOrderStatusLabel,
   getTransitionButtonClass,
   getTransitionLabel,
+  isTerminalOrderStatus,
 } from './orderStatus';
 import type { OrderStatus } from '../types/database';
 
@@ -59,6 +60,16 @@ describe('orderStatus utilities', () => {
     expect(getTransitionLabel('on_the_way')).toBe('Enviar para entrega');
     expect(getTransitionLabel('delivered')).toBe('Marcar como entregado');
     expect(typeof getTransitionButtonClass('confirmed')).toBe('string');
+  });
+
+  it('trata delivered y cancelled como estados terminales', () => {
+    expect(isTerminalOrderStatus('delivered')).toBe(true);
+    expect(isTerminalOrderStatus('cancelled')).toBe(true);
+    expect(isTerminalOrderStatus('payment_pending')).toBe(false);
+    expect(isTerminalOrderStatus('confirmed')).toBe(false);
+    expect(isTerminalOrderStatus('preparing')).toBe(false);
+    expect(isTerminalOrderStatus('ready')).toBe(false);
+    expect(isTerminalOrderStatus('on_the_way')).toBe(false);
   });
 
   it('keeps the label and transition maps in sync with the status order', () => {
