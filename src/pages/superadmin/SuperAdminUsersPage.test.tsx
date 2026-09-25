@@ -144,7 +144,7 @@ describe('SuperAdminUsersPage', () => {
 
     render(<SuperAdminUsersPage />);
 
-    expect(screen.getByText('Comercio')).toBeInTheDocument();
+    expect(screen.getByText('Dueño Comercio')).toBeInTheDocument();
     expect(screen.getByText('Cliente')).toBeInTheDocument();
     expect(screen.getByText('Repartidor')).toBeInTheDocument();
   });

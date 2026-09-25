@@ -18,6 +18,7 @@ import {
   NEW_DELIVERY_STATUSES,
   getOrderDeliveryAddress,
   getOrderDeliveryCoordinates,
+  buildDeliveryMapsUrl,
 } from '../../utils/delivery'
 import type { DriverOrder } from '../../hooks/useDriverDeliveries'
 
@@ -210,28 +211,50 @@ export function DeliveryTrackingModal({
         </div>
       )}
 
-      {/* Map area */}
+{/* Map area */}
       <div className="flex-1 relative bg-gray-200">
-{markers.length > 0 ? (
-            <MapView
-              markers={markers}
-              center={mapCenter}
-              zoom={mapZoom}
-              userLocation={position ? [position.lat, position.lng] : null}
-              routeRequest={
-                position && destination
-                  ? {
-                      from: [position.lat, position.lng],
-                      to: destination,
-                    }
-                  : undefined
-              }
-              className="h-full w-full"
-            />
+        {markers.length > 0 ? (
+          <MapView
+            markers={markers}
+            center={mapCenter}
+            zoom={mapZoom}
+            userLocation={position ? [position.lat, position.lng] : null}
+            routeRequest={
+              position && destination
+                ? {
+                    from: [position.lat, position.lng],
+                    to: destination,
+                  }
+                : undefined
+            }
+            className="h-full w-full"
+          />
         ) : (
-          <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-            <Loader2 className="h-5 w-5 animate-spin mr-2" />
-            {isActive ? 'Esperando posición GPS...' : 'Cargando mapa...'}
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 text-sm p-4">
+            <Loader2 className="h-8 w-8 animate-spin mb-3 text-gray-300" />
+            <p className="text-center mb-2">
+              {isActive ? 'Esperando posición GPS...' : 'Cargando mapa...'}
+            </p>
+            {destination && (
+              <a
+                href={buildDeliveryMapsUrl(order as any)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 underline"
+              >
+                Abrir en Google Maps
+              </a>
+            )}
+            {!destination && address && address !== 'Dirección no disponible' && (
+              <a
+                href={buildDeliveryMapsUrl(order as any)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 underline"
+              >
+                Ver dirección en Google Maps
+              </a>
+            )}
           </div>
         )}
       </div>

@@ -94,10 +94,9 @@ describe('DeliveryTrackingModal', () => {
     )
   })
 
-  it('no muestra enlace a mapas externos (Google Maps)', () => {
+  it('muestra enlace a Google Maps cuando hay dirección pero no coordenadas', () => {
     renderModal()
-    expect(screen.queryByTestId('open-maps')).not.toBeInTheDocument()
-    expect(screen.queryByText(/Google Maps/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/Ver dirección en Google Maps/i)).toBeInTheDocument()
   })
 
   it('muestra el botón "En camino" para pedidos asignados', () => {

@@ -13,6 +13,64 @@ import {
 } from '../../utils/orderStatus';
 import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
 
+type PeriodPreset = 'this_month' | 'last_month' | 'today' | 'last_7_days' | 'custom';
+
+interface PeriodOption {
+  value: PeriodPreset;
+  label: string;
+}
+
+const PERIOD_OPTIONS: PeriodOption[] = [
+  { value: 'this_month', label: 'Este Mes' },
+  { value: 'last_month', label: 'Mes Pasado' },
+  { value: 'today', label: 'Hoy' },
+  { value: 'last_7_days', label: 'Últimos 7 días' },
+  { value: 'custom', label: 'Mes/Año personalizado' },
+];
+
+function getDateRange(preset: PeriodPreset, customMonth?: string): { start: Date; end: Date } {
+  const now = new Date();
+  const start = new Date();
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+
+  switch (preset) {
+    case 'this_month':
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      break;
+    case 'last_month':
+      start.setMonth(now.getMonth() - 1);
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      end.setMonth(now.getMonth() - 1);
+      end.setDate(0); // last day of previous month
+      end.setHours(23, 59, 59, 999);
+      break;
+    case 'today':
+      start.setHours(0, 0, 0, 0);
+      break;
+    case 'last_7_days':
+      start.setDate(now.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+      break;
+    case 'custom':
+      if (customMonth) {
+        const [year, month] = customMonth.split('-').map(Number);
+        start.setFullYear(year, month - 1, 1);
+        start.setHours(0, 0, 0, 0);
+        end.setFullYear(year, month, 0); // last day of month
+        end.setHours(23, 59, 59, 999);
+      } else {
+        // fallback to this month
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+      }
+      break;
+  }
+  return { start, end };
+}
+
 export interface OrdersBoardProps {
   orders: OrderWithCustomer[];
   drivers?: DriverProfile[];
@@ -36,14 +94,43 @@ export function OrdersBoard({
   onOpenProof,
 }: OrdersBoardProps) {
   const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('');
+  const [period, setPeriod] = useState<PeriodPreset>('this_month');
+  const [customMonth, setCustomMonth] = useState<string>(''); // format YYYY-MM
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
-  const filteredOrders = useMemo(
-    () =>
-      orders.filter(
-        (order) => !filterStatus || order.status === filterStatus
-      ),
-    [orders, filterStatus]
+  const { start: periodStart, end: periodEnd } = getDateRange(period, customMonth);
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const matchesStatus = !filterStatus || order.status === filterStatus;
+      const orderDate = new Date(order.created_at);
+      const matchesPeriod = orderDate >= periodStart && orderDate <= periodEnd;
+      return matchesStatus && matchesPeriod;
+    });
+  }, [orders, filterStatus, periodStart, periodEnd]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedOrders = useMemo(
+    () => filteredOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredOrders, currentPage]
   );
+
+  const handlePeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value as PeriodPreset;
+    setPeriod(value);
+    setPage(1);
+    if (value !== 'custom') setCustomMonth('');
+  };
+
+  const handleCustomMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomMonth(e.target.value);
+    setPage(1);
+  };
+
+  const goPrev = () => setPage((p) => Math.max(1, p - 1));
+  const goNext = () => setPage((p) => Math.min(totalPages, p + 1));
 
   return (
     <section className="space-y-4">
@@ -51,7 +138,7 @@ export function OrdersBoard({
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
           Panel de Comercio - Gestión de Pedidos
         </h1>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <label
             htmlFor="status-filter"
             className="text-sm font-medium text-gray-700 whitespace-nowrap"
@@ -71,6 +158,43 @@ export function OrdersBoard({
               </option>
             ))}
           </select>
+
+          <label
+            htmlFor="period-filter"
+            className="text-sm font-medium text-gray-700 whitespace-nowrap"
+          >
+            Período:
+          </label>
+          <select
+            id="period-filter"
+            value={period}
+            onChange={handlePeriodChange}
+            className="border border-gray-300 rounded-md px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            {PERIOD_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          {period === 'custom' && (
+            <>
+              <label
+                htmlFor="custom-month"
+                className="text-sm font-medium text-gray-700 whitespace-nowrap"
+              >
+                Mes/Año:
+              </label>
+              <input
+                id="custom-month"
+                type="month"
+                value={customMonth}
+                onChange={handleCustomMonthChange}
+                className="border border-gray-300 rounded-md px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </>
+          )}
         </div>
       </div>
 
@@ -81,7 +205,8 @@ export function OrdersBoard({
         </p>
       ) : (
         <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-          <table className="w-full text-left border-collapse block sm:table">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse block sm:table">
             <thead className="hidden sm:table-header-group">
               <tr className="border-b border-gray-200 bg-gray-50">
                 {['ID', 'Cliente', 'Total', 'Estado', 'Pago', 'Acciones'].map(
@@ -97,7 +222,7 @@ export function OrdersBoard({
               </tr>
             </thead>
             <tbody className="block sm:table-row-group">
-              {filteredOrders.map((order) => (
+              {paginatedOrders.map((order) => (
                 <tr
                   key={order.id}
                   className="border-t border-gray-200 block sm:table-row hover:bg-gray-50"
@@ -194,6 +319,28 @@ export function OrdersBoard({
               ))}
             </tbody>
           </table>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
+            <span className="text-sm text-gray-600">
+              Página {currentPage} de {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={goPrev}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm border border-gray-300 rounded-md bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={goNext}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 text-sm border border-gray-300 rounded-md bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </section>
