@@ -1,12 +1,10 @@
 import { supabase, TABLE_NAMES } from './supabase';
-import type {
-  IsoTimestamp,
-  MerchantInsert,
-  MerchantStatus,
-  ProfileUpdate,
-} from '../types/database';
+import type { IsoTimestamp, MerchantStatus } from '../types/database';
 import {
-  slugifyMerchantName,
+  getAuthenticatedFunctionHeaders,
+  readFunctionError,
+} from './edgeFunctions';
+import {
   validateCreateMerchantInput,
   type CreateMerchantAccountInput,
   type CreateMerchantAccountResult,
@@ -35,180 +33,95 @@ interface MerchantListQueryRow {
   profiles: { email: string; full_name: string | null } | null;
 }
 
-/**
- * Crea la cuenta completa de un comercio desde el panel de Super Admin:
- * 1. Invoca el Edge Function `create-merchant`, que —con la service_role
- *    key solo en el servidor y tras verificar que el llamador es superadmin—
- *    registra al propietario auto-confirmado con su email, la contraseña
- *    inicial definida en el formulario y rol `merchant_owner`.
- * 2. Asigna el rol `merchant_owner` en su perfil.
- * 3. Inserta el merchant activo vinculado a ese usuario, con el nombre
- *    público del negocio, para que MerchantDashboardPage detecte la tienda.
- *
- * La llamada usa las credenciales cliente normales: la service_role key
- * nunca llega al frontend.
- */
+interface CreateMerchantResponse {
+  userId?: unknown;
+  merchantId?: unknown;
+}
+
 export async function createMerchantAccount(
   input: CreateMerchantAccountInput,
 ): Promise<CreateMerchantAccountResult> {
   const validationError = validateCreateMerchantInput(input);
-  if (validationError !== null) {
-    throw new Error(validationError);
-  }
+  if (validationError !== null) throw new Error(validationError);
 
-  const userId = await createConfirmedOwner(input);
-  await assignOwnerRole(userId, input.ownerFullName, input.ownerCi);
-  const merchantId = await insertActiveMerchant(userId, input);
-
-  return { userId, merchantId, temporaryPassword: input.ownerPassword };
-}
-
-async function createConfirmedOwner(
-  input: CreateMerchantAccountInput,
-): Promise<string> {
-  const { data, error } = await supabase.functions.invoke('create-merchant', {
-    body: {
-      email: input.ownerEmail.trim(),
-      password: input.ownerPassword,
-      fullName: input.ownerFullName.trim(),
-    },
-  });
+  const headers = await getAuthenticatedFunctionHeaders();
+  const { data, error, response } =
+    await supabase.functions.invoke<CreateMerchantResponse>('create-merchant', {
+      headers,
+      body: {
+        email: input.ownerEmail.trim(),
+        password: input.ownerPassword,
+        fullName: input.ownerFullName.trim(),
+        ownerCi: input.ownerCi.trim(),
+        ownerPhone: input.ownerPhone.trim(),
+        businessName: input.businessName.trim(),
+        businessRif: input.businessRif.trim(),
+      },
+    });
   if (error !== null) {
-    throw new Error(extractFunctionErrorMessage(error));
+    throw new Error(await formatFunctionError('crear la cuenta del propietario', error, response));
   }
-  const userId = readUserIdFromPayload(data);
-  if (userId === null) {
-    throw new Error('No se pudo crear la cuenta del propietario.');
-  }
-  return userId;
-}
 
-function extractFunctionErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message !== '') {
-    return `Error al crear la cuenta del propietario: ${error.message}`;
-  }
-  return 'Error al crear la cuenta del propietario.';
-}
-
-function readUserIdFromPayload(payload: unknown): string | null {
-  if (
-    payload !== null &&
-    typeof payload === 'object' &&
-    'userId' in payload &&
-    typeof (payload as { userId: unknown }).userId === 'string'
-  ) {
-    return (payload as { userId: string }).userId;
-  }
-  return null;
-}
-
-async function assignOwnerRole(
-  userId: string,
-  fullName: string,
-  ci: string,
-): Promise<void> {
-  const updates: ProfileUpdate = {
-    role: 'merchant_owner',
-    full_name: fullName.trim(),
-    ci: ci.trim(),
-  };
-  const { error } = await supabase
-    .from(TABLE_NAMES.profiles)
-    .update(updates)
-    .eq('id', userId)
-    .single();
-  if (error !== null && !isNoRowsError(error)) {
-    throw new Error(`Error al asignar el rol merchant_owner: ${error.message}`);
-  }
-}
-
-function isNoRowsError(error: { code?: string }): boolean {
-  return error.code === 'PGRST116';
-}
-
-async function insertActiveMerchant(
-  ownerId: string,
-  input: CreateMerchantAccountInput,
-): Promise<string> {
-  const payload = buildMerchantPayload(ownerId, input);
-  const { data, error } = await supabase
-    .from(TABLE_NAMES.merchants)
-    .insert(payload as Partial<MerchantInsert>)
-    .select('id')
-    .single();
-  if (error !== null || data === null) {
-    throw new Error(
-      `Error al crear el comercio: ${error?.message ?? 'sin datos'}`,
-    );
-  }
-  return data.id;
-}
-
-function buildMerchantPayload(
-  ownerId: string,
-  input: CreateMerchantAccountInput,
-): Partial<MerchantInsert> & Pick<MerchantInsert, 'owner_id' | 'name'> {
+  const result = readCreateMerchantResult(data);
+  if (result === null) throw new Error('No se pudo crear el comercio.');
   return {
-    owner_id: ownerId,
-    name: input.businessName.trim(),
-    slug: slugifyMerchantName(input.businessName),
-    rif: input.businessRif.trim(),
-    category: 'Otro',
-    description: null,
-    address: '',
-    zone: null,
-    phone_whatsapp: input.ownerPhone.trim(),
-    service_modalities: ['Delivery'],
-    business_hours: {
-      days: 'Lunes a Domingo',
-      open_time: '08:00',
-      close_time: '20:00',
-    },
-    status: 'active',
-    is_active: true,
-    is_open: true,
+    userId: result.userId,
+    merchantId: result.merchantId,
+    temporaryPassword: input.ownerPassword,
   };
 }
 
-/**
- * Elimina completamente un comercio y la cuenta de su propietario invocando
- * el Edge Function `delete-merchant`, que —con la service_role key solo en
- * el servidor y tras verificar que el llamador es superadmin— borra la fila
- * del merchant, su perfil y al propietario en Supabase Auth.
- */
+function readCreateMerchantResult(
+  payload: CreateMerchantResponse | null,
+): { userId: string; merchantId: string } | null {
+  if (
+    payload === null ||
+    typeof payload.userId !== 'string' ||
+    typeof payload.merchantId !== 'string' ||
+    payload.userId === '' ||
+    payload.merchantId === ''
+  ) {
+    return null;
+  }
+  return { userId: payload.userId, merchantId: payload.merchantId };
+}
+
+async function formatFunctionError(
+  action: string,
+  error: unknown,
+  response: Response | undefined,
+): Promise<string> {
+  const serverMessage = await readFunctionError(response);
+  if (serverMessage !== null) return `Error al ${action}: ${serverMessage}`;
+  if (error instanceof Error && error.message !== '') {
+    return `Error al ${action}: ${error.message}`;
+  }
+  return `Error al ${action}.`;
+}
+
 export async function deleteMerchant(
   merchantId: string,
   ownerId: string,
 ): Promise<void> {
   if (merchantId.trim() === '' || ownerId.trim() === '') {
-    throw new Error(
-      'Se requiere el identificador del comercio y del propietario.',
-    );
+    throw new Error('Se requiere el identificador del comercio y del propietario.');
   }
-  const { error } = await supabase.functions.invoke('delete-merchant', {
+  const headers = await getAuthenticatedFunctionHeaders();
+  const { error, response } = await supabase.functions.invoke('delete-merchant', {
+    headers,
     body: { merchantId, ownerId },
   });
   if (error !== null) {
-    throw new Error(extractDeleteMerchantErrorMessage(error));
+    throw new Error(await formatFunctionError('eliminar el comercio', error, response));
   }
 }
 
-function extractDeleteMerchantErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message !== '') {
-    return `Error al eliminar el comercio: ${error.message}`;
-  }
-  return 'Error al eliminar el comercio.';
-}
-
-/** Lista los comercios existentes junto a los datos de su propietario. */
 export async function listMerchantsWithOwners(): Promise<
   MerchantAccountListItem[]
 > {
   const { data, error } = await supabase
     .from(TABLE_NAMES.merchants)
-    .select(
-      'id, owner_id, name, rif, status, is_active, created_at, profiles(email, full_name)',
-    )
+    .select('id, owner_id, name, rif, status, is_active, created_at, profiles(email, full_name)')
     .order('created_at', { ascending: false });
 
   if (error !== null) {

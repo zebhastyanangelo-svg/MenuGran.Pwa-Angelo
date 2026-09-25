@@ -18,10 +18,12 @@ interface TableChain {
 const supabaseMocks = vi.hoisted(() => ({
   functionsInvoke: vi.fn(),
   from: vi.fn(),
+  getSession: vi.fn(),
 }));
 
 vi.mock('./supabase', () => ({
   supabase: {
+    auth: { getSession: supabaseMocks.getSession },
     functions: { invoke: supabaseMocks.functionsInvoke },
     from: supabaseMocks.from,
   },
@@ -81,14 +83,6 @@ function registerTable(
   return chain;
 }
 
-function getTable(tableName: string): TableChain {
-  const chain = registeredTables.get(tableName);
-  if (chain === undefined) {
-    throw new Error(`Tabla no registrada en el mock: ${tableName}`);
-  }
-  return chain;
-}
-
 function buildValidInput(): CreateMerchantAccountInput {
   return {
     ownerFullName: 'María Pérez',
@@ -105,108 +99,78 @@ describe('createMerchantAccount', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     registeredTables.clear();
-    supabaseMocks.from.mockImplementation(
-      (table: string) => registeredTables.get(table),
-    );
-    supabaseMocks.functionsInvoke.mockResolvedValue({
-      data: { userId: 'new-owner' },
+    supabaseMocks.getSession.mockResolvedValue({
+      data: { session: { access_token: 'access-token' } },
       error: null,
     });
-    registerTable('profiles', {
-      updateResult: { data: null, error: null },
-    });
-    registerTable('merchants', {
-      insertResult: { data: { id: 'merchant-9' }, error: null },
+    supabaseMocks.functionsInvoke.mockResolvedValue({
+      data: { userId: 'new-owner', merchantId: 'merchant-9' },
+      error: null,
     });
   });
 
-  it('valida el formulario antes de crear nada', async () => {
+  it('valida el formulario antes de leer la sesión', async () => {
     const input = buildValidInput();
     input.ownerEmail = 'correo-invalido';
 
-    await expect(createMerchantAccount(input)).rejects.toThrow(
-      /email válido/i,
-    );
+    await expect(createMerchantAccount(input)).rejects.toThrow(/email válido/i);
+    expect(supabaseMocks.getSession).not.toHaveBeenCalled();
     expect(supabaseMocks.functionsInvoke).not.toHaveBeenCalled();
-    expect(getTable('merchants').insert).not.toHaveBeenCalled();
   });
 
-  it('invoca el Edge Function create-merchant con las credenciales del formulario', async () => {
+  it('invoca create-merchant con JWT explícito y todos los datos del alta', async () => {
     await createMerchantAccount(buildValidInput());
 
     expect(supabaseMocks.functionsInvoke).toHaveBeenCalledWith(
       'create-merchant',
       {
+        headers: { Authorization: 'Bearer access-token' },
         body: {
           email: 'maria@pizzeria.com',
           password: 'ClaveInicial1',
           fullName: 'María Pérez',
+          ownerCi: 'V-12345678',
+          ownerPhone: '04141234567',
+          businessName: 'La Pizzería de María',
+          businessRif: 'J-40123456-7',
         },
       },
     );
   });
 
-  it('actualiza el perfil del usuario creado asignando merchant_owner y su C.I.', async () => {
-    await createMerchantAccount(buildValidInput());
-
-    const profiles = getTable('profiles');
-    expect(supabaseMocks.from).toHaveBeenCalledWith('profiles');
-    expect(profiles.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        role: 'merchant_owner',
-        full_name: 'María Pérez',
-        ci: 'V-12345678',
-      }),
-    );
-    expect(profiles.eq).toHaveBeenCalledWith('id', 'new-owner');
-  });
-
-  it('inserta un merchant activo vinculado al nuevo propietario con nombre y RIF públicos', async () => {
+  it('devuelve los identificadores creados por el servidor', async () => {
     const result = await createMerchantAccount(buildValidInput());
 
-    const merchants = getTable('merchants');
-    expect(merchants.insert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        owner_id: 'new-owner',
-        name: 'La Pizzería de María',
-        slug: 'la-pizzeria-de-maria',
-        rif: 'J-40123456-7',
-        status: 'active',
-        is_active: true,
-      }),
-    );
-    expect(result.merchantId).toBe('merchant-9');
-    expect(result.userId).toBe('new-owner');
-    expect(result.temporaryPassword).toBe('ClaveInicial1');
+    expect(result).toEqual({
+      userId: 'new-owner',
+      merchantId: 'merchant-9',
+      temporaryPassword: 'ClaveInicial1',
+    });
+    expect(supabaseMocks.from).not.toHaveBeenCalled();
   });
 
-  it('no manipula la sesión ni usa la API de Admin desde el frontend', async () => {
-    await createMerchantAccount(buildValidInput());
-
-    expect(supabaseMocks.functionsInvoke).toHaveBeenCalledTimes(1);
-  });
-
-  it('propaga el error cuando el Edge Function falla y no crea el merchant', async () => {
+  it('muestra el error JSON de la Edge Function', async () => {
     supabaseMocks.functionsInvoke.mockResolvedValue({
       data: null,
-      error: new Error('email already registered'),
+      error: new Error('Edge Function returned a non-2xx status code'),
+      response: { json: vi.fn().mockResolvedValue({ error: 'Sesión inválida o expirada.' }) },
     });
 
     await expect(createMerchantAccount(buildValidInput())).rejects.toThrow(
-      'Error al crear la cuenta del propietario: email already registered',
+      'Error al crear la cuenta del propietario: Sesión inválida o expirada.',
     );
-    expect(getTable('profiles').update).not.toHaveBeenCalled();
-    expect(getTable('merchants').insert).not.toHaveBeenCalled();
   });
 
-  it('propaga el error cuando la inserción del merchant falla', async () => {
-    registerTable('merchants', {
-      insertResult: { data: null, error: { message: 'duplicate slug' } },
+  it('falla de forma clara cuando no existe una sesión activa', async () => {
+    supabaseMocks.getSession.mockResolvedValue({
+      data: { session: null },
+      error: null,
     });
 
     await expect(createMerchantAccount(buildValidInput())).rejects.toThrow(
-      'Error al crear el comercio: duplicate slug',
+      'Tu sesión no está disponible. Inicia sesión nuevamente.',
     );
+    expect(supabaseMocks.functionsInvoke).not.toHaveBeenCalled();
   });
 });
 
@@ -286,6 +250,10 @@ describe('listMerchantsWithOwners', () => {
 describe('deleteMerchant', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    supabaseMocks.getSession.mockResolvedValue({
+      data: { session: { access_token: 'access-token' } },
+      error: null,
+    });
     supabaseMocks.functionsInvoke.mockResolvedValue({
       data: { deleted: true },
       error: null,
@@ -297,7 +265,10 @@ describe('deleteMerchant', () => {
 
     expect(supabaseMocks.functionsInvoke).toHaveBeenCalledWith(
       'delete-merchant',
-      { body: { merchantId: 'merchant-9', ownerId: 'new-owner' } },
+      {
+        headers: { Authorization: 'Bearer access-token' },
+        body: { merchantId: 'merchant-9', ownerId: 'new-owner' },
+      },
     );
   });
 

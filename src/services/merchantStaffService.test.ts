@@ -14,10 +14,12 @@ import type { EmployeeFormInput } from '../utils/staffPermissions';
 const supabaseMocks = vi.hoisted(() => ({
   functionsInvoke: vi.fn(),
   from: vi.fn(),
+  getSession: vi.fn(),
 }));
 
 vi.mock('./supabase', () => ({
   supabase: {
+    auth: { getSession: supabaseMocks.getSession },
     functions: { invoke: supabaseMocks.functionsInvoke },
     from: supabaseMocks.from,
   },
@@ -206,6 +208,10 @@ describe('listStaff', () => {
 describe('createEmployee', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    supabaseMocks.getSession.mockResolvedValue({
+      data: { session: { access_token: 'access-token' } },
+      error: null,
+    });
     supabaseMocks.functionsInvoke.mockResolvedValue({
       data: { staffId: 'staff-new' },
       error: null,
@@ -220,13 +226,26 @@ describe('createEmployee', () => {
     expect(supabaseMocks.functionsInvoke).not.toHaveBeenCalled();
   });
 
-   it('invoca create-employee con credenciales y permisos normalizados', async () => {
+   it('rechaza la operación sin una sesión activa', async () => {
+    supabaseMocks.getSession.mockResolvedValue({
+      data: { session: null },
+      error: null,
+    });
+
+    await expect(createEmployee('m-1', buildValidInput())).rejects.toThrow(
+      'Tu sesión no está disponible. Inicia sesión nuevamente.',
+    );
+    expect(supabaseMocks.functionsInvoke).not.toHaveBeenCalled();
+  });
+
+  it('invoca create-employee con credenciales y permisos normalizados', async () => {
      await createEmployee('m-1', buildValidInput());
 
       expect(supabaseMocks.functionsInvoke).toHaveBeenCalledWith(
-        'create-employee',
-        {
-          body: {
+         'create-employee',
+         {
+           headers: { Authorization: 'Bearer access-token' },
+           body: {
             merchantId: 'm-1',
             email: 'carlos@pizzeria.com',
             password: 'Clave123',
@@ -263,9 +282,10 @@ describe('createEmployee', () => {
       await createEmployee('m-1', driverInput);
 
       expect(supabaseMocks.functionsInvoke).toHaveBeenCalledWith(
-        'create-employee',
-        {
-          body: {
+         'create-employee',
+         {
+           headers: { Authorization: 'Bearer access-token' },
+           body: {
             merchantId: 'm-1',
             email: 'luis@pizzeria.com',
             password: 'Clave123',

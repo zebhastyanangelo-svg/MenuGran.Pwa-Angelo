@@ -69,17 +69,6 @@ function mockProfileQuery(result: {
   authMocks.from.mockReturnValue({ select });
 }
 
-function mockProfileQuerySequence(
-  responses: Array<{ data: ProfileRow | null; error: unknown }>,
-): void {
-  responses.forEach((result) => {
-    const single = vi.fn().mockResolvedValue(result);
-    const eq = vi.fn(() => ({ single }));
-    const select = vi.fn(() => ({ eq }));
-    authMocks.from.mockReturnValueOnce({ select });
-  });
-}
-
 function AuthProbe() {
   const auth = useAuth();
   return (
@@ -120,6 +109,9 @@ function AuthProbe() {
 }
 
 describe('fetchProfile', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
   it('consulta la tabla profiles y devuelve el perfil', async () => {
     const profile = buildProfile('user-123', 'customer');
     mockProfileQuery({ data: profile, error: null });
@@ -140,20 +132,16 @@ describe('fetchProfile', () => {
     consoleError.mockRestore();
   });
 
-  it('conserva el rol corporativo buscando por email cuando el id de OAuth no coincide', async () => {
+  it('no concede un rol corporativo por coincidencia de email', async () => {
     const consoleError = vi
       .spyOn(console, 'error')
       .mockImplementation(() => undefined);
-    const corporateProfile = buildProfile('owner-pre-creado', 'merchant_owner');
-    mockProfileQuerySequence([
-      { data: null, error: { message: 'no rows', code: 'PGRST116' } },
-      { data: corporateProfile, error: null },
-    ]);
+    mockProfileQuery({ data: null, error: { message: 'no rows', code: 'PGRST116' } });
 
     await expect(
       fetchProfile('google-uid-nuevo', 'owner-pre-creado@menugram.com'),
-    ).resolves.toEqual(corporateProfile);
-
+    ).resolves.toBeNull();
+    expect(authMocks.from).toHaveBeenCalledTimes(1);
     consoleError.mockRestore();
   });
 
@@ -186,7 +174,7 @@ describe('fetchCurrentSessionRole', () => {
     await expect(fetchCurrentSessionRole()).resolves.toBe('merchant_staff');
   });
 
-  it('mantiene el rol corporativo pre-asignado al entrar con Google y otro uid', async () => {
+  it('no asignaroles corporativos por email cuando Google usa otro uid', async () => {
     const consoleError = vi
       .spyOn(console, 'error')
       .mockImplementation(() => undefined);
@@ -194,13 +182,9 @@ describe('fetchCurrentSessionRole', () => {
       data: { user: { id: 'google-uid-nuevo', email: 'driver@menugram.com' } },
       error: null,
     });
-    mockProfileQuerySequence([
-      { data: null, error: { message: 'no rows', code: 'PGRST116' } },
-      { data: buildProfile('driver-pre-creado', 'driver'), error: null },
-    ]);
+    mockProfileQuery({ data: null, error: { message: 'no rows', code: 'PGRST116' } });
 
-    await expect(fetchCurrentSessionRole()).resolves.toBe('driver');
-
+    await expect(fetchCurrentSessionRole()).resolves.toBeNull();
     consoleError.mockRestore();
   });
 });

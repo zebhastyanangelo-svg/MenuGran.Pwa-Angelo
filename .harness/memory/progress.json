@@ -1,10 +1,10 @@
 {
-  "task_id": "TASK-004",
+  "task_id": "TASK-024",
   "verification_checklist": {
     "linter_passed": true,
     "tests_passed": true,
     "no_secrets_exposed": true,
     "conventions_followed": true
   },
-  "summary": "AuthContext (AuthProvider + fetchProfile), hook useAuth y 7 tests. Escucha onAuthStateChange (INITIAL_SESSION/SIGNED_IN/TOKEN_REFRESHED/USER_UPDATED/SIGNED_OUT), consulta public.profiles para el rol y expone signInWithGoogle, signInWithPassword, signUpWithPassword y signOut. Tipos estrictos con src/types/database.ts (ProfileRow) y tipos de @supabase/supabase-js (Session, User, AuthChangeEvent, PostgrestError)."
+  "summary": "Alta y gestión segura de comercios, empleados y repartidores con JWT Bearer y Edge Functions server-side. RLS endurecido con helpers SECURITY DEFINER en esquema private, políticas consolidadas por rol, funciones antiguas revocadas o eliminadas y migración remota 20260925052532 aplicada. create-employee desplegado como versión 6 con verify_jwt=true. El arnés completo pasó: 94 archivos y 848 tests; Advisors de RLS/RPC sin warnings. Queda únicamente el warning externo de Leaked Password Protection deshabilitado en Supabase Auth y seis índices INFO sin uso."
 }

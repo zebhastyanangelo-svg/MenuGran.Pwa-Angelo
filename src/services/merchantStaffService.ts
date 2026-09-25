@@ -15,6 +15,10 @@ import {
   validateEmployeeInput,
   type EmployeeFormInput,
 } from '../utils/staffPermissions';
+import {
+  getAuthenticatedFunctionHeaders,
+  readFunctionError,
+} from './edgeFunctions';
 
 export interface MerchantContext {
   merchantId: string;
@@ -198,59 +202,31 @@ export async function createEmployee(
   input: EmployeeFormInput,
 ): Promise<string> {
   const validationError = validateEmployeeInput(input);
-  if (validationError !== null) {
-    throw new Error(validationError);
-  }
+  if (validationError !== null) throw new Error(validationError);
 
-  const { data, error, response } = await supabase.functions.invoke<{
-    staffId?: string;
-    error?: string;
-  }>('create-employee', {
-    body: {
-      merchantId,
-      email: input.email.trim(),
-      password: input.password,
-      fullName: input.fullName.trim(),
-      role: input.role,
-      permissions: input.role === 'driver'
-        ? DRIVER_PERMISSIONS
-        : toStaffPermissions(input.permissions),
-    },
-  });
-
-  // Cuando el Edge Function devuelve HTTP 4xx/5xx, supabase-js (v2.112+)
-  // retorna { data: null, error: FunctionsHttpError, response: Response }.
-  // El cuerpo JSON con el mensaje detallado vive en response.json(),
-  // NO en data (que siempre es null para respuestas no-2xx).
+  const headers = await getAuthenticatedFunctionHeaders();
+  const { data, error, response } =
+    await supabase.functions.invoke<{ staffId?: string }>('create-employee', {
+      headers,
+      body: {
+        merchantId,
+        email: input.email.trim(),
+        password: input.password,
+        fullName: input.fullName.trim(),
+        role: input.role,
+        permissions:
+          input.role === 'driver'
+            ? DRIVER_PERMISSIONS
+            : toStaffPermissions(input.permissions),
+      },
+    });
   if (error !== null) {
-    let serverMessage: string | null = null;
-    try {
-      const errorBody: unknown = await response?.json();
-      if (
-        errorBody !== undefined &&
-        errorBody !== null &&
-        typeof errorBody === 'object' &&
-        'error' in errorBody
-      ) {
-        const msg = (errorBody as { error: unknown }).error;
-        if (typeof msg === 'string') {
-          serverMessage = msg;
-        }
-      }
-    } catch {
-      // La respuesta podría no ser JSON o ya haber sido consumida.
-    }
+    const serverMessage = await readFunctionError(response);
     throw new Error(
       serverMessage ?? `Error al crear el empleado: ${error.message}`,
     );
   }
-
-  if (
-    data === null ||
-    typeof data !== 'object' ||
-    !('staffId' in data) ||
-    typeof data.staffId !== 'string'
-  ) {
+  if (data === null || typeof data.staffId !== 'string') {
     throw new Error('No se pudo registrar al empleado.');
   }
   return data.staffId;
