@@ -423,25 +423,43 @@ export function OrderTracker() {
         </div>
       </div>
 
-      {order.status === 'on_the_way' && driverLocation && order.delivery_location && (
+      {order.status === 'on_the_way' && order.delivery_location && (
         <section className="mb-8 bg-white rounded-lg shadow-md p-4 border border-gray-200">
           <div className="flex items-center gap-2 mb-3">
             <Navigation className="h-5 w-5 text-blue-600" />
             <h2 className="text-lg font-bold text-gray-800">Repartidor en camino</h2>
           </div>
           <div className="h-64 rounded-lg overflow-hidden">
-            <MapErrorBoundary fallbackMessage="No se pudo mostrar la ubicación del repartidor.">
+            <MapErrorBoundary fallbackMessage="No se pudo mostrar el mapa.">
               <MapView
-                markers={buildDeliveryMarkers(driverLocation, order.delivery_location)}
-                center={[driverLocation.y, driverLocation.x]}
+                markers={
+                  driverLocation
+                    ? buildDeliveryMarkers(driverLocation, order.delivery_location)
+                    : [
+                        {
+                          id: 'destination',
+                          position: [order.delivery_location.y, order.delivery_location.x],
+                          title: 'Destino de entrega',
+                        },
+                      ]
+                }
+                center={driverLocation ? [driverLocation.y, driverLocation.x] : [order.delivery_location.y, order.delivery_location.x]}
                 zoom={15}
-                routeRequest={{
-                  from: [driverLocation.y, driverLocation.x],
-                  to: [order.delivery_location.y, order.delivery_location.x],
-                }}
+                routeRequest={
+                  driverLocation
+                    ? {
+                        from: [driverLocation.y, driverLocation.x],
+                        to: [order.delivery_location.y, order.delivery_location.x],
+                      }
+                    : undefined
+                }
                 className="h-full w-full"
                 showFallback
-                fallbackMessage="Esperando ubicación del repartidor..."
+                fallbackMessage={
+                  driverLocation
+                    ? 'Esperando ubicación del repartidor...'
+                    : 'Mostrando destino de entrega.'
+                }
               />
             </MapErrorBoundary>
           </div>

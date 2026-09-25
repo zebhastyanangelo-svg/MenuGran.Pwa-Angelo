@@ -116,11 +116,13 @@ export function PaymentProofUploader({
         <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-white p-3">
           <div className="flex items-center gap-3">
             {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt="Vista previa del comprobante"
-                className="h-16 w-16 flex-shrink-0 rounded-md object-cover"
-              />
+              <div className="relative overflow-hidden rounded-md bg-gray-100 max-w-full w-full max-h-48">
+                <img
+                  src={previewUrl}
+                  alt="Vista previa del comprobante"
+                  className="max-w-full w-full max-h-48 object-contain"
+                />
+              </div>
             ) : file.type === 'application/pdf' ? (
               <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md bg-red-50 text-red-500">
                 <FileText className="h-8 w-8" aria-hidden="true" />
