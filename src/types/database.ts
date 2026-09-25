@@ -31,7 +31,7 @@ export type MerchantStatus =
 
 export type OrderType = 'in_store' | 'pickup' | 'delivery';
 
-export type PaymentMethod = 'cash' | 'pago_movil' | 'zelle' | 'card';
+export type PaymentMethod = 'cash' | 'pago_movil' | 'zelle' | 'card' | 'card_pos';
 
 export type OrderStatus =
   | 'payment_pending'
@@ -145,6 +145,12 @@ export interface MerchantRow {
   phone_whatsapp: string;
   service_modalities: ServiceModality;
   business_hours: BusinessHours;
+  /** Banco receptor de Pago Móvil (ej. 'Banesco'). NULL si no configurado. */
+  pago_movil_bank?: string | null;
+  /** Cédula o RIF del receptor de Pago Móvil (ej. 'J-123456789'). */
+  pago_movil_id_number?: string | null;
+  /** Teléfono receptor de Pago Móvil (ej. '0412-1234567'). */
+  pago_movil_phone?: string | null;
 }
 
 export interface MerchantStaffRow {

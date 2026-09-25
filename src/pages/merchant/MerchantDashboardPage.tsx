@@ -8,6 +8,7 @@ import { PaymentProofLightbox } from '../../components/merchant/PaymentProofLigh
 import { Modal } from '../../components/ui/Modal';
 import { Store, Loader2, Package, ClipboardList, TrendingUp, LogOut, Image as ImageIcon, Truck, User } from 'lucide-react';
 import type { OrderStatus } from '../../types/database';
+import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
 import type { OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 
 const PAYMENT_PROOF_BUCKET = 'payment-proofs';
@@ -453,7 +454,10 @@ return (
                       {order.items.length} producto(s) ·{' '}
                       {new Date(order.created_at).toLocaleTimeString()}
                     </p>
-                    {order.payment_proof_url ? (
+                    <p className="text-sm font-medium text-gray-700">
+                      Pago: {getPaymentMethodLabel(order.payment_method)}
+                    </p>
+                    {requiresPaymentProof(order.payment_method) && (order.payment_proof_url ? (
                       <div className="flex items-center gap-2 mt-1">
                         <button
                           type="button"
@@ -469,7 +473,7 @@ return (
                       <span className="text-xs text-gray-400 italic mt-1 block">
                         Sin capture
                       </span>
-                    )}
+                    ))}
                     <div className="flex flex-wrap gap-2">
                       {getOrderActions(order.status).map((action) => (
                         <button

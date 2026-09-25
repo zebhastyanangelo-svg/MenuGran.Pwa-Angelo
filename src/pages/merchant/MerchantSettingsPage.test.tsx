@@ -156,7 +156,7 @@ describe('MerchantSettingsPage', () => {
      ).toBeInTheDocument();
   });
 
-  it('renderiza los tres tabs con las etiquetas correctas', async () => {
+  it('renderiza los cuatro tabs con las etiquetas correctas', async () => {
     await setMockState();
 
     renderPage();
@@ -169,6 +169,9 @@ describe('MerchantSettingsPage', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /Horarios e Identidad/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Pago Móvil/i }),
     ).toBeInTheDocument();
   });
 
@@ -532,6 +535,73 @@ describe('MerchantSettingsPage', () => {
     await waitFor(() => {
       expect(authMocks.saveSettingsMock).toHaveBeenCalledWith(
         expect.objectContaining({ location: null }),
+      );
+    });
+  });
+
+  it('precarga los datos de Pago Móvil existentes en la pestaña Pagos', async () => {
+    await setMockState({
+      merchant: {
+        ...mockMerchant,
+        pago_movil_bank: 'Banesco',
+        pago_movil_id_number: 'J-123456789',
+        pago_movil_phone: '0412-1234567',
+      },
+    });
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Pago Móvil/i }));
+
+    expect(screen.getByDisplayValue('Banesco')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('J-123456789')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('0412-1234567')).toBeInTheDocument();
+  });
+
+  it('guarda los datos de Pago Móvil junto con la configuración', async () => {
+    await setMockState();
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Pago Móvil/i }));
+
+    fireEvent.change(screen.getByLabelText(/^Banco/i), {
+      target: { value: 'Mercantil' },
+    });
+    fireEvent.change(screen.getByLabelText(/Cédula \/ RIF/i), {
+      target: { value: 'J-987654321' },
+    });
+    fireEvent.change(screen.getByLabelText(/Teléfono para Pago Móvil/i), {
+      target: { value: '0414-9876543' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }));
+
+    await waitFor(() => {
+      expect(authMocks.saveSettingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pago_movil_bank: 'Mercantil',
+          pago_movil_id_number: 'J-987654321',
+          pago_movil_phone: '0414-9876543',
+        }),
+      );
+    });
+  });
+
+  it('envía null en los datos de Pago Móvil cuando los campos quedan vacíos', async () => {
+    await setMockState();
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }));
+
+    await waitFor(() => {
+      expect(authMocks.saveSettingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pago_movil_bank: null,
+          pago_movil_id_number: null,
+          pago_movil_phone: null,
+        }),
       );
     });
   });

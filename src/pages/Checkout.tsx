@@ -1,22 +1,59 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Store, Bike } from 'lucide-react';
+import { MapPin, Store, Bike, Smartphone, CreditCard, Banknote } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { PaymentProofUploader } from '../components/cart/PaymentProofUploader';
 import { LocationPicker } from '../components/map/LocationPicker';
 import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
+import { useMerchantPagoMovil } from '../hooks/useMerchantPagoMovil';
 import { compressImage } from '../utils/imageCompressor';
-import type { GeoPoint, OrderType } from '../types/database';
+import type { GeoPoint, OrderType, PaymentMethod } from '../types/database';
+import type { MerchantPagoMovilInfo } from '../services/merchantPaymentService';
 import { createOrder, uploadPaymentProofTemp } from '../services/checkoutService';
 
-const BANK_ACCOUNTS: { id: string; label: string }[] = [
-  { id: 'banco_pichincha', label: 'Banco Pichincha - 1234 5678 9012 3456' },
-  { id: 'banco_guayaquil', label: 'Banco Guayaquil - 9876 5432 1098 7654' },
-];
+type CheckoutPaymentMethod = Extract<PaymentMethod, 'pago_movil' | 'card_pos' | 'cash'>;
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+interface ValidateParams {
+  paymentMethod: CheckoutPaymentMethod;
+  pagoMovil: MerchantPagoMovilInfo | null;
+  reference: string;
+  file: File | null;
+  orderType: OrderType;
+  deliveryLocation: GeoPoint | null;
+}
+
+function validateCheckoutForm(params: ValidateParams): string | null {
+  if (params.paymentMethod === 'pago_movil') {
+    if (!params.pagoMovil) {
+      return 'El comercio aún no configuró sus datos de Pago Móvil. Elige otro método de pago.';
+    }
+    if (!params.reference.trim()) {
+      return 'Ingresa el número de comprobante.';
+    }
+    if (params.file === null || params.file.size > MAX_IMAGE_BYTES) {
+      return 'Adjunta una foto o PDF del comprobante (máx. 5 MB).';
+    }
+  }
+  if (params.orderType === 'delivery' && !params.deliveryLocation) {
+    return 'Selecciona tu ubicación de entrega en el mapa.';
+  }
+  return null;
+}
+
+async function uploadProofIfNeeded(
+  paymentMethod: CheckoutPaymentMethod,
+  file: File | null,
+): Promise<string | null> {
+  if (paymentMethod !== 'pago_movil' || !file) return null;
+  const proofToUpload = file.type.startsWith('image/')
+    ? (await compressImage(file)).blob
+    : file;
+  return uploadPaymentProofTemp(proofToUpload);
+}
 
 export function Checkout() {
   const {
@@ -31,17 +68,16 @@ export function Checkout() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const { pagoMovil } = useMerchantPagoMovil(merchantId);
 
   const [orderType, setOrderType] = useState<OrderType>('delivery');
-  const [bank, setBank] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>('pago_movil');
   const [reference, setReference] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState<GeoPoint | null>(null);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  const isProofValid = file !== null && file.size <= MAX_IMAGE_BYTES;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -51,39 +87,28 @@ export function Checkout() {
       setError(validationError ?? 'No se puede continuar con el pedido.');
       return;
     }
-    if (!bank) {
-      setError('Selecciona el banco de destino.');
-      return;
-    }
-    if (!reference.trim()) {
-      setError('Ingresa el número de comprobante.');
-      return;
-    }
-    if (orderType === 'delivery' && !deliveryLocation) {
-      setError('Selecciona tu ubicación de entrega en el mapa.');
-      return;
-    }
-    if (!isProofValid) {
-      setError('Adjunta una foto o PDF del comprobante (máx. 5 MB).');
+    const formError = validateCheckoutForm({
+      paymentMethod,
+      pagoMovil,
+      reference,
+      file,
+      orderType,
+      deliveryLocation,
+    });
+    if (formError) {
+      setError(formError);
       return;
     }
 
     setIsProcessing(true);
     try {
-      const proofToUpload = file!.type.startsWith('image/')
-        ? (await compressImage(file!)).blob
-        : file!;
-
-      // Step 1: Upload proof BEFORE creating the order
-      const proofPath = await uploadPaymentProofTemp(proofToUpload);
-
-      // Step 2: Create order WITH the proof URL already set
+      const proofPath = await uploadProofIfNeeded(paymentMethod, file);
       const data = await createOrder({
         merchantId: merchantId!,
         customerId: user!.id,
         orderType,
-        paymentMethod: 'pago_movil',
-        paymentReference: reference,
+        paymentMethod,
+        paymentReference: paymentMethod === 'pago_movil' ? reference.trim() : '',
         totalAmount: Number(totalAmount),
         items: items.map((item) => ({
           product_id: item.product.id,
@@ -106,11 +131,10 @@ export function Checkout() {
             ? 'Tu pedido con entrega a domicilio fue registrado. El comercio confirmará pronto.'
             : 'Tu pedido para retiro en local fue registrado. El comercio confirmará pronto.',
       });
-
       clearCart();
       navigate(`/orders/${data}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al enviar el comprobante.');
+      setError(err instanceof Error ? err.message : 'Error al enviar el pedido.');
     } finally {
       setIsProcessing(false);
     }
@@ -235,42 +259,19 @@ export function Checkout() {
         )}
 
         <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <legend className="px-1 text-sm font-semibold text-slate-700">Datos de pago</legend>
-          <div className="space-y-3">
-            <div>
-              <label htmlFor="bank" className="mb-1 block text-sm font-medium text-slate-700">
-                Banco de destino
-              </label>
-              <select
-                id="bank"
-                value={bank}
-                onChange={(e) => setBank(e.target.value)}
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red"
-              >
-                <option value="">Selecciona un banco…</option>
-                {BANK_ACCOUNTS.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="reference" className="mb-1 block text-sm font-medium text-slate-700">
-                Número de comprobante
-              </label>
-              <input
-                id="reference"
-                type="text"
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                placeholder="Ej. 000123456789"
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red"
-              />
-            </div>
-
-            <PaymentProofUploader
+          <legend className="px-1 text-sm font-semibold text-slate-700">Método de pago</legend>
+          <PaymentMethodSelector
+            value={paymentMethod}
+            onChange={(value) => {
+              setPaymentMethod(value);
+              setError(null);
+            }}
+          />
+          {paymentMethod === 'pago_movil' && (
+            <PagoMovilSection
+              pagoMovil={pagoMovil}
+              reference={reference}
+              onReferenceChange={setReference}
               file={file}
               error={error}
               isProcessing={isProcessing}
@@ -279,7 +280,19 @@ export function Checkout() {
                 setError(null);
               }}
             />
-          </div>
+          )}
+          {paymentMethod === 'card_pos' && (
+            <PaymentNotice>
+              Pagarás con tarjeta / punto de venta al recibir tu pedido (delivery)
+              o en caja (retiro en local).
+            </PaymentNotice>
+          )}
+          {paymentMethod === 'cash' && (
+            <PaymentNotice>
+              Pagarás en efectivo al recibir tu pedido (delivery) o en caja
+              (retiro en local).
+            </PaymentNotice>
+          )}
         </fieldset>
 
         {error && (
@@ -289,9 +302,130 @@ export function Checkout() {
         )}
 
         <Button type="submit" fullWidth isLoading={isProcessing} disabled={isProcessing}>
-          Confirmar y enviar comprobante
+          {paymentMethod === 'pago_movil'
+            ? 'Confirmar y enviar comprobante'
+            : 'Confirmar pedido'}
         </Button>
       </form>
+    </div>
+  );
+}
+
+interface PaymentMethodSelectorProps {
+  value: CheckoutPaymentMethod;
+  onChange: (value: CheckoutPaymentMethod) => void;
+}
+
+const PAYMENT_METHOD_OPTIONS: {
+  id: CheckoutPaymentMethod;
+  label: string;
+  icon: typeof Smartphone;
+}[] = [
+  { id: 'pago_movil', label: 'Pago Móvil', icon: Smartphone },
+  { id: 'card_pos', label: 'Punto de Venta', icon: CreditCard },
+  { id: 'cash', label: 'Efectivo', icon: Banknote },
+];
+
+function PaymentMethodSelector({ value, onChange }: PaymentMethodSelectorProps) {
+  return (
+    <div className="grid grid-cols-3 gap-2" role="group" aria-label="Método de pago">
+      {PAYMENT_METHOD_OPTIONS.map(({ id, label, icon: Icon }) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => onChange(id)}
+          aria-pressed={value === id}
+          className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-3 text-xs font-medium transition ${
+            value === id
+              ? 'border-brand-red bg-brand-red/5 text-brand-red shadow-sm'
+              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'
+          }`}
+        >
+          <Icon className="h-5 w-5" aria-hidden="true" />
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PaymentNotice({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+      {children}
+    </p>
+  );
+}
+
+interface PagoMovilSectionProps {
+  pagoMovil: MerchantPagoMovilInfo | null;
+  reference: string;
+  onReferenceChange: (value: string) => void;
+  file: File | null;
+  error: string | null;
+  isProcessing: boolean;
+  onFileSelect: (file: File | null) => void;
+}
+
+function PagoMovilSection({
+  pagoMovil,
+  reference,
+  onReferenceChange,
+  file,
+  error,
+  isProcessing,
+  onFileSelect,
+}: PagoMovilSectionProps) {
+  return (
+    <div className="mt-3 space-y-3">
+      {pagoMovil ? (
+        <dl
+          className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-sm"
+          data-testid="pago-movil-data"
+        >
+          <div className="flex justify-between gap-2">
+            <dt className="font-medium text-indigo-900">Banco</dt>
+            <dd className="text-indigo-950">{pagoMovil.bank}</dd>
+          </div>
+          <div className="mt-1 flex justify-between gap-2">
+            <dt className="font-medium text-indigo-900">Cédula / RIF</dt>
+            <dd className="text-indigo-950">{pagoMovil.idNumber}</dd>
+          </div>
+          <div className="mt-1 flex justify-between gap-2">
+            <dt className="font-medium text-indigo-900">Teléfono</dt>
+            <dd className="text-indigo-950">{pagoMovil.phone}</dd>
+          </div>
+        </dl>
+      ) : (
+        <p
+          className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+          role="note"
+        >
+          Este comercio aún no configuró sus datos de Pago Móvil. Elige otro
+          método de pago o contacta al comercio.
+        </p>
+      )}
+
+      <div>
+        <label htmlFor="reference" className="mb-1 block text-sm font-medium text-slate-700">
+          Número de comprobante
+        </label>
+        <input
+          id="reference"
+          type="text"
+          value={reference}
+          onChange={(e) => onReferenceChange(e.target.value)}
+          placeholder="Ej. 000123456789"
+          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red"
+        />
+      </div>
+
+      <PaymentProofUploader
+        file={file}
+        error={error}
+        isProcessing={isProcessing}
+        onFileSelect={onFileSelect}
+      />
     </div>
   );
 }

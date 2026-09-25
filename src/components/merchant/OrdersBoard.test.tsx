@@ -105,4 +105,39 @@ describe('OrdersBoard', () => {
     expect(screen.queryByTestId('driver-select-order-delivered')).not.toBeInTheDocument();
     expect(screen.queryByTestId('driver-select-order-transito')).not.toBeInTheDocument();
   });
+
+  it('muestra "Punto de Venta" sin botón de comprobante para card_pos', () => {
+    renderBoard([
+      buildOrder({ payment_method: 'card_pos', payment_proof_url: null }),
+    ]);
+
+    expect(screen.getByText('Punto de Venta')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Ver comprobante/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Sin capture/i)).not.toBeInTheDocument();
+  });
+
+  it('muestra "Efectivo" sin botón de comprobante para cash', () => {
+    renderBoard([buildOrder({ payment_method: 'cash', payment_proof_url: null })]);
+
+    expect(screen.getByText('Efectivo')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Ver comprobante/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('muestra "Pago Móvil" con botón cuando hay comprobante', async () => {
+    const { onOpenProof } = renderBoard([
+      buildOrder({
+        payment_method: 'pago_movil',
+        payment_proof_url: 'proofs/order-1.jpg',
+      }),
+    ]);
+
+    expect(screen.getByText('Pago Móvil')).toBeInTheDocument();
+    const proofButton = screen.getByRole('button', { name: /Ver comprobante/i });
+    await userEvent.click(proofButton);
+    expect(onOpenProof).toHaveBeenCalledTimes(1);
+  });
 });

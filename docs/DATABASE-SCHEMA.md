@@ -27,7 +27,8 @@ CREATE TYPE payment_method AS ENUM (
     'cash', 
     'pago_movil', 
     'zelle', 
-    'card'
+    'card',
+    'card_pos'
 );
 
 CREATE TYPE order_status AS ENUM (
@@ -73,6 +74,9 @@ CREATE TABLE public.merchants (
      is_active BOOLEAN DEFAULT TRUE NOT NULL,
      is_open BOOLEAN DEFAULT TRUE NOT NULL,
      location POINT,
+    pago_movil_bank TEXT,
+    pago_movil_id_number TEXT,
+    pago_movil_phone TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 

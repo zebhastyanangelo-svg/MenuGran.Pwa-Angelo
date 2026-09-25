@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { Checkout } from './Checkout';
 import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
+import { useMerchantPagoMovil } from '../hooks/useMerchantPagoMovil';
 
 const mockShowToast = vi.fn();
 
@@ -14,6 +15,10 @@ vi.mock('../hooks/useCart', () => ({
 
 vi.mock('../hooks/useToast', () => ({
   useToast: () => ({ showToast: mockShowToast }),
+}));
+
+vi.mock('../hooks/useMerchantPagoMovil', () => ({
+  useMerchantPagoMovil: vi.fn(),
 }));
 
 vi.mock('../utils/imageCompressor', () => ({
@@ -60,6 +65,20 @@ const validCart = {
   confirmAddItem: vi.fn(),
 };
 
+const validPagoMovil = {
+  bank: 'Banesco',
+  idNumber: 'J-123456789',
+  phone: '0412-1234567',
+};
+
+function setPagoMovilMock(pagoMovil: typeof validPagoMovil | null) {
+  vi.mocked(useMerchantPagoMovil).mockReturnValue({
+    pagoMovil,
+    isLoading: false,
+    error: null,
+  });
+}
+
 beforeAll(() => {
   process.env.VITE_SUPABASE_URL = 'http://localhost';
   process.env.VITE_SUPABASE_ANON_KEY = 'anon-key';
@@ -83,7 +102,16 @@ describe('Checkout', () => {
       resendConfirmationEmail: vi.fn(),
       signOut: vi.fn(),
     });
+    setPagoMovilMock(validPagoMovil);
   });
+
+  function renderCheckout() {
+    return render(
+      <MemoryRouter>
+        <Checkout />
+      </MemoryRouter>,
+    );
+  }
 
   it('muestra estado inválido cuando el carrito no es válido', () => {
     vi.mocked(useCart).mockReturnValue({
@@ -91,22 +119,14 @@ describe('Checkout', () => {
       canCheckout: false,
       validationError: 'Carrito con productos de múltiples comercios.',
     });
-    render(
-      <MemoryRouter>
-        <Checkout />
-      </MemoryRouter>,
-    );
+    renderCheckout();
     expect(screen.getByText(/Carrito con productos de múltiples comercios/i)).toBeInTheDocument();
   });
 
   it(
     'renderiza el formulario con tipo de pedido cuando el carrito es válido',
     () => {
-      render(
-        <MemoryRouter>
-          <Checkout />
-        </MemoryRouter>,
-      );
+      renderCheckout();
       expect(screen.getByText(/Finalizar pedido/i)).toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: /Entrega a domicilio/i }),
@@ -121,30 +141,49 @@ describe('Checkout', () => {
     10000,
   );
 
-  it('requiere banco, referencia y comprobante antes de enviar', async () => {
-    render(
-      <MemoryRouter>
-        <Checkout />
-      </MemoryRouter>,
-    );
+  it('muestra los datos de Pago Móvil configurados por el comercio', () => {
+    renderCheckout();
+
+    expect(screen.getByTestId('pago-movil-data')).toBeInTheDocument();
+    expect(screen.getByTestId('pago-movil-data')).toHaveTextContent('Banesco');
+    expect(screen.getByTestId('pago-movil-data')).toHaveTextContent('J-123456789');
+    expect(screen.getByTestId('pago-movil-data')).toHaveTextContent('0412-1234567');
+  });
+
+  it('bloquea Pago Móvil si el comercio no configuró sus datos', async () => {
+    setPagoMovilMock(null);
+    renderCheckout();
+
+    expect(screen.getByText(/aún no configuró sus datos de Pago Móvil/i)).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
+    const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
+    await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), file);
 
     const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
     if (!form) throw new Error('No se encontró el formulario');
     fireEvent.submit(form);
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent(/Selecciona el banco de destino/i);
+    expect(alert).toHaveTextContent(/aún no configuró sus datos de Pago Móvil/i);
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+  });
+
+  it('requiere referencia y comprobante antes de enviar con Pago Móvil', async () => {
+    renderCheckout();
+
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/Ingresa el número de comprobante/i);
     expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it('la entrega a domicilio requiere ubicación', async () => {
-    render(
-      <MemoryRouter>
-        <Checkout />
-      </MemoryRouter>,
-    );
+    renderCheckout();
 
-    await user.selectOptions(screen.getByLabelText(/Banco de destino/i), 'banco_pichincha');
     await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
     const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
     await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), file);
@@ -157,14 +196,9 @@ describe('Checkout', () => {
     expect(alert).toHaveTextContent(/Selecciona tu ubicación de entrega/i);
   }, 10000);
 
-  it('confirma el pedido, muestra toast y vacía el carrito', async () => {
-    render(
-      <MemoryRouter>
-        <Checkout />
-      </MemoryRouter>,
-    );
+  it('confirma el pedido con Pago Móvil, muestra toast y vacía el carrito', async () => {
+    renderCheckout();
 
-    await user.selectOptions(screen.getByLabelText(/Banco de destino/i), 'banco_pichincha');
     await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
     const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
     await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), file);
@@ -194,14 +228,65 @@ describe('Checkout', () => {
     expect(validCart.clearCart).toHaveBeenCalled();
   }, 10000);
 
-  it('redirige a /orders/:orderId después de confirmar el pedido', async () => {
-    render(
-      <MemoryRouter>
-        <Checkout />
-      </MemoryRouter>,
-    );
+  it('Punto de Venta no solicita captura y registra card_pos', async () => {
+    renderCheckout();
 
-    await user.selectOptions(screen.getByLabelText(/Banco de destino/i), 'banco_pichincha');
+    await user.click(screen.getByRole('button', { name: /Punto de Venta/i }));
+    expect(screen.queryByLabelText(/Comprobante \(foto o PDF\)/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Pagarás con tarjeta \/ punto de venta/i),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar pedido/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockCreateOrder).toHaveBeenCalled();
+    }, { timeout: 5000 });
+    expect(mockUploadPaymentProofTemp).not.toHaveBeenCalled();
+    expect(mockCreateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paymentMethod: 'card_pos',
+        paymentReference: '',
+        paymentProofUrl: null,
+        deliveryLocation: { x: -99.1332, y: 19.4326 },
+      }),
+    );
+  }, 10000);
+
+  it('Efectivo no solicita captura y registra cash', async () => {
+    renderCheckout();
+
+    await user.click(screen.getByRole('button', { name: /Retiro en local/i }));
+    await user.click(screen.getByRole('button', { name: /Efectivo/i }));
+    expect(
+      screen.getByText(/Pagarás en efectivo al recibir tu pedido/i),
+    ).toBeInTheDocument();
+
+    const form = screen.getByRole('button', { name: /Confirmar pedido/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockCreateOrder).toHaveBeenCalled();
+    }, { timeout: 5000 });
+    expect(mockUploadPaymentProofTemp).not.toHaveBeenCalled();
+    expect(mockCreateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderType: 'pickup',
+        paymentMethod: 'cash',
+        paymentProofUrl: null,
+      }),
+    );
+    expect(validCart.clearCart).toHaveBeenCalled();
+  }, 10000);
+
+  it('redirige a /orders/:orderId después de confirmar el pedido', async () => {
+    renderCheckout();
+
     await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
     const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
     await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), file);

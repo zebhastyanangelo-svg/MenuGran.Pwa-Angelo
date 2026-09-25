@@ -11,6 +11,7 @@ import {
   getTransitionLabel,
   isTerminalOrderStatus,
 } from '../../utils/orderStatus';
+import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
 
 export interface OrdersBoardProps {
   orders: OrderWithCustomer[];
@@ -18,21 +19,6 @@ export interface OrdersBoardProps {
   onUpdateStatus: (orderId: string, status: OrderStatus) => void;
   onAssignDriver?: (orderId: string, driverId: string | null) => void;
   onOpenProof: (order: OrderWithCustomer) => void;
-}
-
-function getPaymentMethodLabel(method: OrderWithCustomer['payment_method']): string {
-  switch (method) {
-    case 'pago_movil':
-      return 'Pago Móvil';
-    case 'cash':
-      return 'Efectivo';
-    case 'zelle':
-      return 'Zelle';
-    case 'card':
-      return 'Tarjeta';
-    default:
-      return method;
-  }
 }
 
 function getCustomerLabel(order: OrderWithCustomer): string {
@@ -137,7 +123,7 @@ export function OrdersBoard({
                         Ref: {order.payment_reference}
                       </div>
                     )}
-                    {order.payment_proof_url ? (
+                    {requiresPaymentProof(order.payment_method) && (order.payment_proof_url ? (
                       <button
                         type="button"
                         onClick={() => onOpenProof(order)}
@@ -149,7 +135,7 @@ export function OrdersBoard({
                       <span className="mt-1.5 block text-xs text-gray-400 italic">
                         Sin capture
                       </span>
-                    )}
+                    ))}
                   </td>
                   <td className="px-4 py-3 block sm:table-cell">
                     <div className="flex flex-wrap items-center gap-2">

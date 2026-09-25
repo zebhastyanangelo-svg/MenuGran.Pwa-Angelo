@@ -30,7 +30,21 @@ const MERCHANT_CATEGORIES: MerchantCategory[] = [
   'Otro',
 ];
 
-type SettingsTab = 'general' | 'location' | 'identity';
+type SettingsTab = 'general' | 'location' | 'identity' | 'payments';
+
+/** Bancos frecuentes para Pago Móvil (orientativo; el campo admite texto libre). */
+const PAGO_MOVIL_BANKS: readonly string[] = [
+  'Banco de Venezuela',
+  'Banesco',
+  'Mercantil',
+  'Provincial',
+  'BOD',
+  'BNC',
+  'Bancrecer',
+  'Banplus',
+  'Banco del Tesoro',
+  'Sofitasa',
+];
 
 function initialImageField(): ImageFieldState {
   return { url: null, uploading: false, error: null };
@@ -56,6 +70,9 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
   const [location, setLocation] = useState<GeoPoint | null>(null);
   const [logo, setLogo] = useState<ImageFieldState>(initialImageField);
   const [banner, setBanner] = useState<ImageFieldState>(initialImageField);
+  const [pagoMovilBank, setPagoMovilBank] = useState('');
+  const [pagoMovilIdNumber, setPagoMovilIdNumber] = useState('');
+  const [pagoMovilPhone, setPagoMovilPhone] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -71,6 +88,9 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
       setLogo({ url: merchant.logo_url ?? null, uploading: false, error: null });
       setBanner({ url: merchant.banner_url ?? null, uploading: false, error: null });
       setIsActive(merchant.is_active);
+      setPagoMovilBank(merchant.pago_movil_bank ?? '');
+      setPagoMovilIdNumber(merchant.pago_movil_id_number ?? '');
+      setPagoMovilPhone(merchant.pago_movil_phone ?? '');
     }
   }, [merchant]);
 
@@ -130,6 +150,9 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
         logo_url: logo.url,
         banner_url: banner.url,
         is_active: isActive,
+        pago_movil_bank: pagoMovilBank.trim() || null,
+        pago_movil_id_number: pagoMovilIdNumber.trim() || null,
+        pago_movil_phone: pagoMovilPhone.trim() || null,
       };
 
       await saveSettings(updates);
@@ -233,6 +256,14 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
         >
           Horarios e Identidad
         </button>
+        <button
+          type="button"
+          className={tabClass('payments')}
+          onClick={() => setActiveTab('payments')}
+          aria-pressed={activeTab === 'payments'}
+        >
+          Pago Móvil
+        </button>
       </nav>
 
       <form onSubmit={handleSave} className="space-y-5">
@@ -268,6 +299,17 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
             onBannerRemove={clearBanner}
             isActive={isActive}
             onIsActiveChange={setIsActive}
+          />
+        )}
+
+        {activeTab === 'payments' && (
+          <PagoMovilTab
+            bank={pagoMovilBank}
+            onBankChange={setPagoMovilBank}
+            idNumber={pagoMovilIdNumber}
+            onIdNumberChange={setPagoMovilIdNumber}
+            phone={pagoMovilPhone}
+            onPhoneChange={setPagoMovilPhone}
           />
         )}
 
@@ -360,6 +402,86 @@ function GeneralTab({
             </option>
           ))}
         </select>
+      </div>
+    </div>
+  );
+}
+
+interface PagoMovilTabProps {
+  bank: string;
+  onBankChange: (value: string) => void;
+  idNumber: string;
+  onIdNumberChange: (value: string) => void;
+  phone: string;
+  onPhoneChange: (value: string) => void;
+}
+
+function PagoMovilTab({
+  bank,
+  onBankChange,
+  idNumber,
+  onIdNumberChange,
+  phone,
+  onPhoneChange,
+}: PagoMovilTabProps) {
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-500 rounded-lg bg-indigo-50 border border-indigo-100 px-3 py-2">
+        Estos datos se muestran al cliente en el checkout cuando elige pagar con Pago Móvil.
+      </p>
+      <div>
+        <label
+          htmlFor="pago-movil-bank"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Banco
+        </label>
+        <input
+          id="pago-movil-bank"
+          type="text"
+          list="pago-movil-banks"
+          value={bank}
+          onChange={(e) => onBankChange(e.target.value)}
+          placeholder="Ej. Banesco"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+        />
+        <datalist id="pago-movil-banks">
+          {PAGO_MOVIL_BANKS.map((bankName) => (
+            <option key={bankName} value={bankName} />
+          ))}
+        </datalist>
+      </div>
+      <div>
+        <label
+          htmlFor="pago-movil-id-number"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Cédula / RIF
+        </label>
+        <input
+          id="pago-movil-id-number"
+          type="text"
+          value={idNumber}
+          onChange={(e) => onIdNumberChange(e.target.value)}
+          placeholder="Ej. J-123456789"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+        />
+      </div>
+      <div>
+        <label
+          htmlFor="pago-movil-phone"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Teléfono para Pago Móvil
+        </label>
+        <input
+          id="pago-movil-phone"
+          type="tel"
+          value={phone}
+          onChange={(e) => onPhoneChange(e.target.value)}
+          placeholder="Ej. 0412-1234567"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+        />
       </div>
     </div>
   );
