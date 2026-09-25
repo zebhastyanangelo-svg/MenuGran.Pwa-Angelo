@@ -129,6 +129,26 @@ describe('AuthForm', () => {
     expect(signInWithGoogle).toHaveBeenCalledTimes(1);
   });
 
+  it('propaga la ruta "from" al inicio de sesión social con Google', async () => {
+    const user = userEvent.setup();
+    signInWithGoogle.mockResolvedValueOnce(undefined);
+    renderWithRouter('login', '/admin');
+
+    await user.click(screen.getByRole('button', { name: /Continuar con Google/i }));
+
+    expect(signInWithGoogle).toHaveBeenCalledWith('/admin');
+  });
+
+  it('inicia el login social sin ruta forzada cuando no hay "from"', async () => {
+    const user = userEvent.setup();
+    signInWithGoogle.mockResolvedValueOnce(undefined);
+    renderWithRouter('login', null);
+
+    await user.click(screen.getByRole('button', { name: /Continuar con Google/i }));
+
+    expect(signInWithGoogle).toHaveBeenCalledWith(null);
+  });
+
   it('muestra spinner y deshabilita el botón de Google mientras carga', async () => {
     signInWithGoogle.mockImplementation(() => new Promise(() => {}));
     renderWithRouter('login');
@@ -199,7 +219,7 @@ describe('AuthForm', () => {
     });
   });
 
-  it('redirige al panel del comercio tras login de merchant_owner sin ruta "from"', async () => {
+  it('redirige al panel del comercio (/admin) tras login de merchant_owner sin ruta "from"', async () => {
     const user = userEvent.setup();
     signInWithPassword.mockResolvedValueOnce(undefined);
     fetchCurrentSessionRole.mockResolvedValue('merchant_owner');
@@ -211,11 +231,58 @@ describe('AuthForm', () => {
 
     expect(fetchCurrentSessionRole).toHaveBeenCalled();
     await waitFor(() => {
-      expect(navigate).toHaveBeenCalledWith('/merchant/dashboard', { replace: true });
+      expect(navigate).toHaveBeenCalledWith('/admin', { replace: true });
     });
   });
 
-  it('redirige al marketplace tras login de cliente sin ruta "from"', async () => {
+  it('redirige al panel del comercio (/admin) tras login de merchant_staff sin ruta "from"', async () => {
+    const user = userEvent.setup();
+    signInWithPassword.mockResolvedValueOnce(undefined);
+    fetchCurrentSessionRole.mockResolvedValue('merchant_staff');
+    renderWithRouter('login', null);
+
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'empleado@pizzeria.com');
+    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.click(screen.getByTestId('login-submit'));
+
+    expect(fetchCurrentSessionRole).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('/admin', { replace: true });
+    });
+  });
+
+  it('redirige al panel de entregas (/driver/deliveries) tras login de driver sin ruta "from"', async () => {
+    const user = userEvent.setup();
+    signInWithPassword.mockResolvedValueOnce(undefined);
+    fetchCurrentSessionRole.mockResolvedValue('driver');
+    renderWithRouter('login', null);
+
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'driver@menugram.com');
+    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.click(screen.getByTestId('login-submit'));
+
+    expect(fetchCurrentSessionRole).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('/driver/deliveries', { replace: true });
+    });
+  });
+
+  it('no devuelve al driver a rutas de comercio aunque vengan en "from"', async () => {
+    const user = userEvent.setup();
+    signInWithPassword.mockResolvedValueOnce(undefined);
+    fetchCurrentSessionRole.mockResolvedValue('driver');
+    renderWithRouter('login', '/admin');
+
+    await user.type(screen.getByLabelText(/Correo electrónico/i), 'driver@menugram.com');
+    await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
+    await user.click(screen.getByTestId('login-submit'));
+
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('/driver/deliveries', { replace: true });
+    });
+  });
+
+  it('redirige al home del cliente (/) tras login de cliente sin ruta "from"', async () => {
     const user = userEvent.setup();
     signInWithPassword.mockResolvedValueOnce(undefined);
     fetchCurrentSessionRole.mockResolvedValue('customer');
@@ -226,7 +293,7 @@ describe('AuthForm', () => {
     await user.click(screen.getByTestId('login-submit'));
 
     await waitFor(() => {
-      expect(navigate).toHaveBeenCalledWith('/marketplace', { replace: true });
+      expect(navigate).toHaveBeenCalledWith('/', { replace: true });
     });
   });
 
@@ -272,10 +339,10 @@ describe('AuthForm', () => {
     expect(screen.getByText(/WhatsApp/i)).toBeInTheDocument();
   });
 
-  it('redirige al marketplace tras registro exitoso de cliente', async () => {
+  it('redirige al home del cliente (/) tras registro exitoso de cliente', async () => {
     const user = userEvent.setup();
     signUpWithPassword.mockResolvedValueOnce({ needsEmailConfirmation: false });
-    renderWithRouter('register');
+    renderWithRouter('register', null);
 
     await user.type(screen.getByLabelText(/Nombre completo/i), 'Usuario Test');
     await user.type(screen.getByLabelText(/Correo electrónico/i), 'test@example.com');
@@ -291,7 +358,7 @@ describe('AuthForm', () => {
       'customer',
     );
     await waitFor(() => {
-      expect(navigate).toHaveBeenCalledWith('/marketplace', { replace: true });
+      expect(navigate).toHaveBeenCalledWith('/', { replace: true });
     });
   });
 

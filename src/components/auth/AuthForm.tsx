@@ -112,7 +112,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     setError(null);
     setShowConfirmationBanner(false);
     try {
-      await signInWithGoogle();
+      await signInWithGoogle(requestedFrom);
     } catch (err) {
       setError(resolveAuthErrorMessage(err));
     } finally {

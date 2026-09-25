@@ -17,10 +17,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshProfile = useCallback(async (userId: string): Promise<void> => {
-    const currentProfile = await fetchProfile(userId);
-    setProfile(currentProfile);
-  }, []);
+  const refreshProfile = useCallback(
+    async (userId: string, email: string | null = null): Promise<void> => {
+      const currentProfile = await fetchProfile(userId, email);
+      setProfile(currentProfile);
+    },
+    [],
+  );
 
   const handleAuthEvent = useCallback(
     (event: AuthChangeEvent, nextSession: Session | null): void => {
@@ -29,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         case 'SIGNED_IN':
           setSession(nextSession);
           if (nextSession?.user !== undefined) {
-            void refreshProfile(nextSession.user.id);
+            void refreshProfile(nextSession.user.id, nextSession.user.email ?? null);
           }
           break;
         case 'TOKEN_REFRESHED':
@@ -38,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         case 'USER_UPDATED':
           setSession(nextSession);
           if (nextSession?.user !== undefined) {
-            void refreshProfile(nextSession.user.id);
+            void refreshProfile(nextSession.user.id, nextSession.user.email ?? null);
           }
           break;
         case 'SIGNED_OUT':
@@ -61,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.session?.user !== undefined) {
         // Esperar el perfil antes de quitar el estado de carga para que las
         // guardias de ruta validen el rol real desde el primer render.
-        await refreshProfile(data.session.user.id);
+        await refreshProfile(data.session.user.id, data.session.user.email ?? null);
       }
       if (!isMounted) return;
       setIsLoading(false);
@@ -79,18 +82,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [handleAuthEvent, refreshProfile]);
 
-  const signInWithGoogle = useCallback(async (): Promise<void> => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: `${window.location.origin}/marketplace` },
-      });
-      if (error !== null) throw error;
-    } catch (error) {
-      console.error('Error al iniciar sesión con Google', error);
-      throw error;
-    }
-  }, []);
+  const signInWithGoogle = useCallback(
+    async (redirectPath?: string | null): Promise<void> => {
+      try {
+        // Se aterriza en '/' para que el router resuelva por rol real del
+        // perfil (owner/staff → /admin, driver → /driver/deliveries, etc.).
+        const fromQuery =
+          redirectPath !== undefined && redirectPath !== null && redirectPath !== ''
+            ? `?from=${encodeURIComponent(redirectPath)}`
+            : '';
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: `${window.location.origin}/${fromQuery}` },
+        });
+        if (error !== null) throw error;
+      } catch (error) {
+        console.error('Error al iniciar sesión con Google', error);
+        throw error;
+      }
+    },
+    [],
+  );
 
   const signInWithPassword = useCallback(
     async (email: string, password: string): Promise<void> => {

@@ -4,12 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import type { ProfileRow } from '../types/database';
 import { AuthProvider } from './AuthContext';
-import { fetchProfile } from './auth-profile';
+import { fetchCurrentSessionRole, fetchProfile } from './auth-profile';
 import { useAuth } from '../hooks/useAuth';
 
 const authMocks = vi.hoisted(() => ({
   onAuthStateChange: vi.fn(),
   getSession: vi.fn(),
+  getUser: vi.fn(),
   signInWithOAuth: vi.fn(),
   signInWithPassword: vi.fn(),
   signUp: vi.fn(),
@@ -23,6 +24,7 @@ vi.mock('../services/supabase', () => ({
     auth: {
       onAuthStateChange: authMocks.onAuthStateChange,
       getSession: authMocks.getSession,
+      getUser: authMocks.getUser,
       signInWithOAuth: authMocks.signInWithOAuth,
       signInWithPassword: authMocks.signInWithPassword,
       signUp: authMocks.signUp,
@@ -67,6 +69,17 @@ function mockProfileQuery(result: {
   authMocks.from.mockReturnValue({ select });
 }
 
+function mockProfileQuerySequence(
+  responses: Array<{ data: ProfileRow | null; error: unknown }>,
+): void {
+  responses.forEach((result) => {
+    const single = vi.fn().mockResolvedValue(result);
+    const eq = vi.fn(() => ({ single }));
+    const select = vi.fn(() => ({ eq }));
+    authMocks.from.mockReturnValueOnce({ select });
+  });
+}
+
 function AuthProbe() {
   const auth = useAuth();
   return (
@@ -83,6 +96,13 @@ function AuthProbe() {
       <button onClick={() => void auth.signInWithGoogle().catch(() => undefined)}>
           Continuar con Google
         </button>
+      <button
+        onClick={() =>
+          void auth.signInWithGoogle('/orders/o-1').catch(() => undefined)
+        }
+      >
+        Continuar con Google con origen
+      </button>
       <button
         onClick={() =>
           void auth.signUpWithPassword('a@b.com', 'secret', 'Test User', 'customer')
@@ -116,6 +136,70 @@ describe('fetchProfile', () => {
     mockProfileQuery({ data: null, error: { message: 'row level security' } });
 
     await expect(fetchProfile('user-123')).resolves.toBeNull();
+
+    consoleError.mockRestore();
+  });
+
+  it('conserva el rol corporativo buscando por email cuando el id de OAuth no coincide', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    const corporateProfile = buildProfile('owner-pre-creado', 'merchant_owner');
+    mockProfileQuerySequence([
+      { data: null, error: { message: 'no rows', code: 'PGRST116' } },
+      { data: corporateProfile, error: null },
+    ]);
+
+    await expect(
+      fetchProfile('google-uid-nuevo', 'owner-pre-creado@menugram.com'),
+    ).resolves.toEqual(corporateProfile);
+
+    consoleError.mockRestore();
+  });
+
+  it('no consulta por email cuando el perfil ya se resolvió por id', async () => {
+    authMocks.from.mockClear();
+    const profile = buildProfile('user-123', 'driver');
+    mockProfileQuery({ data: profile, error: null });
+
+    await expect(
+      fetchProfile('user-123', 'user-123@menugram.com'),
+    ).resolves.toEqual(profile);
+    expect(authMocks.from).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('fetchCurrentSessionRole', () => {
+  it('devuelve null cuando no hay sesión activa', async () => {
+    authMocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
+
+    await expect(fetchCurrentSessionRole()).resolves.toBeNull();
+  });
+
+  it('devuelve el rol del perfil de la sesión activa', async () => {
+    authMocks.getUser.mockResolvedValue({
+      data: { user: { id: 'user-123', email: 'user-123@menugram.com' } },
+      error: null,
+    });
+    mockProfileQuery({ data: buildProfile('user-123', 'merchant_staff'), error: null });
+
+    await expect(fetchCurrentSessionRole()).resolves.toBe('merchant_staff');
+  });
+
+  it('mantiene el rol corporativo pre-asignado al entrar con Google y otro uid', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    authMocks.getUser.mockResolvedValue({
+      data: { user: { id: 'google-uid-nuevo', email: 'driver@menugram.com' } },
+      error: null,
+    });
+    mockProfileQuerySequence([
+      { data: null, error: { message: 'no rows', code: 'PGRST116' } },
+      { data: buildProfile('driver-pre-creado', 'driver'), error: null },
+    ]);
+
+    await expect(fetchCurrentSessionRole()).resolves.toBe('driver');
 
     consoleError.mockRestore();
   });
@@ -257,7 +341,7 @@ describe('AuthProvider', () => {
     });
   });
 
-  it('llama a signInWithOAuth con provider google y redirectTo del marketplace', async () => {
+  it('llama a signInWithOAuth con provider google y redirectTo a la raíz (resolución por rol)', async () => {
     authMocks.signInWithOAuth.mockResolvedValue({
       data: { url: null, provider: 'google' },
       error: null,
@@ -273,7 +357,31 @@ describe('AuthProvider', () => {
 
     expect(authMocks.signInWithOAuth).toHaveBeenCalledWith({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/marketplace` },
+      options: { redirectTo: `${window.location.origin}/` },
+    });
+  });
+
+  it('incluye la ruta "from" en el redirectTo del login social cuando se indica', async () => {
+    authMocks.signInWithOAuth.mockResolvedValue({
+      data: { url: null, provider: 'google' },
+      error: null,
+    });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Continuar con Google con origen' }),
+    );
+
+    expect(authMocks.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/?from=${encodeURIComponent('/orders/o-1')}`,
+      },
     });
   });
 

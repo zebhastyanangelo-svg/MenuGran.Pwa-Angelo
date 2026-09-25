@@ -10,7 +10,7 @@ export interface AuthContextValue {
   user: User | null;
   profile: ProfileRow | null;
   isLoading: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (redirectPath?: string | null) => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUpWithPassword: (
     email: string,

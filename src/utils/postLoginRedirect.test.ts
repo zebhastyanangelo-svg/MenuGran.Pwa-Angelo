@@ -15,18 +15,22 @@ describe('getPostLoginPath', () => {
 
   it('redirige al panel del comercio cuando el rol es merchant_owner', () => {
     expect(getPostLoginPath(null, 'merchant_owner')).toBe(MERCHANT_HOME);
-    expect(getPostLoginPath(null, 'merchant_owner')).toBe(
-      '/merchant/dashboard',
-    );
+    expect(getPostLoginPath(null, 'merchant_owner')).toBe('/admin');
   });
 
-  it('redirige al panel de reparto cuando el rol es driver', () => {
+  it('redirige al panel del comercio cuando el rol es merchant_staff', () => {
+    expect(getPostLoginPath(null, 'merchant_staff')).toBe(MERCHANT_HOME);
+    expect(getPostLoginPath(null, 'merchant_staff')).toBe('/admin');
+  });
+
+  it('redirige al panel de entregas cuando el rol es driver', () => {
     expect(getPostLoginPath(null, 'driver')).toBe(DRIVER_HOME);
-    expect(getPostLoginPath(null, 'driver')).toBe('/driver');
+    expect(getPostLoginPath(null, 'driver')).toBe('/driver/deliveries');
   });
 
-  it('mantiene el marketplace como destino por defecto del cliente', () => {
+  it('mantiene la raíz como home del cliente (resuelta al marketplace)', () => {
     expect(getPostLoginPath(null, 'customer')).toBe(CUSTOMER_HOME);
+    expect(getPostLoginPath(null, 'customer')).toBe('/');
     expect(getPostLoginPath(null, null)).toBe(CUSTOMER_HOME);
   });
 
@@ -40,7 +44,7 @@ describe('getPostLoginPath', () => {
     expect(getPostLoginPath('/orders/123', 'driver')).toBe('/orders/123');
   });
 
-  it('redirige al driver a /admin cuando "from" es ruta de comercio', () => {
+  it('redirige al driver a su panel cuando "from" es ruta de comercio', () => {
     expect(getPostLoginPath('/admin', 'driver')).toBe(DRIVER_HOME);
     expect(getPostLoginPath('/admin/dishes', 'driver')).toBe(DRIVER_HOME);
     expect(getPostLoginPath('/merchant/dashboard', 'driver')).toBe(DRIVER_HOME);
@@ -53,6 +57,7 @@ describe('getPostLoginPath', () => {
     expect(getPostLoginPath('', 'superadmin')).toBe(SUPER_ADMIN_HOME);
     expect(getPostLoginPath('', 'customer')).toBe(CUSTOMER_HOME);
     expect(getPostLoginPath('', 'merchant_owner')).toBe(MERCHANT_HOME);
+    expect(getPostLoginPath('', 'merchant_staff')).toBe(MERCHANT_HOME);
     expect(getPostLoginPath('', 'driver')).toBe(DRIVER_HOME);
   });
 

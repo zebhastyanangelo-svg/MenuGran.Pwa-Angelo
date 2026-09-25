@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -14,6 +14,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/layout/Layout';
 import { CartFab } from './components/cart/CartFab';
 import { supabase, TABLE_NAMES } from './services/supabase';
+import { CUSTOMER_HOME, getPostLoginPath } from './utils/postLoginRedirect';
 
 const LoginPage = lazy(() => import('./pages/LoginPage').then((mod) => ({ default: mod.LoginPage })));
 const RegisterPage = lazy(() => import('./pages/RegisterPage').then((mod) => ({ default: mod.RegisterPage })));
@@ -60,6 +61,7 @@ const DriverDeliveriesPage = lazy(() =>
 function RootRedirect() {
   const { user, profile, isLoading } = useAuth();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   const isMerchantRole =
     profile?.role === 'merchant_owner' || profile?.role === 'merchant_staff';
@@ -105,16 +107,7 @@ function RootRedirect() {
   }
 
   if (location.pathname === '/') {
-    if (profile.role === 'customer') {
-      return <Navigate to="/marketplace" replace />;
-    }
-    if (profile.role === 'superadmin') {
-      return <Navigate to="/super-admin/dashboard" replace />;
-    }
-    if (profile.role === 'driver') {
-      return <Navigate to="/driver/deliveries" replace />;
-    }
-    // Merchant roles: only redirect to admin if they actually have a merchant
+    // Merchant roles: solo van al panel si realmente tienen un comercio.
     if (isMerchantRole) {
       if (isMerchantChecking) {
         return <PageLoader message="Verificando comercio..." />;
@@ -123,7 +116,11 @@ function RootRedirect() {
         return <Navigate to="/marketplace" replace />;
       }
     }
-    return <Navigate to="/admin" replace />;
+    // Destino por rol real (u origen "from" si el login lo indicó, p. ej. OAuth).
+    const target = getPostLoginPath(searchParams.get('from'), profile.role);
+    // El home del cliente es la raíz abstracta; aquí se materializa en el
+    // marketplace para no re-renderizar el propio RootRedirect en bucle.
+    return <Navigate to={target === CUSTOMER_HOME ? '/marketplace' : target} replace />;
   }
 
   return <Navigate to="/login" replace />;

@@ -135,6 +135,52 @@ describe('App Router Integration', () => {
     expect(await screen.findByPlaceholderText(/Buscar comercios o platillos/i, {}, { timeout: 30000 })).toBeInTheDocument();
   }, 45000);
 
+  it('redirige al superadmin a su panel al aterrizar en la raíz tras login social', async () => {
+    setAuth({
+      ...baseAuthValue,
+      user: { id: 'admin-1', email: 'admin@menugram.com' } as never,
+      profile: {
+        id: 'admin-1',
+        role: 'superadmin',
+        email: 'admin@menugram.com',
+        full_name: null,
+        avatar_url: null,
+        created_at: '',
+        updated_at: '',
+      },
+    });
+
+    window.history.pushState({}, '', '/');
+    render(<App />);
+
+    expect(
+      await screen.findByRole('heading', { name: /Métricas Globales/i }, { timeout: 30000 }),
+    ).toBeInTheDocument();
+  }, 45000);
+
+  it('honra la ruta "from" al aterrizar en la raíz tras login social', async () => {
+    setAuth({
+      ...baseAuthValue,
+      user: { id: 'user-oauth', email: 'user-oauth@example.com' } as never,
+      profile: {
+        id: 'user-oauth',
+        role: 'customer',
+        email: 'user-oauth@example.com',
+        full_name: 'OAuth User',
+        avatar_url: null,
+        created_at: '',
+        updated_at: '',
+      },
+    });
+
+    window.history.pushState({}, '', `/?from=${encodeURIComponent('/checkout')}`);
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Finalizar pedido/i)).toBeInTheDocument();
+    }, { timeout: 30000 });
+  }, 45000);
+
   it('renders marketplace page on root path', async () => {
     setAuth(baseAuthValue);
 
