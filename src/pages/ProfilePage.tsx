@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { LogOut, Mail, UserCircle2, Phone, CreditCard, Save, Loader2 } from 'lucide-react';
+import { LogOut, Mail, UserCircle2, Phone, CreditCard, Save, Loader2, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useUpdateProfile, type ProfileUpdatePayload } from '../hooks/useUpdateProfile';
@@ -7,8 +7,10 @@ import { useUpdateProfile, type ProfileUpdatePayload } from '../hooks/useUpdateP
 export function ProfilePage() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
-  const { updateProfile, isSaving, error: saveError } = useUpdateProfile();
+  const { updateProfile, deleteAccount, isSaving, isDeleting, error: saveError } = useUpdateProfile();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
 
   const [fullName, setFullName] = useState(profile?.full_name ?? '');
   const [ci, setCi] = useState(profile?.ci ?? '');
@@ -44,6 +46,30 @@ export function ProfilePage() {
       navigate('/login', { replace: true });
     } finally {
       setIsLoggingOut(false);
+    }
+  };
+
+  const openDeleteModal = () => {
+    setConfirmText('');
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setConfirmText('');
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (confirmText !== 'ELIMINAR' || user === null) return;
+    try {
+      await deleteAccount(user.id);
+      // clear local storage and redirect home
+      localStorage.clear();
+      navigate('/', { replace: true });
+    } catch {
+      // error handled by hook
+    } finally {
+      closeDeleteModal();
     }
   };
 
@@ -147,6 +173,28 @@ export function ProfilePage() {
           </button>
         </form>
 
+        {/* Zona de peligro */}
+        <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-red-700">
+            <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+            Zona de peligro
+          </h3>
+          <p className="mb-3 text-sm text-red-600">
+            Esta acción es irreversible. Se eliminarán tus datos personales y se cerrará tu sesión.
+          </p>
+          <button
+            type="button"
+            onClick={openDeleteModal}
+            disabled={isDeleting}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isDeleting ? (
+              <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+            ) : null}
+            Eliminar mi cuenta
+          </button>
+        </div>
+
         <button
           type="button"
           onClick={() => void handleLogout()}
@@ -156,6 +204,54 @@ export function ProfilePage() {
           <LogOut className="h-5 w-5" aria-hidden="true" />
           {isLoggingOut ? 'Cerrando sesión...' : 'Cerrar sesión'}
         </button>
+
+        {/* Modal de confirmación */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <div className="fixed inset-0 bg-black/50 transition-opacity" aria-hidden="true" onClick={closeDeleteModal} />
+              <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                <h2 id="delete-modal-title" className="mb-4 flex items-center gap-2 text-lg font-bold text-red-700">
+                  <AlertTriangle className="h-6 w-6" aria-hidden="true" />
+                  Confirmar eliminación
+                </h2>
+                <p className="mb-4 text-sm text-slate-600">
+                  Escribe <strong>ELIMINAR</strong> en el campo de abajo para confirmar que deseas borrar tu cuenta permanentemente.
+                </p>
+                <label className="block">
+                  <input
+                    type="text"
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    placeholder="ELIMINAR"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base font-semibold text-slate-900 outline-none transition focus:border-brand-red focus:ring-2 focus:ring-brand-red/20"
+                    autoFocus
+                  />
+                </label>
+                <div className="mt-5 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={closeDeleteModal}
+                    className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-base font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteConfirm}
+                    disabled={confirmText !== 'ELIMINAR' || isDeleting}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                    ) : null}
+                    Eliminar definitivamente
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

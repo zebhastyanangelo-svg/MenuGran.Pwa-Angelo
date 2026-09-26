@@ -10,7 +10,9 @@ export interface ProfileUpdatePayload {
 
 export interface UseUpdateProfileResult {
   updateProfile: (userId: string, payload: ProfileUpdatePayload) => Promise<ProfileRow>;
+  deleteAccount: (userId: string) => Promise<void>;
   isSaving: boolean;
+  isDeleting: boolean;
   error: string | null;
 }
 
@@ -32,6 +34,7 @@ async function checkCiUnique(ci: string, excludeUserId: string): Promise<void> {
 
 export function useUpdateProfile(): UseUpdateProfileResult {
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const updateProfile = useCallback(
@@ -72,5 +75,33 @@ export function useUpdateProfile(): UseUpdateProfileResult {
     [],
   );
 
-  return { updateProfile, isSaving, error };
+  const deleteAccount = useCallback(
+    async (userId: string): Promise<void> => {
+      setIsDeleting(true);
+      setError(null);
+      try {
+        // Delete profile row
+        const { error: deleteError } = await supabase
+          .from(TABLE_NAMES.profiles)
+          .delete()
+          .eq('id', userId);
+
+        if (deleteError !== null) {
+          throw new Error(deleteError.message);
+        }
+
+        // Sign out the user (revokes session)
+        await supabase.auth.signOut();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Error al eliminar la cuenta';
+        setError(message);
+        throw err;
+      } finally {
+        setIsDeleting(false);
+      }
+    },
+    [],
+  );
+
+  return { updateProfile, deleteAccount, isSaving, isDeleting, error };
 }
