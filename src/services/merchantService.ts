@@ -18,6 +18,8 @@ export interface CreateMerchantPayload {
   phone_whatsapp: string;
   service_modalities: ServiceModality;
   business_hours: BusinessHours;
+  opening_time?: string | null;
+  closing_time?: string | null;
   logo_file?: File | null;
   banner_file?: File | null;
   logo_url?: string | null;
@@ -49,7 +51,7 @@ export async function createMerchant(
     banner_url = uploadedBanner;
   }
 
-  const { data, error } = await supabase
+const { data, error } = await supabase
     .from('merchants')
     .insert({
       owner_id: user.id,
@@ -62,6 +64,8 @@ export async function createMerchant(
       phone_whatsapp: payload.phone_whatsapp,
       service_modalities: payload.service_modalities,
       business_hours: payload.business_hours,
+      opening_time: payload.opening_time ?? null,
+      closing_time: payload.closing_time ?? null,
       logo_url,
       banner_url,
       status: 'pending_approval',

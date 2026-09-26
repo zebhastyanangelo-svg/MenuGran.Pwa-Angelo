@@ -204,9 +204,9 @@ export async function createEmployee(
   const validationError = validateEmployeeInput(input);
   if (validationError !== null) throw new Error(validationError);
 
-  const headers = await getAuthenticatedFunctionHeaders();
-  const { data, error, response } =
-    await supabase.functions.invoke<{ staffId?: string }>('create-employee', {
+  async function invokeWithAuth() {
+    const headers = await getAuthenticatedFunctionHeaders();
+    return supabase.functions.invoke<{ staffId?: string }>('create-employee', {
       headers,
       body: {
         merchantId,
@@ -220,6 +220,14 @@ export async function createEmployee(
             : toStaffPermissions(input.permissions),
       },
     });
+  }
+
+  let { data, error, response } = await invokeWithAuth();
+  if (error !== null && error.message?.includes('missing-session')) {
+    // Intentar refrescar la sesión y reintentar una vez
+    await supabase.auth.refreshSession();
+    ({ data, error, response } = await invokeWithAuth());
+  }
   if (error !== null) {
     const serverMessage = await readFunctionError(response);
     throw new Error(

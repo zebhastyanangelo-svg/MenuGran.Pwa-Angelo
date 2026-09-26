@@ -74,6 +74,8 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
   const [pagoMovilIdNumber, setPagoMovilIdNumber] = useState('');
   const [pagoMovilPhone, setPagoMovilPhone] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [openingTime, setOpeningTime] = useState('');
+  const [closingTime, setClosingTime] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -91,6 +93,8 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
       setPagoMovilBank(merchant.pago_movil_bank ?? '');
       setPagoMovilIdNumber(merchant.pago_movil_id_number ?? '');
       setPagoMovilPhone(merchant.pago_movil_phone ?? '');
+      setOpeningTime(merchant.opening_time ?? '');
+      setClosingTime(merchant.closing_time ?? '');
     }
   }, [merchant]);
 
@@ -153,6 +157,8 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
         pago_movil_bank: pagoMovilBank.trim() || null,
         pago_movil_id_number: pagoMovilIdNumber.trim() || null,
         pago_movil_phone: pagoMovilPhone.trim() || null,
+        opening_time: openingTime || null,
+        closing_time: closingTime || null,
       };
 
       await saveSettings(updates);
@@ -299,6 +305,10 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
             onBannerRemove={clearBanner}
             isActive={isActive}
             onIsActiveChange={setIsActive}
+            openingTime={openingTime}
+            onOpeningTimeChange={setOpeningTime}
+            closingTime={closingTime}
+            onClosingTimeChange={setClosingTime}
           />
         )}
 
@@ -496,6 +506,10 @@ interface IdentityTabProps {
   onBannerRemove: () => void;
   isActive: boolean;
   onIsActiveChange: (value: boolean) => void;
+  openingTime: string;
+  onOpeningTimeChange: (value: string) => void;
+  closingTime: string;
+  onClosingTimeChange: (value: string) => void;
 }
 
 function IdentityTab({
@@ -507,6 +521,10 @@ function IdentityTab({
   onBannerRemove,
   isActive,
   onIsActiveChange,
+  openingTime,
+  onOpeningTimeChange,
+  closingTime,
+  onClosingTimeChange,
 }: IdentityTabProps) {
   return (
     <div className="space-y-5">
@@ -534,6 +552,39 @@ function IdentityTab({
           onFileChange={onBannerChange}
           onRemove={onBannerRemove}
         />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label
+            htmlFor="merchant-opening-time"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Hora de Apertura
+          </label>
+          <input
+            id="merchant-opening-time"
+            type="time"
+            value={openingTime}
+            onChange={(e) => onOpeningTimeChange(e.target.value)}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="merchant-closing-time"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Hora de Cierre
+          </label>
+          <input
+            id="merchant-closing-time"
+            type="time"
+            value={closingTime}
+            onChange={(e) => onClosingTimeChange(e.target.value)}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+          />
+        </div>
       </div>
 
       <div className="flex items-center gap-3">

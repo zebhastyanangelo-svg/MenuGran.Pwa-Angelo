@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Store, Bike, Smartphone, CreditCard, Banknote } from 'lucide-react';
 import { Button } from '../components/ui/Button';
@@ -12,6 +12,8 @@ import { compressImage } from '../utils/imageCompressor';
 import type { GeoPoint, OrderType, PaymentMethod } from '../types/database';
 import type { MerchantPagoMovilInfo } from '../services/merchantPaymentService';
 import { createOrder, uploadPaymentProofTemp } from '../services/checkoutService';
+import { supabase } from '../services/supabase';
+import { isMerchantOpenNow } from '../utils/dateUtils';
 
 type CheckoutPaymentMethod = Extract<PaymentMethod, 'pago_movil' | 'card_pos' | 'cash'>;
 
@@ -69,6 +71,34 @@ export function Checkout() {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const { pagoMovil } = useMerchantPagoMovil(merchantId);
+  const [isOpenNow, setIsOpenNow] = useState(true);
+  const [openingTimeStr, setOpeningTimeStr] = useState('');
+  const [closingTimeStr, setClosingTimeStr] = useState('');
+
+  useEffect(() => {
+    if (!merchantId) return;
+    let cancelled = false;
+    supabase
+      .from('merchants')
+      .select('opening_time, closing_time')
+      .eq('id', merchantId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error('Error fetching merchant hours', error);
+          return;
+        }
+        if (data) {
+          setOpeningTimeStr(data.opening_time ?? '');
+          setClosingTimeStr(data.closing_time ?? '');
+          setIsOpenNow(isMerchantOpenNow(data.opening_time, data.closing_time));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [merchantId]);
 
   const [orderType, setOrderType] = useState<OrderType>('delivery');
   const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>('pago_movil');
@@ -145,6 +175,25 @@ export function Checkout() {
       <div className="mx-auto max-w-lg p-4">
         <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700">
           <p className="font-medium">{validationError ?? 'Tu carrito no es válido.'}</p>
+          <Button
+            variant="outline"
+            className="mt-3"
+            onClick={() => navigate('/marketplace')}
+          >
+            Volver al menú
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isOpenNow) {
+    return (
+      <div className="mx-auto max-w-lg p-4">
+        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700">
+          <p className="font-medium">
+            El comercio se encuentra cerrado. Su horario de atención es de {openingTimeStr?.slice(0,5) ?? '--:--'} a {closingTimeStr?.slice(0,5) ?? '--:--'}.
+          </p>
           <Button
             variant="outline"
             className="mt-3"

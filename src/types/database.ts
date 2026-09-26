@@ -151,6 +151,10 @@ export interface MerchantRow {
   pago_movil_id_number?: string | null;
   /** Teléfono receptor de Pago Móvil (ej. '0412-1234567'). */
   pago_movil_phone?: string | null;
+  /** Hora de apertura (HH:mm). */
+  opening_time?: string | null;
+  /** Hora de cierre (HH:mm). */
+  closing_time?: string | null;
 }
 
 export interface MerchantStaffRow {
