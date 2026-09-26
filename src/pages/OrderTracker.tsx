@@ -30,25 +30,42 @@ interface ProductNameMap {
   [productId: string]: string;
 }
 
+function isValidGeoPoint(point: GeoPoint | null | undefined): point is GeoPoint {
+  return (
+    point !== null &&
+    point !== undefined &&
+    typeof point.x === 'number' &&
+    typeof point.y === 'number' &&
+    !isNaN(point.x) &&
+    !isNaN(point.y) &&
+    isFinite(point.x) &&
+    isFinite(point.y)
+  );
+}
+
 function buildDeliveryMarkers(
-  driverPos: GeoPoint,
+  driverPos: GeoPoint | null,
   destination: GeoPoint | null,
 ): MapMarker[] {
-  const markers: MapMarker[] = [
-    {
+  const markers: MapMarker[] = [];
+  
+  if (isValidGeoPoint(driverPos)) {
+    markers.push({
       id: 'driver',
       position: [driverPos.y, driverPos.x],
       title: 'Repartidor',
       subtitle: 'Ubicación en tiempo real',
-    },
-  ];
-  if (destination) {
+    });
+  }
+  
+  if (isValidGeoPoint(destination)) {
     markers.push({
       id: 'destination',
       position: [destination.y, destination.x],
       title: 'Destino de entrega',
     });
   }
+  
   return markers;
 }
 
@@ -423,7 +440,7 @@ export function OrderTracker() {
         </div>
       </div>
 
-      {order.status === 'on_the_way' && order.delivery_location && (
+      {order.status === 'on_the_way' && isValidGeoPoint(order.delivery_location) && (
         <section className="mb-8 bg-white rounded-lg shadow-md p-4 border border-gray-200">
           <div className="flex items-center gap-2 mb-3">
             <Navigation className="h-5 w-5 text-blue-600" />
@@ -433,20 +450,18 @@ export function OrderTracker() {
             <MapErrorBoundary fallbackMessage="No se pudo mostrar el mapa.">
               <MapView
                 markers={
-                  driverLocation
+                  isValidGeoPoint(driverLocation)
                     ? buildDeliveryMarkers(driverLocation, order.delivery_location)
-                    : [
-                        {
-                          id: 'destination',
-                          position: [order.delivery_location.y, order.delivery_location.x],
-                          title: 'Destino de entrega',
-                        },
-                      ]
+                    : buildDeliveryMarkers(null, order.delivery_location)
                 }
-                center={driverLocation ? [driverLocation.y, driverLocation.x] : [order.delivery_location.y, order.delivery_location.x]}
+                center={
+                  isValidGeoPoint(driverLocation)
+                    ? [driverLocation.y, driverLocation.x]
+                    : [order.delivery_location.y, order.delivery_location.x]
+                }
                 zoom={15}
                 routeRequest={
-                  driverLocation
+                  isValidGeoPoint(driverLocation)
                     ? {
                         from: [driverLocation.y, driverLocation.x],
                         to: [order.delivery_location.y, order.delivery_location.x],
@@ -456,7 +471,7 @@ export function OrderTracker() {
                 className="h-full w-full"
                 showFallback
                 fallbackMessage={
-                  driverLocation
+                  isValidGeoPoint(driverLocation)
                     ? 'Esperando ubicación del repartidor...'
                     : 'Mostrando destino de entrega.'
                 }

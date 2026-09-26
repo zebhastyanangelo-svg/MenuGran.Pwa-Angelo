@@ -1,6 +1,7 @@
 import { MapPin, Clock } from 'lucide-react';
 import type { MerchantRow } from '../../types/database';
 import { isMerchantOpenNow } from '../../utils/dateUtils';
+import { formatTimeRange } from '../../utils/format';
 
 export interface MerchantCardProps {
   merchant: MerchantRow;
@@ -61,7 +62,7 @@ export function MerchantCard({ merchant, onClick, distance }: MerchantCardProps)
             {merchant.opening_time && merchant.closing_time && (
               <span className="inline-flex items-center gap-0.5 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
                 <Clock className="h-3 w-3" aria-hidden="true" />
-                {merchant.opening_time.slice(0,5)} - {merchant.closing_time.slice(0,5)}
+                {formatTimeRange(merchant.opening_time, merchant.closing_time)}
               </span>
             )}
             <span

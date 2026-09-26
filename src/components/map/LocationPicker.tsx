@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import { MapPin } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
@@ -29,6 +29,8 @@ export interface LocationPickerProps {
   className?: string;
   /** Intenta obtener la ubicación del navegador automáticamente al montar. */
   autoLocate?: boolean;
+  /** Callback para actualizar la dirección de entrega tras geocodificación inversa. */
+  onAddressChange?: (address: string) => void;
 }
 
 function createMap(
@@ -86,17 +88,52 @@ const GEO_ERROR_MESSAGES: Record<number, string> = {
   3: 'El tiempo de obtención de ubicación se agotó.',
 };
 
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+      {
+        headers: {
+          'Accept-Language': 'es,en;q=0.9',
+        },
+      }
+    );
+    if (!response.ok) return '';
+    const data = await response.json();
+    if (data.display_name) return data.display_name;
+    
+    // Build address from components if display_name not available
+    const parts: string[] = [];
+    if (data.address?.road) parts.push(data.address.road);
+    if (data.address?.suburb) parts.push(data.address.suburb);
+    if (data.address?.neighbourhood) parts.push(data.address.neighbourhood);
+    if (data.address?.city) parts.push(data.address.city);
+    if (data.address?.state) parts.push(data.address.state);
+    return parts.join(', ');
+  } catch {
+    return '';
+  }
+}
+
 function applyDetectedLocation(
   position: GeolocationPosition,
   map: L.Map | null,
   markerRef: React.MutableRefObject<L.Marker | null>,
   onLocationChange: (location: GeoPoint | null) => void,
+  onAddressChange?: (address: string) => void,
 ): void {
   const { latitude, longitude } = position.coords;
   onLocationChange({ x: longitude, y: latitude });
   if (map !== null) {
     map.flyTo([latitude, longitude], USER_LOCATION_ZOOM);
     syncMarker([latitude, longitude], map, markerRef);
+  }
+  
+  // Perform reverse geocoding
+  if (onAddressChange) {
+    reverseGeocode(latitude, longitude).then((address) => {
+      if (address) onAddressChange(address);
+    });
   }
 }
 
@@ -106,6 +143,7 @@ export function LocationPicker({
   userLocation = null,
   className = 'h-64 w-full',
   autoLocate = false,
+  onAddressChange,
 }: LocationPickerProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -126,7 +164,7 @@ export function LocationPicker({
     geolocatePosition()
       .then((position) => {
         if (cancelled) return;
-        applyDetectedLocation(position, mapInstanceRef.current, markerRef, onLocationChange);
+        applyDetectedLocation(position, mapInstanceRef.current, markerRef, onLocationChange, onAddressChange);
       })
       .catch(() => {
         // Sin aviso: el usuario puede usar el botón "Usar mi ubicación".
@@ -135,7 +173,7 @@ export function LocationPicker({
     return () => {
       cancelled = true;
     };
-  }, [autoLocate, initialLocation, onLocationChange]);
+  }, [autoLocate, initialLocation, onLocationChange, onAddressChange]);
 
   useEffect(() => {
     if (mapRef.current === null || L === undefined) return;
@@ -183,17 +221,17 @@ export function LocationPicker({
     };
   }, []);
 
-  const handleDetectLocation = async () => {
+  const handleDetectLocation = useCallback(async () => {
     setIsLocating(true);
     try {
       const pos = await geolocatePosition();
-      applyDetectedLocation(pos, mapInstanceRef.current, markerRef, onLocationChange);
+      applyDetectedLocation(pos, mapInstanceRef.current, markerRef, onLocationChange, onAddressChange);
       showToast({
         title: 'Ubicación actualizada',
         message: 'Se centró el mapa en tu ubicación.',
         variant: 'success',
       });
-      } catch (err) {
+    } catch (err) {
       const code =
         err !== null && typeof err === 'object' && 'code' in err
           ? (err as { code: number }).code
@@ -210,7 +248,7 @@ export function LocationPicker({
     } finally {
       setIsLocating(false);
     }
-  };
+  }, [onLocationChange, onAddressChange, showToast]);
 
   return (
     <div className="relative">

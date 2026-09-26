@@ -48,6 +48,29 @@ export interface MapViewProps {
   fallbackMessage?: string;
 }
 
+function isValidLatLng(coords: [number, number] | null | undefined): coords is [number, number] {
+  return (
+    coords !== null &&
+    coords !== undefined &&
+    Array.isArray(coords) &&
+    coords.length === 2 &&
+    typeof coords[0] === 'number' &&
+    typeof coords[1] === 'number' &&
+    !isNaN(coords[0]) &&
+    !isNaN(coords[1]) &&
+    isFinite(coords[0]) &&
+    isFinite(coords[1]) &&
+    coords[0] >= -90 &&
+    coords[0] <= 90 &&
+    coords[1] >= -180 &&
+    coords[1] <= 180
+  );
+}
+
+function filterValidMarkers(markers: readonly MapMarker[]): MapMarker[] {
+  return markers.filter((marker) => isValidLatLng(marker.position));
+}
+
 export function MapView({
   markers = [],
   center,
@@ -67,7 +90,7 @@ export function MapView({
   const routeTo = routeRequest?.to;
 
   useEffect(() => {
-    if (routeFrom === undefined || routeTo === undefined) {
+    if (!isValidLatLng(routeFrom) || !isValidLatLng(routeTo)) {
       setResolvedRoute(null);
       return;
     }
@@ -84,10 +107,11 @@ export function MapView({
   const activeRoute = resolvedRoute ?? route ?? null;
 
   // Determine a center for the map if not explicitly provided
+  const validMarkers = filterValidMarkers(markers);
   const effectiveCenter = center ??
-    (markers[0]?.position) ??
-    userLocation ??
-    (activeRoute && activeRoute[0]) ??
+    (validMarkers[0]?.position) ??
+    (isValidLatLng(userLocation) ? userLocation : null) ??
+    (activeRoute && activeRoute.length > 0 && isValidLatLng(activeRoute[0]) ? activeRoute[0] : null) ??
     null;
 
   useEffect(() => {
@@ -122,7 +146,7 @@ export function MapView({
       }
     });
 
-    markers.forEach((marker) => {
+    validMarkers.forEach((marker) => {
       const markerIcon = (marker as any).icon ?? DEFAULT_ICON;
       const markerInstance = L.marker(marker.position, {
         icon: markerIcon,
@@ -144,7 +168,7 @@ export function MapView({
       });
     });
 
-    if (userLocation !== null) {
+    if (isValidLatLng(userLocation)) {
       const riderMarker = L.marker(userLocation, {
         icon: RIDER_ICON,
         title: 'Tu ubicación',
@@ -154,14 +178,17 @@ export function MapView({
     }
 
     if (activeRoute && activeRoute.length >= 2) {
-      L.polyline(activeRoute as [number, number][], {
-        color: '#3b82f6',
-        weight: 4,
-        opacity: 0.8,
-        dashArray: '8, 6',
-      }).addTo(map);
+      const validRouteCoords = activeRoute.filter(isValidLatLng);
+      if (validRouteCoords.length >= 2) {
+        L.polyline(validRouteCoords as [number, number][], {
+          color: '#3b82f6',
+          weight: 4,
+          opacity: 0.8,
+          dashArray: '8, 6',
+        }).addTo(map);
+      }
     }
-  }, [markers, center, zoom, userLocation, activeRoute]);
+  }, [validMarkers, center, zoom, userLocation, activeRoute]);
 
   // Invalidate size on mount and when container resizes (modal, tabs, etc.)
   useEffect(() => {
@@ -192,7 +219,8 @@ export function MapView({
   }, []);
 
   // Show fallback when no markers, no userLocation, no route, and no center override
-  const hasAnyData = markers.length > 0 || userLocation !== null || activeRoute !== null || routeRequest !== undefined;
+  const hasAnyData = validMarkers.length > 0 || isValidLatLng(userLocation) || 
+    (activeRoute !== null && activeRoute.length > 0) || isValidLatLng(center);
 
   if (!hasAnyData && showFallback) {
     return (

@@ -1,6 +1,6 @@
-import { useState, type FormEvent, useEffect } from 'react';
+import { useState, type FormEvent, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Store, Bike, Smartphone, CreditCard, Banknote } from 'lucide-react';
+import { MapPin, Store, Bike, Smartphone, CreditCard, Banknote, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { PaymentProofUploader } from '../components/cart/PaymentProofUploader';
 import { LocationPicker } from '../components/map/LocationPicker';
@@ -14,6 +14,7 @@ import type { MerchantPagoMovilInfo } from '../services/merchantPaymentService';
 import { createOrder, uploadPaymentProofTemp } from '../services/checkoutService';
 import { supabase } from '../services/supabase';
 import { isMerchantOpenNow } from '../utils/dateUtils';
+import { haversineDistance } from '../utils/distance';
 
 type CheckoutPaymentMethod = Extract<PaymentMethod, 'pago_movil' | 'card_pos' | 'cash'>;
 
@@ -74,13 +75,15 @@ export function Checkout() {
   const [isOpenNow, setIsOpenNow] = useState(true);
   const [openingTimeStr, setOpeningTimeStr] = useState('');
   const [closingTimeStr, setClosingTimeStr] = useState('');
+  const [merchantLocation, setMerchantLocation] = useState<GeoPoint | null>(null);
+  const [deliveryCoverageError, setDeliveryCoverageError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!merchantId) return;
     let cancelled = false;
     supabase
       .from('merchants')
-      .select('opening_time, closing_time')
+      .select('opening_time, closing_time, location')
       .eq('id', merchantId)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -93,6 +96,14 @@ export function Checkout() {
           setOpeningTimeStr(data.opening_time ?? '');
           setClosingTimeStr(data.closing_time ?? '');
           setIsOpenNow(isMerchantOpenNow(data.opening_time, data.closing_time));
+          if (data.location) {
+            const parsed = typeof data.location === 'string' 
+              ? JSON.parse(data.location) 
+              : data.location;
+            if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+              setMerchantLocation({ x: parsed.x, y: parsed.y });
+            }
+          }
         }
       });
     return () => {
@@ -112,6 +123,7 @@ export function Checkout() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
+    setDeliveryCoverageError(null);
 
     if (!canCheckout) {
       setError(validationError ?? 'No se puede continuar con el pedido.');
@@ -128,6 +140,18 @@ export function Checkout() {
     if (formError) {
       setError(formError);
       return;
+    }
+
+    // Validate delivery distance coverage (1km)
+    if (orderType === 'delivery' && deliveryLocation && merchantLocation) {
+      const distance = haversineDistance(deliveryLocation, merchantLocation).km;
+      const MAX_DELIVERY_RADIUS_KM = 1; // 1km coverage radius
+      if (distance > MAX_DELIVERY_RADIUS_KM) {
+        const errorMsg = `Tu dirección está a ${distance.toFixed(1)} km del comercio, fuera del radio de cobertura de ${MAX_DELIVERY_RADIUS_KM} km.`;
+        setDeliveryCoverageError(errorMsg);
+        setError(errorMsg);
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -169,6 +193,10 @@ export function Checkout() {
       setIsProcessing(false);
     }
   };
+
+  const handleAddressChange = useCallback((address: string) => {
+    setDeliveryAddress(address);
+  }, []);
 
   if (!canCheckout) {
     return (
@@ -297,7 +325,14 @@ export function Checkout() {
                 onLocationChange={setDeliveryLocation}
                 userLocation={null}
                 autoLocate
+                onAddressChange={handleAddressChange}
               />
+              {deliveryCoverageError && (
+                <p className="flex items-center gap-2 text-sm text-red-600" role="alert">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                  {deliveryCoverageError}
+                </p>
+              )}
               {deliveryLocation && (
                 <p className="text-xs text-slate-500" data-testid="delivery-coordinates">
                   Coordenadas: {deliveryLocation.y.toFixed(5)}, {deliveryLocation.x.toFixed(5)}
