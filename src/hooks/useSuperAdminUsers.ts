@@ -64,9 +64,12 @@ export function useSuperAdminUsers(): UseSuperAdminUsersResult {
 
       const mapped: SuperAdminUser[] = (data ?? []).map((row: any) => {
         let merchantName: string | null = null;
-        // merchant_owner: merchants via owner_id
-        if (row.merchants && row.merchants.name) {
-          merchantName = row.merchants.name;
+        // merchant_owner: merchants via owner_id (may be array)
+        const merchants = row.merchants;
+        if (Array.isArray(merchants) && merchants.length > 0 && merchants[0].name) {
+          merchantName = merchants[0].name;
+        } else if (merchants && typeof merchants === 'object' && merchants.name) {
+          merchantName = merchants.name;
         }
         // merchant_staff: merchant_staff -> merchant
         if (!merchantName && row.merchant_staff && row.merchant_staff.length > 0) {
