@@ -2,19 +2,34 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { useUpdateProfile } from './useUpdateProfile';
 
-const mockUpdate = vi.fn();
+const mockSelectSingle = vi.fn();
+const mockUpdateSingle = vi.fn();
 
 vi.mock('../services/supabase', () => ({
   supabase: {
-    from: vi.fn(() => ({
-      update: vi.fn(() => ({
-        eq: vi.fn(() => ({
+    from: vi.fn((table) => {
+      if (table === 'profiles') {
+        return {
           select: vi.fn(() => ({
-            single: vi.fn(() => mockUpdate()),
+            eq: vi.fn(() => ({
+              neq: vi.fn(() => ({
+                limit: vi.fn(() => ({
+                  single: mockSelectSingle,
+                })),
+              })),
+            })),
           })),
-        })),
-      })),
-    })),
+          update: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              select: vi.fn(() => ({
+                single: mockUpdateSingle,
+              })),
+            })),
+          })),
+        };
+      }
+      return {};
+    }),
   },
   TABLE_NAMES: { profiles: 'profiles' },
 }));
@@ -31,7 +46,11 @@ describe('useUpdateProfile', () => {
   });
 
   it('retorna error cuando la actualización falla', async () => {
-    mockUpdate.mockResolvedValue({ data: null, error: { message: 'fail' } });
+    // No duplicate CI
+    mockSelectSingle.mockResolvedValue({ data: null, error: null });
+    // Update fails
+    mockUpdateSingle.mockResolvedValue({ data: null, error: { message: 'fail' } });
+
     const { result } = renderHook(() => useUpdateProfile());
 
     await act(async () => {

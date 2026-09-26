@@ -19,6 +19,7 @@ const sampleUsers = [
     phone: '+584121234567',
     role: 'merchant_owner' as const,
     created_at: '2026-01-15T10:00:00Z',
+    merchant_name: 'Comercio Demo',
   },
   {
     id: 'u2',
@@ -28,6 +29,7 @@ const sampleUsers = [
     phone: null,
     role: 'customer' as const,
     created_at: '2026-03-20T14:00:00Z',
+    merchant_name: null,
   },
   {
     id: 'u3',
@@ -37,6 +39,7 @@ const sampleUsers = [
     phone: '+584129876543',
     role: 'driver' as const,
     created_at: '2026-06-10T08:00:00Z',
+    merchant_name: null,
   },
 ];
 

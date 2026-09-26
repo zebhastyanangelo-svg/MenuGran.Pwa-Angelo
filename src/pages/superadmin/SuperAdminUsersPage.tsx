@@ -154,6 +154,9 @@ export function SuperAdminUsersPage() {
                         Teléfono
                       </th>
                       <th className="px-4 py-3 font-medium text-slate-600">
+                        Comercio Asociado
+                      </th>
+                      <th className="px-4 py-3 font-medium text-slate-600">
                         Rol
                       </th>
                     </tr>
@@ -180,6 +183,11 @@ export function SuperAdminUsersPage() {
                         </td>
                         <td className="px-4 py-3 text-slate-600">
                           {user.phone ?? (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {user.merchant_name ?? (
                             <span className="text-slate-400">—</span>
                           )}
                         </td>
