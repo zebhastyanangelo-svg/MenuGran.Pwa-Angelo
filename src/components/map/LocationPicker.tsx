@@ -252,7 +252,7 @@ export function LocationPicker({
 
   return (
     <div className="relative">
-      <div ref={mapRef} className={className} />
+      <div ref={mapRef} className={`${className} z-0`} />
       <button
         type="button"
         onClick={handleDetectLocation}

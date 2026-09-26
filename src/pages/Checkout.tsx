@@ -97,9 +97,14 @@ export function Checkout() {
           setClosingTimeStr(data.closing_time ?? '');
           setIsOpenNow(isMerchantOpenNow(data.opening_time, data.closing_time));
           if (data.location) {
-            const parsed = typeof data.location === 'string' 
-              ? JSON.parse(data.location) 
-              : data.location;
+            let parsed = data.location;
+            if (typeof data.location === 'string') {
+              try {
+                parsed = JSON.parse(data.location);
+              } catch {
+                parsed = null;
+              }
+            }
             if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
               setMerchantLocation({ x: parsed.x, y: parsed.y });
             }

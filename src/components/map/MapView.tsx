@@ -230,7 +230,7 @@ export function MapView({
     );
   }
 
-  return <div ref={mapRef} className={className} />;
+  return <div ref={mapRef} className={`${className} z-0`} />;
 }
 
 export interface MerchantMapViewProps {

@@ -457,6 +457,21 @@ return (
                     <p className="text-sm font-medium text-gray-700">
                       Pago: {getPaymentMethodLabel(order.payment_method)}
                     </p>
+                    {order.profiles && (
+                      <p className="text-xs text-gray-500">
+                        Cliente: {order.profiles.full_name ?? 'Sin nombre'} {order.profiles.ci ? `(${order.profiles.ci})` : ''}
+                      </p>
+                    )}
+                    {order.type === 'delivery' && (
+                      <div className="text-xs text-gray-500">
+                        {order.delivery_address_notes && (
+                          <p>Dirección: {order.delivery_address_notes}</p>
+                        )}
+                        {order.delivery_location && (
+                          <p>Coordenadas: {order.delivery_location.y.toFixed(5)}, {order.delivery_location.x.toFixed(5)}</p>
+                        )}
+                      </div>
+                    )}
                     {requiresPaymentProof(order.payment_method) && (order.payment_proof_url ? (
                       <div className="flex items-center gap-2 mt-1">
                         <button

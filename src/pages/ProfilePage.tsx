@@ -3,6 +3,7 @@ import { LogOut, Mail, UserCircle2, Phone, CreditCard, Save, Loader2, AlertTrian
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useUpdateProfile, type ProfileUpdatePayload } from '../hooks/useUpdateProfile';
+import { supabase } from '../services/supabase';
 
 export function ProfilePage() {
   const { user, profile, signOut } = useAuth();
@@ -32,10 +33,27 @@ export function ProfilePage() {
 
       if (Object.keys(payload).length === 0) return;
 
+      // Check CI uniqueness if changed
+      if (payload.ci && payload.ci !== (profile?.ci ?? '')) {
+        const { data: existing } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('ci', payload.ci)
+          .neq('id', user.id)
+          .maybeSingle();
+        if (existing) {
+          setSuccessMsg(null);
+          // Use saveError via hook? We'll set a local error state
+          // but hook captures error; we can throw
+          throw new Error('Esta cédula ya está registrada por otro usuario.');
+        }
+      }
+
       await updateProfile(user.id, payload);
       setSuccessMsg('Perfil actualizado correctamente');
-    } catch {
+    } catch (err) {
       // error is captured by useUpdateProfile
+      console.error('Error al guardar perfil:', err);
     }
   };
 
