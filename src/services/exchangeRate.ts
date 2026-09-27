@@ -3,8 +3,8 @@
  * La tasa se consulta desde una API pública y se guarda en localStorage con TTL de 4 horas.
  */
 
-const EXCHANGE_RATE_STORAGE_KEY = 'menugram_bcv_exchange_rate';
-const EXCHANGE_RATE_TTL_MS = 4 * 60 * 60 * 1000; // 4 horas en milisegundos
+export const EXCHANGE_RATE_STORAGE_KEY = 'menugram_bcv_exchange_rate';
+export const EXCHANGE_RATE_TTL_MS = 4 * 60 * 60 * 1000; // 4 horas en milisegundos
 
 export interface ExchangeRateData {
   rate: number;

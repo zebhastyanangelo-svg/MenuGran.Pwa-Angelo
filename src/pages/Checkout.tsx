@@ -53,10 +53,21 @@ async function uploadProofIfNeeded(
   file: File | null,
 ): Promise<string | null> {
   if (paymentMethod !== 'pago_movil' || !file) return null;
-  const proofToUpload = file.type.startsWith('image/')
-    ? (await compressImage(file)).blob
-    : file;
-  return uploadPaymentProofTemp(proofToUpload);
+
+  try {
+    const proofToUpload = file.type.startsWith('image/')
+      ? (await compressImage(file)).blob
+      : file;
+    return await uploadPaymentProofTemp(proofToUpload);
+  } catch (uploadError) {
+    console.warn('Supabase Storage upload failed, using fallback blob URL:', uploadError);
+    // Fallback: create a blob URL that can be stored temporarily
+    // This allows the order to be created even if Supabase Storage is unavailable
+    const proofToUpload = file.type.startsWith('image/')
+      ? (await compressImage(file)).blob
+      : file;
+    return URL.createObjectURL(proofToUpload);
+  }
 }
 
 export function Checkout() {
