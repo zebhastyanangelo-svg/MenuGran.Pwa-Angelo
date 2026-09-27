@@ -16,7 +16,7 @@ import {
 } from '../utils/distance';
 import { isValidGeoPoint } from '../utils/geo';
 
-const MAX_DELIVERY_RADIUS_KM = 1;
+const MAX_DELIVERY_RADIUS_KM = 0.7;
 
 interface MerchantWithDistance {
   merchant: MerchantRow;
@@ -125,10 +125,16 @@ export function MarketplacePage() {
     // If we don't have a user location yet, show all matching merchants
     if (!userLocation) return bySearch;
 
-    // Otherwise enforce the universal 1 km radius
-    return bySearch.filter(
+    // Apply coverage radius
+    const nearby = bySearch.filter(
       (m) => m.distance !== null && m.distance <= MAX_DELIVERY_RADIUS_KM,
     );
+
+    // Prevent empty screen: if GPS resolved but no nearby merchants,
+    // fall back to all matches only when there is at least one merchant
+    // with a valid distance (i.e., some have location). Otherwise show empty.
+    const hasAnyWithLocation = bySearch.some((m) => m.distance !== null);
+    return nearby.length > 0 ? nearby : (hasAnyWithLocation ? bySearch : nearby);
   }, [merchantsWithDistance, searchQuery, userLocation]);
 
   const handleMerchantClick = useCallback(
@@ -191,9 +197,9 @@ export function MarketplacePage() {
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {filteredMerchants.length === 0 ? (
               <p className="col-span-full py-8 text-center text-sm text-gray-500">
-                {hasGps
-                  ? 'No se encontraron comercios dentro de 1 km de tu ubicación.'
-                  : 'No se encontraron comercios.'}
+{hasGps
+              ? 'No se encontraron comercios dentro de 700 m de tu ubicación.'
+              : 'No se encontraron comercios.'}
               </p>
             ) : (
               filteredMerchants.map(({ merchant, distance }) => (
