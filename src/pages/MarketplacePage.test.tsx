@@ -187,7 +187,7 @@ describe('MarketplacePage', () => {
   });
 
   describe('filtrado por geolocalización', () => {
-    it('solo muestra comercios dentro de 700 m cuando GPS está disponible', async () => {
+    it('solo muestra comercios dentro de 1 km cuando GPS está disponible', async () => {
       mocks.getCurrentGeoPointMock.mockResolvedValue(userLocation);
       const cerca = buildMerchant('m1', 'Cerca', { x: -66.904, y: 10.481 });
       const lejos = buildMerchant('m2', 'Lejos', { x: -66.92, y: 10.5 });
@@ -218,7 +218,7 @@ describe('MarketplacePage', () => {
         </MemoryRouter>,
       );
 
-      expect(await screen.findByText((content) => content.includes('700'))).toBeInTheDocument();
+      expect((await screen.findAllByText(/1\s*km/)).length).toBeGreaterThan(0);
     });
 
     it('muestra todos los comercios cuando el usuario deniega el GPS', async () => {

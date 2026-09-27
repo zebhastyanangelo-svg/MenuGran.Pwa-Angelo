@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Navigation, X } from 'lucide-react';
+import { MapPin, Navigation, X, CheckCircle, Map, Navigation2 } from 'lucide-react';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { GeoPoint, MerchantRow } from '../types/database';
 import { SearchBar } from '../components/marketplace/SearchBar';
 import { MerchantCard } from '../components/marketplace/MerchantCard';
 import { MarketplaceSkeleton } from '../components/marketplace/MarketplaceSkeleton';
+import { LocationPicker } from '../components/map/LocationPicker';
 import {
   getCurrentGeoPoint,
   isGeolocationSupported,
@@ -170,6 +171,13 @@ export function MarketplacePage() {
     [navigate],
   );
 
+  const handleUserLocationChange = useCallback((location: GeoPoint | null) => {
+    if (location) {
+      setUserLocation(location);
+      setPermissionState('granted');
+    }
+  }, []);
+
   const requestLocation = useCallback(() => {
     if (!isGeolocationSupported()) return;
     setIsLocating(true);
@@ -196,11 +204,6 @@ export function MarketplacePage() {
     [merchantsWithDistance],
   );
 
-  const locationDisplay = useMemo(() => {
-    if (!userLocation) return '📍 Detectando ubicación…';
-    return '📍 Tu ubicación';
-  }, [userLocation]);
-
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-sm">
@@ -211,18 +214,38 @@ export function MarketplacePage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 pt-4">
-        {/* Location header & coverage summary */}
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-medium text-slate-700">{locationDisplay}</p>
+        {/* Interactive Location Picker with Map */}
+        <section className="mb-4" aria-label="Selector de ubicación del cliente">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+              <Map className="h-4 w-4" aria-hidden="true" />
+              Tu ubicación de entrega
+            </h2>
+            {userLocation && (
+              <div className="rounded-xl bg-green-50 px-3 py-2 text-xs text-green-800 flex items-center gap-1.5">
+                <CheckCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span>Ubicación capturada — Lat: {userLocation.y.toFixed(6)}, Long: {userLocation.x.toFixed(6)}</span>
+              </div>
+            )}
+          </div>
+          <LocationPicker
+            initialLocation={userLocation}
+            onLocationChange={handleUserLocationChange}
+            autoLocate={!userLocation}
+            className="h-48 w-full rounded-xl border border-slate-200 overflow-hidden"
+          />
           {userLocation && (
-            <div className="rounded-xl bg-green-50 px-3 py-2 text-xs text-green-800">
-              🎉 Hay {nearbyCount} comercio{nearbyCount !== 1 ? 's' : ''} a menos de 1 km de ti
+            <div className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-xs text-green-800 flex items-center gap-1.5">
+              <CheckCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>Hay {nearbyCount} comercio{nearbyCount !== 1 ? 's' : ''} a menos de 1 km de ti</span>
             </div>
           )}
-        </div>
+        </section>
+
         {!userLocation && (
-          <div className="mb-3 rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-800">
-            📍 Activa tu ubicación para ver comercios a menos de 1 km
+          <div className="mb-3 rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-800 flex items-center gap-1.5">
+            <Navigation2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>Activa tu ubicación para ver comercios a menos de 1 km</span>
           </div>
         )}
 
@@ -237,7 +260,7 @@ export function MarketplacePage() {
               disabled={isLocating}
               className="ml-2 shrink-0 rounded-lg bg-blue-600 px-3 py-1 text-white text-xs font-medium transition hover:bg-blue-700 disabled:opacity-50"
             >
-              {isLocating ? 'Obteniendo…' : '📍 Activar ubicación'}
+              {isLocating ? 'Obteniendo…' : 'Usar mi ubicación'}
             </button>
           </div>
         )}
@@ -289,11 +312,11 @@ export function MarketplacePage() {
                     </p>
                     <button
                       type="button"
-                      onClick={requestLocation}
+                      onClick={() => setUserLocation(null)}
                       disabled={isLocating}
                       className="mt-3 rounded-xl bg-brand-red px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#c80024] disabled:opacity-50"
                     >
-                      {isLocating ? 'Reajustando…' : '🗺️ Reajustar ubicación en el mapa'}
+                      {isLocating ? 'Reajustando…' : 'Reajustar ubicación en el mapa'}
                     </button>
                   </div>
                 ) : (
