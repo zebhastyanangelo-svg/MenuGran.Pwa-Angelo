@@ -152,17 +152,15 @@ export function MarketplacePage() {
       return a.distance - b.distance;
     });
 
-    // If we don't have a user location yet, show all matching merchants sorted by proximity
+    // If we don't have a user location yet, show all matching merchants (no radius filter)
     if (!userLocation) return sorted;
 
-    // Apply coverage radius
+    // Apply coverage radius 1 km
     const nearby = sorted.filter(
       (m) => m.distance !== null && m.distance <= COVERAGE_RADIUS_KM,
     );
 
-    // If no nearby merchants but there are merchants with location, show suggestion
-    const hasAnyWithLocation = sorted.some((m) => m.distance !== null);
-    return nearby.length > 0 ? nearby : (hasAnyWithLocation ? [] : nearby);
+    return nearby;
   }, [merchantsWithDistance, searchQuery, userLocation]);
 
   const handleMerchantClick = useCallback(
