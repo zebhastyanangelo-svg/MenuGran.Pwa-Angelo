@@ -197,7 +197,7 @@ describe('MarketplacePage', () => {
       expect(screen.queryByText('Lejos')).not.toBeInTheDocument();
     });
 
-    it('muestra comercios sin location (null) incluidos en el filtro cercano', async () => {
+    it('no muestra comercios sin location (null) cuando GPS está disponible', async () => {
       mocks.getCurrentGeoPointMock.mockResolvedValue(userLocation);
       const sinLocation = buildMerchant('m1', 'Sin GPS', null);
       mockTableResults({
@@ -210,7 +210,7 @@ describe('MarketplacePage', () => {
         </MemoryRouter>,
       );
 
-      expect(await screen.findByText('Sin GPS')).toBeInTheDocument();
+      expect(await screen.findByText(/No se encontraron comercios dentro de 1 km/i)).toBeInTheDocument();
     });
 
     it('muestra todos los comercios cuando el usuario deniega el GPS', async () => {
@@ -229,34 +229,6 @@ describe('MarketplacePage', () => {
 
       expect(await screen.findByText('Cerca')).toBeInTheDocument();
       expect(screen.getByText('Lejos')).toBeInTheDocument();
-    });
-
-    it('el toggle cambia entre "Cercanos" y "Ver todos"', async () => {
-      mocks.getCurrentGeoPointMock.mockResolvedValue(userLocation);
-      const cerca = buildMerchant('m1', 'Cerca', { x: -66.904, y: 10.481 });
-      const lejos = buildMerchant('m2', 'Lejos', { x: -66.92, y: 10.5 });
-      mockTableResults({
-        merchants: { data: [cerca, lejos], error: null },
-      });
-
-      render(
-        <MemoryRouter>
-          <MarketplacePage />
-        </MemoryRouter>,
-      );
-
-      await screen.findByText('Cerca');
-      expect(screen.queryByText('Lejos')).not.toBeInTheDocument();
-
-      const toggle = screen.getByTestId('nearby-toggle');
-      fireEvent.click(toggle);
-
-      expect(screen.getByText('Lejos')).toBeInTheDocument();
-
-      fireEvent.click(toggle);
-      await waitFor(() => {
-        expect(screen.queryByText('Lejos')).not.toBeInTheDocument();
-      });
     });
 
     it('muestra badge de distancia en las tarjetas', async () => {
@@ -340,11 +312,12 @@ describe('MarketplacePage', () => {
         </MemoryRouter>,
       );
 
-      expect(await screen.findByText('Sin Location')).toBeInTheDocument();
-      expect(screen.getByText('Coord Undefined')).toBeInTheDocument();
-      expect(screen.getByText('Coord NaN')).toBeInTheDocument();
-      expect(screen.getByText('Obj Vacío')).toBeInTheDocument();
-      expect(screen.getByText('Válido')).toBeInTheDocument();
+      expect(await screen.findByText('Válido')).toBeInTheDocument();
+      // Los comercios con location malformado no se muestran (fuera de 1km)
+      expect(screen.queryByText('Sin Location')).not.toBeInTheDocument();
+      expect(screen.queryByText('Coord Undefined')).not.toBeInTheDocument();
+      expect(screen.queryByText('Coord NaN')).not.toBeInTheDocument();
+      expect(screen.queryByText('Obj Vacío')).not.toBeInTheDocument();
     });
 
     it('no colapsa cuando el location de un comercio es undefined', async () => {
@@ -367,8 +340,9 @@ describe('MarketplacePage', () => {
         );
       }).not.toThrow();
 
-      expect(await screen.findByText('Broken')).toBeInTheDocument();
-      expect(screen.getByText('OK')).toBeInTheDocument();
+      expect(await screen.findByText('OK')).toBeInTheDocument();
+      // El comercio con location undefined no se muestra (fuera de 1km)
+      expect(screen.queryByText('Broken')).not.toBeInTheDocument();
     });
   });
 });

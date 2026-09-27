@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import { Loader2, MapPin } from 'lucide-react';
 import type { GeoPoint } from '../../types/database';
@@ -9,6 +9,32 @@ import {
   resolveGeolocationErrorMessage,
 } from '../../utils/geolocation';
 import 'leaflet/dist/leaflet.css';
+
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+      {
+        headers: {
+          'Accept-Language': 'es,en;q=0.9',
+        },
+      }
+    );
+    if (!response.ok) return '';
+    const data = await response.json();
+    if (data.display_name) return data.display_name;
+
+    const parts: string[] = [];
+    if (data.address?.road) parts.push(data.address.road);
+    if (data.address?.suburb) parts.push(data.address.suburb);
+    if (data.address?.neighbourhood) parts.push(data.address.neighbourhood);
+    if (data.address?.city) parts.push(data.address.city);
+    if (data.address?.state) parts.push(data.address.state);
+    return parts.join(', ');
+  } catch {
+    return '';
+  }
+}
 
 const DEFAULT_ZOOM = 13;
 const NEUTRAL_CENTER: [number, number] = [0, 0];
@@ -80,14 +106,47 @@ export function LocationSettingsForm({
   const [isLocating, setIsLocating] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
 
+  const handleMapClick = useCallback(
+    async (e: L.LeafletMouseEvent) => {
+      const latlng = e.latlng;
+      const point: GeoPoint = { x: latlng.lng, y: latlng.lat };
+      onLocationChange(point);
+      syncMarker(point, mapInstanceRef.current!, markerRef);
+
+      // Reverse geocoding for map click
+      const fullAddress = await reverseGeocode(point.y, point.x);
+      if (fullAddress) {
+        onAddressChange(fullAddress);
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${point.y}&lon=${point.x}&addressdetails=1`,
+          { headers: { 'Accept-Language': 'es,en;q=0.9' } }
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const zoneParts = [
+            data.address?.suburb,
+            data.address?.neighbourhood,
+            data.address?.city,
+          ].filter(Boolean);
+          if (zoneParts.length > 0) {
+            onZoneChange(zoneParts[0]);
+          }
+        }
+      }
+    },
+    [onLocationChange, onAddressChange, onZoneChange]
+  );
+
   useEffect(() => {
     if (mapRef.current === null) return;
 
     if (mapInstanceRef.current === null) {
-      mapInstanceRef.current = createMap(
+      const map = createMap(
         mapRef.current,
         location !== null ? [location.y, location.x] : NEUTRAL_CENTER,
       );
+      map.on('click', handleMapClick);
+      mapInstanceRef.current = map;
     }
     const map = mapInstanceRef.current;
     if (map === null) return;
@@ -101,8 +160,9 @@ export function LocationSettingsForm({
         markerRef.current.remove();
         markerRef.current = null;
       }
+      map.off('click', handleMapClick);
     };
-  }, [location]);
+  }, [location, handleMapClick]);
 
   useEffect(() => {
     return () => {
@@ -124,6 +184,28 @@ export function LocationSettingsForm({
       onLocationChange(point);
       syncMarker(point, mapInstanceRef.current!, markerRef);
       mapInstanceRef.current?.flyTo([point.y, point.x], CAPTURED_ZOOM);
+
+      // Reverse geocoding to auto-fill address and zone
+      const fullAddress = await reverseGeocode(point.y, point.x);
+      if (fullAddress) {
+        onAddressChange(fullAddress);
+        // Extract zone from address components (city, suburb, neighbourhood)
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${point.y}&lon=${point.x}&addressdetails=1`,
+          { headers: { 'Accept-Language': 'es,en;q=0.9' } }
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const zoneParts = [
+            data.address?.suburb,
+            data.address?.neighbourhood,
+            data.address?.city,
+          ].filter(Boolean);
+          if (zoneParts.length > 0) {
+            onZoneChange(zoneParts[0]);
+          }
+        }
+      }
     } catch (error) {
       setGpsError(resolveGeolocationErrorMessage(error));
     } finally {

@@ -124,6 +124,7 @@ export function Checkout() {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [outOfRange, setOutOfRange] = useState(false);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -152,12 +153,14 @@ export function Checkout() {
       const distance = haversineDistance(deliveryLocation, merchantLocation).km;
       const MAX_DELIVERY_RADIUS_KM = 1; // 1km coverage radius
       if (distance > MAX_DELIVERY_RADIUS_KM) {
-        const errorMsg = `Tu dirección está a ${distance.toFixed(1)} km del comercio, fuera del radio de cobertura de ${MAX_DELIVERY_RADIUS_KM} km.`;
+        const errorMsg = `Este comercio se encuentra a más de 1 km de tu ubicación actual y no ofrece cobertura a tu zona.`;
         setDeliveryCoverageError(errorMsg);
         setError(errorMsg);
+        setOutOfRange(true);
         return;
       }
     }
+    setOutOfRange(false);
 
     setIsProcessing(true);
     try {
@@ -278,7 +281,10 @@ export function Checkout() {
           <div className="flex rounded-full bg-slate-100 p-1">
             <button
               type="button"
-              onClick={() => setOrderType('delivery')}
+              onClick={() => {
+                setOrderType('delivery');
+                setOutOfRange(false);
+              }}
               aria-pressed={orderType === 'delivery'}
               className={`flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition ${
                 orderType === 'delivery'
@@ -291,7 +297,12 @@ export function Checkout() {
             </button>
             <button
               type="button"
-              onClick={() => setOrderType('pickup')}
+              onClick={() => {
+                setOrderType('pickup');
+                setOutOfRange(false);
+                setDeliveryCoverageError(null);
+                setError(null);
+              }}
               aria-pressed={orderType === 'pickup'}
               className={`flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition ${
                 orderType === 'pickup'
@@ -390,7 +401,12 @@ export function Checkout() {
           </p>
         )}
 
-        <Button type="submit" fullWidth isLoading={isProcessing} disabled={isProcessing}>
+        <Button
+          type="submit"
+          fullWidth
+          isLoading={isProcessing}
+          disabled={isProcessing || outOfRange}
+        >
           {paymentMethod === 'pago_movil'
             ? 'Confirmar y enviar comprobante'
             : 'Confirmar pedido'}

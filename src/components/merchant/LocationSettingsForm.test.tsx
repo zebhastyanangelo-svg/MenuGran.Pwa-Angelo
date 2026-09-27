@@ -34,6 +34,34 @@ vi.mock('leaflet', () => {
 
 vi.mock('leaflet/dist/leaflet.css', () => ({}));
 
+// Mock fetch for reverse geocoding
+const originalFetch = global.fetch;
+beforeAll(() => {
+  global.fetch = vi.fn(async (url: string | URL | Request, options?: RequestInit) => {
+    const urlString = typeof url === 'string' ? url : url.toString();
+    if (urlString.includes('nominatim.openstreetmap.org/reverse')) {
+      return {
+        ok: true,
+        json: async () => ({
+          display_name: 'Calle 123, Caracas, Venezuela',
+          address: {
+            road: 'Calle 123',
+            suburb: 'Chacao',
+            neighbourhood: 'Altamira',
+            city: 'Caracas',
+            state: 'Miranda',
+          },
+        }),
+      } as Response;
+    }
+    return originalFetch(url, options);
+  });
+});
+
+afterAll(() => {
+  global.fetch = originalFetch;
+});
+
 const mockGeolocation = {
   getCurrentPosition: vi.fn(),
 };

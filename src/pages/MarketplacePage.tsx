@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Navigation, X } from 'lucide-react';
+import { MapPin, Navigation, X, AlertCircle } from 'lucide-react';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { GeoPoint, MerchantRow } from '../types/database';
 import { SearchBar } from '../components/marketplace/SearchBar';
@@ -13,9 +13,10 @@ import {
 } from '../utils/geolocation';
 import {
   haversineDistance,
-  isValidGeoPoint,
-  DEFAULT_NEARBY_RADIUS_KM,
-} from '../utils/geo';
+} from '../utils/distance';
+import { isValidGeoPoint } from '../utils/geo';
+
+const MAX_DELIVERY_RADIUS_KM = 1;
 
 interface MerchantWithDistance {
   merchant: MerchantRow;
@@ -34,7 +35,8 @@ function computeDistances(
     }
 
     try {
-      return { merchant: m, distance: haversineDistance(userLocation, m.location) };
+      const result = haversineDistance(userLocation!, m.location);
+      return { merchant: m, distance: result.km };
     } catch (err) {
       console.warn('Error calculando distancia para comercio:', m.id, err);
       return { merchant: m, distance: null };
@@ -52,7 +54,6 @@ export function MarketplacePage() {
   const [userLocation, setUserLocation] = useState<GeoPoint | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [nearbyOnly, setNearbyOnly] = useState(true);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -121,15 +122,15 @@ export function MarketplacePage() {
       m.merchant.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
-    if (!nearbyOnly || userLocation === null) {
+    // Always filter by 1km radius if user location is available
+    if (userLocation === null) {
       return bySearch;
     }
 
     return bySearch.filter(
-      (m) =>
-        m.distance === null || m.distance <= DEFAULT_NEARBY_RADIUS_KM,
+      (m) => m.distance !== null && m.distance <= MAX_DELIVERY_RADIUS_KM,
     );
-  }, [merchantsWithDistance, searchQuery, nearbyOnly, userLocation]);
+  }, [merchantsWithDistance, searchQuery, userLocation]);
 
   const handleMerchantClick = useCallback(
     (merchant: MerchantRow) => {
@@ -139,6 +140,7 @@ export function MarketplacePage() {
   );
 
   const hasGps = userLocation !== null;
+  const noMerchantsInRadius = hasGps && filteredMerchants.length === 0 && merchants.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
@@ -174,23 +176,14 @@ export function MarketplacePage() {
           </div>
         )}
 
-        {hasGps && (
-          <div className="mt-3">
-            <button
-              type="button"
-              onClick={() => setNearbyOnly((prev) => !prev)}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                nearbyOnly
-                  ? 'border-brand-red bg-brand-red text-white'
-                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-800'
-              }`}
-              data-testid="nearby-toggle"
-            >
-              <MapPin className="h-3 w-3" aria-hidden="true" />
-              {nearbyOnly
-                ? `Cercanos (${DEFAULT_NEARBY_RADIUS_KM} km)`
-                : 'Ver todos los comercios'}
-            </button>
+        {noMerchantsInRadius && (
+          <div className="mt-3 flex items-start gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-800" role="alert">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="flex-1">
+              No hay comercios disponibles dentro del radio de 1 km de tu ubicación actual.
+              <br />
+              Prueba mover el pin de tu ubicación en el checkout o ampliar tu zona de búsqueda.
+            </span>
           </div>
         )}
 
@@ -211,8 +204,8 @@ export function MarketplacePage() {
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {filteredMerchants.length === 0 ? (
               <p className="col-span-full py-8 text-center text-sm text-gray-500">
-                {nearbyOnly && hasGps
-                  ? 'No se encontraron comercios cercanos. Prueba ampliando el radio.'
+                {hasGps
+                  ? 'No se encontraron comercios dentro de 1 km de tu ubicación.'
                   : 'No se encontraron comercios.'}
               </p>
             ) : (
