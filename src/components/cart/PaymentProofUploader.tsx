@@ -66,7 +66,7 @@ export function PaymentProofUploader({
 
   return (
     <div className="space-y-2">
-      <label htmlFor="payment-proof-input" className="block text-sm font-medium text-gray-700 mb-1">
+      <label htmlFor="payment-proof-input" data-testid="payment-proof-label" className="block text-sm font-medium text-gray-700 mb-1">
         Comprobante (foto o PDF):
       </label>
 

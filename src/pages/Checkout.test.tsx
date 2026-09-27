@@ -331,8 +331,8 @@ describe('Checkout', () => {
     // Mock merchant location far away (Caracas)
     mockMerchantSelect.mockResolvedValueOnce({
       data: {
-        opening_time: '08:00',
-        closing_time: '22:00',
+        opening_time: '00:00',
+        closing_time: '23:59',
         location: { x: -66.9036, y: 10.4806 }, // lon, lat
       },
       error: null,

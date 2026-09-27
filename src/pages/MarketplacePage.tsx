@@ -16,7 +16,7 @@ import {
 } from '../utils/distance';
 import { isValidGeoPoint } from '../utils/geo';
 
-const MAX_DELIVERY_RADIUS_KM = 0.7;
+const COVERAGE_RADIUS_KM = 1.0;
 
 type PermissionState = 'prompt' | 'granted' | 'denied' | 'unsupported';
 
@@ -139,23 +139,30 @@ export function MarketplacePage() {
   );
 
   const filteredMerchants = useMemo(() => {
+    // apply search filter first
     const bySearch = merchantsWithDistance.filter((m) =>
       m.merchant.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
-    // If we don't have a user location yet, show all matching merchants
-    if (!userLocation) return bySearch;
+    // sort by distance (null last) for better UX
+    const sorted = [...bySearch].sort((a, b) => {
+      if (a.distance === null && b.distance === null) return 0;
+      if (a.distance === null) return 1;
+      if (b.distance === null) return -1;
+      return a.distance - b.distance;
+    });
+
+    // If we don't have a user location yet, show all matching merchants sorted by proximity
+    if (!userLocation) return sorted;
 
     // Apply coverage radius
-    const nearby = bySearch.filter(
-      (m) => m.distance !== null && m.distance <= MAX_DELIVERY_RADIUS_KM,
+    const nearby = sorted.filter(
+      (m) => m.distance !== null && m.distance <= COVERAGE_RADIUS_KM,
     );
 
-    // Prevent empty screen: if GPS resolved but no nearby merchants,
-    // fall back to all matches only when there is at least one merchant
-    // with a valid distance (i.e., some have location). Otherwise show empty.
-    const hasAnyWithLocation = bySearch.some((m) => m.distance !== null);
-    return nearby.length > 0 ? nearby : (hasAnyWithLocation ? bySearch : nearby);
+    // If no nearby merchants but there are merchants with location, show suggestion
+    const hasAnyWithLocation = sorted.some((m) => m.distance !== null);
+    return nearby.length > 0 ? nearby : (hasAnyWithLocation ? [] : nearby);
   }, [merchantsWithDistance, searchQuery, userLocation]);
 
   const handleMerchantClick = useCallback(
@@ -183,7 +190,18 @@ export function MarketplacePage() {
       .finally(() => setIsLocating(false));
   }, []);
 
-  const hasGps = userLocation !== null;
+  
+
+  // coverage summary
+  const nearbyCount = useMemo(
+    () => merchantsWithDistance.filter((m) => m.distance !== null && m.distance <= COVERAGE_RADIUS_KM).length,
+    [merchantsWithDistance],
+  );
+
+  const locationDisplay = useMemo(() => {
+    if (!userLocation) return '📍 Detectando ubicación…';
+    return '📍 Tu ubicación';
+  }, [userLocation]);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
@@ -195,6 +213,21 @@ export function MarketplacePage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 pt-4">
+        {/* Location header & coverage summary */}
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm font-medium text-slate-700">{locationDisplay}</p>
+          {userLocation && (
+            <div className="rounded-xl bg-green-50 px-3 py-2 text-xs text-green-800">
+              🎉 Hay {nearbyCount} comercio{nearbyCount !== 1 ? 's' : ''} a menos de 1 km de ti
+            </div>
+          )}
+        </div>
+        {!userLocation && (
+          <div className="mb-3 rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-800">
+            📍 Activa tu ubicación para ver comercios a menos de 1 km
+          </div>
+        )}
+
         {/* Permission banner */}
         {(permissionState === 'prompt' || permissionState === 'denied') && userLocation === null && (
           <div className="mb-3 flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-800">
@@ -250,13 +283,27 @@ export function MarketplacePage() {
           </div>
         ) : (
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {filteredMerchants.length === 0 ? (
-              <p className="col-span-full py-8 text-center text-sm text-gray-500">
-{hasGps
-              ? 'No se encontraron comercios dentro de 700 m de tu ubicación.'
-              : 'No se encontraron comercios.'}
-              </p>
-            ) : (
+{filteredMerchants.length === 0 ? (
+                userLocation ? (
+                  <div className="col-span-full py-8 text-center">
+                    <p className="text-sm text-gray-500">
+                      No hay comercios a menos de 1 km. Puedes ampliar tu búsqueda o cambiar tu punto de entrega.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={requestLocation}
+                      disabled={isLocating}
+                      className="mt-3 rounded-xl bg-brand-red px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#c80024] disabled:opacity-50"
+                    >
+                      {isLocating ? 'Reajustando…' : '🗺️ Reajustar ubicación en el mapa'}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="col-span-full py-8 text-center text-sm text-gray-500">
+                    No se encontraron comercios.
+                  </p>
+                )
+              ) : (
               filteredMerchants.map(({ merchant, distance }) => (
                 <MerchantCard
                   key={merchant.id}

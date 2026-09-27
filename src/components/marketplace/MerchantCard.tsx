@@ -54,13 +54,20 @@ export function MerchantCard({ merchant, onClick, distance }: MerchantCardProps)
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             {typeof distance === 'number' && (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-                <MapPin className="h-3 w-3" aria-hidden="true" />
-                {distance < 1
-                  ? `${Math.round(distance * 1000)} m`
-                  : `${distance.toFixed(1)} km`}
-              </span>
-            )}
+                <>
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                    <MapPin className="h-3 w-3" aria-hidden="true" />
+                    {distance < 1
+                      ? `${Math.round(distance * 1000)} m`
+                      : `${distance.toFixed(1)} km`}
+                  </span>
+                  {distance <= 1 && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                      Cercano (1 km)
+                    </span>
+                  )}
+                </>
+              )}
             {merchant.opening_time && merchant.closing_time && (
               <span className="inline-flex items-center gap-0.5 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
                 <Clock className="h-3 w-3" aria-hidden="true" />
