@@ -1,3 +1,4 @@
+import { useBCVRate } from '../../hooks/useExchangeRate';
 import type { ProductRow } from '../../types/database';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -16,8 +17,20 @@ function formatPrice(price: string): string {
   return formatCurrency(numeric);
 }
 
+function formatVES(amount: number): string {
+  return new Intl.NumberFormat('es-VE', {
+    style: 'currency',
+    currency: 'VES',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 export function ProductCard({ product, categoryName, onSelect }: ProductCardProps) {
   const interactive = onSelect !== undefined;
+  const bcvRate = useBCVRate();
+  const priceUSD = parseFloat(product.price);
+  const priceVES = bcvRate > 0 && !isNaN(priceUSD) ? priceUSD * bcvRate : 0;
 
   return (
     <Card
@@ -48,9 +61,16 @@ export function ProductCard({ product, categoryName, onSelect }: ProductCardProp
         {product.description ? (
           <p className="mt-1 line-clamp-2 text-xs text-gray-500">{product.description}</p>
         ) : null}
-        <Badge variant="success" className="mt-2">
-          {formatPrice(product.price)}
-        </Badge>
+        <div className="mt-2 flex flex-col gap-0.5">
+          <Badge variant="success" className="text-xs">
+            {formatPrice(product.price)}
+          </Badge>
+          {bcvRate > 0 && priceVES > 0 && (
+            <span className="text-xs text-emerald-700 font-medium">
+              ≈ {formatVES(priceVES)}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">

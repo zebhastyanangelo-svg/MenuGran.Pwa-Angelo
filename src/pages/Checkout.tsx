@@ -8,6 +8,7 @@ import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { useMerchantPagoMovil } from '../hooks/useMerchantPagoMovil';
+import { useBCVRate } from '../hooks/useExchangeRate';
 import { compressImage } from '../utils/imageCompressor';
 import type { GeoPoint, OrderType, PaymentMethod } from '../types/database';
 import type { MerchantPagoMovilInfo } from '../services/merchantPaymentService';
@@ -72,11 +73,30 @@ export function Checkout() {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const { pagoMovil } = useMerchantPagoMovil(merchantId);
+  const bcvRate = useBCVRate();
+
   const [isOpenNow, setIsOpenNow] = useState(true);
   const [openingTimeStr, setOpeningTimeStr] = useState('');
   const [closingTimeStr, setClosingTimeStr] = useState('');
   const [merchantLocation, setMerchantLocation] = useState<GeoPoint | null>(null);
-  const [deliveryCoverageError, setDeliveryCoverageError] = useState<string | null>(null);
+
+  function formatVES(amount: number): string {
+    return new Intl.NumberFormat('es-VE', {
+      style: 'currency',
+      currency: 'VES',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
+
+  function formatUSD(amount: number): string {
+    return new Intl.NumberFormat('es-VE', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
 
   useEffect(() => {
     if (!merchantId) return;
@@ -125,6 +145,7 @@ export function Checkout() {
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [outOfRange, setOutOfRange] = useState(false);
+  const [deliveryCoverageError, setDeliveryCoverageError] = useState<string | null>(null);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -251,27 +272,35 @@ export function Checkout() {
           Resumen ({totalItems} ítems)
         </h2>
         <ul className="space-y-1">
-          {items.map((item) => (
-            <li key={item.product.id} className="flex justify-between text-sm text-gray-600">
-              <span>
-                {item.quantity} × {item.product.title}
-              </span>
-              <span>
-                {new Intl.NumberFormat('es-EC', {
-                  style: 'currency',
-                  currency: 'USD',
-                }).format(parseFloat(item.product.price) * item.quantity)}
-              </span>
-            </li>
-          ))}
+          {items.map((item) => {
+            const unitPriceUSD = parseFloat(item.product.price);
+            const lineTotalUSD = unitPriceUSD * item.quantity;
+            const lineTotalVES = bcvRate > 0 ? lineTotalUSD * bcvRate : 0;
+            return (
+              <li key={item.product.id} className="flex flex-col gap-0.5 text-sm text-gray-600">
+                <span className="flex justify-between">
+                  <span>{item.quantity} × {item.product.title}</span>
+                  <span>{formatUSD(lineTotalUSD)}</span>
+                </span>
+                {bcvRate > 0 && lineTotalVES > 0 && (
+                  <span className="text-xs text-emerald-700 ml-4">
+                    ≈ {formatVES(lineTotalVES)}
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
-        <div className="mt-2 flex justify-between border-t border-gray-100 pt-2 text-sm font-bold text-gray-900">
-          <span>Total</span>
-          <span>
-            {new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' }).format(
-              Number(totalAmount),
-            )}
-          </span>
+        <div className="mt-2 flex flex-col gap-0.5 border-t border-gray-100 pt-2 text-sm font-bold text-gray-900">
+          <div className="flex justify-between">
+            <span>Total</span>
+            <span>{formatUSD(Number(totalAmount))}</span>
+          </div>
+          {bcvRate > 0 && (
+            <span className="text-emerald-700 text-base ml-4">
+              ≈ {formatVES(Number(totalAmount) * bcvRate)}
+            </span>
+          )}
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useBCVRate } from '../../hooks/useExchangeRate';
 import type { ProductRow } from '../../types/database';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
@@ -20,6 +21,15 @@ function formatPrice(price: string): string {
   return formatCurrency(numeric);
 }
 
+function formatVES(amount: number): string {
+  return new Intl.NumberFormat('es-VE', {
+    style: 'currency',
+    currency: 'VES',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 function ProductDetailBody({
   product,
   categoryName,
@@ -32,6 +42,9 @@ function ProductDetailBody({
   onAddToCart: (product: ProductRow, quantity: number) => void;
 }) {
   const [quantity, setQuantity] = useState(1);
+  const bcvRate = useBCVRate();
+  const priceUSD = parseFloat(product.price);
+  const priceVES = bcvRate > 0 && !isNaN(priceUSD) ? priceUSD * bcvRate : 0;
 
   const handleQuantityChange = (value: string) => {
     const parsed = parseInt(value, 10);
@@ -65,7 +78,14 @@ function ProductDetailBody({
 
       <div className="flex flex-wrap items-center gap-2">
         {categoryName ? <Badge variant="primary">{categoryName}</Badge> : null}
-        <Badge variant="success">{formatPrice(product.price)}</Badge>
+        <div className="flex flex-col gap-0.5">
+          <Badge variant="success">{formatPrice(product.price)}</Badge>
+          {bcvRate > 0 && priceVES > 0 && (
+            <span className="text-xs text-emerald-700 font-medium">
+              ≈ {formatVES(priceVES)}
+            </span>
+          )}
+        </div>
         {!product.is_available ? <Badge variant="danger">Agotado</Badge> : null}
       </div>
 

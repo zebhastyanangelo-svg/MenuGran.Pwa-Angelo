@@ -21,6 +21,10 @@ vi.mock('../hooks/useMerchantPagoMovil', () => ({
   useMerchantPagoMovil: vi.fn(),
 }));
 
+vi.mock('../hooks/useExchangeRate', () => ({
+  useBCVRate: vi.fn(() => 36.5),
+}));
+
 vi.mock('../utils/imageCompressor', () => ({
   compressImage: vi.fn().mockResolvedValue({ blob: new Blob(['fake']), size: 50_000, width: 1, height: 1, type: 'image/jpeg' }),
   PAYMENT_PROOF_MAX_BYTES: 150 * 1024,
