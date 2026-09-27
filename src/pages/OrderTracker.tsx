@@ -20,7 +20,7 @@ import { getOrderStatusLabel } from '../utils/orderStatus';
 import { confirmOrderDelivery } from '../services/orderDeliveryService';
 import { OrderStatusStep } from '../components/orders/OrderStatusStep';
 import { getAllowedTransitions, getTransitionLabel, getTransitionButtonClass } from '../utils/orderStatus';
-import { PartyPopper, ArrowLeft, Navigation, PackageCheck } from 'lucide-react';
+import { PartyPopper, ArrowLeft, Navigation, PackageCheck, AlertCircle } from 'lucide-react';
 import { MapView } from '../components/map/MapView';
 import type { MapMarker } from '../components/map/MapView';
 import { MapErrorBoundary } from '../components/map/MapErrorBoundary';
@@ -344,6 +344,9 @@ export function OrderTracker() {
   const isCompleted = order.status === 'delivered' || order.status === 'cancelled';
   const allowedTransitions = getAllowedTransitions(order.status);
 
+  // Show rejection modal when order is cancelled
+  const showRejection = order.status === 'cancelled';
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <header className="mb-8">
@@ -357,6 +360,31 @@ export function OrderTracker() {
           </span>
         </p>
       </header>
+
+      {showRejection && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="rejection-title">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle className="h-8 w-8 text-red-600 flex-shrink-0" aria-hidden="true" />
+              <h2 id="rejection-title" className="text-xl font-bold text-red-700">Solicitud de pedido rechazada</h2>
+            </div>
+            <p className="text-gray-700 mb-6">
+              {(order as any).rejection_reason ?? 'El comercio no puede atender tu pedido en este momento.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                removeOrder(order.id);
+                navigate('/');
+              }}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-red px-6 py-3 text-base font-semibold text-white shadow hover:bg-[#c80024] transition-colors"
+              data-testid="accept-rejection"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
 
       <section
         className="mb-8 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50 p-6 text-center shadow-sm"
