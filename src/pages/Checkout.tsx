@@ -194,12 +194,26 @@ export function Checkout() {
     }
     setOutOfRange(false);
 
+    // Validaciones defensivas para evitar null pointer
+    if (!user?.id) {
+      const errMsg = 'Debes iniciar sesión para realizar un pedido.';
+      setError(errMsg);
+      showToast({ variant: 'error', title: 'Sesión requerida', message: errMsg });
+      return;
+    }
+    if (!merchantId) {
+      const errMsg = 'No se pudo identificar el comercio. Intenta recargar la página.';
+      setError(errMsg);
+      showToast({ variant: 'error', title: 'Error', message: errMsg });
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const proofPath = await uploadProofIfNeeded(paymentMethod, file);
       const data = await createOrder({
-        merchantId: merchantId!,
-        customerId: user!.id,
+        merchantId,
+        customerId: user.id,
         orderType,
         paymentMethod,
         paymentReference: paymentMethod === 'pago_movil' ? reference.trim() : '',

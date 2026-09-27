@@ -32,12 +32,18 @@ const BCV_API_ENDPOINTS = [
     }),
   },
   {
-    url: 'https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=bcv',
-    parser: (data: { bcv: { price: number; date: string } }) => ({
-      price: data.bcv.price,
-      date: data.bcv.date,
-      source: 'pydolarvenezuela-api',
-    }),
+    url: 'https://pydolarve.org/api/v1/dollar?page=bcv',
+    parser: (data: any) => {
+      // Try multiple possible fields for rate and date
+      const rateCandidate = data.promedio ?? data.monto ?? data.price ?? data.bcv?.price ?? data.bcv?.promedio ?? data.bcv?.monto;
+      const dateCandidate = data.fecha ?? data.date ?? data.bcv?.date ?? data.bcv?.fecha;
+      const price = typeof rateCandidate === 'number' ? rateCandidate : typeof rateCandidate === 'string' ? parseFloat(rateCandidate) : NaN;
+      const date = typeof dateCandidate === 'string' ? dateCandidate : new Date().toISOString();
+      if (Number.isNaN(price) || price <= 0) {
+        throw new Error('Tasa inválida recibida de pydolarve');
+      }
+      return { price, date, source: 'pydolarve.org' };
+    },
   },
 ];
 
@@ -153,7 +159,7 @@ export async function getBCVRate(): Promise<number> {
     }
 
     // 4. Fallback final: tasa por defecto configurable (última conocida en Supabase o valor hardcodeado)
-    const DEFAULT_FALLBACK_RATE = 36.5; // Valor aproximado, se debe actualizar periódicamente
+    const DEFAULT_FALLBACK_RATE = 857.00; // Valor de referencia actualizado
     console.warn('Usando tasa BCV de fallback hardcodeada:', DEFAULT_FALLBACK_RATE);
     return DEFAULT_FALLBACK_RATE;
   }
