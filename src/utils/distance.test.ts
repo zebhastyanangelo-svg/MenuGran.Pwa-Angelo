@@ -37,6 +37,15 @@ describe('haversineDistance', () => {
     const b: GeoPoint = { x: 13.4, y: 52.5 };
     expect(haversineDistance(a, b).km).toBeCloseTo(haversineDistance(b, a).km, 6);
   });
+
+  it('calcula distancia corta ~5.5 metros para caso de prueba San Antonio', () => {
+    const merchant: GeoPoint = { x: -66.846149, y: 10.146016 };
+    const customer: GeoPoint = { x: -66.846142, y: 10.145966 };
+    const result = haversineDistance(merchant, customer);
+    // 5.5 m = 0.0055 km, allow small tolerance
+    expect(result.km).toBeLessThanOrEqual(0.01);
+    expect(result.m).toBeCloseTo(result.km * 1000, 1);
+  });
 });
 
 describe('sortByDistance', () => {

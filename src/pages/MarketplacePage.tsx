@@ -62,17 +62,24 @@ export function MarketplacePage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    try {
-      const { data, error: supabaseError } = await supabase
-        .from(TABLE_NAMES.merchants)
-        .select('*')
-        .eq('is_active', true)
-        .eq('status', 'active');
+try {
+        const { data, error: supabaseError } = await supabase
+          .from(TABLE_NAMES.merchants)
+          .select('*')
+          .eq('is_active', true)
+          .eq('status', 'active');
 
-      if (supabaseError) throw supabaseError;
+        if (supabaseError) throw supabaseError;
 
-      setMerchants((data as MerchantRow[]) ?? []);
-    } catch (err) {
+        const merchantsData = (data as MerchantRow[]) ?? [];
+        console.debug('[Marketplace] merchants raw:', merchantsData.map(m => ({
+          id: m.id,
+          name: m.name,
+          latitude: m.location?.y,
+          longitude: m.location?.x,
+        })));
+        setMerchants(merchantsData);
+      } catch (err) {
       console.error('Error al cargar datos del marketplace:', err);
       setError('Ocurrió un error al cargar la información. Inténtalo de nuevo.');
     } finally {
