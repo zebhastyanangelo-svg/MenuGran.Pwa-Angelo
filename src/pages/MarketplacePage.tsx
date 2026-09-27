@@ -16,6 +16,7 @@ import {
   haversineDistance,
 } from '../utils/distance';
 import { isValidGeoPoint } from '../utils/geo';
+import { parseGeoPoint } from '../utils/geoPoint';
 
 const COVERAGE_RADIUS_KM = 1.0;
 
@@ -59,27 +60,32 @@ export function MarketplacePage() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [permissionState, setPermissionState] = useState<PermissionState>('prompt');
 
-  const fetchData = useCallback(async () => {
+const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-try {
-        const { data, error: supabaseError } = await supabase
-          .from(TABLE_NAMES.merchants)
-          .select('*')
-          .eq('is_active', true)
-          .eq('status', 'active');
+    try {
+      const { data, error: supabaseError } = await supabase
+        .from(TABLE_NAMES.merchants)
+        .select('id, name, slug, logo_url, banner_url, status, is_active, is_open, location, created_at, rif, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, pago_movil_bank, pago_movil_id_number, pago_movil_phone, opening_time, closing_time')
+        .eq('is_active', true)
+        .eq('status', 'active');
 
-        if (supabaseError) throw supabaseError;
+      if (supabaseError) throw supabaseError;
 
-        const merchantsData = (data as MerchantRow[]) ?? [];
-        console.debug('[Marketplace] merchants raw:', merchantsData.map(m => ({
-          id: m.id,
-          name: m.name,
-          latitude: m.location?.y,
-          longitude: m.location?.x,
-        })));
-        setMerchants(merchantsData);
-      } catch (err) {
+      const rawMerchants = (data as Partial<MerchantRow>[]) ?? [];
+      const merchantsData = rawMerchants.map((m) => ({
+        ...m,
+        location: parseGeoPoint(m.location),
+      })) as MerchantRow[];
+
+      console.debug('[Marketplace] merchants raw:', merchantsData.map(m => ({
+        id: m.id,
+        name: m.name,
+        latitude: m.location?.y,
+        longitude: m.location?.x,
+      })));
+      setMerchants(merchantsData);
+    } catch (err) {
       console.error('Error al cargar datos del marketplace:', err);
       setError('Ocurrió un error al cargar la información. Inténtalo de nuevo.');
     } finally {
