@@ -62,14 +62,14 @@ export function ProductCard({ product, categoryName, onSelect }: ProductCardProp
           <p className="mt-1 line-clamp-2 text-xs text-gray-500">{product.description}</p>
         ) : null}
         <div className="mt-2 flex flex-col gap-0.5">
-          <Badge variant="success" className="text-xs">
+          <span className="text-sm font-bold text-gray-900">
             {formatPrice(product.price)}
-          </Badge>
-          {bcvRate > 0 && priceVES > 0 && (
-            <span className="text-xs text-emerald-700 font-medium">
-              ≈ {formatVES(priceVES)}
-            </span>
-          )}
+            {bcvRate > 0 && priceVES > 0 && (
+              <span className="ml-1 text-xs text-emerald-700 font-normal">
+                (Bs. {formatVES(priceVES).replace('VES', '').trim()})
+              </span>
+            )}
+          </span>
         </div>
       </div>
 

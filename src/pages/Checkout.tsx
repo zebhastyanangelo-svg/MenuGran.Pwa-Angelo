@@ -316,6 +316,13 @@ export function Checkout() {
             );
           })}
         </ul>
+        {bcvRate > 0 && (
+          <div className="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-100 text-sm text-blue-900">
+            <div className="font-semibold mb-1">Tasa de cambio BCV aplicada: Bs. {bcvRate.toFixed(2)} / USD</div>
+            <div>Total en USD: {formatUSD(Number(totalAmount))}</div>
+            <div>Total a pagar en Bolívares: {formatVES(Number(totalAmount) * bcvRate)}</div>
+          </div>
+        )}
         <div className="mt-2 flex flex-col gap-0.5 border-t border-gray-100 pt-2 text-sm font-bold text-gray-900">
           <div className="flex justify-between">
             <span>Total</span>
@@ -433,6 +440,8 @@ export function Checkout() {
                 setFile(selected);
                 setError(null);
               }}
+              totalAmount={Number(totalAmount)}
+              bcvRate={bcvRate}
             />
           )}
           {paymentMethod === 'card_pos' && (
@@ -524,6 +533,8 @@ interface PagoMovilSectionProps {
   error: string | null;
   isProcessing: boolean;
   onFileSelect: (file: File | null) => void;
+  totalAmount: number;
+  bcvRate: number;
 }
 
 function PagoMovilSection({
@@ -534,7 +545,20 @@ function PagoMovilSection({
   error,
   isProcessing,
   onFileSelect,
+  totalAmount,
+  bcvRate,
 }: PagoMovilSectionProps) {
+  const totalVES = bcvRate > 0 ? totalAmount * bcvRate : 0;
+
+  function formatVES(amount: number): string {
+    return new Intl.NumberFormat('es-VE', {
+      style: 'currency',
+      currency: 'VES',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
+
   return (
     <div className="mt-3 space-y-3">
       {pagoMovil ? (
@@ -563,6 +587,12 @@ function PagoMovilSection({
           Este comercio aún no configuró sus datos de Pago Móvil. Elige otro
           método de pago o contacta al comercio.
         </p>
+      )}
+
+      {bcvRate > 0 && totalVES > 0 && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 font-medium">
+          Monto exacto a transferir: {formatVES(totalVES)} (Tasa BCV: Bs. {bcvRate.toFixed(2)})
+        </div>
       )}
 
       <div>

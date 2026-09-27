@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useBCVRate } from '../../hooks/useExchangeRate';
 import type { OrderStatus } from '../../types/database';
 import type { DriverProfile, OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 import { formatPrice } from '../../types/cart';
@@ -81,9 +82,9 @@ export interface OrdersBoardProps {
 
 function getCustomerLabel(order: OrderWithCustomer): string {
   const profile = order.profiles;
-  if (profile?.full_name) return profile.full_name;
-  if (profile?.email) return profile.email;
-  return order.customer_id ? `Cliente ${order.customer_id.slice(0, 6)}...` : 'Cliente General';
+  const name = profile?.full_name ?? profile?.email ?? `Cliente ${order.customer_id?.slice(0, 6)}...`;
+  const ci = profile?.ci ? ` - C.I. ${profile.ci}` : '';
+  return `${name}${ci}`;
 }
 
 export function OrdersBoard({
@@ -98,6 +99,17 @@ export function OrdersBoard({
   const [customMonth, setCustomMonth] = useState<string>(''); // format YYYY-MM
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
+
+  const bcvRate = useBCVRate();
+
+  function formatVES(amount: number): string {
+    return new Intl.NumberFormat('es-VE', {
+      style: 'currency',
+      currency: 'VES',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
 
   const { start: periodStart, end: periodEnd } = getDateRange(period, customMonth);
 
@@ -209,7 +221,7 @@ export function OrdersBoard({
             <table className="w-full text-left border-collapse block sm:table">
             <thead className="hidden sm:table-header-group">
               <tr className="border-b border-gray-200 bg-gray-50">
-                {['ID', 'Cliente', 'Total', 'Estado', 'Pago', 'Acciones'].map(
+                {['ID', 'Cliente', 'Monto (USD / Bs)', 'Estado', 'Pago', 'Código', 'Acciones'].map(
                   (head) => (
                     <th
                       key={head}
@@ -234,7 +246,14 @@ export function OrdersBoard({
                     {getCustomerLabel(order)}
                   </td>
                   <td className="px-4 py-3 text-sm font-semibold text-gray-900 block sm:table-cell">
-                    {formatPrice(order.total_amount)}
+                    <div className="flex flex-col gap-0.5">
+                      <span>{formatPrice(order.total_amount)}</span>
+                      {bcvRate > 0 && (
+                        <span className="text-xs text-emerald-700">
+                          {formatVES(Number(order.total_amount) * bcvRate)}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm block sm:table-cell">
                     <OrderStatusBadge status={order.status} />
@@ -261,6 +280,9 @@ export function OrdersBoard({
                         Sin capture
                       </span>
                     ))}
+                  </td>
+                  <td className="px-4 py-3 text-sm block sm:table-cell">
+                    <span className="font-mono text-gray-700">Código: {order.id.slice(0, 4).toUpperCase()}</span>
                   </td>
                   <td className="px-4 py-3 block sm:table-cell">
                     <div className="flex flex-wrap items-center gap-2">

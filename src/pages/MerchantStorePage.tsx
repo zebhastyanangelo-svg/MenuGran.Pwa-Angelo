@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { CategoryRow, MerchantRow, ProductRow } from '../types/database';
-import { ArrowLeft, MapPin, Package } from 'lucide-react';
+import { ArrowLeft, MapPin, Package, DollarSign } from 'lucide-react';
 import { CategoryFilter } from '../components/marketplace/CategoryFilter';
 import { ProductCard, ProductCardSkeleton } from '../components/marketplace/ProductCard';
 import { SearchBar } from '../components/marketplace/SearchBar';
 import { Badge } from '../components/ui/Badge';
 import { useCart } from '../hooks/useCart';
 import { useToast } from '../hooks/useToast';
+import { useBCVRate } from '../hooks/useExchangeRate';
 
 const SKELETON_COUNT = 4;
 
@@ -17,6 +18,7 @@ export function MerchantStorePage() {
   const navigate = useNavigate();
   const { confirmAddItem } = useCart();
   const { showToast } = useToast();
+  const bcvRate = useBCVRate();
 
   const [merchant, setMerchant] = useState<MerchantRow | null>(null);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
@@ -255,6 +257,12 @@ export function MerchantStorePage() {
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
                   {merchant.zone}
+                </span>
+              )}
+              {bcvRate > 0 && (
+                <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-medium">
+                  <DollarSign className="h-3 w-3" />
+                  Tasa BCV: Bs. {bcvRate.toFixed(2)} / USD
                 </span>
               )}
             </div>
