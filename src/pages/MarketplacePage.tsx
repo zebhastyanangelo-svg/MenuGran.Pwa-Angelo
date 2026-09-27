@@ -18,6 +18,8 @@ import { isValidGeoPoint } from '../utils/geo';
 
 const MAX_DELIVERY_RADIUS_KM = 0.7;
 
+type PermissionState = 'prompt' | 'granted' | 'denied' | 'unsupported';
+
 interface MerchantWithDistance {
   merchant: MerchantRow;
   distance: number | null;
@@ -54,6 +56,7 @@ export function MarketplacePage() {
   const [userLocation, setUserLocation] = useState<GeoPoint | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [permissionState, setPermissionState] = useState<PermissionState>('prompt');
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -85,8 +88,21 @@ export function MarketplacePage() {
       setLocationError(
         'Tu navegador no soporta geolocalización. Puedes explorar todos los comercios.',
       );
+      setPermissionState('unsupported');
       return;
     }
+
+    // Check permission state
+    navigator.permissions
+      .query({ name: 'geolocation' })
+      .then((perm) => {
+        setPermissionState(perm.state as PermissionState);
+        perm.onchange = () => setPermissionState(perm.state as PermissionState);
+      })
+      .catch(() => {
+        // fallback if permissions API not available
+        setPermissionState('prompt');
+      });
 
     let cancelled = false;
     setIsLocating(true);
@@ -96,11 +112,16 @@ export function MarketplacePage() {
         if (!cancelled) {
           setUserLocation(point);
           setLocationError(null);
+          setPermissionState('granted');
         }
       })
       .catch((err) => {
         if (!cancelled) {
           setLocationError(resolveGeolocationErrorMessage(err));
+          // If denied, permissionState will be updated via permissions API or we infer
+          if (err && typeof err === 'object' && 'code' in err && (err as { code: number }).code === 1) {
+            setPermissionState('denied');
+          }
         }
       })
       .finally(() => {
@@ -144,6 +165,24 @@ export function MarketplacePage() {
     [navigate],
   );
 
+  const requestLocation = useCallback(() => {
+    if (!isGeolocationSupported()) return;
+    setIsLocating(true);
+    setLocationError(null);
+    getCurrentGeoPoint()
+      .then((point) => {
+        setUserLocation(point);
+        setPermissionState('granted');
+      })
+      .catch((err) => {
+        setLocationError(resolveGeolocationErrorMessage(err));
+        if (err && typeof err === 'object' && 'code' in err && (err as { code: number }).code === 1) {
+          setPermissionState('denied');
+        }
+      })
+      .finally(() => setIsLocating(false));
+  }, []);
+
   const hasGps = userLocation !== null;
 
   return (
@@ -156,6 +195,22 @@ export function MarketplacePage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 pt-4">
+        {/* Permission banner */}
+        {(permissionState === 'prompt' || permissionState === 'denied') && userLocation === null && (
+          <div className="mb-3 flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-800">
+            <Navigation className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="flex-1">Activa la ubicación para ver comercios cercanos</span>
+            <button
+              type="button"
+              onClick={requestLocation}
+              disabled={isLocating}
+              className="ml-2 shrink-0 rounded-lg bg-blue-600 px-3 py-1 text-white text-xs font-medium transition hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isLocating ? 'Obteniendo…' : '📍 Activar ubicación'}
+            </button>
+          </div>
+        )}
+
         <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
         {isLocating && (

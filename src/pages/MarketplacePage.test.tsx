@@ -4,6 +4,14 @@ import { MemoryRouter } from 'react-router-dom';
 import type { GeoPoint, MerchantRow } from '../types/database';
 import { MarketplacePage } from './MarketplacePage';
 
+// Mock navigator.permissions for tests
+Object.defineProperty(navigator, 'permissions', {
+  value: {
+    query: vi.fn().mockResolvedValue({ state: 'prompt', onchange: null }),
+  },
+  configurable: true,
+});
+
 const mocks = vi.hoisted(() => ({
   supabaseMock: { from: vi.fn() },
   navigateMock: vi.fn(),
@@ -248,7 +256,8 @@ describe('MarketplacePage', () => {
       );
 
       await screen.findByText('Mi Negocio');
-      expect(screen.getByText(/km$/)).toBeInTheDocument();
+      // distance should be shown in meters (since <1 km)
+      expect(screen.getByText(/^\d+ m$/)).toBeInTheDocument();
     });
 
     it('muestra aviso de error de GPS y botón para cerrar', async () => {
@@ -343,6 +352,28 @@ describe('MarketplacePage', () => {
       expect(await screen.findByText('OK')).toBeInTheDocument();
       // El comercio con location undefined no se muestra (fuera de 1km)
       expect(screen.queryByText('Broken')).not.toBeInTheDocument();
+    });
+
+    it('muestra tarjeta con distancia de 5 m cuando el cliente está a 5 m del comercio', async () => {
+      // Cliente en Cúa/San Antonio
+      const clientLocation: GeoPoint = { x: -66.846148, y: 10.145990 };
+      mocks.getCurrentGeoPointMock.mockResolvedValue(clientLocation);
+
+      // Comercio registrado en la misma coordenada (distancia ~0) -> esperamos <10 m
+      const merchant = buildMerchant('m1', 'Comercio Cercano', { x: -66.846148, y: 10.145990 });
+      mockTableResults({
+        merchants: { data: [merchant], error: null },
+      });
+
+      render(
+        <MemoryRouter>
+          <MarketplacePage />
+        </MemoryRouter>,
+      );
+
+      await screen.findByText('Comercio Cercano');
+      // Debe renderizar badge de distancia en metros (≤10 m)
+      expect(screen.getByText(/^\d+ m$/)).toBeInTheDocument();
     });
   });
 });

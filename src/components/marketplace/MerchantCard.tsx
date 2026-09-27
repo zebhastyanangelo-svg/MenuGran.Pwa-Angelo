@@ -56,7 +56,9 @@ export function MerchantCard({ merchant, onClick, distance }: MerchantCardProps)
             {typeof distance === 'number' && (
               <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
                 <MapPin className="h-3 w-3" aria-hidden="true" />
-                {distance < 0.1 ? '<0.1' : distance.toFixed(1)} km
+                {distance < 1
+                  ? `${Math.round(distance * 1000)} m`
+                  : `${distance.toFixed(1)} km`}
               </span>
             )}
             {merchant.opening_time && merchant.closing_time && (
