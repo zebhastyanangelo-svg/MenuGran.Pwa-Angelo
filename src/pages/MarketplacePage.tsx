@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Navigation, X, AlertCircle } from 'lucide-react';
+import { MapPin, Navigation, X } from 'lucide-react';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { GeoPoint, MerchantRow } from '../types/database';
 import { SearchBar } from '../components/marketplace/SearchBar';
@@ -122,11 +122,10 @@ export function MarketplacePage() {
       m.merchant.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
-    // Always filter by 1km radius if user location is available
-    if (userLocation === null) {
-      return bySearch;
-    }
+    // If we don't have a user location yet, show all matching merchants
+    if (!userLocation) return bySearch;
 
+    // Otherwise enforce the universal 1 km radius
     return bySearch.filter(
       (m) => m.distance !== null && m.distance <= MAX_DELIVERY_RADIUS_KM,
     );
@@ -140,7 +139,6 @@ export function MarketplacePage() {
   );
 
   const hasGps = userLocation !== null;
-  const noMerchantsInRadius = hasGps && filteredMerchants.length === 0 && merchants.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
@@ -173,17 +171,6 @@ export function MarketplacePage() {
             >
               <X className="h-3.5 w-3.5" />
             </button>
-          </div>
-        )}
-
-        {noMerchantsInRadius && (
-          <div className="mt-3 flex items-start gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-800" role="alert">
-            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span className="flex-1">
-              No hay comercios disponibles dentro del radio de 1 km de tu ubicación actual.
-              <br />
-              Prueba mover el pin de tu ubicación en el checkout o ampliar tu zona de búsqueda.
-            </span>
           </div>
         )}
 
