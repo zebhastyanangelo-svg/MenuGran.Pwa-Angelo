@@ -51,6 +51,20 @@ vi.mock('../hooks/useAuth', () => ({
   useAuth: vi.fn(),
 }));
 
+// Mock supabase client used in Checkout to fetch merchant location
+const mockMerchantSelect = vi.fn().mockResolvedValue({ data: null, error: null });
+vi.mock('../services/supabase', () => ({
+  supabase: {
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          maybeSingle: mockMerchantSelect,
+        })),
+      })),
+    })),
+  },
+}));
+
 const validCart = {
   items: [{ product: { id: 'p-1', price: '100.00', title: 'Pizza' }, quantity: 1 } as any],
   totalAmount: '100',
@@ -311,5 +325,33 @@ describe('Checkout', () => {
       }),
     );
     expect(validCart.clearCart).toHaveBeenCalled();
+  }, 10000);
+
+  it('bloquea el pedido cuando la entrega está a más de 1 km del comercio', async () => {
+    // Mock merchant location far away (Caracas)
+    mockMerchantSelect.mockResolvedValueOnce({
+      data: {
+        opening_time: '08:00',
+        closing_time: '22:00',
+        location: { x: -66.9036, y: 10.4806 }, // lon, lat
+      },
+      error: null,
+    });
+
+    renderCheckout();
+
+    await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
+    const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
+    await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), file);
+    await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    // Expect error alert about distance (multiple alerts may render)
+    const alerts = await screen.findAllByText(/más de 1 km/);
+    expect(alerts.length).toBeGreaterThan(0);
+    expect(mockCreateOrder).not.toHaveBeenCalled();
   }, 10000);
 });

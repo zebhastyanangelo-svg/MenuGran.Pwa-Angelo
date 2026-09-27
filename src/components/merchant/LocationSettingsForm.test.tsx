@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach, afterAll } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach, afterAll, beforeAll } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { useState } from 'react';
 import { LocationSettingsForm } from './LocationSettingsForm';
