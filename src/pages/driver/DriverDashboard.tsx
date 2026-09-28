@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { formatPrice } from '../../types/cart';
 import { getOrderTypeLabel } from '../../utils/orderType';
+import { getOrderDeliveryCoordinates } from '../../utils/delivery';
 import { MapView } from '../../components/map/MapView';
 import type { DriverOrder } from '../../hooks/useDriverDashboard';
 
@@ -286,6 +287,7 @@ function ActiveDeliveryView({
   const customerPhone = getCustomerPhone(order);
   const address = getDeliveryAddress(order);
   const mapsUrl = buildMapsUrl(address);
+  const deliveryCoords = getOrderDeliveryCoordinates(order);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
@@ -336,26 +338,20 @@ function ActiveDeliveryView({
             zoom={15}
             userLocation={[position.lat, position.lng]}
             markers={
-              order.delivery_location
+              deliveryCoords
                 ? [{
                     id: 'delivery-dest',
-                    position: [
-                      (order.delivery_location as { x: number; y: number }).y,
-                      (order.delivery_location as { x: number; y: number }).x,
-                    ],
+                    position: deliveryCoords,
                     title: 'Destino de entrega',
                     subtitle: address,
                   }]
                 : []
             }
             routeRequest={
-              order.delivery_location
+              deliveryCoords
                 ? {
                     from: [position.lat, position.lng],
-                    to: [
-                      (order.delivery_location as { x: number; y: number }).y,
-                      (order.delivery_location as { x: number; y: number }).x,
-                    ],
+                    to: deliveryCoords,
                   }
                 : undefined
             }

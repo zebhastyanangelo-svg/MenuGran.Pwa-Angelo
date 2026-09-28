@@ -3,6 +3,7 @@ import L from 'leaflet';
 import type { MerchantRow } from '../../types/database';
 import 'leaflet/dist/leaflet.css';
 import { fetchOsrmRoute } from '../../utils/osrmRoute';
+import { parseGeoPoint } from '../../utils/geoPoint';
 
 const DEFAULT_ZOOM = 13;
 
@@ -254,14 +255,18 @@ export function MerchantMapView({
   className = 'h-80 w-full',
 }: MerchantMapViewProps) {
   const markers: MapMarker[] = merchants
-    .filter((m): m is MerchantRow & { location: { x: number; y: number } } => m.location !== null)
-    .map((m) => ({
-      id: m.id,
-      position: [m.location.y, m.location.x],
-      title: m.name,
-      subtitle: m.is_active ? 'Abierto' : 'Cerrado',
-      onClick: onSelectMerchant ? () => onSelectMerchant(m) : undefined,
-    }));
+    .map((merchant): MapMarker | null => {
+      const location = parseGeoPoint(merchant.location);
+      if (location === null) return null;
+      return {
+        id: merchant.id,
+        position: [location.y, location.x],
+        title: merchant.name,
+        subtitle: merchant.is_active ? 'Abierto' : 'Cerrado',
+        onClick: onSelectMerchant ? () => onSelectMerchant(merchant) : undefined,
+      };
+    })
+    .filter((marker): marker is MapMarker => marker !== null);
 
   if (markers.length === 0) {
     return (

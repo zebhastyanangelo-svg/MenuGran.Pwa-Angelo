@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   getExchangeRate,
   getCachedExchangeRate,
@@ -23,37 +23,39 @@ export function useExchangeRate(): UseExchangeRateReturn {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [source, setSource] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
+
+  const applyCacheMetadata = useCallback(() => {
+    const cached = getCachedExchangeRate();
+    if (cached) {
+      setLastUpdated(new Date(cached.timestamp));
+      setSource(cached.source);
+    }
+  }, []);
 
   const loadRate = useCallback(async () => {
     try {
       setError(null);
 
-      // Primero mostrar la caché inmediatamente si existe
       const cached = getCachedExchangeRate();
       if (cached) {
         setRate(cached.rate);
-        setLastUpdated(new Date(cached.timestamp));
-        setSource(cached.source);
+        applyCacheMetadata();
       }
 
-      // Luego obtener la tasa actualizada desde Supabase
       const currentRate = await getExchangeRate();
+      if (!isMountedRef.current) return;
       setRate(currentRate);
-
-      // Actualizar metadata de la caché fresca
-      const freshCache = getCachedExchangeRate();
-      if (freshCache) {
-        setLastUpdated(new Date(freshCache.timestamp));
-        setSource(freshCache.source);
-      }
+      applyCacheMetadata();
     } catch (err) {
+      if (!isMountedRef.current) return;
       const message = err instanceof Error ? err.message : 'Error al obtener tasa de cambio';
       setError(message);
       console.error('[useExchangeRate]', message);
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) setIsLoading(false);
     }
-  }, []);
+  }, [applyCacheMetadata]);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
@@ -61,7 +63,11 @@ export function useExchangeRate(): UseExchangeRateReturn {
   }, [loadRate]);
 
   useEffect(() => {
-    loadRate();
+    isMountedRef.current = true;
+    void loadRate();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [loadRate]);
 
   return {

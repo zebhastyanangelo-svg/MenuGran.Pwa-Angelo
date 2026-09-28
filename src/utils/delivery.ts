@@ -1,4 +1,5 @@
 import type { OrderRow, OrderStatus } from '../types/database';
+import { parseGeoPoint } from './geoPoint';
 
 /** Estados previos a 'on_the_way' que aparecen en la pestaña "Nuevas" del repartidor. */
 export const NEW_DELIVERY_STATUSES: readonly OrderStatus[] = [
@@ -35,8 +36,9 @@ export function getOrderDeliveryCoordinates(
   if (order.latitude != null && order.longitude != null) {
     return [order.latitude, order.longitude];
   }
-  if (order.delivery_location) {
-    return [order.delivery_location.y, order.delivery_location.x];
+  const location = parseGeoPoint(order.delivery_location);
+  if (location !== null) {
+    return [location.y, location.x];
   }
   return null;
 }

@@ -17,6 +17,7 @@ import {
 import { useNotificationToast } from '../components/pwa/useNotificationToast';
 import { statusDisplayMap } from '../utils/statusDisplayMap';
 import { getOrderStatusLabel } from '../utils/orderStatus';
+import { parseGeoPoint } from '../utils/geoPoint';
 import { confirmOrderDelivery } from '../services/orderDeliveryService';
 import { OrderStatusStep } from '../components/orders/OrderStatusStep';
 import { getAllowedTransitions, getTransitionLabel, getTransitionButtonClass } from '../utils/orderStatus';
@@ -347,6 +348,13 @@ export function OrderTracker() {
   // Show rejection modal when order is cancelled
   const showRejection = order.status === 'cancelled';
 
+  // Destino de entrega: columna POINT o, en su defecto, lat/lng explícitas.
+  const deliveryPoint: GeoPoint | null =
+    parseGeoPoint(order.delivery_location) ??
+    (order.latitude !== null && order.longitude !== null
+      ? { x: order.longitude, y: order.latitude }
+      : null);
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <header className="mb-8">
@@ -468,7 +476,7 @@ export function OrderTracker() {
         </div>
       </div>
 
-      {order.status === 'on_the_way' && isValidGeoPoint(order.delivery_location) && (
+      {order.status === 'on_the_way' && isValidGeoPoint(deliveryPoint) && (
         <section className="mb-8 bg-white rounded-lg shadow-md p-4 border border-gray-200">
           <div className="flex items-center gap-2 mb-3">
             <Navigation className="h-5 w-5 text-blue-600" />
@@ -479,20 +487,20 @@ export function OrderTracker() {
               <MapView
                 markers={
                   isValidGeoPoint(driverLocation)
-                    ? buildDeliveryMarkers(driverLocation, order.delivery_location)
-                    : buildDeliveryMarkers(null, order.delivery_location)
+                    ? buildDeliveryMarkers(driverLocation, deliveryPoint)
+                    : buildDeliveryMarkers(null, deliveryPoint)
                 }
                 center={
                   isValidGeoPoint(driverLocation)
                     ? [driverLocation.y, driverLocation.x]
-                    : [order.delivery_location.y, order.delivery_location.x]
+                    : [deliveryPoint.y, deliveryPoint.x]
                 }
                 zoom={15}
                 routeRequest={
                   isValidGeoPoint(driverLocation)
                     ? {
                         from: [driverLocation.y, driverLocation.x],
-                        to: [order.delivery_location.y, order.delivery_location.x],
+                        to: [deliveryPoint.y, deliveryPoint.x],
                       }
                     : undefined
                 }

@@ -9,7 +9,6 @@ import { OfflineBanner } from './components/pwa/OfflineBanner';
 import { ReloadPrompt } from './components/pwa/ReloadPrompt';
 import { NotificationToastProvider, NotificationToastList } from './components/pwa/NotificationToast';
 import { PwaInstallProvider } from './contexts/PwaInstallContext';
-import { InstallBanner } from './components/pwa/InstallBanner';
 import { Analytics } from '@vercel/analytics/react';
 import { PageLoader } from './components/PageLoader';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -192,7 +191,6 @@ export function App() {
               </ErrorBoundary>
               <ReloadPrompt />
               <CartFab />
-              <InstallBanner />
               <Analytics />
             </BrowserRouter>
             <NotificationToastList />

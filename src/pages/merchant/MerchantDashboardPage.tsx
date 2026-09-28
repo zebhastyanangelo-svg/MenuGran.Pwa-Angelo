@@ -9,6 +9,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Store, Loader2, Package, ClipboardList, TrendingUp, LogOut, Image as ImageIcon, Truck, User } from 'lucide-react';
 import type { OrderStatus } from '../../types/database';
 import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
+import { getOrderDeliveryCoordinates } from '../../utils/delivery';
 import type { OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 
 const PAYMENT_PROOF_BUCKET = 'payment-proofs';
@@ -467,9 +468,12 @@ return (
                         {order.delivery_address_notes && (
                           <p>Dirección: {order.delivery_address_notes}</p>
                         )}
-                        {order.delivery_location && (
-                          <p>Coordenadas: {order.delivery_location.y.toFixed(5)}, {order.delivery_location.x.toFixed(5)}</p>
-                        )}
+                        {(() => {
+                          const coords = getOrderDeliveryCoordinates(order);
+                          return coords ? (
+                            <p>Coordenadas: {coords[0].toFixed(5)}, {coords[1].toFixed(5)}</p>
+                          ) : null;
+                        })()}
                       </div>
                     )}
                     {requiresPaymentProof(order.payment_method) && (order.payment_proof_url ? (

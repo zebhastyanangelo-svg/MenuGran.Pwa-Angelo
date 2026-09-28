@@ -24,6 +24,10 @@ interface CreateOrderParams {
  *
  * The RLS policy `orders_insert_customer` enforces that `customer_id = auth.uid()`,
  * so the caller must supply the authenticated user's ID.
+ *
+ * Note: We omit `delivery_location` (PostGIS point) because PostgREST doesn't accept
+ * the `(x,y)` string format directly. Instead we use the `latitude`/`longitude`
+ * float8 columns which work reliably.
  */
 export async function createOrder(params: CreateOrderParams): Promise<string> {
   const orderData: OrderInsert = {
@@ -36,10 +40,6 @@ export async function createOrder(params: CreateOrderParams): Promise<string> {
     payment_proof_url: params.paymentProofUrl ?? undefined,
     total_amount: String(params.totalAmount),
     items: params.items,
-    delivery_location:
-      params.deliveryLocation != null
-        ? `(${params.deliveryLocation.x},${params.deliveryLocation.y})`
-        : undefined,
     latitude: params.deliveryLocation?.y ?? undefined,
     longitude: params.deliveryLocation?.x ?? undefined,
     delivery_address: params.deliveryAddress ?? undefined,

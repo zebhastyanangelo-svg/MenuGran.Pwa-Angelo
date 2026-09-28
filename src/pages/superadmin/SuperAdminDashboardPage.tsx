@@ -8,6 +8,7 @@ import { useSuperAdminOrderTrends } from '../../hooks/useSuperAdminOrderTrends';
 import { useBCVRate } from '../../hooks/useExchangeRate';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../services/supabase';
+import { parseGeoPoint } from '../../utils/geoPoint';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -88,6 +89,24 @@ function MetricsChartsSection({
   );
 }
 
+interface MerchantMapRow {
+  id: string;
+  name: string;
+  address: string | null;
+  category: string | null;
+  is_open: boolean;
+  location: unknown;
+}
+
+interface MerchantMapMarker {
+  id: string;
+  name: string;
+  address: string;
+  category: string;
+  is_open: boolean;
+  location: { x: number; y: number } | null;
+}
+
 /** Dashboard global de métricas de la plataforma (rol superadmin). */
 export function SuperAdminDashboardPage() {
   const { metrics, isLoading, error } = useSuperAdminMetrics();
@@ -99,7 +118,7 @@ export function SuperAdminDashboardPage() {
   } = useSuperAdminOrderTrends();
   const bcvRate = useBCVRate();
 
-  const [merchants, setMerchants] = useState<Array<{ id: string; name: string; address: string; category: string; is_open: boolean; location: { x: number; y: number } | null }>>([]);
+  const [merchants, setMerchants] = useState<MerchantMapMarker[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const mapRef = useRef<HTMLDivElement | null>(null);
 
@@ -116,14 +135,15 @@ export function SuperAdminDashboardPage() {
           return;
         }
         if (data) {
+          const rows = data as unknown as MerchantMapRow[];
           setMerchants(
-            data.map((m: any) => ({
+            rows.map((m) => ({
               id: m.id,
               name: m.name,
-              address: m.address,
-              category: m.category,
+              address: m.address ?? 'Sin dirección',
+              category: m.category ?? 'Sin categoría',
               is_open: m.is_open,
-              location: m.location,
+              location: parseGeoPoint(m.location),
             }))
           );
         }
