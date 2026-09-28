@@ -4,7 +4,7 @@
  */
 
 export const EXCHANGE_RATE_STORAGE_KEY = 'menugram_bcv_exchange_rate';
-export const EXCHANGE_RATE_TTL_MS = 4 * 60 * 60 * 1000; // 4 horas en milisegundos
+export const EXCHANGE_RATE_TTL_MS = 60 * 60 * 1000; // 1 hora en milisegundos (actualización cada hora)
 
 export interface ExchangeRateData {
   rate: number;
@@ -32,17 +32,29 @@ const BCV_API_ENDPOINTS = [
     }),
   },
   {
-    url: 'https://pydolarve.org/api/v1/dollar?page=bcv',
+    url: 'https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=bcv',
     parser: (data: any) => {
-      // Try multiple possible fields for rate and date
-      const rateCandidate = data.promedio ?? data.monto ?? data.price ?? data.bcv?.price ?? data.bcv?.promedio ?? data.bcv?.monto;
-      const dateCandidate = data.fecha ?? data.date ?? data.bcv?.date ?? data.bcv?.fecha;
+      const rateCandidate = data.price ?? data.promedio ?? data.monto ?? data.bcv?.price ?? data.bcv?.promedio ?? data.bcv?.monto;
+      const dateCandidate = data.date ?? data.fecha ?? data.bcv?.date ?? data.bcv?.fecha;
       const price = typeof rateCandidate === 'number' ? rateCandidate : typeof rateCandidate === 'string' ? parseFloat(rateCandidate) : NaN;
       const date = typeof dateCandidate === 'string' ? dateCandidate : new Date().toISOString();
       if (Number.isNaN(price) || price <= 0) {
-        throw new Error('Tasa inválida recibida de pydolarve');
+        throw new Error('Tasa inválida recibida de pydolarvenezuela-api');
       }
-      return { price, date, source: 'pydolarve.org' };
+      return { price, date, source: 'pydolarvenezuela-api.vercel.app' };
+    },
+  },
+  {
+    url: 'https://bcv-api.vercel.app/api/bcv',
+    parser: (data: any) => {
+      const rateCandidate = data.price ?? data.rate ?? data.bcv?.price ?? data.bcv?.rate;
+      const dateCandidate = data.date ?? data.fecha ?? data.bcv?.date ?? data.bcv?.fecha;
+      const price = typeof rateCandidate === 'number' ? rateCandidate : typeof rateCandidate === 'string' ? parseFloat(rateCandidate) : NaN;
+      const date = typeof dateCandidate === 'string' ? dateCandidate : new Date().toISOString();
+      if (Number.isNaN(price) || price <= 0) {
+        throw new Error('Tasa inválida recibida de bcv-api');
+      }
+      return { price, date, source: 'bcv-api.vercel.app' };
     },
   },
 ];
@@ -215,4 +227,38 @@ export function formatUSD(amount: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
+}
+
+/** Interval ID para la actualización automática cada hora. */
+let hourlyRefreshInterval: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * Inicia la actualización automática de la tasa BCV cada hora.
+ * Llama a fetchBCVRateFromAPI y guarda en caché; ignora errores para no romper la app.
+ */
+export function startHourlyBCVRefresh(): void {
+  if (typeof window === 'undefined' || hourlyRefreshInterval !== null) return;
+
+  const refresh = async () => {
+    try {
+      const fresh = await fetchBCVRateFromAPI();
+      setCachedExchangeRate(fresh.rate, fresh.source);
+    } catch {
+      // Silencioso: la próxima lectura usará fallback o caché existente.
+    }
+  };
+
+  // Ejecutar inmediatamente y luego cada hora.
+  refresh();
+  hourlyRefreshInterval = setInterval(refresh, EXCHANGE_RATE_TTL_MS);
+}
+
+/**
+ * Detiene la actualización automática (útil en tests o cleanup).
+ */
+export function stopHourlyBCVRefresh(): void {
+  if (hourlyRefreshInterval !== null) {
+    clearInterval(hourlyRefreshInterval);
+    hourlyRefreshInterval = null;
+  }
 }

@@ -13,6 +13,8 @@ import {
   isTerminalOrderStatus,
 } from '../../utils/orderStatus';
 import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
+import { Modal } from '../ui/Modal';
+import { Truck, Eye } from 'lucide-react';
 
 type PeriodPreset = 'this_month' | 'last_month' | 'today' | 'last_7_days' | 'custom';
 
@@ -99,6 +101,8 @@ export function OrdersBoard({
   const [customMonth, setCustomMonth] = useState<string>(''); // format YYYY-MM
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderWithCustomer | null>(null);
 
   const bcvRate = useBCVRate();
 
@@ -145,7 +149,8 @@ export function OrdersBoard({
   const goNext = () => setPage((p) => Math.min(totalPages, p + 1));
 
   return (
-    <section className="space-y-4">
+    <>
+      <section className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
           Panel de Comercio - Gestión de Pedidos
@@ -216,155 +221,374 @@ export function OrdersBoard({
           {filterStatus ? ` con estado ${getOrderStatusLabel(filterStatus)}` : ''}
         </p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse block sm:table">
-            <thead className="hidden sm:table-header-group">
-              <tr className="border-b border-gray-200 bg-gray-50">
-                {['ID', 'Cliente', 'Monto (USD / Bs)', 'Estado', 'Pago', 'Código', 'Acciones'].map(
-                  (head) => (
-                    <th
-                      key={head}
-                      className="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide"
+        <>
+          {/* Desktop table view */}
+          <div className="hidden md:block overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    {['ID', 'Cliente', 'Monto (USD / Bs)', 'Estado', 'Pago', 'Código', 'Acciones'].map(
+                      (head) => (
+                        <th
+                          key={head}
+                          className="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide"
+                        >
+                          {head}
+                        </th>
+                      )
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedOrders.map((order) => (
+                    <tr
+                      key={order.id}
+                      className="border-t border-gray-200 hover:bg-gray-50"
                     >
-                      {head}
-                    </th>
-                  )
-                )}
-              </tr>
-            </thead>
-            <tbody className="block sm:table-row-group">
-              {paginatedOrders.map((order) => (
-                <tr
-                  key={order.id}
-                  className="border-t border-gray-200 block sm:table-row hover:bg-gray-50"
+                      <td className="px-4 py-3 text-sm font-medium text-gray-800">
+                        {order.id}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-800">
+                        {getCustomerLabel(order)}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                        <div className="flex flex-col gap-0.5">
+                          <span>{formatPrice(order.total_amount)}</span>
+                          {bcvRate > 0 && (
+                            <span className="text-xs text-emerald-700">
+                              {formatVES(Number(order.total_amount) * bcvRate)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <OrderStatusBadge status={order.status} />
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="font-medium">
+                          {getPaymentMethodLabel(order.payment_method)}
+                        </span>
+                        {order.payment_reference && (
+                          <div className="mt-0.5 text-xs text-gray-500">
+                            Ref: {order.payment_reference}
+                          </div>
+                        )}
+                        {requiresPaymentProof(order.payment_method) && (order.payment_proof_url ? (
+                          <button
+                            type="button"
+                            onClick={() => onOpenProof(order)}
+                            className="mt-1.5 inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded font-medium transition-colors"
+                          >
+                            Ver comprobante
+                          </button>
+                        ) : (
+                          <span className="mt-1.5 block text-xs text-gray-400 italic">
+                            Sin capture
+                          </span>
+                        ))}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="font-mono text-gray-700">Código: {order.id.slice(0, 4).toUpperCase()}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {order.type === 'delivery' && onAssignDriver && (
+                            <div className="w-full mb-1 md:w-auto">
+                              {order.driver_id ? (
+                                <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded font-medium">
+                                  <Truck className="h-3 w-3" aria-hidden="true" />
+                                  {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
+                                </span>
+                              ) : !isTerminalOrderStatus(order.status) && order.status !== 'on_the_way' ? (
+                                <select
+                                  className="w-full text-xs border border-indigo-200 rounded px-2 py-1 bg-indigo-50 text-indigo-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                  data-testid={`driver-select-${order.id}`}
+                                  defaultValue=""
+                                  onChange={(e) => {
+                                    const driverId = e.target.value;
+                                    if (driverId) {
+                                      onAssignDriver(order.id, driverId);
+                                    }
+                                  }}
+                                >
+                                  <option value="" disabled>
+                                    Asignar repartidor
+                                  </option>
+                                  {drivers.length === 0 ? (
+                                    <option value="" disabled className="text-gray-400">
+                                      Sin repartidores disponibles
+                                    </option>
+                                  ) : (
+                                    drivers.map((driver) => (
+                                      <option key={driver.id} value={driver.id}>
+                                        {driver.full_name ?? driver.email ?? driver.id}
+                                      </option>
+                                    ))
+                                  )}
+                                </select>
+                              ) : null}
+                            </div>
+                          )}
+                          {!isTerminalOrderStatus(order.status) &&
+                            getAllowedTransitions(order.status).filter(s => s !== 'delivered').map((nextStatus) => (
+                              <button
+                                key={nextStatus}
+                                type="button"
+                                onClick={() => onUpdateStatus(order.id, nextStatus)}
+                                className={`text-xs px-2.5 py-1 rounded font-medium transition-colors ${getTransitionButtonClass(
+                                  nextStatus
+                                )}`}
+                              >
+                                {getTransitionLabel(nextStatus)}
+                              </button>
+                            ))}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setDetailOpen(true);
+                            }}
+                            className="text-xs px-2.5 py-1 rounded font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-colors"
+                          >
+                            <Eye className="h-3 w-3 inline mr-1" aria-hidden="true" />
+                            Ver detalles
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
+              <span className="text-sm text-gray-600">
+                Página {currentPage} de {totalPages}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={goPrev}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-md bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
                 >
-                  <td className="px-4 py-3 text-sm font-medium text-gray-800 block sm:table-cell">
-                    {order.id}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-800 block sm:table-cell">
-                    {getCustomerLabel(order)}
-                  </td>
-                  <td className="px-4 py-3 text-sm font-semibold text-gray-900 block sm:table-cell">
-                    <div className="flex flex-col gap-0.5">
-                      <span>{formatPrice(order.total_amount)}</span>
+                  Anterior
+                </button>
+                <button
+                  onClick={goNext}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-md bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile card view */}
+          <div className="md:hidden space-y-3">
+            {paginatedOrders.map((order) => (
+              <article
+                key={order.id}
+                className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 truncate">{order.id}</p>
+                    <p className="text-sm text-gray-600">{getCustomerLabel(order)}</p>
+                    <div className="mt-1 flex flex-col gap-0.5">
+                      <span className="font-semibold text-gray-900">{formatPrice(order.total_amount)}</span>
                       {bcvRate > 0 && (
                         <span className="text-xs text-emerald-700">
                           {formatVES(Number(order.total_amount) * bcvRate)}
                         </span>
                       )}
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm block sm:table-cell">
-                    <OrderStatusBadge status={order.status} />
-                  </td>
-                  <td className="px-4 py-3 text-sm block sm:table-cell">
-                    <span className="font-medium">
-                      {getPaymentMethodLabel(order.payment_method)}
-                    </span>
-                    {order.payment_reference && (
-                      <div className="mt-0.5 text-xs text-gray-500">
-                        Ref: {order.payment_reference}
-                      </div>
-                    )}
-                    {requiresPaymentProof(order.payment_method) && (order.payment_proof_url ? (
-                      <button
-                        type="button"
-                        onClick={() => onOpenProof(order)}
-                        className="mt-1.5 inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded font-medium transition-colors"
-                      >
-                        Ver comprobante
-                      </button>
-                    ) : (
-                      <span className="mt-1.5 block text-xs text-gray-400 italic">
-                        Sin capture
-                      </span>
-                    ))}
-                  </td>
-                  <td className="px-4 py-3 text-sm block sm:table-cell">
-                    <span className="font-mono text-gray-700">Código: {order.id.slice(0, 4).toUpperCase()}</span>
-                  </td>
-                  <td className="px-4 py-3 block sm:table-cell">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {order.type === 'delivery' && onAssignDriver && (
-                        <div className="w-full mb-1">
-                          {order.driver_id ? (
-                            <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded font-medium">
-                              🚗 {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
-                            </span>
-                          ) : !isTerminalOrderStatus(order.status) && order.status !== 'on_the_way' ? (
-                            <select
-                              className="w-full text-xs border border-indigo-200 rounded px-2 py-1 bg-indigo-50 text-indigo-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              data-testid={`driver-select-${order.id}`}
-                              defaultValue=""
-                              onChange={(e) => {
-                                const driverId = e.target.value;
-                                if (driverId) {
-                                  onAssignDriver(order.id, driverId);
-                                }
-                              }}
-                            >
-                              <option value="" disabled>
-                                Asignar repartidor
-                              </option>
-                              {drivers.length === 0 ? (
-                                <option value="" disabled className="text-gray-400">
-                                  Sin repartidores disponibles
-                                </option>
-                              ) : (
-                                drivers.map((driver) => (
-                                  <option key={driver.id} value={driver.id}>
-                                    {driver.full_name ?? driver.email ?? driver.id}
-                                  </option>
-                                ))
-                              )}
-                            </select>
-                          ) : null}
-                        </div>
+                    <div className="mt-2 flex items-center gap-2 text-xs">
+                      <OrderStatusBadge status={order.status} />
+                      <span className="font-medium">{getPaymentMethodLabel(order.payment_method)}</span>
+                      {order.payment_reference && (
+                        <span className="text-gray-500">Ref: {order.payment_reference}</span>
                       )}
-                      {!isTerminalOrderStatus(order.status) &&
-                        getAllowedTransitions(order.status).filter(s => s !== 'delivered').map((nextStatus) => (
-                          <button
-                            key={nextStatus}
-                            type="button"
-                            onClick={() => onUpdateStatus(order.id, nextStatus)}
-                            className={`text-xs px-2.5 py-1 rounded font-medium transition-colors ${getTransitionButtonClass(
-                              nextStatus
-                            )}`}
-                          >
-                            {getTransitionLabel(nextStatus)}
-                          </button>
-                        ))}
+                      <span className="font-mono text-gray-700">Código: {order.id.slice(0, 4).toUpperCase()}</span>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
-            <span className="text-sm text-gray-600">
-              Página {currentPage} de {totalPages}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={goPrev}
-                disabled={currentPage === 1}
-                className="px-3 py-1 text-sm border border-gray-300 rounded-md bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-              >
-                Anterior
-              </button>
-              <button
-                onClick={goNext}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 text-sm border border-gray-300 rounded-md bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-              >
-                Siguiente
-              </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setDetailOpen(true);
+                    }}
+                    className="flex items-center gap-1 text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded text-xs font-medium hover:bg-indigo-100"
+                  >
+                    <Eye className="h-3 w-3" aria-hidden="true" />
+                    Ver detalles
+                  </button>
+                </div>
+
+                {/* Actions row */}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {order.type === 'delivery' && onAssignDriver && (
+                    <div className="w-full">
+                      {order.driver_id ? (
+                        <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded font-medium">
+                          <Truck className="h-3 w-3" aria-hidden="true" />
+                          {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
+                        </span>
+                      ) : !isTerminalOrderStatus(order.status) && order.status !== 'on_the_way' ? (
+                        <select
+                          className="w-full text-xs border border-indigo-200 rounded px-2 py-1 bg-indigo-50 text-indigo-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          data-testid={`driver-select-${order.id}`}
+                          defaultValue=""
+                          onChange={(e) => {
+                            const driverId = e.target.value;
+                            if (driverId) {
+                              onAssignDriver(order.id, driverId);
+                            }
+                          }}
+                        >
+                          <option value="" disabled>
+                            Asignar repartidor
+                          </option>
+                          {drivers.length === 0 ? (
+                            <option value="" disabled className="text-gray-400">
+                              Sin repartidores disponibles
+                            </option>
+                          ) : (
+                            drivers.map((driver) => (
+                              <option key={driver.id} value={driver.id}>
+                                {driver.full_name ?? driver.email ?? driver.id}
+                              </option>
+                            ))
+                          )}
+                        </select>
+                      ) : null}
+                    </div>
+                  )}
+                  {!isTerminalOrderStatus(order.status) &&
+                    getAllowedTransitions(order.status).filter(s => s !== 'delivered').map((nextStatus) => (
+                      <button
+                        key={nextStatus}
+                        type="button"
+                        onClick={() => onUpdateStatus(order.id, nextStatus)}
+                        className={`text-xs px-2.5 py-1 rounded font-medium transition-colors ${getTransitionButtonClass(
+                          nextStatus
+                        )}`}
+                      >
+                        {getTransitionLabel(nextStatus)}
+                      </button>
+                    ))}
+                </div>
+
+                {/* Pagination not needed in mobile card view; rely on page controls below */}
+              </article>
+            ))}
+            {/* Pagination controls for mobile */}
+            <div className="flex items-center justify-between px-2 py-2 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+              <span className="text-sm text-gray-600">
+                Página {currentPage} de {totalPages}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={goPrev}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-md bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Anterior
+                </button>
+                <button
+                  onClick={goNext}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-md bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Siguiente
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </section>
+
+      {/* Detail modal */}
+      <Modal
+        isOpen={detailOpen}
+        onClose={() => {
+          setDetailOpen(false);
+          setSelectedOrder(null);
+        }}
+        title="Detalle del pedido"
+      >
+        {selectedOrder && (
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="text-sm font-medium text-gray-500">ID</p>
+                <p className="font-mono text-gray-900">{selectedOrder.id}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Código</p>
+                <p className="font-mono text-gray-900">{selectedOrder.id.slice(0, 4).toUpperCase()}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Cliente</p>
+                <p className="text-gray-900">{getCustomerLabel(selectedOrder)}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Email</p>
+                <p className="text-gray-900">{selectedOrder.profiles?.email ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Cédula</p>
+                <p className="text-gray-900">{selectedOrder.profiles?.ci ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Tipo</p>
+                <p className="text-gray-900 capitalize">{selectedOrder.type.replace('_', ' ')}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Estado</p>
+                <p className="text-gray-900 capitalize">{getOrderStatusLabel(selectedOrder.status)}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Método de pago</p>
+                <p className="text-gray-900">{getPaymentMethodLabel(selectedOrder.payment_method)}</p>
+              </div>
+              {selectedOrder.payment_reference && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Referencia</p>
+                  <p className="text-gray-900">{selectedOrder.payment_reference}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-sm font-medium text-gray-500">Total (USD)</p>
+                <p className="font-semibold text-gray-900">{formatPrice(selectedOrder.total_amount)}</p>
+              </div>
+              {bcvRate > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Total (Bs.)</p>
+                  <p className="font-semibold text-emerald-700">{formatVES(Number(selectedOrder.total_amount) * bcvRate)}</p>
+                </div>
+              )}
+              {selectedOrder.delivery_address_notes && (
+                <div className="sm:col-span-2">
+                  <p className="text-sm font-medium text-gray-500">Dirección de entrega</p>
+                  <p className="text-gray-900 whitespace-pre-line">{selectedOrder.delivery_address_notes}</p>
+                </div>
+              )}
+              {selectedOrder.payment_proof_url && (
+                <div className="sm:col-span-2">
+                  <p className="text-sm font-medium text-gray-500">Comprobante de pago</p>
+                  <img
+                    src={selectedOrder.payment_proof_url}
+                    alt="Comprobante"
+                    className="mt-2 max-w-full h-auto rounded-lg border border-gray-200"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
+    </>
   );
 }

@@ -58,15 +58,20 @@ async function uploadProofIfNeeded(
     const proofToUpload = file.type.startsWith('image/')
       ? (await compressImage(file)).blob
       : file;
-    return await uploadPaymentProofTemp(proofToUpload);
+    const url = await uploadPaymentProofTemp(proofToUpload);
+    if (!url) throw new Error('No se recibió URL de almacenamiento');
+    return url;
   } catch (uploadError) {
-    console.warn('Supabase Storage upload failed, using fallback blob URL:', uploadError);
-    // Fallback: create a blob URL that can be stored temporarily
-    // This allows the order to be created even if Supabase Storage is unavailable
-    const proofToUpload = file.type.startsWith('image/')
-      ? (await compressImage(file)).blob
-      : file;
-    return URL.createObjectURL(proofToUpload);
+    const message = uploadError instanceof Error ? uploadError.message : String(uploadError);
+    // Detectar errores comunes de Supabase Storage
+    if (message.includes('row-level security') || message.includes('policy') || message.includes('permission')) {
+      throw new Error('No se pudo subir el comprobante: permisos de almacenamiento insuficientes. Contacta al administrador.');
+    }
+    if (message.includes('size') || message.includes('payload') || message.includes('413')) {
+      throw new Error('El archivo es demasiado grande para subir. Máximo 5 MB.');
+    }
+    // Otros errores de red
+    throw new Error(`Error al subir el comprobante: ${message}`);
   }
 }
 
@@ -242,7 +247,9 @@ export function Checkout() {
       clearCart();
       navigate(`/orders/${data}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al enviar el pedido.');
+      const errMsg = err instanceof Error ? err.message : 'Error al enviar el pedido.';
+      setError(errMsg);
+      showToast({ variant: 'error', title: 'Error', message: errMsg });
     } finally {
       setIsProcessing(false);
     }

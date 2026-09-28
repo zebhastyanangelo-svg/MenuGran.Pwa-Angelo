@@ -1,10 +1,15 @@
-import { BarChart3, ClipboardList, Store, Users } from 'lucide-react';
+import { BarChart3, ClipboardList, Store, Users, DollarSign, MapPin } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { PlatformDistributionChart } from '../../components/superadmin/PlatformDistributionChart';
 import { RevenueTrendChart } from '../../components/superadmin/RevenueTrendChart';
 import { OrdersStatusChart } from '../../components/superadmin/OrdersStatusChart';
 import { useSuperAdminMetrics } from '../../hooks/useSuperAdminMetrics';
 import { useSuperAdminOrderTrends } from '../../hooks/useSuperAdminOrderTrends';
+import { useBCVRate } from '../../hooks/useExchangeRate';
+import { useEffect, useState, useRef } from 'react';
+import { supabase } from '../../services/supabase';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 interface MetricCardProps {
   icon: React.ReactNode;
@@ -92,21 +97,90 @@ export function SuperAdminDashboardPage() {
     isLoading: trendsLoading,
     error: trendsError,
   } = useSuperAdminOrderTrends();
+  const bcvRate = useBCVRate();
+
+  const [merchants, setMerchants] = useState<Array<{ id: string; name: string; address: string; category: string; is_open: boolean; location: { x: number; y: number } | null }>>([]);
+  const [mapReady, setMapReady] = useState(false);
+  const mapRef = useRef<HTMLDivElement | null>(null);
+
+  // Fetch merchants with location for map
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from('merchants')
+      .select('id, name, address, category, is_open, location')
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error('Error fetching merchants for map', error);
+          return;
+        }
+        if (data) {
+          setMerchants(
+            data.map((m: any) => ({
+              id: m.id,
+              name: m.name,
+              address: m.address,
+              category: m.category,
+              is_open: m.is_open,
+              location: m.location,
+            }))
+          );
+        }
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Initialize Leaflet map after merchants loaded
+  useEffect(() => {
+    if (merchants.length === 0 || mapReady) return;
+    const container = mapRef.current;
+    if (!container) return;
+    const map = L.map(container).setView([10.5, -66.9], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map);
+
+    merchants.forEach((m) => {
+      if (m.location && typeof m.location.x === 'number' && typeof m.location.y === 'number') {
+        const color = m.is_open ? '#22c55e' : '#ef4444';
+        const marker = L.circleMarker([m.location.y, m.location.x], {
+          radius: 8,
+          fillColor: color,
+          color: '#fff',
+          weight: 1,
+          fillOpacity: 0.9,
+        }).addTo(map);
+        marker.bindPopup(`<strong>${m.name}</strong><br/>${m.address}<br/>${m.category}`);
+      }
+    });
+    setMapReady(true);
+  }, [merchants, mapReady]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="mx-auto max-w-7xl space-y-6">
-        <header className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-red/10">
-            <BarChart3 className="h-5 w-5 text-brand-red" />
-          </span>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-              Métricas Globales
-            </h1>
-            <p className="text-sm text-gray-500">
-              Resumen general de la plataforma MenuGram.
-            </p>
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-red/10">
+              <BarChart3 className="h-5 w-5 text-brand-red" />
+            </span>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                Métricas Globales
+              </h1>
+              <p className="text-sm text-gray-500">
+                Resumen general de la plataforma MenuGram.
+              </p>
+            </div>
+          </div>
+          {/* BCV Rate widget */}
+          <div className="flex items-center gap-2 rounded-xl bg-white border border-gray-200 px-4 py-2 shadow-sm">
+            <DollarSign className="h-5 w-5 text-emerald-600" aria-hidden="true" />
+            <span className="font-semibold text-gray-900">
+              Tasa BCV: Bs. {bcvRate > 0 ? bcvRate.toFixed(2) : '—'}
+            </span>
           </div>
         </header>
 
@@ -152,6 +226,22 @@ export function SuperAdminDashboardPage() {
             trendsError={trendsError}
           />
         )}
+
+        {/* Mapa global de comercios */}
+        <section aria-label="Mapa global de comercios">
+          <h2 className="mb-3 text-sm font-semibold text-slate-500 flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-brand-red" aria-hidden="true" />
+            Mapa Global de Comercios
+          </h2>
+          <Card className="p-0 overflow-hidden">
+            <div
+              ref={mapRef}
+              style={{ height: '400px', width: '100%' }}
+              role="application"
+              aria-label="Mapa de comercios"
+            />
+          </Card>
+        </section>
       </div>
     </div>
   );
