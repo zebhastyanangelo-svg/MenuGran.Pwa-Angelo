@@ -54,6 +54,64 @@ export default defineConfig(({ mode }) => {
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           skipWaiting: true,
           clientsClaim: true,
+          runtimeCaching: [
+            {
+              urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'api-cache',
+                expiration: {
+                  maxEntries: 50,
+                  maxAgeSeconds: 5 * 60, // 5 minutes
+                },
+                networkTimeoutSeconds: 10,
+              },
+            },
+            {
+              urlPattern: ({ url }) => url.hostname.includes('supabase.co'),
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'supabase-cache',
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 5 * 60, // 5 minutes
+                },
+                networkTimeoutSeconds: 10,
+                plugins: [
+                  {
+                    fetchDidSucceed: async ({ response }) => {
+                      if (response.ok) {
+                        console.debug('[SW] Cached Supabase response');
+                      }
+                      return response;
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              urlPattern: ({ url }) => url.pathname.match(/\.(png|jpg|jpeg|svg|webp|ico)$/),
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'images-cache',
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+                },
+              },
+            },
+            {
+              urlPattern: ({ url }) => url.pathname.match(/\.(woff2?|ttf|eot)$/),
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'fonts-cache',
+                expiration: {
+                  maxEntries: 20,
+                  maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
+                },
+              },
+            },
+          ],
         },
         devOptions: {
           enabled: false,

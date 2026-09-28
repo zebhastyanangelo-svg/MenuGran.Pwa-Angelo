@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
-  getBCVRate,
+  getExchangeRate,
   getCachedExchangeRate,
-} from '../services/exchangeRate';
+} from '../services/exchangeRateSupabase';
 
 export interface UseExchangeRateReturn {
   rate: number | null;
@@ -14,8 +14,8 @@ export interface UseExchangeRateReturn {
 }
 
 /**
- * Hook para obtener y mantener actualizada la tasa de cambio BCV.
- * Usa caché local y actualiza automáticamente en background.
+ * Hook para obtener y mantener actualizada la tasa de cambio BCV desde Supabase.
+ * Usa caché local con TTL de 30 minutos y actualiza automáticamente en background.
  */
 export function useExchangeRate(): UseExchangeRateReturn {
   const [rate, setRate] = useState<number | null>(null);
@@ -36,8 +36,8 @@ export function useExchangeRate(): UseExchangeRateReturn {
         setSource(cached.source);
       }
 
-      // Luego obtener la tasa actualizada (puede usar caché o API)
-      const currentRate = await getBCVRate();
+      // Luego obtener la tasa actualizada desde Supabase
+      const currentRate = await getExchangeRate();
       setRate(currentRate);
 
       // Actualizar metadata de la caché fresca
@@ -76,14 +76,12 @@ export function useExchangeRate(): UseExchangeRateReturn {
 
 /**
  * Hook simplificado que solo retorna la tasa (útil para componentes que solo necesitan el valor).
- * Lanza durante la carga inicial si no hay caché.
+ * Retorna 0 durante la carga inicial si no hay caché.
  */
 export function useBCVRate(): number {
   const { rate, isLoading } = useExchangeRate();
 
   if (isLoading && rate === null) {
-    // Durante la carga inicial sin caché, retornamos 0 para evitar renderizado condicional complejo
-    // El componente padre debería manejar el estado de carga
     return 0;
   }
 

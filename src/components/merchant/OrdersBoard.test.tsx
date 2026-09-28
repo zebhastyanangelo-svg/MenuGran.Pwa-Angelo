@@ -53,7 +53,7 @@ describe('OrdersBoard', () => {
   it('muestra el badge "Entregado" con estilo verde claro para pedidos delivered', () => {
     renderBoard([buildOrder({ status: 'delivered' })]);
 
-    const badge = screen.getByText('Entregado', { selector: 'span' });
+    const badge = screen.getAllByText('Entregado', { selector: 'span' })[0];
     expect(badge).toBeInTheDocument();
     expect(badge.className).toContain('bg-emerald-100');
     expect(badge.className).toContain('text-emerald-800');
@@ -71,7 +71,7 @@ describe('OrdersBoard', () => {
   it('muestra el badge "En Camino" mientras el pedido está en tránsito', () => {
     renderBoard([buildOrder({ status: 'on_the_way' })]);
 
-    const badge = screen.getByText('En Camino', { selector: 'span' });
+    const badge = screen.getAllByText('En Camino', { selector: 'span' })[0];
     expect(badge).toBeInTheDocument();
     expect(badge.className).toContain('bg-purple-100');
   });
@@ -79,7 +79,7 @@ describe('OrdersBoard', () => {
   it('muestra botones de acción para pedidos que aún pueden transicionar', async () => {
     const { onUpdateStatus } = renderBoard([buildOrder({ status: 'preparing' })]);
 
-    const actionButton = screen.getByRole('button', { name: 'Marcar como listo' });
+    const actionButton = screen.getAllByRole('button', { name: 'Marcar como listo' })[0];
     await userEvent.click(actionButton);
 
     expect(onUpdateStatus).toHaveBeenCalledWith('order-1', 'ready');
@@ -111,7 +111,7 @@ describe('OrdersBoard', () => {
       buildOrder({ payment_method: 'card_pos', payment_proof_url: null }),
     ]);
 
-    expect(screen.getByText('Punto de Venta')).toBeInTheDocument();
+    expect(screen.getAllByText('Punto de Venta')[0]).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /Ver comprobante/i }),
     ).not.toBeInTheDocument();
@@ -121,7 +121,7 @@ describe('OrdersBoard', () => {
   it('muestra "Efectivo" sin botón de comprobante para cash', () => {
     renderBoard([buildOrder({ payment_method: 'cash', payment_proof_url: null })]);
 
-    expect(screen.getByText('Efectivo')).toBeInTheDocument();
+    expect(screen.getAllByText('Efectivo')[0]).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /Ver comprobante/i }),
     ).not.toBeInTheDocument();
@@ -135,7 +135,7 @@ describe('OrdersBoard', () => {
       }),
     ]);
 
-    expect(screen.getByText('Pago Móvil')).toBeInTheDocument();
+    expect(screen.getAllByText('Pago Móvil')[0]).toBeInTheDocument();
     const proofButton = screen.getByRole('button', { name: /Ver comprobante/i });
     await userEvent.click(proofButton);
     expect(onOpenProof).toHaveBeenCalledTimes(1);

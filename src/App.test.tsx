@@ -5,6 +5,11 @@ import App from './App';
 import { useAuth } from './hooks/useAuth';
 import type { AuthContextValue } from './context/auth-context-core';
 
+vi.mock('./services/exchangeRateSupabase', () => ({
+  getExchangeRate: vi.fn().mockResolvedValue(857.00),
+  getCachedExchangeRate: vi.fn().mockReturnValue(null),
+}));
+
 const createQuery = () => {
   const query: Record<string, unknown> = {
     select: () => query,

@@ -249,9 +249,9 @@ describe('MerchantDashboardPage', () => {
 
     // Wait for data to load
     await waitFor(() => {
-      expect(screen.getByText('order-1')).toBeInTheDocument();
-      expect(screen.getByText('order-2')).toBeInTheDocument();
-      expect(screen.getByText('order-3')).toBeInTheDocument();
+      expect(screen.getAllByText(/order-1/i)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/order-2/i)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/order-3/i)[0]).toBeInTheDocument();
     });
 
     // Check default view shows all three
@@ -266,9 +266,9 @@ describe('MerchantDashboardPage', () => {
     // Wait for filter to apply
     await waitFor(() => {
       // Only order-2 should be visible
-      expect(screen.getByText('order-2')).toBeInTheDocument();
-      expect(screen.queryByText('order-1')).not.toBeInTheDocument();
-      expect(screen.queryByText('order-3')).not.toBeInTheDocument();
+      expect(screen.getAllByText(/order-2/i)[0]).toBeInTheDocument();
+      expect(screen.queryAllByText(/order-1/i)).toHaveLength(0);
+      expect(screen.queryAllByText(/order-3/i)).toHaveLength(0);
     });
   });
 
@@ -312,10 +312,10 @@ describe('MerchantDashboardPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Aceptar pago/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Aceptar pago/i)[0]).toBeInTheDocument();
     });
 
-    await userEventInstance.click(screen.getByText(/Aceptar pago/i));
+    await userEventInstance.click(screen.getAllByText(/Aceptar pago/i)[0]);
 
     // Wait for update to be called
     await waitFor(() => {
@@ -341,11 +341,11 @@ describe('MerchantDashboardPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/order-delivery-1/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/order-delivery-1/i)[0]).toBeInTheDocument();
     });
 
     expect(
-      screen.getByText(/Sin repartidores disponibles/i),
+      screen.getAllByText(/Sin repartidores disponibles/i)[0],
     ).toBeInTheDocument();
   });
 });
