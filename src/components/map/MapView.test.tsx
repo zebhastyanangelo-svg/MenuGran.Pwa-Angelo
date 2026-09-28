@@ -30,6 +30,7 @@ vi.mock('leaflet', () => {
     on: vi.fn(),
     off: vi.fn(),
     invalidateSize: vi.fn(),
+    fitBounds: vi.fn(),
   };
 
   const markerFn = vi.fn((_latlng: unknown, _options?: unknown) => {
@@ -49,6 +50,10 @@ vi.mock('leaflet', () => {
 
   const iconFn = vi.fn((_options: unknown) => ({ _options }));
 
+  const latLngBoundsFn = vi.fn(() => ({
+    extend: vi.fn(),
+  }));
+
   return {
     default: {
       map: vi.fn(() => mockMap),
@@ -58,6 +63,7 @@ vi.mock('leaflet', () => {
       tileLayer: vi.fn().mockReturnValue({ addTo: vi.fn() }),
       icon: iconFn,
       divIcon: vi.fn(() => ({})),
+      latLngBounds: latLngBoundsFn,
       Marker: class {},
       CircleMarker: class {},
       Polyline: class {},

@@ -146,6 +146,7 @@ export function MapView({
       }
     });
 
+    const bounds = L.latLngBounds([]);
     validMarkers.forEach((marker) => {
       const markerIcon = (marker as any).icon ?? DEFAULT_ICON;
       const markerInstance = L.marker(marker.position, {
@@ -162,11 +163,17 @@ export function MapView({
 
       markerInstance.bindPopup(popupContent);
       markerInstance.addTo(map);
+      bounds.extend(marker.position);
 
       markerInstance.on('click', () => {
         if (marker.onClick) marker.onClick();
       });
     });
+
+    // Fit bounds to show all markers if we have any
+    if (validMarkers.length > 0) {
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
 
     if (isValidLatLng(userLocation)) {
       const riderMarker = L.marker(userLocation, {
@@ -188,7 +195,7 @@ export function MapView({
         }).addTo(map);
       }
     }
-  }, [validMarkers, center, zoom, userLocation, activeRoute]);
+  }, [validMarkers, center, zoom, userLocation, activeRoute, effectiveCenter]);
 
   // Invalidate size on mount and when container resizes (modal, tabs, etc.)
   useEffect(() => {

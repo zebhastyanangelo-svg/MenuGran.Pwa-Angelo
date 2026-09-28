@@ -247,6 +247,7 @@ export function Checkout() {
       clearCart();
       navigate(`/orders/${data}`);
     } catch (err) {
+      console.error('[Checkout] error during submit:', err);
       const errMsg = err instanceof Error ? err.message : 'Error al enviar el pedido.';
       setError(errMsg);
       showToast({ variant: 'error', title: 'Error', message: errMsg });
