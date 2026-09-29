@@ -1,9 +1,23 @@
 import { useState, type FormEvent } from 'react';
-import { LogOut, Mail, UserCircle2, Phone, CreditCard, Save, Loader2, AlertTriangle } from 'lucide-react';
+import { LogOut, Mail, UserCircle2, Phone, CreditCard, Save, Loader2, AlertTriangle, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useUpdateProfile, type ProfileUpdatePayload } from '../hooks/useUpdateProfile';
 import { supabase } from '../services/supabase';
+import {
+  isPushSupported,
+  subscribeCurrentUserToPush,
+  sendTestPushNotification,
+  type SubscribePushResult,
+} from '../services/pushNotificationService';
+
+/** Mensajes de error según el resultado de la suscripción push. */
+const PUSH_SUBSCRIBE_ERRORS: Record<SubscribePushResult['status'] & string, string> = {
+  unsupported: 'Tu navegador no soporta notificaciones push.',
+  denied: 'Debes permitir las notificaciones en tu navegador para recibirlas.',
+  error: 'No se pudo registrar tu dispositivo para notificaciones.',
+  subscribed: '',
+};
 
 export function ProfilePage() {
   const { user, profile, signOut } = useAuth();
@@ -17,6 +31,38 @@ export function ProfilePage() {
   const [ci, setCi] = useState(profile?.ci ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const [pushSending, setPushSending] = useState(false);
+  const [pushMessage, setPushMessage] = useState<string | null>(null);
+  const [pushError, setPushError] = useState<string | null>(null);
+  const pushSupported = isPushSupported();
+
+  /** Suscribe el dispositivo (si hace falta) y envía un push de verificación. */
+  const handleTestNotification = async () => {
+    if (user === null || pushSending) return;
+    setPushSending(true);
+    setPushMessage(null);
+    setPushError(null);
+
+    try {
+      const subscription = await subscribeCurrentUserToPush(user.id);
+      if (subscription.status !== 'subscribed') {
+        setPushError(PUSH_SUBSCRIBE_ERRORS[subscription.status] || PUSH_SUBSCRIBE_ERRORS.error);
+        return;
+      }
+
+      const result = await sendTestPushNotification();
+      if (result.ok) {
+        setPushMessage('¡Notificación enviada! Revisa tu dispositivo.');
+      } else {
+        setPushError(result.message);
+      }
+    } catch (err) {
+      setPushError(err instanceof Error ? err.message : 'Error inesperado al probar la notificación.');
+    } finally {
+      setPushSending(false);
+    }
+  };
 
   const email = user?.email ?? profile?.email ?? 'Sin correo asociado';
   const displayName = profile?.full_name ?? user?.user_metadata?.full_name ?? 'Cliente';
@@ -190,6 +236,45 @@ export function ProfilePage() {
             {isSaving ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </form>
+
+        {/* Notificaciones Push */}
+        <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <Bell className="h-5 w-5 text-brand-red" aria-hidden="true" />
+            Notificaciones Push
+          </h3>
+          <p className="mb-3 text-sm text-slate-500">
+            Recibe avisos de tus pedidos y promociones en este dispositivo.
+          </p>
+          <button
+            type="button"
+            onClick={() => void handleTestNotification()}
+            disabled={pushSending || !pushSupported}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+          >
+            {pushSending ? (
+              <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Bell className="h-5 w-5" aria-hidden="true" />
+            )}
+            {pushSending ? 'Enviando...' : 'Probar notificación'}
+          </button>
+          {!pushSupported && (
+            <p className="mt-2 text-xs text-slate-500">
+              Tu navegador no soporta notificaciones push.
+            </p>
+          )}
+          {pushMessage && (
+            <p role="status" className="mt-3 rounded-lg bg-green-50 px-4 py-2 text-sm font-medium text-green-700">
+              {pushMessage}
+            </p>
+          )}
+          {pushError && (
+            <p role="alert" className="mt-3 rounded-lg bg-red-50 px-4 py-2 text-sm font-medium text-red-700">
+              {pushError}
+            </p>
+          )}
+        </div>
 
         {/* Zona de peligro */}
         <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4">

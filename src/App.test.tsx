@@ -5,8 +5,8 @@ import App from './App';
 import { useAuth } from './hooks/useAuth';
 import type { AuthContextValue } from './context/auth-context-core';
 
-vi.mock('./services/exchangeRateSupabase', () => ({
-  getExchangeRate: vi.fn().mockResolvedValue(857.00),
+vi.mock('./services/exchangeRate', () => ({
+  getBCVRate: vi.fn().mockResolvedValue(857.0),
   getCachedExchangeRate: vi.fn().mockReturnValue(null),
 }));
 

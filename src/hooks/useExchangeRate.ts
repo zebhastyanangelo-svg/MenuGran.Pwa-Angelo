@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  getExchangeRate,
+  getBCVRate,
   getCachedExchangeRate,
-} from '../services/exchangeRateSupabase';
+} from '../services/exchangeRate';
 
 export interface UseExchangeRateReturn {
   rate: number | null;
@@ -14,8 +14,11 @@ export interface UseExchangeRateReturn {
 }
 
 /**
- * Hook para obtener y mantener actualizada la tasa de cambio BCV desde Supabase.
- * Usa caché local con TTL de 30 minutos y actualiza automáticamente en background.
+ * Hook para obtener y mantener actualizada la tasa de cambio BCV desde
+ * DolarApi Venezuela (https://dolarapi.com/v1/venezuela/dolares/bcv).
+ * Es la fuente central de la tasa para toda la app (Checkout, carrito,
+ * paneles de comercio y admin). Usa caché en memoria/localStorage con TTL
+ * de 1 hora y deduplica peticiones concurrentes a la API.
  */
 export function useExchangeRate(): UseExchangeRateReturn {
   const [rate, setRate] = useState<number | null>(null);
@@ -43,7 +46,7 @@ export function useExchangeRate(): UseExchangeRateReturn {
         applyCacheMetadata();
       }
 
-      const currentRate = await getExchangeRate();
+      const currentRate = await getBCVRate();
       if (!isMountedRef.current) return;
       setRate(currentRate);
       applyCacheMetadata();

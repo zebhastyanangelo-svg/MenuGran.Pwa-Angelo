@@ -50,6 +50,9 @@ export default defineConfig(({ mode }) => {
           cacheId: 'menu-pwa-v1',
           cleanupOutdatedCaches: true,
           globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+          // Handler de Web Push (evento push + notificationclick). El SW es
+          // generado por Workbox, así que el código custom se inyecta aquí.
+          importScripts: ['/push-handler.js'],
           navigateFallback: '/index.html',
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           skipWaiting: true,

@@ -120,6 +120,8 @@ export interface ProfileRow {
   phone?: string | null;
   avatar_url: string | null;
   role: UserRole;
+  /** Indica si el usuario ya completó el tutorial de onboarding. */
+  onboarding_completed?: boolean;
   created_at: IsoTimestamp;
   updated_at: IsoTimestamp;
 }
@@ -223,6 +225,18 @@ export interface DeliveryRow {
   updated_at: IsoTimestamp;
 }
 
+/** Suscripción Web Push de un usuario (una fila por endpoint de navegador). */
+export interface UserPushSubscriptionRow {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  is_active: boolean;
+  created_at: IsoTimestamp;
+  updated_at: IsoTimestamp;
+}
+
 /* ---------- INSERT (tipos de escritura parciales) ---------- */
 
 export type ProfileInsert = Pick<ProfileRow, 'id' | 'email'> &
@@ -300,3 +314,11 @@ export type OrderUpdate = Partial<Omit<OrderRow, 'id' | 'created_at'>>;
 export type DeliveryUpdate = Partial<
   Omit<DeliveryRow, 'id' | 'order_id' | 'created_at'>
 >;
+
+/** Campos para registrar (o reactivar) una suscripción push desde el cliente. */
+export type UserPushSubscriptionInsert = Pick<
+  UserPushSubscriptionRow,
+  'user_id' | 'endpoint' | 'p256dh' | 'auth'
+> & {
+  is_active?: boolean;
+};

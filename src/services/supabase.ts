@@ -7,6 +7,7 @@ import type {
   OrderRow,
   ProductRow,
   ProfileRow,
+  UserPushSubscriptionRow,
 } from '../types/database';
 import { validateRuntimeEnv } from '../utils/env';
 
@@ -32,6 +33,7 @@ const TABLE_NAMES = {
   products: 'products',
   orders: 'orders',
   deliveries: 'deliveries',
+  userPushSubscriptions: 'user_push_subscriptions',
 } as const;
 
 export type TableName = (typeof TABLE_NAMES)[keyof typeof TABLE_NAMES];
@@ -45,6 +47,7 @@ export interface DatabaseTables {
   products: ProductRow;
   orders: OrderRow;
   deliveries: DeliveryRow;
+  user_push_subscriptions: UserPushSubscriptionRow;
 }
 
 export const supabase: SupabaseClient = createClient(

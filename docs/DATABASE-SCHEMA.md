@@ -57,6 +57,7 @@ CREATE TABLE public.profiles (
     full_name TEXT,
     avatar_url TEXT,
     role user_role DEFAULT 'customer'::user_role NOT NULL,
+    onboarding_completed BOOLEAN DEFAULT FALSE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
@@ -151,3 +152,31 @@ CREATE UNIQUE INDEX idx_merchants_slug ON public.merchants(slug) WHERE status = 
 CREATE INDEX idx_products_merchant_category ON public.products(merchant_id, category_id);
 CREATE INDEX idx_orders_merchant_status ON public.orders(merchant_id, status, created_at DESC);
 CREATE INDEX idx_deliveries_driver ON public.deliveries(driver_id, status);
+
+-- TABLA SUSCRIPCIONES PUSH (WEB PUSH / VAPID)
+-- Una fila por endpoint de navegador. Solo el dueño (RLS) puede gestionarlas;
+-- la Edge Function send-push-notification las lee con service role.
+CREATE TABLE public.user_push_subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    endpoint TEXT UNIQUE NOT NULL,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+CREATE INDEX idx_user_push_subscriptions_active_user
+    ON public.user_push_subscriptions(user_id) WHERE is_active;
+
+-- CONFIG DEL SISTEMA DE PUSH (fila única, sin policies de RLS: solo service role)
+-- Guarda el par de claves VAPID y el secreto que usan los cron jobs diarios
+-- (9:00 desayuno, 12:30 almuerzo, 19:00 cena — hora de Venezuela) para invocar
+-- la Edge Function send-push-notification.
+CREATE TABLE public.app_push_config (
+    id INT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    vapid_public_key TEXT NOT NULL,
+    vapid_private_key TEXT NOT NULL,
+    cron_secret TEXT NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);

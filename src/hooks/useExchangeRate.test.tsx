@@ -1,13 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useExchangeRate, useBCVRate } from './useExchangeRate';
-import type { CachedExchangeRate } from '../services/exchangeRateSupabase';
+import type { ExchangeRateData } from '../services/exchangeRate';
 
-const getExchangeRateMock = vi.fn<() => Promise<number>>();
-const getCachedExchangeRateMock = vi.fn<() => CachedExchangeRate | null>();
+const getBCVRateMock = vi.fn<() => Promise<number>>();
+const getCachedExchangeRateMock = vi.fn<() => ExchangeRateData | null>();
 
-vi.mock('../services/exchangeRateSupabase', () => ({
-  getExchangeRate: () => getExchangeRateMock(),
+vi.mock('../services/exchangeRate', () => ({
+  getBCVRate: () => getBCVRateMock(),
   getCachedExchangeRate: () => getCachedExchangeRateMock(),
 }));
 
@@ -29,41 +29,40 @@ function deferred<T>(): Deferred<T> {
 
 describe('useExchangeRate', () => {
   beforeEach(() => {
-    getExchangeRateMock.mockReset();
+    getBCVRateMock.mockReset();
     getCachedExchangeRateMock.mockReset().mockReturnValue(null);
   });
 
-  it('carga la tasa desde Supabase al montar', async () => {
-    getExchangeRateMock.mockResolvedValue(36.5);
+  it('carga la tasa desde la API al montar', async () => {
+    getBCVRateMock.mockResolvedValue(857.5);
     const { result } = renderHook(() => useExchangeRate());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.rate).toBe(36.5);
+    expect(result.current.rate).toBe(857.5);
     expect(result.current.error).toBeNull();
   });
 
   it('aplica la caché de inmediato y luego la tasa fresca', async () => {
-    const cached: CachedExchangeRate = {
-      rate: 35,
+    const cached: ExchangeRateData = {
+      rate: 855,
       timestamp: Date.now(),
-      source: 'bcv',
-      currency: 'USD',
+      source: 'dolarapi.com/venezuela/bcv',
     };
     getCachedExchangeRateMock.mockReturnValue(cached);
-    getExchangeRateMock.mockResolvedValue(36);
+    getBCVRateMock.mockResolvedValue(858);
 
     const { result } = renderHook(() => useExchangeRate());
 
-    await waitFor(() => expect(result.current.rate).toBe(35));
-    expect(result.current.source).toBe('bcv');
+    await waitFor(() => expect(result.current.rate).toBe(855));
+    expect(result.current.source).toBe('dolarapi.com/venezuela/bcv');
 
-    await waitFor(() => expect(result.current.rate).toBe(36));
+    await waitFor(() => expect(result.current.rate).toBe(858));
     expect(result.current.isLoading).toBe(false);
   });
 
   it('expone el error del servicio cuando falla con el hook montado', async () => {
-    getExchangeRateMock.mockRejectedValue(new Error('fallo de red'));
+    getBCVRateMock.mockRejectedValue(new Error('fallo de red'));
     const { result } = renderHook(() => useExchangeRate());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -74,7 +73,7 @@ describe('useExchangeRate', () => {
 
   it('no actualiza estado si el componente se desmonta antes de resolver', async () => {
     const pending = deferred<number>();
-    getExchangeRateMock.mockReturnValue(pending.promise);
+    getBCVRateMock.mockReturnValue(pending.promise);
 
     const { unmount } = renderHook(() => useExchangeRate());
     unmount();
@@ -87,7 +86,7 @@ describe('useExchangeRate', () => {
 
   it('no lanza si el fetch se rechaza tras desmontar el hook', async () => {
     const pending = deferred<number>();
-    getExchangeRateMock.mockReturnValue(pending.promise);
+    getBCVRateMock.mockReturnValue(pending.promise);
 
     const { unmount } = renderHook(() => useExchangeRate());
     unmount();
@@ -101,16 +100,16 @@ describe('useExchangeRate', () => {
 
 describe('useBCVRate', () => {
   beforeEach(() => {
-    getExchangeRateMock.mockReset();
+    getBCVRateMock.mockReset();
     getCachedExchangeRateMock.mockReset().mockReturnValue(null);
   });
 
   it('retorna 0 mientras carga sin caché y la tasa al resolver', async () => {
-    getExchangeRateMock.mockResolvedValue(42.25);
+    getBCVRateMock.mockResolvedValue(859.25);
     const { result } = renderHook(() => useBCVRate());
 
     expect(result.current).toBe(0);
 
-    await waitFor(() => expect(result.current).toBe(42.25));
+    await waitFor(() => expect(result.current).toBe(859.25));
   });
 });

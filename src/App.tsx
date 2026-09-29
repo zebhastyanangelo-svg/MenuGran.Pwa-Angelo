@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { OfflineBanner } from './components/pwa/OfflineBanner';
 import { ReloadPrompt } from './components/pwa/ReloadPrompt';
 import { NotificationToastProvider, NotificationToastList } from './components/pwa/NotificationToast';
+import { CustomerOnboardingGate } from './components/onboarding/CustomerOnboardingGate';
 import { PwaInstallProvider } from './contexts/PwaInstallContext';
 import { Analytics } from '@vercel/analytics/react';
 import { PageLoader } from './components/PageLoader';
@@ -189,6 +190,7 @@ export function App() {
                   </Routes>
                 </Suspense>
               </ErrorBoundary>
+              <CustomerOnboardingGate />
               <ReloadPrompt />
               <CartFab />
               <Analytics />

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { SuperAdminDashboardPage } from './SuperAdminDashboardPage';
 
@@ -143,5 +143,31 @@ describe('SuperAdminDashboardPage', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Error al contar orders: rls denied',
     );
+  });
+
+  it('muestra la sección de notificaciones y abre el modal de envío masivo', () => {
+    mockMetricsHook.mockReturnValue({
+      metrics: loadedMetrics,
+      isLoading: false,
+      error: null,
+    });
+
+    render(<SuperAdminDashboardPage />);
+
+    expect(screen.getByText('Notificaciones Push a Clientes')).toBeInTheDocument();
+
+    const bulkButton = screen.getByRole('button', {
+      name: /Enviar Notificación Masiva a Clientes/i,
+    });
+    expect(bulkButton).toBeInTheDocument();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.click(bulkButton);
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Enviar Notificación a Todos/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Cancelar/i }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

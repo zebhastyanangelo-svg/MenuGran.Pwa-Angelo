@@ -1,8 +1,9 @@
-import { BarChart3, ClipboardList, Store, Users, DollarSign, MapPin } from 'lucide-react';
+import { BarChart3, ClipboardList, Store, Users, DollarSign, MapPin, Megaphone } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { PlatformDistributionChart } from '../../components/superadmin/PlatformDistributionChart';
 import { RevenueTrendChart } from '../../components/superadmin/RevenueTrendChart';
 import { OrdersStatusChart } from '../../components/superadmin/OrdersStatusChart';
+import { BulkNotificationModal } from '../../components/superadmin/BulkNotificationModal';
 import { useSuperAdminMetrics } from '../../hooks/useSuperAdminMetrics';
 import { useSuperAdminOrderTrends } from '../../hooks/useSuperAdminOrderTrends';
 import { useBCVRate } from '../../hooks/useExchangeRate';
@@ -120,6 +121,7 @@ export function SuperAdminDashboardPage() {
 
   const [merchants, setMerchants] = useState<MerchantMapMarker[]>([]);
   const [mapReady, setMapReady] = useState(false);
+  const [showBulkNotificationModal, setShowBulkNotificationModal] = useState(false);
   const mapRef = useRef<HTMLDivElement | null>(null);
 
   // Fetch merchants with location for map
@@ -208,6 +210,33 @@ export function SuperAdminDashboardPage() {
           <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
             {error}
           </p>
+        )}
+
+        {/* Envío masivo de notificaciones push a clientes */}
+        <section aria-label="Notificaciones push a clientes">
+          <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900">
+                <Megaphone className="h-5 w-5 text-brand-red" aria-hidden="true" />
+                Notificaciones Push a Clientes
+              </h2>
+              <p className="text-sm text-gray-500">
+                Envía una notificación masiva a todos los clientes con notificaciones activas.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowBulkNotificationModal(true)}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
+            >
+              <Megaphone className="h-4 w-4" aria-hidden="true" />
+              Enviar Notificación Masiva a Clientes
+            </button>
+          </Card>
+        </section>
+
+        {showBulkNotificationModal && (
+          <BulkNotificationModal onClose={() => setShowBulkNotificationModal(false)} />
         )}
 
         {isLoading ? (
