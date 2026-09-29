@@ -6,6 +6,8 @@ interface OrderStatusStepProps {
   currentIndex: number;
   index: number;
   isCompleted: boolean;
+  /** Etiqueta opcional (p. ej. "Listo para Retirar" en pedidos pickup). */
+  label?: string;
 }
 
 const STATUS_ANIMATIONS: Record<OrderStatus, string> = {
@@ -97,7 +99,7 @@ function StatusIcon({ status, index, currentIndex, isCompleted }: { status: Orde
   );
 }
 
-export function OrderStatusStep({ status, currentIndex, index, isCompleted }: OrderStatusStepProps) {
+export function OrderStatusStep({ status, currentIndex, index, isCompleted, label }: OrderStatusStepProps) {
   const isActive = index === currentIndex && !isCompleted;
   const isPast = index < currentIndex;
 
@@ -123,7 +125,7 @@ export function OrderStatusStep({ status, currentIndex, index, isCompleted }: Or
         <StatusIcon status={status} index={index} currentIndex={currentIndex} isCompleted={isCompleted} />
       </div>
       <span className={labelClass}>
-        {getOrderStatusLabel(status)}
+        {label ?? getOrderStatusLabel(status)}
       </span>
     </div>
   );

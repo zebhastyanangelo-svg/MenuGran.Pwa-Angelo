@@ -410,4 +410,68 @@ describe('OrderTracker', () => {
     expect(screen.getByText(/productos del pedido/i)).toBeInTheDocument();
     expect(screen.getAllByText(/\$25\.50/).length).toBeGreaterThanOrEqual(1);
   });
+
+  it('muestra la tarjeta de retiro en caja y omite "En Camino" en pedidos pickup listos', async () => {
+    const pickupReadyOrder = { ...mockOrder, type: 'pickup', status: 'ready' };
+    const mockFrom = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: pickupReadyOrder, error: null }),
+    };
+    (supabase.from as Mock).mockReturnValue(mockFrom);
+
+    const { wrapper } = createWrapper();
+    render(<OrderTracker />, { wrapper });
+
+    const readyCard = await screen.findByTestId('pickup-ready-card');
+    expect(within(readyCard).getByText(/¡tu pedido está listo!/i)).toBeInTheDocument();
+    expect(
+      within(readyCard).getByText(/ya puedes venir a retirarlo en caja e indicar tu código de entrega:/i),
+    ).toBeInTheDocument();
+    expect(within(readyCard).getByText('#TEST-ORD')).toBeInTheDocument();
+
+    // El stepper de pickup no debe contener el paso "En Camino".
+    expect(screen.queryByText('En Camino')).not.toBeInTheDocument();
+    expect(screen.getByText('Listo para Retirar')).toBeInTheDocument();
+  });
+
+  it('muestra una alerta destacada cuando el pedido fue cancelado', async () => {
+    const cancelledOrder = { ...mockOrder, status: 'cancelled' };
+    const mockFrom = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: cancelledOrder, error: null }),
+    };
+    (supabase.from as Mock).mockReturnValue(mockFrom);
+
+    const { wrapper } = createWrapper();
+    render(<OrderTracker />, { wrapper });
+
+    const alert = await screen.findByTestId('order-cancelled-alert');
+    expect(within(alert).getByText(/tu pedido ha sido cancelado/i)).toBeInTheDocument();
+    expect(
+      within(alert).getByText(/asistencia con tu reembolso\/pago, por favor contacta al comercio/i),
+    ).toBeInTheDocument();
+  });
+
+  it('muestra el paso "En Camino" en el stepper para pedidos delivery', async () => {
+    const mockFrom = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
+    };
+    (supabase.from as Mock).mockReturnValue(mockFrom);
+
+    const { wrapper } = createWrapper();
+    render(<OrderTracker />, { wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText(/seguimiento de orden/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('En Camino')).toBeInTheDocument();
+  });
 });

@@ -16,7 +16,7 @@ import {
 } from '../hooks/useNotifications';
 import { useNotificationToast } from '../components/pwa/useNotificationToast';
 import { statusDisplayMap } from '../utils/statusDisplayMap';
-import { getOrderStatusLabel } from '../utils/orderStatus';
+import { getOrderStatusLabel, getOrderStatusFlow } from '../utils/orderStatus';
 import { parseGeoPoint } from '../utils/geoPoint';
 import { confirmOrderDelivery } from '../services/orderDeliveryService';
 import { OrderStatusStep } from '../components/orders/OrderStatusStep';
@@ -154,16 +154,6 @@ export function OrderTracker() {
     }
   }, [orderId, order, showToast, queryClient]);
 
-  const orderStatusSteps: OrderStatus[] = [
-    'payment_pending',
-    'confirmed',
-    'preparing',
-    'ready',
-    'on_the_way',
-    'delivered',
-    'cancelled'
-  ];
-
   const loadOrder = useCallback(async () => {
     if (!orderId) {
       setError('ID de orden no proporcionado');
@@ -200,7 +190,7 @@ export function OrderTracker() {
           : { data: [], error: null },
         supabase.from('merchants').select('name').eq('id', data.merchant_id).single(),
         data.customer_id
-          ? supabase.from('profiles').select('full_name, phone, document_id').eq('id', data.customer_id).single()
+          ? supabase.from('profiles').select('full_name, phone, ci').eq('id', data.customer_id).single()
           : { data: null, error: null },
       ]);
 
@@ -219,7 +209,7 @@ export function OrderTracker() {
       if (customerResult.data) {
         setCustomerName(customerResult.data.full_name);
         setCustomerPhone(customerResult.data.phone ?? null);
-        setCustomerDocumentId(customerResult.data.document_id ?? null);
+        setCustomerDocumentId(customerResult.data.ci ?? null);
       }
     } catch (err) {
       console.error('Error loading order:', err);
@@ -341,9 +331,14 @@ export function OrderTracker() {
     );
   }
 
+  // Flujo de pasos según el tipo: pickup/in_store omiten "En Camino".
+  const orderStatusSteps = getOrderStatusFlow(order.type);
+
   const currentStepIndex = orderStatusSteps.indexOf(order.status);
   const isCompleted = order.status === 'delivered' || order.status === 'cancelled';
-  const allowedTransitions = getAllowedTransitions(order.status);
+  const isPickupFlow = order.type === 'pickup' || order.type === 'in_store';
+  const allowedTransitions = getAllowedTransitions(order.status, order.type);
+  const deliveryCode = `#${order.id.slice(0, 8).toUpperCase()}`;
 
   // Show rejection modal when order is cancelled
   const showRejection = order.status === 'cancelled';
@@ -394,6 +389,46 @@ export function OrderTracker() {
         </div>
       )}
 
+      {order.status === 'cancelled' && (
+        <section
+          className="mb-8 rounded-2xl border border-red-300 bg-red-50 p-6 shadow-md"
+          role="alert"
+          data-testid="order-cancelled-alert"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-6 w-6 flex-shrink-0 text-red-600" aria-hidden="true" />
+            <div>
+              <h2 className="text-lg font-bold text-red-800">Pedido cancelado</h2>
+              <p className="mt-1 text-red-700">
+                Tu pedido ha sido cancelado. Si tienes dudas o necesitas
+                asistencia con tu reembolso/pago, por favor contacta al comercio.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {isPickupFlow && order.status === 'ready' && !isCompleted && (
+        <section
+          className="mb-8 rounded-2xl border border-emerald-300 bg-emerald-50 p-6 text-center shadow-md"
+          role="status"
+          data-testid="pickup-ready-card"
+        >
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+            <PackageCheck className="h-7 w-7 text-emerald-600" aria-hidden="true" />
+          </div>
+          <h2 className="text-2xl font-bold text-emerald-800">
+            ¡Tu pedido está listo!
+          </h2>
+          <p className="mt-2 text-emerald-700">
+            Ya puedes venir a retirarlo en caja e indicar tu código de entrega:{' '}
+            <span className="font-mono font-extrabold text-emerald-900">
+              {deliveryCode}
+            </span>
+          </p>
+        </section>
+      )}
+
       <section
         className="mb-8 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50 p-6 text-center shadow-sm"
         data-testid="delivery-code-card"
@@ -402,12 +437,14 @@ export function OrderTracker() {
           Tu código de entrega
         </p>
         <p className="mt-1 font-mono text-4xl font-extrabold tracking-widest text-amber-900">
-          #{order.id.slice(0, 8).toUpperCase()}
+          {deliveryCode}
         </p>
-<p className="mt-2 text-sm text-amber-700">
-            Comparte este código con el repartidor al recibir tu pedido.
-          </p>
-        </section>
+        <p className="mt-2 text-sm text-amber-700">
+          {isPickupFlow
+            ? 'Indica este código en caja al retirar tu pedido.'
+            : 'Comparte este código con el repartidor al recibir tu pedido.'}
+        </p>
+      </section>
 
       {/* Cliente confirma recepción del pedido */}
       {(!isCompleted &&
@@ -419,7 +456,9 @@ export function OrderTracker() {
             <div>
               <h3 className="text-lg font-bold text-emerald-800">Confirmar recepción del pedido</h3>
               <p className="text-sm text-emerald-700">
-                Al recibir tu pedido, confirma la entrega con el código de arriba.
+                {isPickupFlow
+                  ? 'Al retirar tu pedido en caja, confirma aquí la recepción.'
+                  : 'Al recibir tu pedido, confirma la entrega con el código de arriba.'}
               </p>
             </div>
           </div>
@@ -471,6 +510,7 @@ export function OrderTracker() {
               currentIndex={currentStepIndex}
               index={index}
               isCompleted={isCompleted}
+              label={getOrderStatusLabel(status, order.type)}
             />
           ))}
         </div>

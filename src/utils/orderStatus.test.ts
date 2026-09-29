@@ -3,9 +3,11 @@ import {
   ORDER_STATUS_ORDER,
   getAllowedTransitions,
   getOrderStatusBadgeClass,
+  getOrderStatusFlow,
   getOrderStatusLabel,
   getTransitionButtonClass,
   getTransitionLabel,
+  isLocalPickupOrder,
   isTerminalOrderStatus,
 } from './orderStatus';
 import type { OrderStatus } from '../types/database';
@@ -50,6 +52,43 @@ describe('orderStatus utilities', () => {
     expect(getAllowedTransitions('on_the_way')).toContain('delivered');
     expect(getAllowedTransitions('delivered')).toEqual([]);
     expect(getAllowedTransitions('cancelled')).toEqual([]);
+  });
+
+  it('detecta pedidos de retiro en local (pickup / in_store)', () => {
+    expect(isLocalPickupOrder('pickup')).toBe(true);
+    expect(isLocalPickupOrder('in_store')).toBe(true);
+    expect(isLocalPickupOrder('delivery')).toBe(false);
+  });
+
+  it('omite "En Camino" del flujo de pickup y lo mantiene en delivery', () => {
+    expect(getOrderStatusFlow('pickup')).not.toContain('on_the_way');
+    expect(getOrderStatusFlow('in_store')).not.toContain('on_the_way');
+    expect(getOrderStatusFlow('delivery')).toContain('on_the_way');
+    expect(getOrderStatusFlow('pickup')).toEqual([
+      'payment_pending',
+      'confirmed',
+      'preparing',
+      'ready',
+      'delivered',
+      'cancelled',
+    ]);
+  });
+
+  it('pickup pasa de Listo a Entregado sin pasar por En Camino', () => {
+    expect(getAllowedTransitions('ready', 'pickup')).toEqual(['delivered']);
+    expect(getAllowedTransitions('ready', 'in_store')).toEqual(['delivered']);
+    expect(getAllowedTransitions('on_the_way', 'pickup')).toEqual([]);
+    expect(getAllowedTransitions('payment_pending', 'pickup')).toEqual([
+      'confirmed',
+      'cancelled',
+    ]);
+  });
+
+  it('etiqueta "Listo para Retirar" solo en pedidos de retiro en local', () => {
+    expect(getOrderStatusLabel('ready', 'pickup')).toBe('Listo para Retirar');
+    expect(getOrderStatusLabel('ready', 'in_store')).toBe('Listo para Retirar');
+    expect(getOrderStatusLabel('ready')).toBe('Listo');
+    expect(getOrderStatusLabel('ready', 'delivery')).toBe('Listo');
   });
 
   it('labels and styles transitions', () => {

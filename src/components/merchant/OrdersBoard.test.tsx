@@ -140,4 +140,52 @@ describe('OrdersBoard', () => {
     await userEvent.click(proofButton);
     expect(onOpenProof).toHaveBeenCalledTimes(1);
   });
+
+  it('permite marcar como entregado un pickup listo (sin "Enviar para entrega")', async () => {
+    const { onUpdateStatus } = renderBoard([
+      buildOrder({ type: 'pickup', status: 'ready' }),
+    ]);
+
+    expect(
+      screen.queryByRole('button', { name: 'Enviar para entrega' }),
+    ).not.toBeInTheDocument();
+
+    const deliveredButton = screen.getAllByRole('button', { name: 'Marcar como entregado' })[0];
+    await userEvent.click(deliveredButton);
+
+    expect(onUpdateStatus).toHaveBeenCalledWith('order-1', 'delivered');
+  });
+
+  it('mantiene "Enviar para entrega" y oculta "Marcar como entregado" en delivery listo', () => {
+    renderBoard([buildOrder({ type: 'delivery', status: 'ready' })]);
+
+    expect(
+      screen.getAllByRole('button', { name: 'Enviar para entrega' }).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.queryByRole('button', { name: 'Marcar como entregado' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('muestra email, cédula y teléfono del cliente en el detalle del pedido', async () => {
+    renderBoard([
+      buildOrder({
+        status: 'confirmed',
+        profiles: {
+          full_name: 'Cliente Prueba',
+          email: 'cliente@test.com',
+          ci: 'V12345678',
+          phone: '+584121234567',
+        },
+      }),
+    ]);
+
+    const detailButton = screen.getAllByRole('button', { name: /Ver detalles/i })[0];
+    await userEvent.click(detailButton);
+
+    expect(await screen.findByText('Detalle del pedido')).toBeInTheDocument();
+    expect(screen.getByText('cliente@test.com')).toBeInTheDocument();
+    expect(screen.getByText('V12345678')).toBeInTheDocument();
+    expect(screen.getByText('+584121234567')).toBeInTheDocument();
+  });
 });

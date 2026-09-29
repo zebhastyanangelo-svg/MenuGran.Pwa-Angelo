@@ -331,7 +331,7 @@ export function OrdersBoard({
                             </div>
                           )}
                           {!isTerminalOrderStatus(order.status) &&
-                            getAllowedTransitions(order.status).filter(s => s !== 'delivered').map((nextStatus) => (
+                            getAllowedTransitions(order.status, order.type).filter(s => s !== 'delivered' || order.type !== 'delivery').map((nextStatus) => (
                               <button
                                 key={nextStatus}
                                 type="button"
@@ -465,7 +465,7 @@ export function OrdersBoard({
                     </div>
                   )}
                   {!isTerminalOrderStatus(order.status) &&
-                    getAllowedTransitions(order.status).filter(s => s !== 'delivered').map((nextStatus) => (
+                    getAllowedTransitions(order.status, order.type).filter(s => s !== 'delivered' || order.type !== 'delivery').map((nextStatus) => (
                       <button
                         key={nextStatus}
                         type="button"
@@ -540,6 +540,10 @@ export function OrdersBoard({
               <div>
                 <p className="text-sm font-medium text-gray-500">Cédula</p>
                 <p className="text-gray-900">{selectedOrder.profiles?.ci ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Teléfono</p>
+                <p className="text-gray-900">{selectedOrder.profiles?.phone ?? '—'}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Tipo</p>

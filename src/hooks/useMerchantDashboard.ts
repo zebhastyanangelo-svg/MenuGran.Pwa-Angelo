@@ -67,7 +67,7 @@ async function fetchOrders(ids: string[]): Promise<OrderWithCustomer[]> {
   if (ids.length === 0) return []
   const result = await supabase
     .from(TABLE_NAMES.orders)
-     .select('id, merchant_id, customer_id, driver_id, type, status, payment_method, payment_reference, payment_proof_url, total_amount, table_number, delivery_location, delivery_address_notes, latitude, longitude, items, created_at, profiles!customer_id(full_name, email)')
+     .select('id, merchant_id, customer_id, driver_id, type, status, payment_method, payment_reference, payment_proof_url, total_amount, table_number, delivery_location, delivery_address_notes, latitude, longitude, items, created_at, profiles!customer_id(full_name, email, ci, phone)')
     .in('merchant_id', ids)
     .order('created_at', { ascending: false })
   if (result.error) throw result.error

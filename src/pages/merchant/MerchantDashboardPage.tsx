@@ -7,7 +7,7 @@ import { supabase } from '../../services/supabase';
 import { PaymentProofLightbox } from '../../components/merchant/PaymentProofLightbox';
 import { Modal } from '../../components/ui/Modal';
 import { Store, Loader2, Package, ClipboardList, TrendingUp, LogOut, Image as ImageIcon, Truck, User } from 'lucide-react';
-import type { OrderStatus } from '../../types/database';
+import type { OrderStatus, OrderType } from '../../types/database';
 import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
 import { getOrderDeliveryCoordinates } from '../../utils/delivery';
 import type { OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
@@ -34,7 +34,8 @@ interface OrderAction {
   next: OrderStatus;
 }
 
-function getOrderActions(status: OrderStatus): OrderAction[] {
+function getOrderActions(status: OrderStatus, orderType: OrderType = 'delivery'): OrderAction[] {
+  const isLocalPickup = orderType === 'pickup' || orderType === 'in_store';
   switch (status) {
     case 'payment_pending':
       return [
@@ -52,7 +53,11 @@ function getOrderActions(status: OrderStatus): OrderAction[] {
         { label: 'Cancelar', next: 'cancelled' },
       ];
     case 'ready':
-      // El cliente confirma la recepción; el comercio no marca como entregado
+      // En delivery el cliente confirma la recepción; en pickup/in_store el
+      // comercio entrega en caja y marca el pedido como entregado.
+      if (isLocalPickup) {
+        return [{ label: 'Entregado', next: 'delivered' }];
+      }
       return [];
     default:
       return [];
@@ -494,7 +499,7 @@ return (
                       </span>
                     ))}
                     <div className="flex flex-wrap gap-2">
-                      {getOrderActions(order.status).map((action) => (
+                      {getOrderActions(order.status, order.type).map((action) => (
                         <button
                           key={action.label}
                           type="button"

@@ -1,4 +1,4 @@
-import type { OrderStatus } from '../types/database';
+import type { OrderStatus, OrderType } from '../types/database';
 
 export const ORDER_STATUS_ORDER: readonly OrderStatus[] = [
   'payment_pending',
@@ -10,7 +10,26 @@ export const ORDER_STATUS_ORDER: readonly OrderStatus[] = [
   'cancelled',
 ];
 
-export function getOrderStatusLabel(status: OrderStatus): string {
+/** Pasos del stepper para pedidos con retiro en local (sin "En Camino"). */
+const LOCAL_PICKUP_FLOW: readonly OrderStatus[] = [
+  'payment_pending',
+  'confirmed',
+  'preparing',
+  'ready',
+  'delivered',
+  'cancelled',
+];
+
+export function isLocalPickupOrder(orderType: OrderType): boolean {
+  return orderType === 'pickup' || orderType === 'in_store';
+}
+
+/** Flujo de estados del stepper según el tipo de pedido. */
+export function getOrderStatusFlow(orderType: OrderType): readonly OrderStatus[] {
+  return isLocalPickupOrder(orderType) ? LOCAL_PICKUP_FLOW : ORDER_STATUS_ORDER;
+}
+
+export function getOrderStatusLabel(status: OrderStatus, orderType?: OrderType): string {
   switch (status) {
     case 'payment_pending':
       return 'Pendiente de Pago';
@@ -19,7 +38,9 @@ export function getOrderStatusLabel(status: OrderStatus): string {
     case 'preparing':
       return 'En Preparación';
     case 'ready':
-      return 'Listo';
+      return orderType !== undefined && isLocalPickupOrder(orderType)
+        ? 'Listo para Retirar'
+        : 'Listo';
     case 'on_the_way':
       return 'En Camino';
     case 'delivered':
@@ -52,7 +73,8 @@ export function getOrderStatusBadgeClass(status: OrderStatus): string {
   }
 }
 
-export function getAllowedTransitions(status: OrderStatus): OrderStatus[] {
+export function getAllowedTransitions(status: OrderStatus, orderType: OrderType = 'delivery'): OrderStatus[] {
+  const isLocalPickup = isLocalPickupOrder(orderType);
   switch (status) {
     case 'payment_pending':
       return ['confirmed', 'cancelled'];
@@ -61,9 +83,10 @@ export function getAllowedTransitions(status: OrderStatus): OrderStatus[] {
     case 'preparing':
       return ['ready'];
     case 'ready':
-      return ['on_the_way'];
+      // Pickup/In Store: el cliente retira en caja y se marca entregado.
+      return isLocalPickup ? ['delivered'] : ['on_the_way'];
     case 'on_the_way':
-      return ['delivered'];
+      return isLocalPickup ? [] : ['delivered'];
     default:
       return [];
   }
