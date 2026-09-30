@@ -25,7 +25,7 @@ export function MerchantCard({ merchant, onClick, distance }: MerchantCardProps)
       aria-label={`Ver comercio ${merchant.name}`}
       className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
     >
-      <div className="h-28 w-full bg-gradient-to-r from-brand-red via-[#f34a5f] to-brand-amber/80">
+      <div className="h-28 w-full bg-gradient-to-r from-brand-red via-[#f34a5f] to-brand-amber/80" aria-hidden="true">
         {merchant.banner_url ? (
           <img
             src={merchant.banner_url}
@@ -38,7 +38,7 @@ export function MerchantCard({ merchant, onClick, distance }: MerchantCardProps)
 
       <div className="relative p-4 pt-0">
         <div className="-mt-8 mb-2 flex items-end justify-between">
-          <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-white bg-slate-100 shadow-md">
+          <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-white bg-slate-100 shadow-md" aria-hidden="true">
             {merchant.logo_url ? (
               <img
                 src={merchant.logo_url}

@@ -73,7 +73,7 @@ export function ProductCard({ product, categoryName, onSelect }: ProductCardProp
         </div>
       </div>
 
-      <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
+      <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100" aria-hidden="true">
         {product.image_url ? (
           <img
             src={product.image_url}

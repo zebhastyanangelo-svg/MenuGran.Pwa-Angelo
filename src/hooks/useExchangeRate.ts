@@ -15,10 +15,10 @@ export interface UseExchangeRateReturn {
 
 /**
  * Hook para obtener y mantener actualizada la tasa de cambio BCV desde
- * DolarApi Venezuela (https://dolarapi.com/v1/venezuela/dolares/bcv).
+ * DolarApi Venezuela (https://ve.dolarapi.com/v1/dolares/oficial).
  * Es la fuente central de la tasa para toda la app (Checkout, carrito,
  * paneles de comercio y admin). Usa caché en memoria/localStorage con TTL
- * de 1 hora y deduplica peticiones concurrentes a la API.
+ * de 5 horas y deduplica peticiones concurrentes a la API.
  */
 export function useExchangeRate(): UseExchangeRateReturn {
   const [rate, setRate] = useState<number | null>(null);

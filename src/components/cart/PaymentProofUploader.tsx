@@ -124,11 +124,11 @@ export function PaymentProofUploader({
                 />
               </div>
             ) : file.type === 'application/pdf' ? (
-              <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md bg-red-50 text-red-500">
+              <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md bg-red-50 text-red-500" aria-hidden="true">
                 <FileText className="h-8 w-8" aria-hidden="true" />
               </div>
             ) : (
-              <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-400">
+              <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-400" aria-hidden="true">
                 <ImageIcon className="h-8 w-8" aria-hidden="true" />
               </div>
             )}

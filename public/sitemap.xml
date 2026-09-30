@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Sitemap de MenuGram — https://www.menugran.online
+  Rutas públicas principales de la PWA. Las rutas privadas (/admin, /super-admin,
+  /driver, /checkout, /profile, /orders) se excluyen deliberadamente por SEO
+  y privacidad.
+  Si se añade una ruta pública nueva, actualiza también public/robots.txt.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://www.menugran.online/</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.menugran.online/marketplace</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.menugran.online/login</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://www.menugran.online/privacy</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://www.menugran.online/terms</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://www.menugran.online/cookies</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>

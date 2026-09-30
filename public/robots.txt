@@ -1,0 +1,15 @@
+# robots.txt — MenuGram (https://www.menugran.online)
+# Se permiten todas las rutas públicas. Se excluyen las áreas privadas
+# (paneles de administración, entregas, checkout y pedidos) por SEO y
+# privacidad.
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /super-admin
+Disallow: /driver
+Disallow: /checkout
+Disallow: /profile
+Disallow: /orders/
+
+Sitemap: https://www.menugran.online/sitemap.xml

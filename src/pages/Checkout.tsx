@@ -4,6 +4,7 @@ import { MapPin, Store, Bike, Smartphone, CreditCard, Banknote, AlertCircle } fr
 import { Button } from '../components/ui/Button';
 import { PaymentProofUploader } from '../components/cart/PaymentProofUploader';
 import { LocationPicker } from '../components/map/LocationPicker';
+import { TermsAcceptanceCheckbox } from '../components/legal/TermsAcceptanceCheckbox';
 import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
@@ -154,6 +155,7 @@ export function Checkout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [outOfRange, setOutOfRange] = useState(false);
   const [deliveryCoverageError, setDeliveryCoverageError] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -458,6 +460,12 @@ export function Checkout() {
           )}
         </fieldset>
 
+        <TermsAcceptanceCheckbox
+          id="checkout-terms"
+          checked={termsAccepted}
+          onChange={setTermsAccepted}
+        />
+
         {error && (
           <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
             {error}
@@ -468,7 +476,7 @@ export function Checkout() {
           type="submit"
           fullWidth
           isLoading={isProcessing}
-          disabled={isProcessing || outOfRange}
+          disabled={isProcessing || outOfRange || !termsAccepted}
         >
           {paymentMethod === 'pago_movil'
             ? 'Confirmar y enviar comprobante'

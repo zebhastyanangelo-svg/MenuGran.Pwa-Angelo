@@ -163,7 +163,7 @@ describe('exchangeRate service', () => {
   });
 
   describe('fetchBCVRateFromAPI', () => {
-    const NEW_BCV_ENDPOINT = 'https://dolarapi.com/v1/venezuela/dolares/bcv';
+    const PRIMARY_BCV_ENDPOINT = 'https://ve.dolarapi.com/v1/dolares/oficial';
 
     it('consulta el endpoint oficial de DolarApi Venezuela y extrae data.promedio', async () => {
       const fetchMock = vi.fn().mockResolvedValue(
@@ -182,11 +182,11 @@ describe('exchangeRate service', () => {
       const result = await fetchBCVRateFromAPI();
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(fetchMock).toHaveBeenCalledWith(NEW_BCV_ENDPOINT, expect.objectContaining({
+      expect(fetchMock).toHaveBeenCalledWith(PRIMARY_BCV_ENDPOINT, expect.objectContaining({
         headers: { Accept: 'application/json' },
       }));
       expect(result.rate).toBe(857.89);
-      expect(result.source).toBe('dolarapi.com/venezuela/bcv');
+      expect(result.source).toBe('ve.dolarapi.com/oficial');
     });
 
     it('acepta promedio numérico como string', async () => {
@@ -208,7 +208,7 @@ describe('exchangeRate service', () => {
 
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(result.rate).toBe(858.1);
-      expect(result.source).toBe('ve.dolarapi.com/oficial');
+      expect(result.source).toBe('dolarapi.com/venezuela/bcv');
     });
 
     it('hace fallback al siguiente endpoint si la red devuelve error HTTP', async () => {
@@ -220,7 +220,7 @@ describe('exchangeRate service', () => {
       const result = await fetchBCVRateFromAPI();
 
       expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(fetchMock.mock.calls[0][0]).toBe(NEW_BCV_ENDPOINT);
+      expect(fetchMock.mock.calls[0][0]).toBe(PRIMARY_BCV_ENDPOINT);
       expect(result.rate).toBe(800.5);
     });
 
@@ -303,6 +303,18 @@ describe('exchangeRate service', () => {
       const rate = await getBCVRate();
 
       expect(rate).toBe(777.77);
+    });
+
+    it('retorna la tasa en caché si tiene menos de 5 horas de antigüedad', async () => {
+      setCachedExchangeRate(500.0, 'test');
+      vi.advanceTimersByTime(4 * 60 * 60 * 1000); // 4 horas
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+
+      const rate = await getBCVRate();
+
+      expect(rate).toBe(500.0);
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('retorna la tasa por defecto cuando no hay caché y la API falla', async () => {

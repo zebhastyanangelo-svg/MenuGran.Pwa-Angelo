@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
+import { Footer } from './Footer';
 import { authRoutes } from './navItems';
 import { ActiveOrderBanner } from '../orders/ActiveOrderBanner';
 import { IncompleteProfileBanner } from '../IncompleteProfileBanner';
@@ -48,6 +49,7 @@ export function Layout() {
       <main className="mx-auto w-full max-w-5xl px-4 pb-24 pt-4 md:pb-4 md:pl-64">
         <Outlet />
       </main>
+      <Footer />
       {!isAuthRoute && <BottomNav />}
     </div>
   );

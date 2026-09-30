@@ -50,7 +50,7 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
             aria-label="Cerrar"
             className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
       )}

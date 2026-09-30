@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { fetchCurrentSessionRole } from '../../context/auth-profile';
 import { suggestEmailDomain } from '../../utils/emailSuggestions';
 import { getPostLoginPath } from '../../utils/postLoginRedirect';
+import { TermsAcceptanceCheckbox } from '../legal/TermsAcceptanceCheckbox';
 
 type AuthTab = 'login' | 'register';
 
@@ -92,6 +93,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [showConfirmationBanner, setShowConfirmationBanner] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { signInWithPassword, signUpWithPassword, resendConfirmationEmail, signInWithGoogle } =
@@ -155,6 +157,12 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     const fullName = (form.elements.namedItem('full_name') as HTMLInputElement).value.trim();
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
+
+    if (!termsAccepted) {
+      setError('Debes aceptar los Términos y Condiciones y la Política de Privacidad.');
+      setIsEmailLoading(false);
+      return;
+    }
 
     const role = 'customer';
 
@@ -416,7 +424,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
               ¿Quieres vender tu comida en MenuGran? Contacta al equipo de soporte para dar de alta tu negocio
             </p>
             <a
-              href="https://wa.me/58414xxxxxxx"
+              href="https://wa.me/584142380573?text=Hola,%20quiero%20más%20información%20para%20registrar%20mi%20negocio%20en%20MenuGram"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-2 text-brand-red underline text-sm font-medium"
@@ -425,10 +433,16 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
             </a>
           </div>
 
+          <TermsAcceptanceCheckbox
+            id="register-terms"
+            checked={termsAccepted}
+            onChange={setTermsAccepted}
+          />
+
           <button
             type="submit"
             data-testid="register-submit"
-            disabled={isEmailLoading}
+            disabled={isEmailLoading || !termsAccepted}
             className={SUBMIT_BASE_CLASS}
           >
             {isEmailLoading ? (

@@ -4,13 +4,16 @@ import { useQuery } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { useAuth } from './hooks/useAuth';
+import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { OfflineBanner } from './components/pwa/OfflineBanner';
 import { ReloadPrompt } from './components/pwa/ReloadPrompt';
 import { NotificationToastProvider, NotificationToastList } from './components/pwa/NotificationToast';
 import { CustomerOnboardingGate } from './components/onboarding/CustomerOnboardingGate';
+import { CookieConsentBanner } from './components/cookies/CookieConsentBanner';
 import { PwaInstallProvider } from './contexts/PwaInstallContext';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { PageLoader } from './components/PageLoader';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/layout/Layout';
@@ -20,6 +23,15 @@ import { CUSTOMER_HOME, getPostLoginPath } from './utils/postLoginRedirect';
 
 const LoginPage = lazy(() => import('./pages/LoginPage').then((mod) => ({ default: mod.LoginPage })));
 const RegisterPage = lazy(() => import('./pages/RegisterPage').then((mod) => ({ default: mod.RegisterPage })));
+const PrivacyPolicyPage = lazy(() =>
+  import('./pages/legal/PrivacyPolicyPage').then((mod) => ({ default: mod.PrivacyPolicyPage })),
+);
+const TermsConditionsPage = lazy(() =>
+  import('./pages/legal/TermsConditionsPage').then((mod) => ({ default: mod.TermsConditionsPage })),
+);
+const CookiePolicyPage = lazy(() =>
+  import('./pages/legal/CookiePolicyPage').then((mod) => ({ default: mod.CookiePolicyPage })),
+);
 const MarketplacePage = lazy(() => import('./pages/MarketplacePage').then((mod) => ({ default: mod.MarketplacePage })));
 const MerchantStorePage = lazy(() => import('./pages/MerchantStorePage').then((mod) => ({ default: mod.MerchantStorePage })));
 const MerchantDashboardPage = lazy(() =>
@@ -122,6 +134,84 @@ function RootRedirect() {
   return <Navigate to="/login" replace />;
 }
 
+function AppRoutes() {
+  useGoogleAnalytics();
+  return (
+    <>
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader message="Cargando página..." />}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route element={<Layout />}>
+              <Route path="/" element={<RootRedirect />} />
+              <Route path="/privacy" element={<PrivacyPolicyPage />} />
+              <Route path="/terms" element={<TermsConditionsPage />} />
+              <Route path="/cookies" element={<CookiePolicyPage />} />
+              <Route path="/marketplace" element={<MarketplacePage />} />
+  <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+  <Route path="/checkout" element={<Checkout />} />
+  <Route
+    path="/profile"
+    element={
+      <ProtectedRoute>
+        <ProfilePage />
+      </ProtectedRoute>
+    }
+  />
+  <Route path="/orders/:id" element={<OrderTracker />} />
+  <Route
+    path="/merchant/dashboard"
+    element={
+      <ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}>
+        <MerchantDashboardPage />
+      </ProtectedRoute>
+    }
+  />
+  <Route path="/admin" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']} requiredPermission="can_manage_orders"><MerchantDashboardPage /></ProtectedRoute>} />
+  <Route path="/admin/settings" element={<ProtectedRoute requiredRole={['merchant_owner', 'superadmin']}><MerchantSettingsPage /></ProtectedRoute>} />
+  <Route path="/admin/dishes" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantDishesPage /></ProtectedRoute>} />
+  <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']} requiredPermission="can_view_metrics"><MerchantResumenPage /></ProtectedRoute>} />
+  <Route path="/merchant/profile" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantProfilePage /></ProtectedRoute>} />
+  <Route path="/admin/profile" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantProfilePage /></ProtectedRoute>} />
+  <Route path="/super-admin" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminMerchantsPage /></ProtectedRoute>} />
+  <Route path="/super-admin/dashboard" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminDashboardPage /></ProtectedRoute>} />
+  <Route path="/super-admin/users" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminUsersPage /></ProtectedRoute>} />
+  <Route path="/super-admin/profile" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminProfilePage /></ProtectedRoute>} />
+  <Route
+    path="/driver"
+    element={
+      <ProtectedRoute requiredRole="driver" requiredPermission="can_view_assigned_deliveries">
+        <DriverDashboard />
+      </ProtectedRoute>
+    }
+  />
+  <Route
+    path="/driver/deliveries"
+    element={
+      <ProtectedRoute
+        requiredRole={['driver', 'merchant_owner', 'merchant_staff', 'superadmin']}
+        requiredPermission="can_view_assigned_deliveries"
+      >
+        <DriverDeliveriesPage />
+      </ProtectedRoute>
+    }
+  />
+  <Route path="*" element={<NotFoundPage />} />
+</Route>
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
+        <CustomerOnboardingGate />
+        <ReloadPrompt />
+        <CartFab />
+        <Analytics />
+        <SpeedInsights />
+        <CookieConsentBanner />
+    </>
+  );
+}
+
 export function App() {
   return (
     <AuthProvider>
@@ -129,71 +219,7 @@ export function App() {
         <NotificationToastProvider>
           <PwaInstallProvider>
             <BrowserRouter>
-              <ErrorBoundary>
-                <Suspense fallback={<PageLoader message="Cargando página..." />}>
-                  <Routes>
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
-                    <Route element={<Layout />}>
-                      <Route path="/" element={<RootRedirect />} />
-                      <Route path="/marketplace" element={<MarketplacePage />} />
-                      <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
-                      <Route path="/checkout" element={<Checkout />} />
-                      <Route
-                        path="/profile"
-                        element={
-                          <ProtectedRoute>
-                            <ProfilePage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route path="/orders/:id" element={<OrderTracker />} />
-                      <Route
-                        path="/merchant/dashboard"
-                        element={
-                          <ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}>
-                            <MerchantDashboardPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route path="/admin" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']} requiredPermission="can_manage_orders"><MerchantDashboardPage /></ProtectedRoute>} />
-                      <Route path="/admin/settings" element={<ProtectedRoute requiredRole={['merchant_owner', 'superadmin']}><MerchantSettingsPage /></ProtectedRoute>} />
-                      <Route path="/admin/dishes" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantDishesPage /></ProtectedRoute>} />
-                      <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']} requiredPermission="can_view_metrics"><MerchantResumenPage /></ProtectedRoute>} />
-                      <Route path="/merchant/profile" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantProfilePage /></ProtectedRoute>} />
-                      <Route path="/admin/profile" element={<ProtectedRoute requiredRole={['merchant_owner', 'merchant_staff', 'superadmin']}><MerchantProfilePage /></ProtectedRoute>} />
-                      <Route path="/super-admin" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminMerchantsPage /></ProtectedRoute>} />
-                      <Route path="/super-admin/dashboard" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminDashboardPage /></ProtectedRoute>} />
-                      <Route path="/super-admin/users" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminUsersPage /></ProtectedRoute>} />
-                      <Route path="/super-admin/profile" element={<ProtectedRoute requiredRole="superadmin" redirectTo="/"><SuperAdminProfilePage /></ProtectedRoute>} />
-                      <Route
-                        path="/driver"
-                        element={
-                          <ProtectedRoute requiredRole="driver" requiredPermission="can_view_assigned_deliveries">
-                            <DriverDashboard />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/driver/deliveries"
-                        element={
-                          <ProtectedRoute
-                            requiredRole={['driver', 'merchant_owner', 'merchant_staff', 'superadmin']}
-                            requiredPermission="can_view_assigned_deliveries"
-                          >
-                            <DriverDeliveriesPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route path="*" element={<NotFoundPage />} />
-                    </Route>
-                  </Routes>
-                </Suspense>
-              </ErrorBoundary>
-              <CustomerOnboardingGate />
-              <ReloadPrompt />
-              <CartFab />
-              <Analytics />
+              <AppRoutes />
             </BrowserRouter>
             <NotificationToastList />
             <OfflineBanner />

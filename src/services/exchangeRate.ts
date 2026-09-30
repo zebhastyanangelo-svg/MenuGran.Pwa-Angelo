@@ -2,12 +2,12 @@
  * Servicio central de MenuGram para obtener y cachear la tasa oficial BCV
  * (Banco Central de Venezuela) desde DolarApi Venezuela.
  *
- * Endpoint oficial: https://dolarapi.com/v1/venezuela/dolares/bcv
+ * Endpoint oficial: https://ve.dolarapi.com/v1/dolares/oficial
  * De la respuesta JSON se extrae estrictamente la propiedad `promedio`,
  * que corresponde a la tasa del dólar oficial del BCV.
  *
  * Estrategia de resiliencia:
- * 1. Caché en memoria + localStorage con TTL de 1 hora (evita llamar a la API
+ * 1. Caché en memoria + localStorage con TTL de 5 horas (evita llamar a la API
  *    en cada renderizado o recarga de página).
  * 2. Deduplicación de peticiones concurrentes (un solo fetch compartido).
  * 3. Fallbacks: endpoints públicos alternativos, última tasa en caché
@@ -15,7 +15,7 @@
  */
 
 export const EXCHANGE_RATE_STORAGE_KEY = 'menugram_bcv_exchange_rate';
-export const EXCHANGE_RATE_TTL_MS = 60 * 60 * 1000; // 1 hora en milisegundos
+export const EXCHANGE_RATE_TTL_MS = 5 * 60 * 60 * 1000; // 5 horas en milisegundos
 /** Última tasa conocida; se usa solo cuando la API y la caché fallan. */
 export const DEFAULT_FALLBACK_RATE = 857.0;
 
@@ -117,12 +117,12 @@ function parseLegacyBCVEndpoint(data: unknown, source: string): BCVRateResponse 
  */
 const BCV_API_ENDPOINTS: BCVApiEndpoint[] = [
   {
-    url: 'https://dolarapi.com/v1/venezuela/dolares/bcv',
-    parser: (data) => parseDolarApiPromedio(data, 'dolarapi.com/venezuela/bcv'),
-  },
-  {
     url: 'https://ve.dolarapi.com/v1/dolares/oficial',
     parser: (data) => parseDolarApiPromedio(data, 've.dolarapi.com/oficial'),
+  },
+  {
+    url: 'https://dolarapi.com/v1/venezuela/dolares/bcv',
+    parser: (data) => parseDolarApiPromedio(data, 'dolarapi.com/venezuela/bcv'),
   },
   {
     url: 'https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=bcv',

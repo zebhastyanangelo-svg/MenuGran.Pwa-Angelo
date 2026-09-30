@@ -126,6 +126,7 @@ describe('Single Registration Flow (AuthForm)', { timeout: 15000 }, () => {
     await user.type(screen.getByLabelText(/Contraseña/i), 'password123');
     await user.type(screen.getByLabelText(/C.I./i), 'V-12345678');
     await user.type(screen.getByLabelText(/Teléfono/i), '+58 412-123-4567');
+    await user.click(screen.getByLabelText(/Acepto los/i));
     await user.click(screen.getByTestId('register-submit'));
 
     await waitFor(() => {
