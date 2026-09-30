@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Sitemap de MenuGram — https://www.menugran.online
+  Sitemap de MenuGram — https://menugram.online
   Rutas públicas principales de la PWA. Las rutas privadas (/admin, /super-admin,
   /driver, /checkout, /profile, /orders) se excluyen deliberadamente por SEO
   y privacidad.
@@ -8,38 +8,38 @@
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://www.menugran.online/</loc>
-    <lastmod>2026-09-29</lastmod>
+    <loc>https://menugram.online/</loc>
+    <lastmod>2026-09-30</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://www.menugran.online/marketplace</loc>
-    <lastmod>2026-09-29</lastmod>
+    <loc>https://menugram.online/marketplace</loc>
+    <lastmod>2026-09-30</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.menugran.online/login</loc>
-    <lastmod>2026-09-29</lastmod>
+    <loc>https://menugram.online/login</loc>
+    <lastmod>2026-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://www.menugran.online/privacy</loc>
-    <lastmod>2026-09-29</lastmod>
+    <loc>https://menugram.online/privacy</loc>
+    <lastmod>2026-09-30</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://www.menugran.online/terms</loc>
-    <lastmod>2026-09-29</lastmod>
+    <loc>https://menugram.online/terms</loc>
+    <lastmod>2026-09-30</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://www.menugran.online/cookies</loc>
-    <lastmod>2026-09-29</lastmod>
+    <loc>https://menugram.online/cookies</loc>
+    <lastmod>2026-09-30</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>

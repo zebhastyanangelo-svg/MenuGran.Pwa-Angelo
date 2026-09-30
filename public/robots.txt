@@ -1,4 +1,4 @@
-# robots.txt — MenuGram (https://www.menugran.online)
+# robots.txt — MenuGram (https://menugram.online)
 # Se permiten todas las rutas públicas. Se excluyen las áreas privadas
 # (paneles de administración, entregas, checkout y pedidos) por SEO y
 # privacidad.

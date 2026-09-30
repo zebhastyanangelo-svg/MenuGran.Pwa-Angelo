@@ -135,9 +135,20 @@ type InvokePushPayload =
 /** Invoca la Edge Function send-push-notification con manejo de errores. */
 async function invokeSendPushNotification(payload: InvokePushPayload): Promise<SendPushResult> {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (session === null) {
+      return { ok: false, message: 'Sesión expirada. Inicia sesión nuevamente.' };
+    }
+
     const { data, error } = await supabase.functions.invoke<PushSendSummary>(
       'send-push-notification',
-      { body: payload },
+      {
+        body: payload,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      },
     );
 
     if (error !== null) {

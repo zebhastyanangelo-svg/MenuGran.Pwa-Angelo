@@ -157,7 +157,7 @@ describe('ProductCard', () => {
     const product = buildProduct('p1', 'Hamburguesa', '12.50');
     render(<ProductCard product={{ ...product, image_url: 'https://example.com/img.jpg' }} />);
 
-    const img = screen.getByRole('img', { name: 'Hamburguesa' });
+    const img = screen.getByRole('img', { name: 'Hamburguesa', hidden: true });
     expect(img).toHaveAttribute('loading', 'lazy');
   });
 

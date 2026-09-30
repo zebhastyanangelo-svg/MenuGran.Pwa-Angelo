@@ -12,8 +12,7 @@ import { NotificationToastProvider, NotificationToastList } from './components/p
 import { CustomerOnboardingGate } from './components/onboarding/CustomerOnboardingGate';
 import { CookieConsentBanner } from './components/cookies/CookieConsentBanner';
 import { PwaInstallProvider } from './contexts/PwaInstallContext';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/react';
+
 import { PageLoader } from './components/PageLoader';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/layout/Layout';
@@ -205,8 +204,6 @@ function AppRoutes() {
         <CustomerOnboardingGate />
         <ReloadPrompt />
         <CartFab />
-        <Analytics />
-        <SpeedInsights />
         <CookieConsentBanner />
     </>
   );

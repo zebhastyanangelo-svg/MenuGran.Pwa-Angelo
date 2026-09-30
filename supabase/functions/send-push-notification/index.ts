@@ -1,10 +1,10 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.112.2';
-import { jwtVerify, importSPKI } from 'https://esm.sh/jose@5.9.6';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
 };
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -122,13 +122,6 @@ function addPersonalizedGreeting(template: string): string {
 interface PushSubscription {
   endpoint: string;
   keys: { p256dh: string; auth: string };
-}
-
-interface PushSendSummary {
-  sent: number;
-  failed: number;
-  deactivated: number;
-  total: number;
 }
 
 async function getSubscriptionsForUser(client: SupabaseClient, userId: string): Promise<PushSubscription[]> {

@@ -12,6 +12,8 @@ const fromMock = vi.fn();
 const upsertMock = vi.fn();
 const invokeMock = vi.fn();
 
+const getSessionMock = vi.fn();
+
 vi.mock('./supabase', () => ({
   TABLE_NAMES: {
     profiles: 'profiles',
@@ -25,6 +27,7 @@ vi.mock('./supabase', () => ({
   },
   supabase: {
     from: (...args: unknown[]) => fromMock(...args),
+    auth: { getSession: (...args: unknown[]) => getSessionMock(...args) },
     functions: { invoke: (...args: unknown[]) => invokeMock(...args) },
   },
 }));
@@ -163,6 +166,10 @@ describe('subscribeCurrentUserToPush', () => {
 describe('sendTestPushNotification / sendBulkPushNotification', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getSessionMock.mockResolvedValue({
+      data: { session: { access_token: 'test-token' } },
+      error: null,
+    });
   });
 
   it('envía la notificación de prueba con target user', async () => {
@@ -175,6 +182,7 @@ describe('sendTestPushNotification / sendBulkPushNotification', () => {
 
     expect(invokeMock).toHaveBeenCalledWith('send-push-notification', {
       body: { target: 'user' },
+      headers: { Authorization: 'Bearer test-token' },
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -193,12 +201,25 @@ describe('sendTestPushNotification / sendBulkPushNotification', () => {
 
     expect(invokeMock).toHaveBeenCalledWith('send-push-notification', {
       body: { target: 'all', title: 'Promo', body: '¡Hoy 2x1, {nombre}!' },
+      headers: { Authorization: 'Bearer test-token' },
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.summary.sent).toBe(10);
       expect(result.summary.deactivated).toBe(1);
     }
+  });
+
+  it('devuelve error controlado si no hay sesión activa', async () => {
+    getSessionMock.mockResolvedValue({ data: { session: null }, error: null });
+
+    const result = await sendTestPushNotification();
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toContain('Sesión expirada');
+    }
+    expect(invokeMock).not.toHaveBeenCalled();
   });
 
   it('devuelve un mensaje de error controlado si la función falla', async () => {
