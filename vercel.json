@@ -1,18 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/sw.js",
-      "destination": "/sw.js"
-    },
-    {
-      "source": "/manifest.webmanifest",
-      "destination": "/manifest.webmanifest"
-    },
-    {
-      "source": "/workbox-(.*).js",
-      "destination": "/workbox-$1.js"
-    },
-    {
       "source": "/((?!.*\\.(?:js|css|json|xml|ico|png|jpg|jpeg|svg|webmanifest)|sw\\.js).*)",
       "destination": "/index.html"
     }

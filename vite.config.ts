@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.svg', 'logo.svg'],
-        injectRegister: false,
+        injectRegister: 'auto',
         manifest: {
           name: 'MenuGram - Menús digitales',
           short_name: 'MenuGram',

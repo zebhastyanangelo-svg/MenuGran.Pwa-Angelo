@@ -14,6 +14,24 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object';
+}
+
+function readNamedKey(name: string): string | null {
+  const rawValue = Deno.env.get(name);
+  if (rawValue === undefined || rawValue === '') return null;
+  try {
+    const parsed: unknown = JSON.parse(rawValue);
+    if (isRecord(parsed) && typeof parsed.default === 'string') {
+      return parsed.default === '' ? null : parsed.default;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 function getSupabaseUrl(): string {
   const value = Deno.env.get('SUPABASE_URL')?.trim();
   if (value === undefined || value === '') {
@@ -24,7 +42,7 @@ function getSupabaseUrl(): string {
 
 function getServiceRoleKey(): string {
   const key =
-    Deno.env.get('SUPABASE_SECRET_KEYS') ??
+    readNamedKey('SUPABASE_SECRET_KEYS') ??
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ??
     Deno.env.get('SUPABASE_SECRET_KEY');
   if (key === undefined || key === '') {
@@ -35,7 +53,7 @@ function getServiceRoleKey(): string {
 
 function getPublishableKey(): string {
   const key =
-    Deno.env.get('SUPABASE_PUBLISHABLE_KEYS') ??
+    readNamedKey('SUPABASE_PUBLISHABLE_KEYS') ??
     Deno.env.get('SUPABASE_PUBLISHABLE_KEY') ??
     Deno.env.get('SUPABASE_ANON_KEY');
   if (key === undefined || key === '') {
