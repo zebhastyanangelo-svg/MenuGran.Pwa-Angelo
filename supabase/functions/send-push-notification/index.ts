@@ -7,6 +7,26 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
+function getVapidPublicKey(): string {
+  const key =
+    readNamedKey('VAPID_PUBLIC_KEY') ??
+    Deno.env.get('VAPID_PUBLIC_KEY');
+  if (key === undefined || key === '') {
+    throw new Error('VAPID_PUBLIC_KEY no configurada.');
+  }
+  return key;
+}
+
+function getVapidPrivateKey(): string {
+  const key =
+    readNamedKey('VAPID_PRIVATE_KEY') ??
+    Deno.env.get('VAPID_PRIVATE_KEY');
+  if (key === undefined || key === '') {
+    throw new Error('VAPID_PRIVATE_KEY no configurada.');
+  }
+  return key;
+}
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -193,13 +213,9 @@ async function sendPushNotification(
   body: string,
 ): Promise<{ ok: boolean }> {
   try {
-    const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
-    const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
+    const vapidPublicKey = getVapidPublicKey();
+    const vapidPrivateKey = getVapidPrivateKey();
     const vapidSubject = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@menugram.com';
-
-    if (!vapidPublicKey || !vapidPrivateKey) {
-      return { ok: false };
-    }
 
     const payload = JSON.stringify({ title, body, url: '/' });
 
