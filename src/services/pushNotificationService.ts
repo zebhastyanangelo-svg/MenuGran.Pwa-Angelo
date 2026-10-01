@@ -15,7 +15,7 @@ import type { UserPushSubscriptionInsert } from '../types/database';
 
 /** Clave pública VAPID del par de MenuGram (la privada vive solo en el servidor). */
 export const VAPID_PUBLIC_KEY =
-  'BNhcrcsKnkvKvPQBUUA8h3a9z_91SJAA_Vsqv156f_ZNBhRY1xyjxiWtboXCzIZKpN5dc93dOyPLCocBkglrr2k';
+  'BBRgDWS7KDR06u-OfqX7D0xEcan9QmgHSrlriaxVWljeFd57E8t5-XeiPR1TqZJmeG1u1zKWqnydL6hvdKQwNag';
 
 export type SubscribePushResult =
   | { status: 'subscribed'; alreadySubscribed: boolean }
