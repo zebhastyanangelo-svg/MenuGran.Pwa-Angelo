@@ -1,8 +1,8 @@
 /**
- * Servicio de notificaciones push de MenuGram (Web Push / VAPID).
+ * Servicio de notificaciones push de MenuGran (Web Push / VAPID).
  *
  * Flujo:
- *  1. El navegador se suscribe con la clave pública VAPID de MenuGram.
+ *  1. El navegador se suscribe con la clave pública VAPID de MenuGran.
  *  2. La suscripción se persiste en `user_push_subscriptions` (Supabase).
  *  3. La Edge Function `send-push-notification` entrega los push usando la
  *     clave privada VAPID (que vive solo en el servidor).
@@ -13,7 +13,7 @@
 import { supabase, TABLE_NAMES } from './supabase';
 import type { UserPushSubscriptionInsert } from '../types/database';
 
-/** Clave pública VAPID del par de MenuGram (la privada vive solo en el servidor). */
+/** Clave pública VAPID del par de MenuGran (la privada vive solo en el servidor). */
 export const VAPID_PUBLIC_KEY =
   'BBRgDWS7KDR06u-OfqX7D0xEcan9QmgHSrlriaxVWljeFd57E8t5-XeiPR1TqZJmeG1u1zKWqnydL6hvdKQwNag';
 

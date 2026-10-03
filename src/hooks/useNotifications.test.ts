@@ -197,14 +197,14 @@ describe('useNotifications', () => {
     }).not.toThrow();
   });
 
-  it('no dispara notificación duplicada para el mismo estado', () => {
+  it('no dispara notificación duplicada para el mismo estado', async () => {
     (globalThis as any).Notification.permission = 'granted';
     (globalThis as any).Notification.mockClear();
 
     const { result } = renderHook(() => useNotifications());
 
-    act(() => {
-      void result.current.requestPermission();
+    await act(async () => {
+      await result.current.requestPermission();
     });
 
     const notification = buildOrderNotification('confirmed');

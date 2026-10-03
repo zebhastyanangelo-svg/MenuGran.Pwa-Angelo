@@ -1,5 +1,5 @@
 /**
- * Servicio central de MenuGram para obtener y cachear la tasa oficial BCV
+ * Servicio central de MenuGran para obtener y cachear la tasa oficial BCV
  * (Banco Central de Venezuela) desde DolarApi Venezuela.
  *
  * Endpoint oficial: https://ve.dolarapi.com/v1/dolares/oficial
@@ -218,29 +218,39 @@ export function clearExchangeRateCache(): void {
 }
 
 async function fetchBCVFromEndpoint(endpoint: BCVApiEndpoint): Promise<ExchangeRateData> {
-  const response = await fetch(endpoint.url, {
-    headers: {
-      Accept: 'application/json',
-    },
-    signal: AbortSignal.timeout(10000), // 10 segundos de timeout
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  const signal =
+    controller.signal instanceof AbortSignal ? controller.signal : undefined;
+
+  try {
+    const response = await fetch(endpoint.url, {
+      headers: {
+        Accept: 'application/json',
+      },
+      ...(signal ? { signal } : {}),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data: unknown = await response.json();
+    const parsed = endpoint.parser(data);
+
+    if (typeof parsed.price !== 'number' || parsed.price <= 0) {
+      throw new Error('Tasa inválida recibida de la API');
+    }
+
+    return {
+      rate: parsed.price,
+      timestamp: Date.now(),
+      source: parsed.source,
+    };
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const data: unknown = await response.json();
-  const parsed = endpoint.parser(data);
-
-  if (typeof parsed.price !== 'number' || parsed.price <= 0) {
-    throw new Error('Tasa inválida recibida de la API');
-  }
-
-  return {
-    rate: parsed.price,
-    timestamp: Date.now(),
-    source: parsed.source,
-  };
 }
 
 async function fetchFirstAvailableBCVEndpoint(): Promise<ExchangeRateData> {

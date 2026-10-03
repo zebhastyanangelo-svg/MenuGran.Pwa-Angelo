@@ -1,5 +1,5 @@
 /*
- * push-handler.js — Manejo de Web Push para el Service Worker de MenuGram.
+ * push-handler.js — Manejo de Web Push para el Service Worker de MenuGran.
  *
  * El SW principal (dist/sw.js) es generado por Workbox (vite-plugin-pwa,
  * modo generateSW) y no admite código custom, por eso este archivo se inyecta
@@ -28,7 +28,7 @@ self.addEventListener('push', function (event) {
     }
   }
 
-  var title = (payload && payload.title) || 'MenuGram';
+  var title = (payload && payload.title) || 'MenuGran';
   var url = (payload && payload.url) || '/marketplace';
 
   var options = {

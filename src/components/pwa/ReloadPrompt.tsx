@@ -4,7 +4,7 @@ import { usePwaInstall, usePwaUpdate } from '../../hooks/usePwaUpdate';
 /**
  * Banner que notifica (a) actualizaciones del Service Worker y la
  * disponibilidad offline de la PWA y (b) la posibilidad de instalar
- * MenuGram en el dispositivo mediante el prompt nativo del navegador.
+ * MenuGran en el dispositivo mediante el prompt nativo del navegador.
  *
  * El componente es invisible por defecto y solo aparece cuando hay algo
  * que comunicar al usuario (actualización pendiente, app lista offline o
@@ -39,9 +39,9 @@ export function ReloadPrompt(): React.ReactElement | null {
 
         <p className="flex-1 text-sm text-gray-700">
           {isUpdateAvailable
-            ? 'Hay una nueva versión disponible. Actualiza para seguir usando MenuGram.'
+            ? 'Hay una nueva versión disponible. Actualiza para seguir usando MenuGran.'
             : isOfflineReady
-              ? 'MenuGram está listo para funcionar sin conexión.'
+              ? 'MenuGran está listo para funcionar sin conexión.'
               : 'Instala MenuGran en tu dispositivo para acceder más rápido.'}
         </p>
 
@@ -62,7 +62,7 @@ export function ReloadPrompt(): React.ReactElement | null {
               type="button"
               onClick={() => void promptInstall()}
               className="animate__bounce rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              aria-label="Instalar MenuGram"
+              aria-label="Instalar MenuGran"
             >
               Instalar
             </button>

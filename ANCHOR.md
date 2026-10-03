@@ -1,4 +1,4 @@
-# ANCHOR — Conversación MenuGram PWA
+# ANCHOR — Conversación MenuGran PWA
 
 ## Objective
 - Simplificar al máximo el registro de comercios en AuthForm.tsx para reducir fricción: reducir el formulario de la pestaña Comercio a solo Nombre del Comercio, Correo electrónico y Contraseña; quitar RIF, Categoría, Descripción y Dirección (se completan luego en el Dashboard del comerciante); redirigir al panel del comerciante; actualizar los tests necesarios y verificar con `npx vitest run` y `npx tsc -b`.

@@ -13,7 +13,7 @@ describe('OnboardingModal', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Paso 1 de 3')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Explora los comercios cercanos/i })).toBeInTheDocument();
-    expect(screen.getByText(/Navega por el catálogo de MenuGram/i)).toBeInTheDocument();
+    expect(screen.getByText(/Navega por el catálogo de MenuGran/i)).toBeInTheDocument();
   });
 
   it('avanza al paso 2 y al paso 3 con el botón Siguiente', () => {

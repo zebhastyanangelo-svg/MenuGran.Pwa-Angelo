@@ -12,7 +12,7 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-slate-200 bg-slate-50 md:flex">
       <div className="flex h-16 items-center gap-2 border-b border-slate-200 bg-white/80 px-5 backdrop-blur-sm">
         <img src="/logo.svg" alt="" className="h-7 w-7 rounded-md" aria-hidden="true" />
-        <span className="text-lg font-bold text-slate-900">MenuGram</span>
+        <span className="text-lg font-bold text-slate-900">MenuGran</span>
       </div>
       <nav className="flex-1 space-y-2 px-3 py-4" aria-label="Navegación principal">
         {navItems.map(({ to, label, icon: Icon }) => (

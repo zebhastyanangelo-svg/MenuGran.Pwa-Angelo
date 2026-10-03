@@ -1,10 +1,10 @@
-# Theme Guide — MenuGram
+# Theme Guide — MenuGran
 
-Este documento define la identidad visual de MenuGram para mantener consistencia entre la UI, componentes y experiencias de compra.
+Este documento define la identidad visual de MenuGran para mantener consistencia entre la UI, componentes y experiencias de compra.
 
 ## 1. Principios de marca
 
-MenuGram usa una identidad limpia, cálida y de alto contraste con foco en conversiones rápidas y una experiencia moderna para pedidos.
+MenuGran usa una identidad limpia, cálida y de alto contraste con foco en conversiones rápidas y una experiencia moderna para pedidos.
 
 - Marca principal: rojo intenso y enérgico
 - Marca secundaria: ámbar cálido para energía o promociones
@@ -185,4 +185,4 @@ Antes de cerrar una tarea visual, revisar:
 - Radio base: `rounded-2xl`
 - Radio botón: `rounded-xl` o `rounded-full`
 
-Este guide sirve como referencia de diseño visual para todas las nuevas pantallas, componentes y mejoras del sistema UI de MenuGram.
+Este guide sirve como referencia de diseño visual para todas las nuevas pantallas, componentes y mejoras del sistema UI de MenuGran.

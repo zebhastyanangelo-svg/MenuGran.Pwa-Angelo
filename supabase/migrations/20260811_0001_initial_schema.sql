@@ -1,4 +1,4 @@
--- MenuGram — Esquema inicial (2026-08-11)
+-- MenuGran — Esquema inicial (2026-08-11)
 -- Fuente: docs/DATABASE-SCHEMA.md (enums, tablas, índices)
 -- + RLS (arquitectura), trigger de perfil, bucket de comprobantes y Realtime.
 

@@ -128,7 +128,7 @@ describe('ReloadPrompt', () => {
     render(<ReloadPrompt />);
 
     expect(
-      screen.getByRole('button', { name: /instalar menugram/i }),
+      screen.getByRole('button', { name: /instalar menugran/i }),
     ).toBeInTheDocument();
   });
 
@@ -149,7 +149,7 @@ describe('ReloadPrompt', () => {
     render(<ReloadPrompt />);
 
     const installButton = screen.getByRole('button', {
-      name: /instalar menugram/i,
+      name: /instalar menugran/i,
     });
 
     await act(async () => {
@@ -165,7 +165,7 @@ describe('ReloadPrompt', () => {
     render(<ReloadPrompt />);
 
     expect(
-      screen.getByText(/instala menugram en tu dispositivo/i),
+      screen.getByText(/instala menugran en tu dispositivo/i),
     ).toBeInTheDocument();
   });
 });

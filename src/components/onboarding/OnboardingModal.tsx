@@ -11,7 +11,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     title: 'Explora los comercios cercanos',
     description:
-      'Navega por el catálogo de MenuGram y descubre los comercios abiertos cerca de ti, con sus menús, precios en dólares y su ubicación exacta en el mapa.',
+      'Navega por el catálogo de MenuGran y descubre los comercios abiertos cerca de ti, con sus menús, precios en dólares y su ubicación exacta en el mapa.',
     icon: <MapPin className="h-10 w-10" aria-hidden="true" />,
   },
   {
@@ -34,7 +34,7 @@ interface OnboardingModalProps {
 }
 
 /**
- * Tutorial interactivo de onboarding para clientes nuevos de MenuGram.
+ * Tutorial interactivo de onboarding para clientes nuevos de MenuGran.
  * Tres pasos animados (CSS transitions + animate-slide-up) con navegación,
  * indicador de progreso y botón "Saltar" disponible en cualquier paso.
  */

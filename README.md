@@ -1,4 +1,4 @@
-# MenuGram PWA
+# MenuGran PWA
 
 Plataforma de menús digitales multi-tenant con gestión de pedidos en tiempo real y seguimiento de entregas.
 

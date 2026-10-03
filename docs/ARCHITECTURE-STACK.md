@@ -1,7 +1,7 @@
 #  Arquitectura General y Stack Tecnologico
 
 ## 1. Vision General del Proyecto
-MenuGram es una plataforma web progresiva (PWA) multi-tenant diseñada para menús digitales, gestión de comandas en tiempo real y seguimiento de pedidos en vivo, optimizada para operar con costo de infraestructura cero ($0) y preparada para alta escalabilidad mediante un modelo de Monolito Modular.
+MenuGran es una plataforma web progresiva (PWA) multi-tenant diseñada para menús digitales, gestión de comandas en tiempo real y seguimiento de pedidos en vivo, optimizada para operar con costo de infraestructura cero ($0) y preparada para alta escalabilidad mediante un modelo de Monolito Modular.
 
 ---
 

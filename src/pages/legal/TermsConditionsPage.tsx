@@ -3,7 +3,7 @@ import { LegalList, LegalPageLayout, LegalSection } from '../../components/legal
 const LAST_UPDATED = '29 de septiembre de 2026';
 
 /**
- * Términos y Condiciones del servicio MenuGram, aplicables a clientes
+ * Términos y Condiciones del servicio MenuGran, aplicables a clientes
  * y comercios que usan la plataforma.
  */
 export function TermsConditionsPage() {
@@ -11,11 +11,11 @@ export function TermsConditionsPage() {
     <LegalPageLayout
       title="Términos y Condiciones"
       updatedAt={LAST_UPDATED}
-      intro="Estos Términos regulan el uso de MenuGram (menugran.online), la plataforma multi-comercio de menús digitales con pedidos en tiempo real y seguimiento de entrega. Al registrarte, publicar un comercio o realizar un pedido, aceptas estos Términos."
+      intro="Estos Términos regulan el uso de MenuGran (menugran.online), la plataforma multi-comercio de menús digitales con pedidos en tiempo real y seguimiento de entrega. Al registrarte, publicar un comercio o realizar un pedido, aceptas estos Términos."
     >
       <LegalSection title="1. Descripción del servicio">
         <p>
-          MenuGram permite a comercios publicar su menú digital, recibir pedidos y
+          MenuGran permite a comercios publicar su menú digital, recibir pedidos y
           coordinar entregas, y a clientes explorar comercios, pedir comida y seguir su
           entrega en tiempo real. El servicio se presta «tal cual» y depende de la
           disponibilidad de internet, del navegador y de los datos que cada comercio
@@ -56,7 +56,7 @@ export function TermsConditionsPage() {
           items={[
             'El comercio es el único responsable de la calidad, inocuidad, legalidad y veracidad de sus productos, precios e imágenes.',
             'Debe confirmar, preparar y coordinar los pedidos recibidos y mantener actualizados horarios, menú y datos de pago.',
-            'Los pagos se realizan directamente entre cliente y comercio (pago móvil, punto de venta o efectivo); MenuGram no cobra, custodia ni intermedia los fondos.',
+            'Los pagos se realizan directamente entre cliente y comercio (pago móvil, punto de venta o efectivo); MenuGran no cobra, custodia ni intermedia los fondos.',
             'El personal autorizado (staff) actúa en nombre del comercio, que responde por los permisos que asigne dentro del panel.',
           ]}
         />
@@ -64,7 +64,7 @@ export function TermsConditionsPage() {
 
       <LegalSection title="5. Pedidos, pagos y entregas">
         <p>
-          El contrato de compra se celebra entre el cliente y el comercio. MenuGram solo
+          El contrato de compra se celebra entre el cliente y el comercio. MenuGran solo
           proporciona la tecnología de pedidos, notificaciones y seguimiento, y no garantiza
           tiempos de entrega, disponibilidad de productos ni el cobro efectivo de un pago.
           Ante cualquier problema (pedido faltante, cobro o devolución), el cliente debe
@@ -85,17 +85,17 @@ export function TermsConditionsPage() {
 
       <LegalSection title="7. Limitación de responsabilidad">
         <p>
-          En la máxima medida permitida por la ley, MenuGram no será responsable por daños
+          En la máxima medida permitida por la ley, MenuGran no será responsable por daños
           indirectos derivados del uso de la plataforma, ni por incumplimientos de comercios
           o repartidores (retrasos, calidad del producto, disputas de pago). La
-          responsabilidad de MenuGram se limita, en todo caso, a los daños directos
+          responsabilidad de MenuGran se limita, en todo caso, a los daños directos
           demostrados.
         </p>
       </LegalSection>
 
       <LegalSection title="8. Propiedad intelectual y suspensión">
         <p>
-          La marca MenuGram, su software y diseño son propiedad de MenuGram; cada comercio
+          La marca MenuGran, su software y diseño son propiedad de MenuGran; cada comercio
           conserva los derechos sobre sus nombres, logotipos e imágenes. Podemos suspender o
           eliminar cuentas que incumplan estos Términos o pongan en riesgo la plataforma,
           con notificación previa cuando sea posible.

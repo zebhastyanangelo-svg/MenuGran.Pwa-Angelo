@@ -211,7 +211,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     <div className="w-full max-w-md">
       <div className="mb-8 flex flex-col items-center text-center">
         <div className="animate__bounce flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-red shadow-lg">
-          <span className="text-3xl font-black text-white">M</span>
+          <span className="text-2xl font-black text-white">MG</span>
         </div>
         <h1 className="mt-4 text-2xl font-bold text-slate-900">¡Bienvenido a MenuGran!</h1>
         <p className="mt-1 text-sm text-slate-500">
@@ -437,7 +437,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
               ¿Quieres vender tu comida en MenuGran? Contacta al equipo de soporte para dar de alta tu negocio
             </p>
             <a
-              href="https://wa.me/584142380573?text=Hola,%20quiero%20más%20información%20para%20registrar%20mi%20negocio%20en%20MenuGram"
+              href="https://wa.me/584142380573?text=Hola,%20quiero%20más%20información%20para%20registrar%20mi%20negocio%20en%20MenuGran"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-2 text-brand-red underline text-sm font-medium"

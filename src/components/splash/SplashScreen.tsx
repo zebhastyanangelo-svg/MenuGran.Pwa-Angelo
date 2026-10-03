@@ -27,7 +27,7 @@ export function SplashScreen({ onFinish, duration = 3500 }: SplashScreenProps) {
     >
       <div className="animate-splash-pulse flex flex-col items-center">
         <div className="flex h-28 w-28 items-center justify-center rounded-3xl bg-white shadow-2xl">
-          <span className="text-5xl font-black tracking-tight text-brand-red">M</span>
+          <span className="text-4xl font-black tracking-tight text-brand-red">MG</span>
         </div>
         <h1 className="mt-6 text-4xl font-black tracking-tight text-white">MenuGran</h1>
         <p className="mt-2 text-sm font-medium text-white/80">

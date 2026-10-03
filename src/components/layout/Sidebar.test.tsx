@@ -32,7 +32,7 @@ describe('Sidebar', () => {
     vi.clearAllMocks();
   });
 
-  it('renderiza la marca MenuGram', () => {
+  it('renderiza la marca MenuGran', () => {
     useAuthMock.mockReturnValue({
       profile: buildProfile('customer'),
       signOut: vi.fn(),
@@ -42,7 +42,7 @@ describe('Sidebar', () => {
         <Sidebar />
       </MemoryRouter>,
     );
-    expect(screen.getByText('MenuGram')).toBeInTheDocument();
+    expect(screen.getByText('MenuGran')).toBeInTheDocument();
   });
 
   it('renderiza la navegación de cliente y oculta el Panel', () => {

@@ -299,7 +299,7 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ sent: 0, failed: 0, deactivated: 0, total: 0 });
       }
 
-      const title = 'MenuGram';
+      const title = 'MenuGran';
       const bodyText = 'Tienes una nueva notificación.';
 
       let sent = 0;
@@ -322,7 +322,7 @@ Deno.serve(async (req: Request) => {
       const auth = await assertSuperadmin(authHeader);
       if (!auth.ok) return auth.response;
 
-      const title = addPersonalizedGreeting(body.title ?? 'MenuGram');
+      const title = addPersonalizedGreeting(body.title ?? 'MenuGran');
       const bodyText = addPersonalizedGreeting(body.body ?? '');
 
       const subscriptions = await getAllSubscriptions(client);

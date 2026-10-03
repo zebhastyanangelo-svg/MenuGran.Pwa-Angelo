@@ -19,7 +19,7 @@ const PREVIEW_SAMPLE_NAME = 'María Pérez';
  * {full_name}, {first_name}) con vista previa en tiempo real.
  */
 export function BulkNotificationModal({ onClose }: BulkNotificationModalProps) {
-  const [title, setTitle] = useState('MenuGram');
+  const [title, setTitle] = useState('MenuGran');
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<SendPushResult | null>(null);

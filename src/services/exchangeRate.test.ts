@@ -29,12 +29,6 @@ Object.defineProperty(global, 'localStorage', {
   writable: true,
 });
 
-// jsdom puede no implementar AbortSignal.timeout; se stubbea para los tests de fetch.
-if (typeof AbortSignal.timeout !== 'function') {
-  (AbortSignal as unknown as { timeout: (ms: number) => AbortSignal }).timeout = () =>
-    new AbortController().signal;
-}
-
 interface MockFetchResponse {
   ok: boolean;
   status: number;

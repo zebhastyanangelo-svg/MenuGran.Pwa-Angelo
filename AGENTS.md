@@ -1,4 +1,4 @@
-# MenuGram PWA — Agent Instructions
+# MenuGran PWA — Agent Instructions
 
 ## Project Overview
 Multi-tenant digital menu platform with real-time order management and delivery tracking. Stack: React 18+/TypeScript/Vite/Tailwind (PWA), Node.js/Express modular monolith (Render), PostgreSQL/Supabase (Auth, DB, Realtime, Storage), Cloudinary (images), Leaflet/OpenStreetMap (maps).

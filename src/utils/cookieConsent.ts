@@ -1,5 +1,5 @@
 /**
- * Gestión del consentimiento de cookies de MenuGram.
+ * Gestión del consentimiento de cookies de MenuGran.
  *
  * La preferencia del usuario se persiste en `localStorage` bajo la clave
  * `menugram_cookie_consent` con dos valores posibles:

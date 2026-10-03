@@ -24,7 +24,7 @@ function ConsentBannerView({ onAccept }: ConsentBannerViewProps) {
             Usamos cookies y almacenamiento local técnicos para que la app funcione
             (sesión, carrito y pedidos) y, con tu permiso, cookies de{' '}
             <strong className="font-semibold text-slate-900">analítica (Google Analytics)</strong>{' '}
-            para entender cómo se usa MenuGram y mejorarla. Consulta nuestra{' '}
+            para entender cómo se usa MenuGran y mejorarla. Consulta nuestra{' '}
             <Link
               to="/cookies"
               className="font-medium text-brand-red underline underline-offset-2 hover:text-[#c80024]"

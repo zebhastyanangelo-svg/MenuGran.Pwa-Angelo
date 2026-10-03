@@ -124,7 +124,7 @@ export function MerchantStorePage() {
       <div className="min-h-screen bg-slate-50 pb-12">
         <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-sm">
           <div className="mx-auto max-w-3xl">
-            <h1 className="text-xl font-bold text-slate-900">MenuGram</h1>
+            <h1 className="text-xl font-bold text-slate-900">MenuGran</h1>
             <p className="text-xs text-slate-500">Cargando comercio...</p>
           </div>
         </header>
@@ -146,7 +146,7 @@ export function MerchantStorePage() {
       <div className="min-h-screen bg-gray-50 pb-12">
         <header className="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
           <div className="mx-auto max-w-3xl">
-            <h1 className="text-xl font-bold text-gray-900">MenuGram</h1>
+            <h1 className="text-xl font-bold text-gray-900">MenuGran</h1>
           </div>
         </header>
         <main className="mx-auto max-w-3xl px-4 pt-4">
@@ -170,7 +170,7 @@ export function MerchantStorePage() {
       <div className="min-h-screen bg-gray-50 pb-12">
         <header className="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
           <div className="mx-auto max-w-3xl">
-            <h1 className="text-xl font-bold text-gray-900">MenuGram</h1>
+            <h1 className="text-xl font-bold text-gray-900">MenuGran</h1>
           </div>
         </header>
         <main className="mx-auto max-w-3xl px-4 pt-4">
@@ -193,7 +193,7 @@ export function MerchantStorePage() {
     <div className="min-h-screen bg-slate-50 pb-12">
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-sm">
         <div className="mx-auto max-w-3xl">
-          <h1 className="text-xl font-bold text-slate-900">MenuGram</h1>
+          <h1 className="text-xl font-bold text-slate-900">MenuGran</h1>
         </div>
       </header>
 

@@ -3,7 +3,7 @@ import { LegalList, LegalPageLayout, LegalSection } from '../../components/legal
 const LAST_UPDATED = '29 de septiembre de 2026';
 
 /**
- * Política de Cookies de MenuGram: explica el uso de cookies técnicas,
+ * Política de Cookies de MenuGran: explica el uso de cookies técnicas,
  * almacenamiento local (localStorage) y de analítica (Google Analytics),
  * así como el mecanismo de consentimiento y revocación.
  */
@@ -12,7 +12,7 @@ export function CookiePolicyPage() {
     <LegalPageLayout
       title="Política de Cookies"
       updatedAt={LAST_UPDATED}
-      intro="En MenuGram usamos tecnologías de almacenamiento en tu dispositivo (cookies y localStorage) para que la aplicación funcione correctamente y, con tu permiso, para medir su uso con analítica. Aquí explicamos cuáles usamos, para qué, y cómo puedes aceptarlas o rechazarlas."
+      intro="En MenuGran usamos tecnologías de almacenamiento en tu dispositivo (cookies y localStorage) para que la aplicación funcione correctamente y, con tu permiso, para medir su uso con analítica. Aquí explicamos cuáles usamos, para qué, y cómo puedes aceptarlas o rechazarlas."
     >
       <LegalSection title="1. Qué son las cookies y el localStorage">
         <p>
@@ -26,7 +26,7 @@ export function CookiePolicyPage() {
 
       <LegalSection title="2. Almacenamiento técnico y funcional (siempre activo)">
         <p>
-          Son necesarios para que MenuGram funcione y no requieren consentimiento:
+          Son necesarios para que MenuGran funcione y no requieren consentimiento:
         </p>
         <LegalList
           items={[

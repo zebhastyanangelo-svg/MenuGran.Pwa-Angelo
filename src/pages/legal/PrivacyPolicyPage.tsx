@@ -3,7 +3,7 @@ import { LegalList, LegalPageLayout, LegalSection } from '../../components/legal
 const LAST_UPDATED = '29 de septiembre de 2026';
 
 /**
- * Política de Privacidad de MenuGram: explica qué datos se recopilan
+ * Política de Privacidad de MenuGran: explica qué datos se recopilan
  * (cuenta, pedidos, pagos y ubicación), con qué finalidad, con quién se
  * comparten y cómo ejercer los derechos ARCO.
  */
@@ -12,11 +12,11 @@ export function PrivacyPolicyPage() {
     <LegalPageLayout
       title="Política de Privacidad"
       updatedAt={LAST_UPDATED}
-      intro="En MenuGram (menugran.online) tratamos tus datos personales con transparencia y solo para que puedas pedir, vender y recibir comida de forma segura. Esta política explica qué datos recopilamos, cómo los usamos y qué derechos tienes como usuario."
+      intro="En MenuGran (menugran.online) tratamos tus datos personales con transparencia y solo para que puedas pedir, vender y recibir comida de forma segura. Esta política explica qué datos recopilamos, cómo los usamos y qué derechos tienes como usuario."
     >
       <LegalSection title="1. Responsable del tratamiento">
         <p>
-          MenuGram («nosotros») es la plataforma multi-comercio de menús digitales con
+          MenuGran («nosotros») es la plataforma multi-comercio de menús digitales con
           pedidos en tiempo real y seguimiento de entrega, disponible en{' '}
           <strong>www.menugran.online</strong>. Puedes contactarnos por los canales de
           soporte publicados en la aplicación para cualquier consulta sobre privacidad.
@@ -28,7 +28,7 @@ export function PrivacyPolicyPage() {
           items={[
             'Datos de cuenta: nombre, correo electrónico, contraseña (cifrada), C.I. y teléfono que nos entregas al registrarte.',
             'Datos de pedidos: productos, cantidades, precios, método de pago, referencia del comprobante, dirección de entrega y estado del pedido.',
-            'Datos de pago: solo la referencia y el comprobante (imagen o PDF) del pago móvil o transferencia. MenuGram nunca solicita ni almacena números de tarjeta bancaria.',
+            'Datos de pago: solo la referencia y el comprobante (imagen o PDF) del pago móvil o transferencia. MenuGran nunca solicita ni almacena números de tarjeta bancaria.',
             'Datos de ubicación: coordenadas GPS que compartes voluntariamente al seleccionar tu dirección de entrega en el mapa, usadas para coordinar y rastrear la entrega.',
             'Datos técnicos: identificador de sesión, registro de actividad y métricas agregadas de uso.',
           ]}

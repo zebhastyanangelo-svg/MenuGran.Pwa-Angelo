@@ -193,7 +193,7 @@ export function SuperAdminDashboardPage() {
                 Métricas Globales
               </h1>
               <p className="text-sm text-gray-500">
-                Resumen general de la plataforma MenuGram.
+                Resumen general de la plataforma MenuGran.
               </p>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import type { MerchantRow } from '../../types/database';
 import {
   MapView,
@@ -19,6 +19,17 @@ vi.mock('leaflet', () => {
   const layers: Record<string, unknown[]> = {};
   const instanceMap: Record<string, unknown[]> = {};
 
+  const chainableLayer = () => ({
+    addTo: vi.fn().mockReturnThis(),
+    removeFrom: vi.fn().mockReturnThis(),
+    remove: vi.fn(),
+    bindPopup: vi.fn().mockReturnThis(),
+    on: vi.fn().mockReturnThis(),
+    off: vi.fn().mockReturnThis(),
+    setLatLng: vi.fn().mockReturnThis(),
+    setStyle: vi.fn().mockReturnThis(),
+  });
+
   const mockMap = {
     setView: vi.fn(),
     eachLayer: vi.fn((cb: (layer: unknown) => void) => {
@@ -33,25 +44,14 @@ vi.mock('leaflet', () => {
     fitBounds: vi.fn(),
   };
 
-  const markerFn = vi.fn((_latlng: unknown, _options?: unknown) => {
-    const markerInstance = {
-      addTo: vi.fn(),
-      bindPopup: vi.fn(),
-      on: vi.fn(),
-      remove: vi.fn(),
-      setLatLng: vi.fn(),
-    };
-    return markerInstance;
-  });
+  const markerFn = vi.fn((_latlng: unknown, _options?: unknown) => chainableLayer());
 
-  const circleMarkerFn = vi.fn((_latlng: unknown, _options?: unknown) => ({
-    addTo: vi.fn(),
-  }));
+  const circleMarkerFn = vi.fn((_latlng: unknown, _options?: unknown) => chainableLayer());
 
   const iconFn = vi.fn((_options: unknown) => ({ _options }));
 
   const latLngBoundsFn = vi.fn(() => ({
-    extend: vi.fn(),
+    extend: vi.fn().mockReturnThis(),
   }));
 
   return {
@@ -59,8 +59,8 @@ vi.mock('leaflet', () => {
       map: vi.fn(() => mockMap),
       marker: markerFn,
       circleMarker: circleMarkerFn,
-      polyline: vi.fn(() => ({ addTo: vi.fn() })),
-      tileLayer: vi.fn().mockReturnValue({ addTo: vi.fn() }),
+      polyline: vi.fn(() => chainableLayer()),
+      tileLayer: vi.fn(() => chainableLayer()),
       icon: iconFn,
       divIcon: vi.fn(() => ({})),
       latLngBounds: latLngBoundsFn,
@@ -77,6 +77,10 @@ vi.mock('leaflet', () => {
 vi.mock('leaflet/dist/leaflet.css', () => ({}));
 
 describe('MapView', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renderiza el contenedor del mapa', () => {
     render(<MapView markers={[]} />);
     const mapContainer = document.querySelector('.h-64.w-full');
@@ -100,7 +104,22 @@ describe('MapView', () => {
     expect(document.querySelector('.h-64.w-full')).toBeInTheDocument();
   });
 
-  it('renderiza con routeRequest sin errores', () => {
+  it('renderiza con routeRequest sin errores', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        code: 'Ok',
+        routes: [
+          {
+            geometry: {
+              type: 'LineString',
+              coordinates: [[-99.13, 19.43], [-99.14, 19.44]],
+            },
+          },
+        ],
+      }),
+    });
+
     render(
       <MapView
         markers={[]}
@@ -110,6 +129,9 @@ describe('MapView', () => {
       />,
     );
     expect(document.querySelector('.h-64.w-full')).toBeInTheDocument();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
   });
 });
 

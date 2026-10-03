@@ -8,7 +8,7 @@ const LEGAL_LINKS = [
 ];
 
 /**
- * Pie de página de MenuGram con los enlaces legales de la plataforma.
+ * Pie de página de MenuGran con los enlaces legales de la plataforma.
  * Se renderiza al final del layout principal (rutas con navegación).
  */
 export function Footer() {
@@ -20,7 +20,7 @@ export function Footer() {
     >
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 border-t border-slate-200 pt-4 text-center md:flex-row md:justify-between md:pl-0 md:text-left">
         <p className="text-xs text-slate-500">
-          © {new Date().getFullYear()} MenuGram. Todos los derechos reservados.
+          © {new Date().getFullYear()} MenuGran. Todos los derechos reservados.
         </p>
         <nav aria-label="Enlaces legales">
           <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">

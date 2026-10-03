@@ -1,4 +1,4 @@
-# Design Tokens Board — MenuGram
+# Design Tokens Board — MenuGran
 
 ## 1. Tokens de marca
 
