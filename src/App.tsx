@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
@@ -12,6 +12,7 @@ import { NotificationToastProvider, NotificationToastList } from './components/p
 import { CustomerOnboardingGate } from './components/onboarding/CustomerOnboardingGate';
 import { CookieConsentBanner } from './components/cookies/CookieConsentBanner';
 import { PwaInstallProvider } from './contexts/PwaInstallContext';
+import { SplashScreen } from './components/splash/SplashScreen';
 
 import { PageLoader } from './components/PageLoader';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -210,11 +211,14 @@ function AppRoutes() {
 }
 
 export function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
   return (
     <AuthProvider>
       <CartProvider>
         <NotificationToastProvider>
           <PwaInstallProvider>
+            {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
             <BrowserRouter>
               <AppRoutes />
             </BrowserRouter>

@@ -22,7 +22,10 @@ const SUBMIT_BASE_CLASS =
   'w-full rounded-xl border border-transparent bg-brand-red py-3 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70';
 
 const GOOGLE_BUTTON_CLASS =
-  'flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70';
+  'flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-brand-red/30 focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70';
+
+const INPUT_BASE_CLASS =
+  'mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition-all duration-200 focus:border-brand-red focus:ring-2 focus:ring-brand-red/20 sm:text-sm';
 
 /**
  * Logo oficial de Google en SVG (colores de marca).
@@ -206,6 +209,16 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
 
   return (
     <div className="w-full max-w-md">
+      <div className="mb-8 flex flex-col items-center text-center">
+        <div className="animate__bounce flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-red shadow-lg">
+          <span className="text-3xl font-black text-white">M</span>
+        </div>
+        <h1 className="mt-4 text-2xl font-bold text-slate-900">¡Bienvenido a MenuGran!</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Tu plataforma digital de menús y pedidos en tiempo real.
+        </p>
+      </div>
+
       <button
         type="button"
         data-testid="google-signin"
@@ -287,7 +300,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
       )}
 
       {activeTab === 'login' && (
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="animate-slide-up space-y-4">
           <h2 className="mb-2 text-center text-xl font-bold text-slate-900">
             Iniciar Sesión
           </h2>
@@ -301,7 +314,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
               type="email"
               required
               autoComplete="email"
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+              className={INPUT_BASE_CLASS}
             />
           </div>
           <div>
@@ -315,7 +328,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
               required
               minLength={6}
               autoComplete="current-password"
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+              className={INPUT_BASE_CLASS}
             />
           </div>
           <button
@@ -336,8 +349,8 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         </form>
       )}
 
-{activeTab === 'register' && (
-        <form onSubmit={handleRegister} className="space-y-4">
+      {activeTab === 'register' && (
+        <form onSubmit={handleRegister} className="animate-slide-up space-y-4">
           <h2 className="mb-2 text-center text-xl font-bold text-slate-900">
             Registrarse
           </h2>
@@ -353,7 +366,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                 type="text"
                 required
                 autoComplete="name"
-                className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                className={INPUT_BASE_CLASS}
               />
             </div>
             <div>
@@ -366,7 +379,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                 type="email"
                 required
                 autoComplete="email"
-                className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                className={INPUT_BASE_CLASS}
               />
             </div>
             <div>
@@ -380,7 +393,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                 required
                 minLength={6}
                 autoComplete="new-password"
-                className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                className={INPUT_BASE_CLASS}
               />
             </div>
           </div>
@@ -397,7 +410,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                 required
                 autoComplete="name"
                 maxLength={20}
-                className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                className={INPUT_BASE_CLASS}
                 placeholder="Ej: V-12345678"
               />
             </div>
@@ -412,7 +425,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                 required
                 autoComplete="tel"
                 maxLength={15}
-                className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-red focus:ring-2 focus:ring-red-100 sm:text-sm"
+                className={INPUT_BASE_CLASS}
                 placeholder="Ej: +58 412-123-4567"
                 pattern="[0-9\s+\-]+"
               />

@@ -71,7 +71,7 @@ export function OnboardingModal({ onFinish }: OnboardingModalProps) {
         </p>
 
         <div key={activeStep} className="animate-slide-up mt-4 flex flex-col items-center text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-red-50 text-brand-red">
+          <div className="animate__bounce flex h-20 w-20 items-center justify-center rounded-2xl bg-red-50 text-brand-red">
             {step.icon}
           </div>
           <h2 id="onboarding-step-title" className="mt-4 text-xl font-bold text-slate-900">

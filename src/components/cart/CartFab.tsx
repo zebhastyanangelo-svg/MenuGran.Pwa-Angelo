@@ -39,7 +39,10 @@ export function CartFab() {
       >
         <ShoppingCart className="h-6 w-6" aria-hidden="true" />
         {totalItems > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-brand-amber px-1.5 text-xs font-bold text-slate-900">
+          <span
+            key={totalItems}
+            className="animate__bounce absolute -top-1 -right-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-brand-amber px-1.5 text-xs font-bold text-slate-900"
+          >
             {totalItems}
           </span>
         )}

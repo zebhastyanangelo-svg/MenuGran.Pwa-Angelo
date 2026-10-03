@@ -24,7 +24,7 @@ function buildOrder(overrides: Partial<OrderWithCustomer> = {}): OrderWithCustom
     latitude: null,
     longitude: null,
     items: [],
-    created_at: '2026-09-23T10:00:00.000Z',
+    created_at: new Date().toISOString(),
     profiles: { full_name: 'Cliente Prueba', email: 'cliente@test.com' },
     ...overrides,
   };

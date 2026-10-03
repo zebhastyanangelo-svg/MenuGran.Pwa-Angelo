@@ -109,6 +109,7 @@ function ProductDetailBody({
         fullWidth
         disabled={!product.is_available}
         onClick={handleAdd}
+        className="animate__bounce"
       >
         {product.is_available ? 'Agregar al carrito' : 'No disponible'}
       </Button>

@@ -42,7 +42,7 @@ export function ReloadPrompt(): React.ReactElement | null {
             ? 'Hay una nueva versión disponible. Actualiza para seguir usando MenuGram.'
             : isOfflineReady
               ? 'MenuGram está listo para funcionar sin conexión.'
-              : 'Instala MenuGram en tu dispositivo para acceder más rápido.'}
+              : 'Instala MenuGran en tu dispositivo para acceder más rápido.'}
         </p>
 
         <div className="flex flex-shrink-0 items-center gap-2">
@@ -61,7 +61,7 @@ export function ReloadPrompt(): React.ReactElement | null {
             <button
               type="button"
               onClick={() => void promptInstall()}
-              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="animate__bounce rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               aria-label="Instalar MenuGram"
             >
               Instalar
