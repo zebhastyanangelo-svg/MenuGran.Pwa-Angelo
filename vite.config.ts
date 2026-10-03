@@ -12,8 +12,8 @@ export default defineConfig(({ mode }) => {
         includeAssets: ['favicon.svg', 'logo.svg'],
         injectRegister: 'auto',
         manifest: {
-          name: 'MenuGram - Menús digitales',
-          short_name: 'MenuGram',
+          name: 'MenuGran - Menús digitales',
+          short_name: 'MenuGran',
           description:
             'Plataforma multi-comercio para menús digitales con pedidos en tiempo real y seguimiento de entrega.',
           lang: 'es',
