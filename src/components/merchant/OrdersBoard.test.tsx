@@ -5,6 +5,17 @@ import { OrdersBoard } from './OrdersBoard';
 import type { DriverProfile, OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 import { render } from '../../test/test-utils';
 
+const createSignedUrlMock = vi.fn();
+
+vi.mock('../../services/supabase', () => ({
+  supabase: {
+    storage: {
+      from: vi.fn().mockReturnThis(),
+      createSignedUrl: (...args: unknown[]) => createSignedUrlMock(...args),
+    },
+  },
+}));
+
 function buildOrder(overrides: Partial<OrderWithCustomer> = {}): OrderWithCustomer {
   return {
     id: 'order-1',
@@ -90,9 +101,9 @@ describe('OrdersBoard', () => {
       buildOrder({ status: 'delivered', payment_proof_url: 'proofs/order-1.jpg' }),
     ]);
 
-    const proofButton = screen.getByRole('button', { name: /Ver comprobante/i });
-    expect(proofButton).toBeEnabled();
-    await userEvent.click(proofButton);
+    const proofButtons = screen.getAllByRole('button', { name: /Ver comprobante/i });
+    expect(proofButtons[0]).toBeEnabled();
+    await userEvent.click(proofButtons[0]);
     expect(onOpenProof).toHaveBeenCalledTimes(1);
   });
 
@@ -136,8 +147,8 @@ describe('OrdersBoard', () => {
     ]);
 
     expect(screen.getAllByText('Pago Móvil')[0]).toBeInTheDocument();
-    const proofButton = screen.getByRole('button', { name: /Ver comprobante/i });
-    await userEvent.click(proofButton);
+    const proofButtons = screen.getAllByRole('button', { name: /Ver comprobante/i });
+    await userEvent.click(proofButtons[0]);
     expect(onOpenProof).toHaveBeenCalledTimes(1);
   });
 
@@ -187,5 +198,46 @@ describe('OrdersBoard', () => {
     expect(screen.getByText('cliente@test.com')).toBeInTheDocument();
     expect(screen.getByText('V12345678')).toBeInTheDocument();
     expect(screen.getByText('+584121234567')).toBeInTheDocument();
+  });
+
+  it('muestra la imagen del comprobante en el detalle usando una URL firmada', async () => {
+    createSignedUrlMock.mockResolvedValue({
+      data: { signedUrl: 'https://example.com/signed-proof.jpg' },
+      error: null,
+    });
+    renderBoard([
+      buildOrder({
+        status: 'confirmed',
+        payment_proof_url: 'proofs/order-1.jpg',
+      }),
+    ]);
+
+    const detailButton = screen.getAllByRole('button', { name: /Ver detalles/i })[0];
+    await userEvent.click(detailButton);
+
+    const proofImage = await screen.findByRole('img', { name: 'Comprobante' });
+    expect(proofImage).toBeInTheDocument();
+    expect(proofImage).toHaveAttribute('src', 'https://example.com/signed-proof.jpg');
+    expect(createSignedUrlMock).toHaveBeenCalledWith('proofs/order-1.jpg', 3600);
+  });
+
+  it('muestra un mensaje de error en el detalle si no se puede firmar el comprobante', async () => {
+    createSignedUrlMock.mockResolvedValue({
+      data: null,
+      error: { message: 'No se pudo cargar el comprobante' },
+    });
+    renderBoard([
+      buildOrder({
+        status: 'confirmed',
+        payment_proof_url: 'proofs/order-1.jpg',
+      }),
+    ]);
+
+    const detailButton = screen.getAllByRole('button', { name: /Ver detalles/i })[0];
+    await userEvent.click(detailButton);
+
+    expect(await screen.findByText('Detalle del pedido')).toBeInTheDocument();
+    expect(await screen.findByText('No se pudo cargar el comprobante')).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Comprobante' })).not.toBeInTheDocument();
   });
 });

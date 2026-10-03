@@ -284,10 +284,10 @@ describe('MerchantDashboardPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Ver comprobante/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Ver comprobante/i)[0]).toBeInTheDocument();
     });
 
-    await userEventInstance.click(screen.getByText(/Ver comprobante/i));
+    await userEventInstance.click(screen.getAllByText(/Ver comprobante/i)[0]);
 
   // Modal should appear
   expect(screen.getByText(/Comprobante de Pago/i)).toBeInTheDocument();

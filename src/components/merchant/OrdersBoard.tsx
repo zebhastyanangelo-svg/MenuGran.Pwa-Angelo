@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useBCVRate } from '../../hooks/useExchangeRate';
+import { PAYMENT_PROOF_BUCKET } from '../../hooks/useMerchantDashboard';
+import { supabase } from '../../services/supabase';
 import type { OrderStatus } from '../../types/database';
 import type { DriverProfile, OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 import { formatPrice } from '../../types/cart';
@@ -103,6 +105,8 @@ export function OrdersBoard({
   const PAGE_SIZE = 10;
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderWithCustomer | null>(null);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [proofError, setProofError] = useState<string | null>(null);
 
   const bcvRate = useBCVRate();
 
@@ -147,6 +151,33 @@ export function OrdersBoard({
 
   const goPrev = () => setPage((p) => Math.max(1, p - 1));
   const goNext = () => setPage((p) => Math.min(totalPages, p + 1));
+
+  const openDetailOrder = async (order: OrderWithCustomer) => {
+    setSelectedOrder(order);
+    setDetailOpen(true);
+    setProofUrl(null);
+    setProofError(null);
+    if (!order.payment_proof_url) return;
+    try {
+      const { data, error: signedError } = await supabase.storage
+        .from(PAYMENT_PROOF_BUCKET)
+        .createSignedUrl(order.payment_proof_url, 3600);
+      if (signedError || !data?.signedUrl) {
+        setProofError(signedError?.message ?? 'No se pudo cargar el comprobante');
+        return;
+      }
+      setProofUrl(data.signedUrl);
+    } catch (err: unknown) {
+      setProofError(err instanceof Error ? err.message : 'Error de comprobante');
+    }
+  };
+
+  const closeDetail = () => {
+    setDetailOpen(false);
+    setSelectedOrder(null);
+    setProofUrl(null);
+    setProofError(null);
+  };
 
   return (
     <>
@@ -345,10 +376,7 @@ export function OrdersBoard({
                             ))}
                           <button
                             type="button"
-                            onClick={() => {
-                              setSelectedOrder(order);
-                              setDetailOpen(true);
-                            }}
+                            onClick={() => void openDetailOrder(order)}
                             className="text-xs px-2.5 py-1 rounded font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-colors"
                           >
                             <Eye className="h-3 w-3 inline mr-1" aria-hidden="true" />
@@ -411,13 +439,23 @@ export function OrdersBoard({
                       )}
                       <span className="font-mono text-gray-700">Código: {order.id.slice(0, 4).toUpperCase()}</span>
                     </div>
+                    {requiresPaymentProof(order.payment_method) && (order.payment_proof_url ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpenProof(order)}
+                        className="mt-1.5 inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded font-medium transition-colors"
+                      >
+                        Ver comprobante
+                      </button>
+                    ) : (
+                      <span className="mt-1.5 block text-xs text-gray-400 italic">
+                        Sin capture
+                      </span>
+                    ))}
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      setSelectedOrder(order);
-                      setDetailOpen(true);
-                    }}
+                    onClick={() => void openDetailOrder(order)}
                     className="flex items-center gap-1 text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded text-xs font-medium hover:bg-indigo-100"
                   >
                     <Eye className="h-3 w-3" aria-hidden="true" />
@@ -512,10 +550,7 @@ export function OrdersBoard({
       {/* Detail modal */}
       <Modal
         isOpen={detailOpen}
-        onClose={() => {
-          setDetailOpen(false);
-          setSelectedOrder(null);
-        }}
+        onClose={closeDetail}
         title="Detalle del pedido"
       >
         {selectedOrder && (
@@ -582,11 +617,19 @@ export function OrdersBoard({
               {selectedOrder.payment_proof_url && (
                 <div className="sm:col-span-2">
                   <p className="text-sm font-medium text-gray-500">Comprobante de pago</p>
-                  <img
-                    src={selectedOrder.payment_proof_url}
-                    alt="Comprobante"
-                    className="mt-2 max-w-full h-auto rounded-lg border border-gray-200"
-                  />
+                  {proofError ? (
+                    <p className="mt-2 text-xs text-red-500" role="alert">
+                      {proofError}
+                    </p>
+                  ) : proofUrl ? (
+                    <img
+                      src={proofUrl}
+                      alt="Comprobante"
+                      className="mt-2 max-w-full h-auto rounded-lg border border-gray-200"
+                    />
+                  ) : (
+                    <p className="mt-2 text-xs text-gray-400 italic">Cargando comprobante…</p>
+                  )}
                 </div>
               )}
             </div>
