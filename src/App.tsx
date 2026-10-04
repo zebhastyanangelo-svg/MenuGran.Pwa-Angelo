@@ -15,6 +15,7 @@ import { PushNotificationOnboarding } from './components/pwa/PushNotificationOnb
 import { NotificationToastProvider, NotificationToastList } from './components/pwa/NotificationToast';
 import { CustomerOnboardingGate } from './components/onboarding/CustomerOnboardingGate';
 import { CookieConsentBanner } from './components/cookies/CookieConsentBanner';
+import { SupportWidget } from './components/support/SupportWidget';
 import { PwaInstallProvider } from './contexts/PwaInstallContext';
 import { SplashScreen } from './components/splash/SplashScreen';
 
@@ -38,6 +39,9 @@ const CookiePolicyPage = lazy(() =>
 );
 const MarketplacePage = lazy(() => import('./pages/MarketplacePage').then((mod) => ({ default: mod.MarketplacePage })));
 const MerchantStorePage = lazy(() => import('./pages/MerchantStorePage').then((mod) => ({ default: mod.MerchantStorePage })));
+const MerchantQrRedirectPage = lazy(() =>
+  import('./pages/MerchantQrRedirectPage').then((mod) => ({ default: mod.MerchantQrRedirectPage })),
+);
 const MerchantDashboardPage = lazy(() =>
   import('./pages/MerchantDashboardPage').then((mod) => ({ default: mod.MerchantDashboardPage })),
 );
@@ -157,6 +161,8 @@ function AppRoutes() {
               <Route path="/cookies" element={<CookiePolicyPage />} />
               <Route path="/marketplace" element={<MarketplacePage />} />
   <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+  {/* Destino de los códigos QR impresos por el comercio. */}
+  <Route path="/q/:token" element={<MerchantQrRedirectPage />} />
   <Route path="/checkout" element={<Checkout />} />
   <Route
     path="/profile"
@@ -213,6 +219,7 @@ function AppRoutes() {
         <ReloadPrompt />
         <PushNotificationOnboarding />
         <CartFab />
+        <SupportWidget />
         <CookieConsentBanner />
     </>
   );

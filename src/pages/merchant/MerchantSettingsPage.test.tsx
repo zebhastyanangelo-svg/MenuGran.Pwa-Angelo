@@ -156,7 +156,7 @@ describe('MerchantSettingsPage', () => {
      ).toBeInTheDocument();
   });
 
-  it('renderiza los cuatro tabs con las etiquetas correctas', async () => {
+  it('renderiza los cinco tabs con las etiquetas correctas', async () => {
     await setMockState();
 
     renderPage();
@@ -172,6 +172,9 @@ describe('MerchantSettingsPage', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /Pago Móvil/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Código QR/i }),
     ).toBeInTheDocument();
   });
 
@@ -223,7 +226,7 @@ describe('MerchantSettingsPage', () => {
      );
 
      expect(
-       screen.getByRole('checkbox') as HTMLInputElement,
+       screen.getByLabelText('Comercio activo') as HTMLInputElement,
      ).toBeChecked();
    });
 
@@ -383,7 +386,7 @@ describe('MerchantSettingsPage', () => {
       screen.getByRole('button', { name: /Horarios e Identidad/i }),
     );
 
-    const checkbox = screen.getByRole('checkbox') as HTMLInputElement;
+    const checkbox = screen.getByLabelText('Comercio activo') as HTMLInputElement;
     expect(checkbox).toBeChecked();
 
     fireEvent.click(checkbox);
@@ -402,7 +405,7 @@ describe('MerchantSettingsPage', () => {
       screen.getByRole('button', { name: /Horarios e Identidad/i }),
     );
 
-    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByLabelText('Comercio activo'));
 
     fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }));
 

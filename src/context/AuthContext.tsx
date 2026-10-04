@@ -7,11 +7,11 @@ import {
   type ReactNode,
 } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
-import posthog, { isPostHogEnabled } from '../posthog';
+import posthog, { isPostHogEnabled, syncPostHogConsent } from '../posthog';
 import { supabase } from '../services/supabase';
 import type { ProfileRow, UserRole } from '../types/database';
 import { requiresEmailConfirmation } from '../utils/emailSuggestions';
-import { hasAnalyticsConsent } from '../utils/cookieConsent';
+import { COOKIE_CONSENT_EVENT, hasAnalyticsConsent } from '../utils/cookieConsent';
 import { AuthContext, type AuthContextValue, type SignUpResult } from './auth-context-core';
 import { fetchProfile } from './auth-profile';
 
@@ -20,6 +20,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const identifiedUserIdRef = useRef<string | null>(null);
+  const sessionRef = useRef<Session | null>(null);
+
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
 
   const identifySession = useCallback((nextSession: Session): void => {
     const { user } = nextSession;
@@ -113,6 +118,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.subscription.unsubscribe();
     };
   }, [handleAuthEvent, identifySession, refreshProfile]);
+
+  /**
+   * Reintenta la identificación cuando el usuario otorga consentimiento.
+   *
+   * `identifySession` omite `identify()` mientras no hay consentimiento de
+   * analítica (envía email y nombre). Si el usuario inicia sesión antes de
+   * aceptar el banner, sin este listener la sesión quedaría anónima para
+   * siempre, aunque la captura ya esté activada.
+   */
+  useEffect(() => {
+    if (!isPostHogEnabled) return;
+
+    const handleConsentChange = () => {
+      // La captura debe estar activa antes de `identify()`; se sincroniza aquí
+      // para no depender del orden de montaje de los hooks de la app.
+      syncPostHogConsent();
+
+      const currentSession = sessionRef.current;
+      if (currentSession?.user !== undefined) {
+        identifySession(currentSession);
+      }
+    };
+
+    window.addEventListener(COOKIE_CONSENT_EVENT, handleConsentChange);
+    return () => window.removeEventListener(COOKIE_CONSENT_EVENT, handleConsentChange);
+  }, [identifySession]);
 
   const signInWithGoogle = useCallback(
     async (redirectPath?: string | null): Promise<void> => {

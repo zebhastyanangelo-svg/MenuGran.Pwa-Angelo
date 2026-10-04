@@ -67,6 +67,41 @@ export interface BusinessHours {
   close_time: string;
 }
 
+/** Claves de día de la semana en el orden en que se muestra la agenda. */
+export type WeekdayKey =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
+
+/**
+ * Horario de un día concreto. Si `is_open` es `false` el comercio no abre
+ * ese día y las horas se ignoran.
+ *
+ * Cuando `close_time` es menor que `open_time` el horario cruza la medianoche
+ * (p. ej. 20:00 → 02:00).
+ */
+export interface DaySchedule {
+  is_open: boolean;
+  /** Hora de apertura en "HH:mm" (24h). */
+  open_time: string;
+  /** Hora de cierre en "HH:mm" (24h). */
+  close_time: string;
+}
+
+/** Agenda de los siete días de la semana. */
+export type WeeklySchedule = Record<WeekdayKey, DaySchedule>;
+
+/** Contenido de la columna JSONB `merchants.weekly_hours`. */
+export interface WeeklyHours {
+  /** Zona horaria IANA del comercio (p. ej. 'America/Caracas'). */
+  timezone: string;
+  schedule: WeeklySchedule;
+}
+
 /* ---------- TIPOS AUXILIARES ---------- */
 
 export type IsoTimestamp = string;
@@ -157,6 +192,10 @@ export interface MerchantRow {
   opening_time?: string | null;
   /** Hora de cierre (HH:mm). */
   closing_time?: string | null;
+  /** Agenda semanal por día. `null` si el comercio no la ha configurado. */
+  weekly_hours?: WeeklyHours | null;
+  /** Token estable del código QR del comercio. */
+  qr_token?: string | null;
 }
 
 export interface MerchantStaffRow {

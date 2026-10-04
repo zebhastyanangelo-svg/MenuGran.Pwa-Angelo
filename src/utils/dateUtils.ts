@@ -16,13 +16,19 @@ export function getDefaultDateRange(): { startDate: string; endDate: string } {
 }
 
 /**
- * Devuelve true si la hora actual (local) está entre opening y closing.
+ * Devuelve true si la hora de `date` (local) está entre opening y closing.
  * opening y closing en formato "HH:mm" (24h). Si opening > closing se asume que cruza medianoche.
+ *
+ * @param date Momento a evaluar. Por omisión, ahora. Se expone para poder
+ *             probar la lógica de horarios sin manipular el reloj del sistema.
  */
-export function isMerchantOpenNow(opening: string | null | undefined, closing: string | null | undefined): boolean {
+export function isMerchantOpenNow(
+  opening: string | null | undefined,
+  closing: string | null | undefined,
+  date: Date = new Date(),
+): boolean {
   if (!opening || !closing) return false;
-  const now = new Date();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const currentMinutes = date.getHours() * 60 + date.getMinutes();
 
   const parse = (t: string) => {
     const [h, m] = t.split(':').map(Number);

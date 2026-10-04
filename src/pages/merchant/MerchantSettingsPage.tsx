@@ -14,10 +14,14 @@ import { LocationSettingsForm } from '../../components/merchant/LocationSettings
 import { formatGeoPointOrNull } from '../../utils/distance';
 import { parseGeoPoint } from '../../utils/geoPoint';
 import { NoMerchantWarning } from '../../components/merchant/NoMerchantWarning';
+import { MerchantQrPanel } from '../../components/merchant/MerchantQrPanel';
+import { WeeklyHoursEditor } from '../../components/merchant/WeeklyHoursEditor';
+import { createDefaultWeeklyHours, parseWeeklyHours, summarizeWeeklyHours } from '../../utils/weeklyHours';
 import type {
   GeoPoint,
   MerchantCategory,
   MerchantUpdate,
+  WeeklyHours,
 } from '../../types/database';
 
 const MERCHANT_CATEGORIES: MerchantCategory[] = [
@@ -30,7 +34,7 @@ const MERCHANT_CATEGORIES: MerchantCategory[] = [
   'Otro',
 ];
 
-type SettingsTab = 'general' | 'location' | 'identity' | 'payments';
+type SettingsTab = 'general' | 'location' | 'identity' | 'payments' | 'qr';
 
 /** Bancos frecuentes para Pago Móvil (orientativo; el campo admite texto libre). */
 const PAGO_MOVIL_BANKS: readonly string[] = [
@@ -74,8 +78,7 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
   const [pagoMovilIdNumber, setPagoMovilIdNumber] = useState('');
   const [pagoMovilPhone, setPagoMovilPhone] = useState('');
   const [isActive, setIsActive] = useState(true);
-  const [openingTime, setOpeningTime] = useState('');
-  const [closingTime, setClosingTime] = useState('');
+  const [weeklyHours, setWeeklyHours] = useState<WeeklyHours>(() => createDefaultWeeklyHours());
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -93,8 +96,7 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
       setPagoMovilBank(merchant.pago_movil_bank ?? '');
       setPagoMovilIdNumber(merchant.pago_movil_id_number ?? '');
       setPagoMovilPhone(merchant.pago_movil_phone ?? '');
-      setOpeningTime(merchant.opening_time ?? '');
-      setClosingTime(merchant.closing_time ?? '');
+      setWeeklyHours(parseWeeklyHours(merchant.weekly_hours));
     }
   }, [merchant]);
 
@@ -135,6 +137,15 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
   const clearLogo = () => clearImage('logo');
   const clearBanner = () => clearImage('banner');
 
+  /**
+   * Guarda un token nuevo de QR. Vive fuera de `handleSave` porque rotar el
+   * código debe ser inmediato y no depender del resto del formulario: si el
+   * comercio tiene un cambio sin guardar en otra pestaña, no debe perderlo.
+   */
+  const persistQrToken = async (token: string): Promise<void> => {
+    await saveSettings({ qr_token: token });
+  };
+
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
     if (!merchant) return;
@@ -157,8 +168,10 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
         pago_movil_bank: pagoMovilBank.trim() || null,
         pago_movil_id_number: pagoMovilIdNumber.trim() || null,
         pago_movil_phone: pagoMovilPhone.trim() || null,
-        opening_time: openingTime || null,
-        closing_time: closingTime || null,
+        // `opening_time`/`closing_time` se derivan de la agenda semanal para que las
+        // vistas que aún leen esas columnas sigan mostrando un rango coherente.
+        ...summarizeWeeklyHours(weeklyHours),
+        weekly_hours: weeklyHours,
       };
 
       await saveSettings(updates);
@@ -270,6 +283,14 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
         >
           Pago Móvil
         </button>
+        <button
+          type="button"
+          className={tabClass('qr')}
+          onClick={() => setActiveTab('qr')}
+          aria-pressed={activeTab === 'qr'}
+        >
+          Código QR
+        </button>
       </nav>
 
       <form onSubmit={handleSave} className="space-y-5">
@@ -305,10 +326,15 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
             onBannerRemove={clearBanner}
             isActive={isActive}
             onIsActiveChange={setIsActive}
-            openingTime={openingTime}
-            onOpeningTimeChange={setOpeningTime}
-            closingTime={closingTime}
-            onClosingTimeChange={setClosingTime}
+            weeklyHours={weeklyHours}
+            onWeeklyHoursChange={setWeeklyHours}
+          />
+        )}
+
+        {activeTab === 'qr' && (
+          <MerchantQrPanel
+            merchant={merchant}
+            onPersistToken={persistQrToken}
           />
         )}
 
@@ -506,10 +532,8 @@ interface IdentityTabProps {
   onBannerRemove: () => void;
   isActive: boolean;
   onIsActiveChange: (value: boolean) => void;
-  openingTime: string;
-  onOpeningTimeChange: (value: string) => void;
-  closingTime: string;
-  onClosingTimeChange: (value: string) => void;
+  weeklyHours: WeeklyHours;
+  onWeeklyHoursChange: (next: WeeklyHours) => void;
 }
 
 function IdentityTab({
@@ -521,10 +545,8 @@ function IdentityTab({
   onBannerRemove,
   isActive,
   onIsActiveChange,
-  openingTime,
-  onOpeningTimeChange,
-  closingTime,
-  onClosingTimeChange,
+  weeklyHours,
+  onWeeklyHoursChange,
 }: IdentityTabProps) {
   return (
     <div className="space-y-5">
@@ -554,38 +576,7 @@ function IdentityTab({
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label
-            htmlFor="merchant-opening-time"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Hora de Apertura
-          </label>
-          <input
-            id="merchant-opening-time"
-            type="time"
-            value={openingTime}
-            onChange={(e) => onOpeningTimeChange(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="merchant-closing-time"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Hora de Cierre
-          </label>
-          <input
-            id="merchant-closing-time"
-            type="time"
-            value={closingTime}
-            onChange={(e) => onClosingTimeChange(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-          />
-        </div>
-      </div>
+      <WeeklyHoursEditor weeklyHours={weeklyHours} onChange={onWeeklyHoursChange} />
 
       <div className="flex items-center gap-3">
         <input

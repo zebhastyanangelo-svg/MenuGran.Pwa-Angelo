@@ -66,7 +66,7 @@ const fetchData = useCallback(async () => {
     try {
       const { data, error: supabaseError } = await supabase
         .from(TABLE_NAMES.merchants)
-        .select('id, name, slug, logo_url, banner_url, status, is_active, is_open, location, created_at, rif, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, pago_movil_bank, pago_movil_id_number, pago_movil_phone, opening_time, closing_time')
+        .select('id, name, slug, logo_url, banner_url, status, is_active, is_open, location, created_at, rif, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, pago_movil_bank, pago_movil_id_number, pago_movil_phone, opening_time, closing_time, weekly_hours')
         .eq('is_active', true)
         .eq('status', 'active');
 

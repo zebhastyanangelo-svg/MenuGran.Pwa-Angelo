@@ -1,7 +1,6 @@
 import { MapPin, Clock } from 'lucide-react';
 import type { MerchantRow } from '../../types/database';
-import { isMerchantOpenNow } from '../../utils/dateUtils';
-import { formatTimeRange } from '../../utils/format';
+import { getMerchantAvailability } from '../../utils/merchantAvailability';
 
 export interface MerchantCardProps {
   merchant: MerchantRow;
@@ -16,6 +15,8 @@ export function MerchantCard({ merchant, onClick, distance }: MerchantCardProps)
       onClick(merchant);
     }
   };
+
+  const availability = getMerchantAvailability(merchant);
 
   return (
     <div
@@ -68,20 +69,16 @@ export function MerchantCard({ merchant, onClick, distance }: MerchantCardProps)
                   )}
                 </>
               )}
-            {merchant.opening_time && merchant.closing_time && (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-                <Clock className="h-3 w-3" aria-hidden="true" />
-                {formatTimeRange(merchant.opening_time, merchant.closing_time)}
-              </span>
-            )}
             <span
               className={`inline-flex items-center gap-0.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                isMerchantOpenNow(merchant.opening_time, merchant.closing_time)
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-red-100 text-red-800'
+                availability.isOpen ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
               }`}
             >
-              {isMerchantOpenNow(merchant.opening_time, merchant.closing_time) ? 'Abierto' : 'Cerrado'}
+              {availability.badgeLabel}
+            </span>
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {availability.todayLabel}
             </span>
           </div>
         </div>
