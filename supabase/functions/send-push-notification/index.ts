@@ -10,19 +10,37 @@ const corsHeaders = {
 const VAPID_SUBJECT = 'mailto:admin@menugran.com';
 
 /**
- * Origen de las claves VAPID, en orden de precedencia:
- *  1. Variables de entorno (`VAPID_PUBLIC_KEY` / `WEB_PUSH_PRIVATE_KEY`).
+ * Par de claves VAPID usado para firmar los envíos Web Push.
+ *
+ * Origen, en orden de precedencia:
+ *  1. Secretos de la Edge Function (`VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY`,
+ *     `WEB_PUSH_*`, …), que permiten rotar sin tocar la base de datos.
  *  2. Fila `id = 1` de `app_push_config` (solo accesible con service_role).
  *
- * La tabla actúa como fuente de verdad rotable sin redeploy. La clave privada
- * nunca se expone al cliente: `app_push_config` no tiene políticas RLS para
- * `anon`/`authenticated`.
+ * La clave privada nunca se expone al cliente: `app_push_config` no tiene
+ * políticas RLS para `anon`/`authenticated`.
  */
 interface VapidKeyPair {
   publicKey: string;
   privateKey: string;
-  source: 'env' | 'db';
+  /** Origen del par, para poder diagnosticarlo en la respuesta y en los logs. */
+  source: string;
 }
+
+/**
+ * Parejas de secretos (pública, privada) que el despliegue declara como un
+ * mismo par VAPID, en orden de precedencia.
+ *
+ * No se construye el producto cruzado de todas las claves disponibles: eso
+ * podría emparejar la pública de un par con la privada de otro, y el resultado
+ * son 401/403 en todos los envíos sin que nada indique la causa.
+ */
+const VAPID_KEY_PAIRINGS: ReadonlyArray<readonly [string, string]> = [
+  ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY'],
+  ['WEB_PUSH_PUBLIC_KEY', 'WEB_PUSH_PRIVATE_KEY'],
+  ['VAPID_PUBLIC_KEY', 'WEB_PUSH_PRIVATE_KEY'],
+  ['VAPID_PUBLIC_KEY', 'PUSH_PRIVATE_KEY'],
+];
 
 function readEnvKey(...names: string[]): string | null {
   for (const name of names) {
@@ -35,18 +53,8 @@ function readEnvKey(...names: string[]): string | null {
   return null;
 }
 
-async function loadVapidKeys(client: SupabaseClient): Promise<VapidKeyPair> {
-  const envPublicKey = readEnvKey('VAPID_PUBLIC_KEY', 'WEB_PUSH_PUBLIC_KEY');
-  const envPrivateKey = readEnvKey(
-    'WEB_PUSH_PRIVATE_KEY',
-    'VAPID_PRIVATE_KEY',
-    'PUSH_PRIVATE_KEY',
-  );
-
-  if (envPublicKey !== null && envPrivateKey !== null) {
-    return { publicKey: envPublicKey, privateKey: envPrivateKey, source: 'env' };
-  }
-
+/** Lee el par VAPID de `app_push_config`, o `null` si no está disponible. */
+async function readVapidKeysFromDb(client: SupabaseClient): Promise<VapidKeyPair | null> {
   const { data, error } = await client
     .from('app_push_config')
     .select('vapid_public_key, vapid_private_key')
@@ -54,43 +62,68 @@ async function loadVapidKeys(client: SupabaseClient): Promise<VapidKeyPair> {
     .maybeSingle();
 
   if (error !== null || data === null) {
-    throw new Error(
-      'No hay claves VAPID configuradas. Define VAPID_PUBLIC_KEY y WEB_PUSH_PRIVATE_KEY ' +
-        'en los secretos de la Edge Function, o inserta la fila id=1 en app_push_config.',
-    );
+    console.error('No se pudo leer app_push_config:', error);
+    return null;
   }
 
   return {
     publicKey: data.vapid_public_key,
     privateKey: data.vapid_private_key,
-    source: 'db',
+    source: 'app_push_config',
   };
 }
 
-/**
- * Verifica que las claves VAPID configuradas constituyan un par válido
- * (que la privada corresponde a la pública) antes de enviar nada.
- *
- * Sin esto, un desajuste se manifiesta como "0 entregadas" y lleva a
- * desactivar suscripciones que son perfectamente válidas.
- */
-async function assertVapidKeysUsable(keys: VapidKeyPair): Promise<void> {
-  if (base64UrlToBytes(keys.privateKey).length !== 32) {
-    throw new Error(
-      'La clave privada VAPID debe ser una clave P-256 cruda de 32 bytes en base64url.',
-    );
+/** Candidatos de claves VAPID, de mayor a menor precedencia. */
+async function collectVapidKeyCandidates(client: SupabaseClient): Promise<VapidKeyPair[]> {
+  const candidates: VapidKeyPair[] = [];
+
+  for (const [publicName, privateName] of VAPID_KEY_PAIRINGS) {
+    const publicKey = readEnvKey(publicName);
+    const privateKey = readEnvKey(privateName);
+    if (publicKey === null || privateKey === null) continue;
+    candidates.push({ publicKey, privateKey, source: `${publicName}+${privateName}` });
   }
 
+  const fromDb = await readVapidKeysFromDb(client);
+  if (fromDb !== null) candidates.push(fromDb);
+
+  return candidates;
+}
+
+/** Devuelve `null` si el par sirve, o el motivo por el que se descarta. */
+async function describeVapidKeyFailure(keys: VapidKeyPair): Promise<string | null> {
   try {
     await importVapidPrivateKey(keys.publicKey, keys.privateKey);
+    return null;
   } catch (error) {
-    throw new Error(
-      `Las claves VAPID no forman un par válido (pública: ${keys.source}). ` +
-        `Regenera el par VAPID y actualiza ambas claves. Detalle: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-    );
+    return error instanceof Error ? error.message : String(error);
   }
+}
+
+/**
+ * Elige el primer par de claves VAPID realmente utilizable.
+ *
+ * Validar el par, y no solo su presencia, es lo que evita el 500: un secreto
+ * puede estar definido y aun así ser inservible (por ejemplo, una clave privada
+ * que no es un escalar P-256). Al descartar los pares inválidos se sigue
+ * comprando con la siguiente fuente, de modo que `app_push_config` deja de ser
+ * letra muerta cuando los secretos del entorno están mal.
+ */
+async function resolveVapidKeys(client: SupabaseClient): Promise<VapidKeyPair> {
+  const candidates = await collectVapidKeyCandidates(client);
+  const failures: string[] = [];
+
+  for (const candidate of candidates) {
+    const failure = await describeVapidKeyFailure(candidate);
+    if (failure === null) return candidate;
+    failures.push(`${candidate.source} (${failure})`);
+  }
+
+  throw new Error(
+    'No hay un par de claves VAPID utilizable. Define VAPID_PUBLIC_KEY y ' +
+      'WEB_PUSH_PRIVATE_KEY con un par P-256 coherente, o corrige la fila id=1 de ' +
+      `app_push_config. Candidatos descartados: ${failures.length > 0 ? failures.join(' | ') : 'ninguno encontrado'}.`,
+  );
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -380,14 +413,28 @@ function publicKeyToCoordinates(publicKey: string): { x: string; y: string } {
 }
 
 /**
- * Importa la clave privada VAPID (P-256 cruda, 32 bytes base64url) como
- * clave ECDSA firmante usando JWK.
+ * Importa la clave privada VAPID como clave ECDSA firmante.
  *
- * Importar por JWK tiene una propiedad útil: si el par público/privado no
- * corresponde, `importKey` falla. Esto convierte un desajuste de claves en
- * un error explícito en lugar de 400 notificaciones fallidas.
+ * Acepta los dos formatos con los que se ha desplegado esta clave:
+ *  - escalar P-256 crudo de 32 bytes (base64url): se importa por JWK, lo que
+ *    además hace que un desajuste entre la pública y la privada falle aquí en
+ *    lugar de convertirse en 400 notificaciones rechazadas;
+ *  - contenedor PKCS8 DER (base64), que es lo que escriben varias
+ *    herramientas de generación de claves VAPID.
  */
 async function importVapidPrivateKey(publicKey: string, privateKey: string): Promise<CryptoKey> {
+  const privateBytes = base64UrlToBytes(privateKey);
+
+  if (privateBytes.length !== 32) {
+    return crypto.subtle.importKey(
+      'pkcs8',
+      privateBytes,
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      false,
+      ['sign'],
+    );
+  }
+
   const { x, y } = publicKeyToCoordinates(publicKey);
 
   return crypto.subtle.importKey(
@@ -556,8 +603,7 @@ Deno.serve(async (req: Request) => {
       const auth = await assertAuthenticated(authHeader);
       if (!auth.ok) return auth.response;
 
-      const vapidKeys = await loadVapidKeys(client);
-      await assertVapidKeysUsable(vapidKeys);
+      const vapidKeys = await resolveVapidKeys(client);
 
       const subscriptions = await getSubscriptionsForUser(client, auth.userId);
       if (subscriptions.length === 0) {
@@ -588,8 +634,7 @@ Deno.serve(async (req: Request) => {
       const auth = await assertSuperadmin(authHeader);
       if (!auth.ok) return auth.response;
 
-      const vapidKeys = await loadVapidKeys(client);
-      await assertVapidKeysUsable(vapidKeys);
+      const vapidKeys = await resolveVapidKeys(client);
 
       const title = addPersonalizedGreeting(body.title ?? 'MenuGran');
       const bodyText = addPersonalizedGreeting(body.body ?? '');

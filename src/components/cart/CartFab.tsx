@@ -4,6 +4,7 @@ import { ShoppingCart } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useCart } from '../../hooks/useCart';
 import { CartDrawer } from './CartDrawer';
+import { FLOATING_ACTION_STACKED_CLASS } from '../layout/floatingActions';
 import type { UserRole } from '../../types/database';
 
 const AUTH_ROUTES = ['/login', '/register'];
@@ -35,7 +36,7 @@ export function CartFab() {
         type="button"
         onClick={() => setIsOpen(true)}
         aria-label="Abrir carrito de compras"
-        className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand-red text-white shadow-lg transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
+        className={`${FLOATING_ACTION_STACKED_CLASS} flex h-14 w-14 items-center justify-center rounded-full bg-brand-red text-white shadow-lg transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2`}
       >
         <ShoppingCart className="h-6 w-6" aria-hidden="true" />
         {totalItems > 0 && (

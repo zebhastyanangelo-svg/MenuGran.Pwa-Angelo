@@ -5,7 +5,7 @@ import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { formatCurrency } from '../../utils/format';
+import { formatUSD, formatVES } from '../../utils/format';
 
 export interface ProductDetailModalProps {
   product: ProductRow | null;
@@ -18,16 +18,7 @@ export interface ProductDetailModalProps {
 function formatPrice(price: string): string {
   const numeric = parseFloat(price);
   if (isNaN(numeric)) return price;
-  return formatCurrency(numeric);
-}
-
-function formatVES(amount: number): string {
-  return new Intl.NumberFormat('es-VE', {
-    style: 'currency',
-    currency: 'VES',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  return formatUSD(numeric);
 }
 
 function ProductDetailBody({
@@ -81,7 +72,7 @@ function ProductDetailBody({
         <div className="flex flex-col gap-0.5">
           <Badge variant="success">{formatPrice(product.price)}</Badge>
           {bcvRate > 0 && priceVES > 0 && (
-            <span className="text-xs text-emerald-700 font-medium">
+            <span className="text-xs font-medium text-emerald-700">
               ≈ {formatVES(priceVES)}
             </span>
           )}

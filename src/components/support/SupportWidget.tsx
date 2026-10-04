@@ -32,6 +32,7 @@ import {
   resolveFlowOption,
   searchArticles,
 } from '../../utils/supportSearch';
+import { FLOATING_ACTION_CLASS, FLOATING_PANEL_CLASS } from '../layout/floatingActions';
 
 type ViewMode = 'home' | 'flow' | 'search';
 
@@ -83,7 +84,7 @@ export function SupportWidget() {
         onClick={() => setIsOpen(true)}
         aria-label="Abrir ayuda y soporte"
         data-testid="support-fab"
-        className="fixed bottom-5 right-5 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-brand-red text-white shadow-lg transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
+        className={`${FLOATING_ACTION_CLASS} inline-flex h-14 w-14 items-center justify-center rounded-full bg-brand-red text-white shadow-lg transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2`}
       >
         <LifeBuoy className="h-6 w-6" aria-hidden="true" />
       </button>
@@ -91,7 +92,7 @@ export function SupportWidget() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-40 flex h-[min(560px,calc(100vh-3rem))] w-[min(360px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+    <div className={`${FLOATING_PANEL_CLASS} flex h-[min(560px,calc(100vh-8rem))] w-[min(360px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl`}>
       <header className="flex items-center justify-between gap-2 bg-brand-red px-4 py-3 text-white">
         <div className="flex items-center gap-2">
           {view !== 'home' && (

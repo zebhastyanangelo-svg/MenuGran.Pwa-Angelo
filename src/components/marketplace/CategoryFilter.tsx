@@ -12,12 +12,12 @@ export function CategoryFilter({
   onSelectCategory,
 }: CategoryFilterProps) {
   const baseClass =
-    'whitespace-nowrap rounded-full border px-4 py-1.5 text-xs font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/60';
+    'whitespace-nowrap rounded-full border px-4 py-2 text-xs font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/60';
   const activeClass = 'border-brand-red bg-brand-red text-white shadow-sm';
   const idleClass = 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50';
 
   return (
-    <div className="no-scrollbar flex w-full gap-2 overflow-x-auto py-2" role="tablist" aria-label="Filtrar por categoría">
+    <div className="no-scrollbar -mx-4 flex w-full gap-2.5 overflow-x-auto px-4 py-1" role="tablist" aria-label="Filtrar por categoría">
       <button
         type="button"
         role="tab"

@@ -281,7 +281,7 @@ const fetchData = useCallback(async () => {
         <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
         {isLocating && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-500">
             <Navigation className="h-3.5 w-3.5 animate-pulse" aria-hidden="true" />
             Buscando comercios cercanos…
           </p>
@@ -316,7 +316,7 @@ const fetchData = useCallback(async () => {
             </button>
           </div>
         ) : (
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
 {filteredMerchants.length === 0 ? (
                 userLocation ? (
                   <div className="col-span-full py-8 text-center">

@@ -46,7 +46,7 @@ export function Layout() {
       {!isAuthRoute && <Sidebar />}
       <ActiveOrderBanner />
       <IncompleteProfileBanner />
-      <main className="mx-auto w-full max-w-5xl px-4 pb-24 pt-4 md:pb-4 md:pl-64">
+      <main className="mx-auto w-full max-w-5xl px-4 pb-36 pt-4 md:pb-8 md:pl-64">
         <Outlet />
       </main>
       <Footer />

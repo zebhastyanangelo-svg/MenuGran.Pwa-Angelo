@@ -3,7 +3,7 @@ import type { ProductRow } from '../../types/database';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Skeleton } from '../ui/Skeleton';
-import { formatCurrency } from '../../utils/format';
+import { formatUSD, formatVES } from '../../utils/format';
 
 export interface ProductCardProps {
   product: ProductRow;
@@ -14,16 +14,7 @@ export interface ProductCardProps {
 function formatPrice(price: string): string {
   const numeric = parseFloat(price);
   if (isNaN(numeric)) return price;
-  return formatCurrency(numeric);
-}
-
-function formatVES(amount: number): string {
-  return new Intl.NumberFormat('es-VE', {
-    style: 'currency',
-    currency: 'VES',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  return formatUSD(numeric);
 }
 
 export function ProductCard({ product, categoryName, onSelect }: ProductCardProps) {
@@ -31,6 +22,7 @@ export function ProductCard({ product, categoryName, onSelect }: ProductCardProp
   const bcvRate = useBCVRate();
   const priceUSD = parseFloat(product.price);
   const priceVES = bcvRate > 0 && !isNaN(priceUSD) ? priceUSD * bcvRate : 0;
+  const showVES = bcvRate > 0 && priceVES > 0;
 
   return (
     <Card
@@ -48,32 +40,44 @@ export function ProductCard({ product, categoryName, onSelect }: ProductCardProp
             }
           : undefined
       }
-      className={`flex cursor-pointer gap-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-red ${
-        interactive ? '' : 'cursor-default'
+      className={`flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-red ${
+        interactive ? 'cursor-pointer' : 'cursor-default'
       }`}
     >
-      <div className="flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h4 className="text-sm font-bold text-gray-900">{product.title}</h4>
-          {categoryName ? <Badge variant="primary">{categoryName}</Badge> : null}
-          {!product.is_available ? <Badge variant="danger">Agotado</Badge> : null}
-        </div>
+      <div className="min-w-0 flex-1">
+        <h4 className="text-base font-semibold leading-snug text-slate-900">
+          {product.title}
+        </h4>
+
+        {(categoryName !== undefined || !product.is_available) && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {categoryName ? <Badge variant="primary">{categoryName}</Badge> : null}
+            {!product.is_available ? <Badge variant="danger">Agotado</Badge> : null}
+          </div>
+        )}
+
         {product.description ? (
-          <p className="mt-1 line-clamp-2 text-xs text-gray-500">{product.description}</p>
+          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-500">
+            {product.description}
+          </p>
         ) : null}
-        <div className="mt-2 flex flex-col gap-0.5">
-          <span className="text-sm font-bold text-gray-900">
+
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="text-base font-bold leading-none text-slate-900">
             {formatPrice(product.price)}
-            {bcvRate > 0 && priceVES > 0 && (
-              <span className="ml-1 text-xs text-emerald-700 font-normal">
-                (Bs. {formatVES(priceVES).replace('VES', '').trim()})
-              </span>
-            )}
           </span>
+          {showVES ? (
+            <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-xs font-medium leading-none text-emerald-700">
+              {formatVES(priceVES)}
+            </span>
+          ) : null}
         </div>
       </div>
 
-      <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100" aria-hidden="true">
+      <div
+        className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200/70"
+        aria-hidden="true"
+      >
         {product.image_url ? (
           <img
             src={product.image_url}
@@ -82,7 +86,7 @@ export function ProductCard({ product, categoryName, onSelect }: ProductCardProp
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
+          <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
             Sin foto
           </div>
         )}
@@ -93,13 +97,13 @@ export function ProductCard({ product, categoryName, onSelect }: ProductCardProp
 
 export function ProductCardSkeleton() {
   return (
-    <Card className="flex gap-4 p-3" aria-hidden="true">
-      <div className="flex-1">
+    <Card className="flex items-start gap-4 p-4" aria-hidden="true">
+      <div className="min-w-0 flex-1">
         <Skeleton variant="text" className="w-2/3" />
-        <Skeleton variant="text" className="mt-2 w-full" />
-        <Skeleton variant="text" className="mt-2 w-1/3" />
+        <Skeleton variant="text" className="mt-3 w-full" />
+        <Skeleton variant="text" className="mt-3 w-1/3" />
       </div>
-      <Skeleton variant="rectangular" className="h-20 w-20 flex-shrink-0" />
+      <Skeleton variant="rectangular" className="h-20 w-20 flex-shrink-0 rounded-xl" />
     </Card>
   );
 }

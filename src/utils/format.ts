@@ -8,6 +8,42 @@ export function formatCurrency(value: number | string): string {
   return currencyFormatter.format(numeric);
 }
 
+const usdFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+});
+
+/**
+ * Formatea un precio en dólares.
+ *
+ * `formatCurrency` usa el peso mexicano porque así se han calculado los
+ * reportes administrativos; los precios de producto se guardan en USD y deben
+ * declararse como tales.
+ */
+export function formatUSD(value: number | string): string {
+  const numeric = typeof value === 'string' ? Number(value) : value;
+  return usdFormatter.format(numeric);
+}
+
+const venezuelanAmountFormatter = new Intl.NumberFormat('es-VE', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/**
+ * Formatea un monto en bolívares con un único indicador de moneda.
+ *
+ * `Intl` con `style: 'currency'` para VES emite el símbolo `Bs.S`. Quitar el
+ * código con `replace('VES', '')` no surte efecto (la salida no contiene ese
+ * texto) y, al anteponer `Bs.` a mano, el resultado era `Bs. Bs.S 1.234,56`.
+ * Aquí se aplica el separador de miles venezolano y `Bs.` se escribe una
+ * sola vez.
+ */
+export function formatVES(value: number | string): string {
+  const numeric = typeof value === 'string' ? Number(value) : value;
+  return `Bs. ${venezuelanAmountFormatter.format(numeric)}`;
+}
+
 const dateFormatter = new Intl.DateTimeFormat('es-MX', {
   year: 'numeric',
   month: 'long',

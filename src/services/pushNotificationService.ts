@@ -10,6 +10,7 @@
  * La clave pública es, por diseño, información pública (no es un secreto).
  */
 
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase, TABLE_NAMES } from './supabase';
 import type { UserPushSubscriptionInsert } from '../types/database';
 
@@ -299,6 +300,30 @@ type InvokePushPayload =
   | { target: 'user'; title?: string; body?: string }
   | { target: 'all'; title: string; body: string };
 
+/**
+ * Extrae el mensaje de error que devuelve la Edge Function.
+ *
+ * Cuando la función responde con un 4xx/5xx, supabase-js lanza un
+ * `FunctionsHttpError` cuyo `context` es la `Response` sin leer: el cuerpo sigue
+ * ahí. Sin este paso el mensaje real (por ejemplo, qué par de claves VAPID está
+ * mal) se pierde y el panel solo muestra un error genérico.
+ */
+async function readEdgeFunctionError(error: unknown): Promise<string | null> {
+  if (!(error instanceof FunctionsHttpError)) return null;
+
+  try {
+    const payload: unknown = await error.context.json();
+    if (typeof payload === 'object' && payload !== null && 'error' in payload) {
+      const message = (payload as { error: unknown }).error;
+      if (typeof message === 'string' && message.trim() !== '') return message.trim();
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 /** Invoca la Edge Function send-push-notification con manejo de errores. */
 async function invokeSendPushNotification(payload: InvokePushPayload): Promise<SendPushResult> {
   try {
@@ -319,7 +344,11 @@ async function invokeSendPushNotification(payload: InvokePushPayload): Promise<S
     );
 
     if (error !== null) {
-      return { ok: false, message: 'No se pudo enviar la notificación. Intenta nuevamente.' };
+      const serverMessage = await readEdgeFunctionError(error);
+      return {
+        ok: false,
+        message: serverMessage ?? 'No se pudo enviar la notificación. Intenta nuevamente.',
+      };
     }
 
     if (
