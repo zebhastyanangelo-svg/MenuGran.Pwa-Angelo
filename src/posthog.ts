@@ -1,4 +1,5 @@
 import posthog from 'posthog-js'
+import { hasAnalyticsConsent } from './utils/cookieConsent'
 
 const posthogKey = import.meta.env.VITE_POSTHOG_KEY
 const posthogHost = import.meta.env.VITE_POSTHOG_HOST
@@ -19,6 +20,25 @@ function requirePostHogConfig(value: string | undefined, variableName: string): 
   return false
 }
 
+/**
+ * Sincroniza el estado de captura de PostHog con la preferencia de consentimiento
+ * guardada en `localStorage` (`menugram_cookie_consent`).
+ *
+ * - `'all'` → PostHog captura eventos (analítica de producto).
+ * - `'necessary'` / sin preferencia → no se captura ningún evento.
+ *
+ * Es idempotente: puede llamarse en cada cambio de consentimiento.
+ */
+export function syncPostHogConsent(): void {
+  if (!isPostHogEnabled) return
+
+  if (hasAnalyticsConsent()) {
+    posthog.opt_in_capturing()
+  } else {
+    posthog.opt_out_capturing()
+  }
+}
+
 if (
   requirePostHogConfig(posthogKey, 'VITE_POSTHOG_KEY') &&
   requirePostHogConfig(posthogHost, 'VITE_POSTHOG_HOST')
@@ -35,7 +55,13 @@ if (
       capture_unhandled_rejections: true,
       capture_console_errors: false,
     },
+    // Privacidad: PostHog es una herramienta de analítica de terceros, así que
+    // NO captura eventos hasta que el usuario acepte las cookies de analítica
+    // en el banner de consentimiento (ver `syncPostHogConsent`).
+    opt_out_capturing_by_default: true,
   })
+
+  syncPostHogConsent()
 }
 
 export default posthog

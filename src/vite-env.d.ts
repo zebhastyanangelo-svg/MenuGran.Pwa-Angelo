@@ -13,6 +13,12 @@ interface ImportMetaEnv {
   readonly VITE_GA_MEASUREMENT_ID?: string;
   readonly VITE_POSTHOG_KEY?: string;
   readonly VITE_POSTHOG_HOST?: string;
+  /**
+   * Clave pública VAPID con la que el navegador se suscribe. Debe ser el
+   * par complementario de `WEB_PUSH_PRIVATE_KEY` en la Edge Function (o de
+   * `app_push_config.vapid_public_key`).
+   */
+  readonly VITE_WEB_PUSH_PUBLIC_KEY?: string;
 }
 
 interface ImportMeta {

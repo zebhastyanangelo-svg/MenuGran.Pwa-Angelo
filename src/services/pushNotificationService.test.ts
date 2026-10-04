@@ -3,6 +3,7 @@ import {
   isPushSupported,
   urlBase64ToUint8Array,
   subscribeCurrentUserToPush,
+  reconcilePushSubscription,
   sendTestPushNotification,
   sendBulkPushNotification,
   VAPID_PUBLIC_KEY,
@@ -11,6 +12,7 @@ import {
 const fromMock = vi.fn();
 const upsertMock = vi.fn();
 const invokeMock = vi.fn();
+const selectMaybeSingleMock = vi.fn();
 
 const getSessionMock = vi.fn();
 
@@ -48,9 +50,7 @@ function removePushMocks(): void {
 }
 
 function installPushMocks(): void {
-  const pushSubscription = {
-    toJSON: () => subscriptionJson,
-  };
+  const pushSubscription = createPushSubscriptionMock(subscriptionJson, VAPID_PUBLIC_KEY);
   Object.defineProperty(navigator, 'serviceWorker', {
     configurable: true,
     value: {
@@ -58,6 +58,49 @@ function installPushMocks(): void {
         pushManager: {
           getSubscription: vi.fn().mockResolvedValue(pushSubscription),
           subscribe: vi.fn().mockResolvedValue(pushSubscription),
+        },
+      }),
+    },
+  });
+  Object.defineProperty(window, 'PushManager', { configurable: true, value: class PushManager {} });
+  Object.defineProperty(window, 'Notification', {
+    configurable: true,
+    value: class Notification {
+      static permission = 'granted';
+      static requestPermission = vi.fn().mockResolvedValue('granted');
+    },
+  });
+}
+
+/** Crea un PushSubscription simulado, opcionalmente atado a otra clave VAPID. */
+function createPushSubscriptionMock(
+  json: typeof subscriptionJson,
+  applicationServerKey: string | null,
+) {
+  return {
+    toJSON: () => json,
+    unsubscribe: vi.fn().mockResolvedValue(true),
+    options:
+      applicationServerKey === null
+        ? undefined
+        : { userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(applicationServerKey) },
+  };
+}
+
+/** Reinstala los mocks de push con un control granular sobre la suscripción. */
+function installPushMocksWith(options: {
+  existing: ReturnType<typeof createPushSubscriptionMock> | null;
+  subscribed?: ReturnType<typeof createPushSubscriptionMock>;
+}): void {
+  const next = options.subscribed ?? createPushSubscriptionMock(subscriptionJson, VAPID_PUBLIC_KEY);
+  const subscribeMock = vi.fn().mockResolvedValue(next);
+  Object.defineProperty(navigator, 'serviceWorker', {
+    configurable: true,
+    value: {
+      ready: Promise.resolve({
+        pushManager: {
+          getSubscription: vi.fn().mockResolvedValue(options.existing),
+          subscribe: subscribeMock,
         },
       }),
     },
@@ -237,5 +280,119 @@ describe('sendTestPushNotification / sendBulkPushNotification', () => {
     const result = await sendTestPushNotification();
 
     expect(result.ok).toBe(false);
+  });
+});
+
+describe('reconcilePushSubscription', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    removePushMocks();
+    fromMock.mockReturnValue({
+      select: () => ({ eq: () => ({ maybeSingle: selectMaybeSingleMock }) }),
+      upsert: (...args: unknown[]) => upsertMock(...args),
+    });
+    selectMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+    upsertMock.mockResolvedValue({ error: null });
+  });
+
+  afterEach(() => {
+    removePushMocks();
+  });
+
+  it('retorna unsupported si el navegador no soporta Web Push', async () => {
+    const result = await reconcilePushSubscription('user-1');
+    expect(result).toEqual({ status: 'unsupported' });
+  });
+
+  it('retorna permission_denied sin tocar la BD si el permiso no está concedido', async () => {
+    installPushMocks();
+    vi.mocked(window.Notification.requestPermission).mockResolvedValue('denied');
+    Object.defineProperty(window, 'Notification', {
+      configurable: true,
+      value: class Notification {
+        static permission = 'denied';
+        static requestPermission = vi.fn().mockResolvedValue('denied');
+      },
+    });
+
+    const result = await reconcilePushSubscription('user-1');
+
+    expect(result).toEqual({ status: 'permission_denied' });
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+
+  it('retorna absent cuando el navegador ya no tiene suscripción', async () => {
+    installPushMocksWith({ existing: null });
+
+    const result = await reconcilePushSubscription('user-1');
+
+    expect(result).toEqual({ status: 'absent' });
+    expect(upsertMock).not.toHaveBeenCalled();
+  });
+
+  it('registra la suscripción cuando no existe en Supabase', async () => {
+    installPushMocks();
+    selectMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+
+    const result = await reconcilePushSubscription('user-1');
+
+    expect(result).toEqual({ status: 'synced' });
+    expect(upsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'user-1', is_active: true }),
+      { onConflict: 'endpoint' },
+    );
+  });
+
+  it('reactiva el registro cuando la suscripción fue marcada inactiva', async () => {
+    installPushMocks();
+    selectMaybeSingleMock.mockResolvedValue({
+      data: { id: 'sub-1', p256dh: 'BKEY', auth: 'BAUTH', is_active: false },
+      error: null,
+    });
+
+    const result = await reconcilePushSubscription('user-1');
+
+    expect(result).toEqual({ status: 'synced' });
+    expect(upsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ endpoint: subscriptionJson.endpoint, is_active: true }),
+      { onConflict: 'endpoint' },
+    );
+  });
+
+  it('no escribe si el registro ya está activo y sincronizado', async () => {
+    installPushMocks();
+    selectMaybeSingleMock.mockResolvedValue({
+      data: { id: 'sub-1', p256dh: 'BKEY', auth: 'BAUTH', is_active: true },
+      error: null,
+    });
+
+    const result = await reconcilePushSubscription('user-1');
+
+    expect(result).toEqual({ status: 'synced' });
+    expect(upsertMock).not.toHaveBeenCalled();
+  });
+
+  it('re-suscribe cuando la suscripción del navegador usa una clave VAPID anterior', async () => {
+    const stale = createPushSubscriptionMock(subscriptionJson, 'BOTHER-VAPID-KEY-VALUE');
+    const fresh = createPushSubscriptionMock(subscriptionJson, VAPID_PUBLIC_KEY);
+    installPushMocksWith({ existing: stale, subscribed: fresh });
+
+    const result = await reconcilePushSubscription('user-1');
+
+    expect(result).toEqual({ status: 'synced' });
+    expect(stale.unsubscribe).toHaveBeenCalled();
+    expect(upsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'user-1', endpoint: subscriptionJson.endpoint }),
+      { onConflict: 'endpoint' },
+    );
+  });
+
+  it('devuelve error cuando la consulta del registro falla', async () => {
+    installPushMocks();
+    selectMaybeSingleMock.mockResolvedValue({ data: null, error: { message: 'rls' } });
+
+    const result = await reconcilePushSubscription('user-1');
+
+    expect(result.status).toBe('error');
   });
 });

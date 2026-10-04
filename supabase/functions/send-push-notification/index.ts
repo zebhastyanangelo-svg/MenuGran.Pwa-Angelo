@@ -7,24 +7,90 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
-function getVapidPublicKey(): string {
-  const key =
-    readNamedKey('VAPID_PUBLIC_KEY') ??
-    Deno.env.get('VAPID_PUBLIC_KEY');
-  if (key === undefined || key === '') {
-    throw new Error('VAPID_PUBLIC_KEY no configurada.');
-  }
-  return key;
+const VAPID_SUBJECT = 'mailto:admin@menugran.com';
+
+/**
+ * Origen de las claves VAPID, en orden de precedencia:
+ *  1. Variables de entorno (`VAPID_PUBLIC_KEY` / `WEB_PUSH_PRIVATE_KEY`).
+ *  2. Fila `id = 1` de `app_push_config` (solo accesible con service_role).
+ *
+ * La tabla actúa como fuente de verdad rotable sin redeploy. La clave privada
+ * nunca se expone al cliente: `app_push_config` no tiene políticas RLS para
+ * `anon`/`authenticated`.
+ */
+interface VapidKeyPair {
+  publicKey: string;
+  privateKey: string;
+  source: 'env' | 'db';
 }
 
-function getVapidPrivateKey(): string {
-  const key =
-    readNamedKey('VAPID_PRIVATE_KEY') ??
-    Deno.env.get('VAPID_PRIVATE_KEY');
-  if (key === undefined || key === '') {
-    throw new Error('VAPID_PRIVATE_KEY no configurada.');
+function readEnvKey(...names: string[]): string | null {
+  for (const name of names) {
+    const named = readNamedKey(name);
+    if (named !== null) return named;
+
+    const direct = Deno.env.get(name);
+    if (direct !== undefined && direct.trim() !== '') return direct.trim();
   }
-  return key;
+  return null;
+}
+
+async function loadVapidKeys(client: SupabaseClient): Promise<VapidKeyPair> {
+  const envPublicKey = readEnvKey('VAPID_PUBLIC_KEY', 'WEB_PUSH_PUBLIC_KEY');
+  const envPrivateKey = readEnvKey(
+    'WEB_PUSH_PRIVATE_KEY',
+    'VAPID_PRIVATE_KEY',
+    'PUSH_PRIVATE_KEY',
+  );
+
+  if (envPublicKey !== null && envPrivateKey !== null) {
+    return { publicKey: envPublicKey, privateKey: envPrivateKey, source: 'env' };
+  }
+
+  const { data, error } = await client
+    .from('app_push_config')
+    .select('vapid_public_key, vapid_private_key')
+    .eq('id', 1)
+    .maybeSingle();
+
+  if (error !== null || data === null) {
+    throw new Error(
+      'No hay claves VAPID configuradas. Define VAPID_PUBLIC_KEY y WEB_PUSH_PRIVATE_KEY ' +
+        'en los secretos de la Edge Function, o inserta la fila id=1 en app_push_config.',
+    );
+  }
+
+  return {
+    publicKey: data.vapid_public_key,
+    privateKey: data.vapid_private_key,
+    source: 'db',
+  };
+}
+
+/**
+ * Verifica que las claves VAPID configuradas constituyan un par válido
+ * (que la privada corresponde a la pública) antes de enviar nada.
+ *
+ * Sin esto, un desajuste se manifiesta como "0 entregadas" y lleva a
+ * desactivar suscripciones que son perfectamente válidas.
+ */
+async function assertVapidKeysUsable(keys: VapidKeyPair): Promise<void> {
+  if (base64UrlToBytes(keys.privateKey).length !== 32) {
+    throw new Error(
+      'La clave privada VAPID debe ser una clave P-256 cruda de 32 bytes en base64url.',
+    );
+  }
+
+  try {
+    await importVapidPrivateKey(keys.publicKey, keys.privateKey);
+  } catch (error) {
+    throw new Error(
+      `Las claves VAPID no forman un par válido (pública: ${keys.source}). ` +
+        `Regenera el par VAPID y actualiza ambas claves. Detalle: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+    );
+  }
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -212,72 +278,263 @@ async function getAllSubscriptions(client: SupabaseClient): Promise<Array<PushSu
   }));
 }
 
+/**
+ * Resultado de un intento de envío. La distinción entre `gone` y el resto es
+ * deliberada: solo un 404/410 del push service significa que la suscripción
+ * ya no existe y debe eliminarse. Cualquier otro fallo (error local de
+ * configuración, red, 429, 5xx) NO invalida la suscripción.
+ */
+type PushOutcome =
+  | { status: 'sent' }
+  | { status: 'gone' }
+  | { status: 'retry'; statusCode: number }
+  | { status: 'auth_error'; statusCode: number }
+  | { status: 'client_error'; statusCode: number };
+
+interface VapidKeys {
+  publicKey: string;
+  privateKey: string;
+}
+
+/** El `aud` del JWT VAPID debe ser el origen del push service destino. */
+function audienceForEndpoint(endpoint: string): string {
+  return new URL(endpoint).origin;
+}
+
 async function sendPushNotification(
   subscription: PushSubscription,
   title: string,
   body: string,
-): Promise<{ ok: boolean }> {
-  try {
-    const vapidPublicKey = getVapidPublicKey();
-    const vapidPrivateKey = getVapidPrivateKey();
-    const vapidSubject = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@menugram.com';
+  vapidKeys: VapidKeys,
+): Promise<PushOutcome> {
+  const token = await createVapidToken(
+    vapidKeys.publicKey,
+    vapidKeys.privateKey,
+    VAPID_SUBJECT,
+    audienceForEndpoint(subscription.endpoint),
+  );
 
-    const payload = JSON.stringify({ title, body, url: '/' });
+  const response = await fetch(subscription.endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `vapid t=${token}, k=${vapidKeys.publicKey}`,
+      TTL: '86400',
+    },
+    body: JSON.stringify({ title, body, url: '/' }),
+    signal: AbortSignal.timeout(10000),
+  });
 
-    const response = await fetch(subscription.endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `vapid t=${await createVapidToken(vapidPublicKey, vapidPrivateKey, vapidSubject)}, k=${vapidPublicKey}`,
-      },
-      body: payload,
-      signal: AbortSignal.timeout(10000),
-    });
-
-    return { ok: response.ok };
-  } catch {
-    return { ok: false };
+  if (response.ok) return { status: 'sent' };
+  if (response.status === 404 || response.status === 410) return { status: 'gone' };
+  if (response.status === 401 || response.status === 403) {
+    return { status: 'auth_error', statusCode: response.status };
   }
+  if (response.status === 429 || response.status >= 500) {
+    return { status: 'retry', statusCode: response.status };
+  }
+  return { status: 'client_error', statusCode: response.status };
 }
 
-async function createVapidToken(publicKey: string, privateKey: string, subject: string): Promise<string> {
-  const header = { alg: 'ES256', typ: 'JWT' };
-  const now = Math.floor(Date.now() / 1000);
-  const payload = { aud: 'https://fcm.googleapis.com', exp: now + 3600, sub: subject };
+/** Decodifica base64url (VAPID) a bytes. Tolera `+`/`/` y padding ausente. */
+function base64UrlToBytes(value: string): Uint8Array {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(padded);
+  const output = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    output[i] = binary.charCodeAt(i);
+  }
+  return output;
+}
 
-  const headerB64 = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  const payloadB64 = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+function bytesToBase64Url(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 1) {
+    binary += String.fromCharCode(bytes[i]!);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
 
-  const signingInput = `${headerB64}.${payloadB64}`;
+/**
+ * Extrae las coordenadas X e Y de una clave pública VAPID P-256.
+ *
+ * La clave pública VAPID es un punto EC sin comprimir de 65 bytes:
+ * `0x04 || X(32) || Y(32)`. Esto permite importar la clave privada como JWK
+ * (formato que WebCrypto sí soporta) en lugar de PKCS8, que es lo que
+ * provocaba el `DataError` silencioso.
+ */
+function publicKeyToCoordinates(publicKey: string): { x: string; y: string } {
+  const bytes = base64UrlToBytes(publicKey);
 
-  const privateKeyBytes = new Uint8Array(atob(privateKey).split('').map(c => c.charCodeAt(0)));
-  const key = await crypto.subtle.importKey(
-    'pkcs8',
-    privateKeyBytes,
+  if (bytes.length !== 65 || bytes[0] !== 0x04) {
+    throw new Error(
+      `Clave pública VAPID inválida: se esperaban 65 bytes sin comprimir y llegaron ${bytes.length}.`,
+    );
+  }
+
+  return {
+    x: bytesToBase64Url(bytes.slice(1, 33)),
+    y: bytesToBase64Url(bytes.slice(33, 65)),
+  };
+}
+
+/**
+ * Importa la clave privada VAPID (P-256 cruda, 32 bytes base64url) como
+ * clave ECDSA firmante usando JWK.
+ *
+ * Importar por JWK tiene una propiedad útil: si el par público/privado no
+ * corresponde, `importKey` falla. Esto convierte un desajuste de claves en
+ * un error explícito en lugar de 400 notificaciones fallidas.
+ */
+async function importVapidPrivateKey(publicKey: string, privateKey: string): Promise<CryptoKey> {
+  const { x, y } = publicKeyToCoordinates(publicKey);
+
+  return crypto.subtle.importKey(
+    'jwk',
+    { kty: 'EC', crv: 'P-256', d: privateKey, x, y, ext: true },
     { name: 'ECDSA', namedCurve: 'P-256' },
     false,
     ['sign'],
   );
-
-  const signature = await crypto.subtle.sign(
-    { name: 'ECDSA', hash: 'SHA-256' },
-    key,
-    new TextEncoder().encode(signingInput),
-  );
-
-  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-
-  return `${signingInput}.${signatureB64}`;
 }
 
-async function deactivateSubscription(client: SupabaseClient, endpoint: string): Promise<void> {
-  await client
+/**
+ * Convierte una firma ECDSA cruda (formato P1363: `R||S`, 64 bytes) que
+ * produce WebCrypto al formato DER exigido por JWT (ES256).
+ *
+ * Sin esta conversión, el JWT VAPID se genera con una firma que los push
+ * services (FCM, Mozilla autopush, APNs) rechazan.
+ */
+function rawSignatureToDer(rawSignature: Uint8Array): Uint8Array {
+  if (rawSignature.length !== 64) {
+    throw new Error(`Firma ECDSA inesperada: ${rawSignature.length} bytes (se esperaban 64).`);
+  }
+
+  // R y S son enteros big-endian; se les antepone 0x00 si el bit alto está
+  // activo para que no se interpreten como negativos.
+  const encodeInteger = (bytes: Uint8Array): Uint8Array => {
+    let start = 0;
+    while (start < bytes.length - 1 && bytes[start] === 0) start += 1;
+    const trimmed = bytes.slice(start);
+    const needsPad = (trimmed[0]! & 0x80) !== 0;
+    const value = needsPad
+      ? Uint8Array.from([0x00, ...trimmed])
+      : trimmed;
+    return Uint8Array.from([0x02, value.length, ...value]);
+  };
+
+  const r = encodeInteger(rawSignature.slice(0, 32));
+  const s = encodeInteger(rawSignature.slice(32, 64));
+  const body = Uint8Array.from([...r, ...s]);
+
+  // El contenedor DER declara la longitud en bytes; los enteros son < 0x80
+  // por lo que siempre cabe en una sola longitud corta.
+  return Uint8Array.from([0x30, body.length, ...body]);
+}
+
+/**
+ * Genera el JWT VAPID (ES256) para autorizar un envío Web Push.
+ *
+ * @param audience Origen del push service (ej. `https://fcm.googleapis.com`),
+ *                 que debe corresponder al endpoint destino.
+ */
+async function createVapidToken(
+  publicKey: string,
+  privateKey: string,
+  subject: string,
+  audience: string,
+): Promise<string> {
+  const header = { alg: 'ES256', typ: 'JWT' };
+  const now = Math.floor(Date.now() / 1000);
+  const payload = { aud: audience, exp: now + 3600, sub: subject };
+
+  const headerB64 = bytesToBase64Url(new TextEncoder().encode(JSON.stringify(header)));
+  const payloadB64 = bytesToBase64Url(new TextEncoder().encode(JSON.stringify(payload)));
+
+  const signingInput = `${headerB64}.${payloadB64}`;
+  const key = await importVapidPrivateKey(publicKey, privateKey);
+
+  const rawSignature = new Uint8Array(
+    await crypto.subtle.sign(
+      { name: 'ECDSA', hash: 'SHA-256' },
+      key,
+      new TextEncoder().encode(signingInput),
+    ),
+  );
+
+  return `${signingInput}.${bytesToBase64Url(rawSignatureToDer(rawSignature))}`;
+}
+
+/**
+ * Elimina físicamente una suscripción que el push service confirmó perdida
+ * (404/410). No se marca como inactiva: se borra, para no conservar tokens
+ * obsoletos que solo volverían a fallar.
+ */
+async function deleteSubscription(client: SupabaseClient, endpoint: string): Promise<void> {
+  const { error } = await client
     .from('user_push_subscriptions')
-    .update({ is_active: false })
+    .delete()
     .eq('endpoint', endpoint);
+
+  if (error !== null) {
+    console.error('No se pudo eliminar la suscripción caducada:', error);
+  }
+}
+
+interface DeliveryReport {
+  sent: number;
+  /** Suscritos que el push service rechazó con 404/410 y fueron eliminados. */
+  deleted: number;
+  /** Fallos que no invalidan la suscripción (red, 429, 5xx, 4xx). */
+  failed: number;
+  /** Respuestas 401/403: indican un problema de claves VAPID, no del cliente. */
+  authErrors: number;
+  /** Errores locales de configuración (claves VAPID inválidas, etc.). */
+  configError?: string;
+}
+
+async function deliverToSubscriptions(
+  client: SupabaseClient,
+  subscriptions: Array<PushSubscription & { full_name?: string | null }>,
+  buildPayload: (sub: PushSubscription & { full_name?: string | null }) => { title: string; body: string },
+  vapidKeys: VapidKeyPair,
+): Promise<DeliveryReport> {
+  const report: DeliveryReport = { sent: 0, deleted: 0, failed: 0, authErrors: 0 };
+
+  for (const sub of subscriptions) {
+    const { title, body } = buildPayload(sub);
+
+    try {
+      const outcome = await sendPushNotification(sub, title, body, vapidKeys);
+
+      switch (outcome.status) {
+        case 'sent':
+          report.sent += 1;
+          break;
+        case 'gone':
+          report.failed += 1;
+          report.deleted += 1;
+          await deleteSubscription(client, sub.endpoint);
+          break;
+        case 'auth_error':
+          report.failed += 1;
+          report.authErrors += 1;
+          break;
+        default:
+          report.failed += 1;
+          break;
+      }
+    } catch (error) {
+      // Error local (configuración, red): la suscripción sigue siendo válida.
+      report.failed += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      report.configError ??= message;
+      console.error('Fallo local al enviar push (la suscripción se conserva):', message);
+    }
+  }
+
+  return report;
 }
 
 Deno.serve(async (req: Request) => {
@@ -299,66 +556,78 @@ Deno.serve(async (req: Request) => {
       const auth = await assertAuthenticated(authHeader);
       if (!auth.ok) return auth.response;
 
+      const vapidKeys = await loadVapidKeys(client);
+      await assertVapidKeysUsable(vapidKeys);
+
       const subscriptions = await getSubscriptionsForUser(client, auth.userId);
       if (subscriptions.length === 0) {
-        return jsonResponse({ sent: 0, failed: 0, deactivated: 0, total: 0 });
+        return jsonResponse({
+          sent: 0,
+          failed: 0,
+          deleted: 0,
+          deactivated: 0,
+          total: 0,
+          vapidSource: vapidKeys.source,
+        });
       }
 
       const title = body.title ?? 'MenuGran';
       const bodyText = body.body ?? 'Tienes una nueva notificación.';
 
-      let sent = 0;
-      let failed = 0;
+      const report = await deliverToSubscriptions(
+        client,
+        subscriptions,
+        () => ({ title, body: bodyText }),
+        vapidKeys,
+      );
 
-      for (const sub of subscriptions) {
-        const result = await sendPushNotification(sub, title, bodyText);
-        if (result.ok) {
-          sent++;
-        } else {
-          failed++;
-          await deactivateSubscription(client, sub.endpoint);
-        }
-      }
-
-      return jsonResponse({ sent, failed, deactivated: 0, total: subscriptions.length });
+      return jsonResponse({ ...report, deactivated: report.deleted, total: subscriptions.length });
     }
 
     if (body.target === 'all') {
       const auth = await assertSuperadmin(authHeader);
       if (!auth.ok) return auth.response;
 
+      const vapidKeys = await loadVapidKeys(client);
+      await assertVapidKeysUsable(vapidKeys);
+
       const title = addPersonalizedGreeting(body.title ?? 'MenuGran');
       const bodyText = addPersonalizedGreeting(body.body ?? '');
 
       const subscriptions = await getAllSubscriptions(client);
       if (subscriptions.length === 0) {
-        return jsonResponse({ sent: 0, failed: 0, deactivated: 0, total: 0 });
+        return jsonResponse({
+          sent: 0,
+          failed: 0,
+          deleted: 0,
+          deactivated: 0,
+          total: 0,
+          vapidSource: vapidKeys.source,
+        });
       }
 
-      let sent = 0;
-      let failed = 0;
-      let deactivated = 0;
+      const report = await deliverToSubscriptions(
+        client,
+        subscriptions,
+        (sub) => ({
+          title: replaceTemplateVariables(title, sub.full_name ?? null),
+          body: replaceTemplateVariables(bodyText, sub.full_name ?? null),
+        }),
+        vapidKeys,
+      );
 
-      for (const sub of subscriptions) {
-        const personalizedTitle = replaceTemplateVariables(title, sub.full_name);
-        const personalizedBody = replaceTemplateVariables(bodyText, sub.full_name);
-
-        const result = await sendPushNotification(sub, personalizedTitle, personalizedBody);
-        if (result.ok) {
-          sent++;
-        } else {
-          failed++;
-          await deactivateSubscription(client, sub.endpoint);
-          deactivated++;
-        }
-      }
-
-      return jsonResponse({ sent, failed, deactivated, total: subscriptions.length });
+      return jsonResponse({
+        ...report,
+        deactivated: report.deleted,
+        total: subscriptions.length,
+        vapidSource: vapidKeys.source,
+      });
     }
 
     return jsonResponse({ error: 'Target inválido.' }, 400);
   } catch (error) {
     console.error('Error en send-push-notification:', error);
-    return jsonResponse({ error: 'Error interno del servidor.' }, 500);
+    const message = error instanceof Error ? error.message : 'Error interno del servidor.';
+    return jsonResponse({ error: message }, 500);
   }
 });

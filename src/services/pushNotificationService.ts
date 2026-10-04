@@ -13,9 +13,23 @@
 import { supabase, TABLE_NAMES } from './supabase';
 import type { UserPushSubscriptionInsert } from '../types/database';
 
-/** Clave pública VAPID del par de MenuGran (la privada vive solo en el servidor). */
+/**
+ * Clave pública VAPID con la que el navegador se suscribe.
+ *
+ * Se lee de `VITE_WEB_PUSH_PUBLIC_KEY` para que rotar la clave no exija
+ * recompilar el bundle. El fallback replica `app_push_config.vapid_public_key`
+ * (la fuente de verdad del par VAPID) y ambos deben coincidir con la clave
+ * privada que usa la Edge Function.
+ */
+const FALLBACK_VAPID_PUBLIC_KEY =
+  'BNhcrcsKnkvKvPQBUUA8h3a9z_91SJAA_Vsqv156f_ZNBhRY1xyjxiWtboXCzIZKpN5dc93dOyPLCocBkglrr2k';
+
 export const VAPID_PUBLIC_KEY =
-  'BBRgDWS7KDR06u-OfqX7D0xEcan9QmgHSrlriaxVWljeFd57E8t5-XeiPR1TqZJmeG1u1zKWqnydL6hvdKQwNag';
+  import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY?.trim() || FALLBACK_VAPID_PUBLIC_KEY;
+
+/** Indica si la clave pública viene de la variable de entorno (configuración recomendada). */
+export const isVapidKeyFromEnv =
+  (import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY?.trim().length ?? 0) > 0;
 
 export type SubscribePushResult =
   | { status: 'subscribed'; alreadySubscribed: boolean }
@@ -26,8 +40,17 @@ export type SubscribePushResult =
 export interface PushSendSummary {
   sent: number;
   failed: number;
+  /** Suscripciones eliminadas por el servidor al confirmar un 404/410. */
+  deleted: number;
+  /** @deprecated Alias de `deleted`, conservado por compatibilidad. */
   deactivated: number;
   total: number;
+  /** Respuestas 401/403: el problema es la configuración VAPID, no el cliente. */
+  authErrors?: number;
+  /** `'env'` o `'db'`: de dónde se obtuvo el par de claves VAPID. */
+  vapidSource?: string;
+  /** Mensaje del primer fallo local de configuración detectado. */
+  configError?: string;
 }
 
 export type SendPushResult =
@@ -96,34 +119,178 @@ export async function subscribeCurrentUserToPush(userId: string): Promise<Subscr
     }
 
     const registration = await navigator.serviceWorker.ready;
-    const existingSubscription = await registration.pushManager.getSubscription();
-    const subscription =
-      existingSubscription ??
-      (await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      }));
+    const { subscription, reused } = await getOrCreateSubscription(registration);
 
-    const serialized = subscription.toJSON();
-    if (
-      serialized.endpoint === undefined ||
-      serialized.keys?.p256dh === undefined ||
-      serialized.keys?.auth === undefined
-    ) {
+    const payload = serializeSubscription(subscription);
+    if (payload === null) {
       return { status: 'error', message: 'La suscripción push devuelta por el navegador es inválida.' };
     }
 
-    const payload: PushSubscriptionPayload = {
-      endpoint: serialized.endpoint,
-      keys: { p256dh: serialized.keys.p256dh, auth: serialized.keys.auth },
-    };
     await persistSubscription(userId, payload);
 
-    return { status: 'subscribed', alreadySubscribed: existingSubscription !== null };
+    return { status: 'subscribed', alreadySubscribed: reused };
   } catch (err) {
     return {
       status: 'error',
       message: err instanceof Error ? err.message : 'Error al suscribirse a las notificaciones.',
+    };
+  }
+}
+
+function serializeSubscription(subscription: PushSubscription): PushSubscriptionPayload | null {
+  const serialized = subscription.toJSON();
+  if (
+    serialized.endpoint === undefined ||
+    serialized.keys?.p256dh === undefined ||
+    serialized.keys?.auth === undefined
+  ) {
+    return null;
+  }
+
+  return {
+    endpoint: serialized.endpoint,
+    keys: { p256dh: serialized.keys.p256dh, auth: serialized.keys.auth },
+  };
+}
+
+/**
+ * Indica si la suscripción del navegador se creó con la clave pública VAPID
+ * que la app usa hoy.
+ *
+ * Las suscripciones están ligadas al `applicationServerKey` con el que se
+ * crearon: si la clave VAPID se rota, el navegador sigue devolviendo la
+ * suscripción antigua y el push service rechaza los envíos. En ese caso hay
+ * que desuscribir y volver a suscribir.
+ */
+function isSubscriptionKeyedToCurrentVapidKey(subscription: PushSubscription): boolean {
+  const options = subscription.options;
+  const existingKey = options?.applicationServerKey;
+  if (existingKey === null || existingKey === undefined) return false;
+
+  const currentKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+  const existingBytes = new Uint8Array(existingKey);
+  if (existingBytes.byteLength !== currentKey.byteLength) return false;
+
+  return existingBytes.every((byte, index) => byte === currentKey[index]);
+}
+
+/** Suscripción obtenida del navegador, junto con si se reutilizó o se creó. */
+interface ResolvedSubscription {
+  subscription: PushSubscription;
+  reused: boolean;
+}
+
+/**
+ * Devuelve la suscripción push vigente del navegador, creándola si no existe
+ * y reemplazándola si quedó atada a una clave VAPID anterior.
+ */
+async function getOrCreateSubscription(
+  registration: ServiceWorkerRegistration,
+): Promise<ResolvedSubscription> {
+  const existingSubscription = await registration.pushManager.getSubscription();
+  const subscribeOptions: PushSubscriptionOptionsInit = {
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+  };
+
+  if (existingSubscription === null) {
+    const created = await registration.pushManager.subscribe(subscribeOptions);
+    return { subscription: created, reused: false };
+  }
+
+  if (isSubscriptionKeyedToCurrentVapidKey(existingSubscription)) {
+    return { subscription: existingSubscription, reused: true };
+  }
+
+  // La suscripción quedó atada a una clave VAPID rotada: se descarta para
+  // poder crear una nueva con la clave vigente.
+  await existingSubscription.unsubscribe();
+  const created = await registration.pushManager.subscribe(subscribeOptions);
+  return { subscription: created, reused: false };
+}
+
+/** Resultado de reconciliar la suscripción del navegador con la del servidor. */
+export type ReconcilePushResult =
+  | { status: 'unsupported' }
+  | { status: 'permission_denied' }
+  | { status: 'absent' }
+  | { status: 'synced' }
+  | { status: 'error'; message: string };
+
+/**
+ * Reconcilia la suscripción push del navegador con el registro en Supabase.
+ *
+ * Se ejecuta al entrar a la app (sin pedir permiso) y cubre tres casos:
+ *  - la suscripción del navegador ya no existe → se registra de nuevo;
+ *  - existe pero el registro en Supabase falta o quedó inactivo → se reactiva;
+ *  - existe pero apunta a una clave VAPID anterior → se re-suscribe.
+ *
+ * No solicita permiso si el usuario lo ha denegado: el onboarding sigue
+ * siendo el único punto que llama a `Notification.requestPermission()`.
+ */
+export async function reconcilePushSubscription(userId: string): Promise<ReconcilePushResult> {
+  if (!isPushSupported()) return { status: 'unsupported' };
+  if (Notification.permission !== 'granted') return { status: 'permission_denied' };
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const browserSubscription = await registration.pushManager.getSubscription();
+
+    if (browserSubscription === null) {
+      return { status: 'absent' };
+    }
+
+    const payload = serializeSubscription(browserSubscription);
+    if (payload === null) {
+      return { status: 'error', message: 'La suscripción push del navegador es inválida.' };
+    }
+
+    const { data: existingRows, error: lookupError } = await supabase
+      .from(TABLE_NAMES.userPushSubscriptions)
+      .select('id, p256dh, auth, is_active')
+      .eq('endpoint', payload.endpoint)
+      .maybeSingle();
+
+    if (lookupError !== null) {
+      return {
+        status: 'error',
+        message: 'No se pudo verificar tu suscripción de notificaciones.',
+      };
+    }
+
+    const needsResubscribe = !isSubscriptionKeyedToCurrentVapidKey(browserSubscription);
+
+    // Sin registro, o registrado con otras claves, o inactivo: se reescribe
+    // (upsert) para que el endpoint vigente quede asociado al usuario.
+    if (
+      existingRows === null ||
+      existingRows.is_active === false ||
+      existingRows.p256dh !== payload.keys.p256dh ||
+      existingRows.auth !== payload.keys.auth ||
+      needsResubscribe
+    ) {
+      if (needsResubscribe) {
+        await browserSubscription.unsubscribe();
+        const fresh = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+        const freshPayload = serializeSubscription(fresh);
+        if (freshPayload === null) {
+          return { status: 'error', message: 'La nueva suscripción push es inválida.' };
+        }
+        await persistSubscription(userId, freshPayload);
+        return { status: 'synced' };
+      }
+
+      await persistSubscription(userId, payload);
+    }
+
+    return { status: 'synced' };
+  } catch (err) {
+    return {
+      status: 'error',
+      message: err instanceof Error ? err.message : 'Error al sincronizar las notificaciones.',
     };
   }
 }

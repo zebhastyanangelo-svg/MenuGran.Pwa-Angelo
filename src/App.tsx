@@ -6,6 +6,8 @@ import { CartProvider } from './context/CartContext';
 import { useAuth } from './hooks/useAuth';
 import { useGeofencing } from './hooks/useGeofencing';
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
+import { usePostHogAnalytics } from './hooks/usePostHogAnalytics';
+import { usePushSubscriptionSync } from './hooks/usePushSubscriptionSync';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { OfflineBanner } from './components/pwa/OfflineBanner';
 import { ReloadPrompt } from './components/pwa/ReloadPrompt';
@@ -138,6 +140,8 @@ function RootRedirect() {
 
 function AppRoutes() {
   useGoogleAnalytics();
+  usePostHogAnalytics();
+  usePushSubscriptionSync();
   useGeofencing();
   return (
     <>

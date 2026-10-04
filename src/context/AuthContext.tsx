@@ -11,6 +11,7 @@ import posthog, { isPostHogEnabled } from '../posthog';
 import { supabase } from '../services/supabase';
 import type { ProfileRow, UserRole } from '../types/database';
 import { requiresEmailConfirmation } from '../utils/emailSuggestions';
+import { hasAnalyticsConsent } from '../utils/cookieConsent';
 import { AuthContext, type AuthContextValue, type SignUpResult } from './auth-context-core';
 import { fetchProfile } from './auth-profile';
 
@@ -24,6 +25,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { user } = nextSession;
 
     if (!isPostHogEnabled || identifiedUserIdRef.current === user.id) return;
+
+    // `identify` envía email y nombre a PostHog (encargado de tratamiento).
+    // Sin consentimiento de analítica no debe enviarse ningún dato personal,
+    // por lo que postponemos la identificación hasta que el usuario acepte.
+    if (!hasAnalyticsConsent()) return;
 
     if (identifiedUserIdRef.current !== null) {
       posthog.reset();

@@ -1,6 +1,6 @@
 import { LegalList, LegalPageLayout, LegalSection } from '../../components/legal/LegalPage';
 
-const LAST_UPDATED = '29 de septiembre de 2026';
+const LAST_UPDATED = '3 de octubre de 2026';
 
 /**
  * Política de Privacidad de MenuGran: explica qué datos se recopilan
@@ -31,6 +31,7 @@ export function PrivacyPolicyPage() {
             'Datos de pago: solo la referencia y el comprobante (imagen o PDF) del pago móvil o transferencia. MenuGran nunca solicita ni almacena números de tarjeta bancaria.',
             'Datos de ubicación: coordenadas GPS que compartes voluntariamente al seleccionar tu dirección de entrega en el mapa, usadas para coordinar y rastrear la entrega.',
             'Datos técnicos: identificador de sesión, registro de actividad y métricas agregadas de uso.',
+            'Datos de analítica de producto: cuando aceptas las cookies de analítica, registramos de forma agregada páginas visitadas, acciones realizadas en la app (por ejemplo, agregar un producto al carrito o completar un pedido), errores técnicos y características del dispositivo y del navegador. No incluimos información que permita identificarte directamente (como tu nombre, tu correo o el contenido de tus pedidos) en los eventos de analítica.',
           ]}
         />
       </LegalSection>

@@ -107,10 +107,39 @@ export function BulkNotificationModal({ onClose }: BulkNotificationModalProps) {
             </div>
 
             {result !== null && result.ok && (
-              <p role="status" className="rounded-lg bg-green-50 px-4 py-2 text-sm font-medium text-green-700">
-                Notificación enviada: {result.summary.sent} entregadas de {result.summary.total}{' '}
-                suscripciones ({result.summary.deactivated} desactivadas por caducar).
-              </p>
+              <div
+                role="status"
+                className={`rounded-lg px-4 py-2 text-sm font-medium ${
+                  result.summary.sent > 0 ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-800'
+                }`}
+              >
+                <p>
+                  Notificación enviada: {result.summary.sent} entregadas de {result.summary.total}{' '}
+                  suscripciones.
+                </p>
+                {result.summary.deleted > 0 && (
+                  <p className="mt-1">
+                    {result.summary.deleted} eliminadas porque el navegador ya no las reconoce.
+                  </p>
+                )}
+                {(result.summary.authErrors ?? 0) > 0 && (
+                  <p className="mt-1 font-semibold">
+                    {result.summary.authErrors} rechazos por claves VAPID (401/403). Revisa que
+                    VITE_WEB_PUSH_PUBLIC_KEY y la clave privada coincidan.
+                  </p>
+                )}
+                {result.summary.configError !== undefined && (
+                  <p className="mt-1 font-semibold">Error de configuración: {result.summary.configError}</p>
+                )}
+                {result.summary.sent === 0 &&
+                  (result.summary.authErrors ?? 0) === 0 &&
+                  result.summary.configError === undefined && (
+                    <p className="mt-1">
+                      No se entregó ninguna. Las {result.summary.total} suscripciones siguen activas
+                      (pueden estar en segundo plano o sin permiso concedido).
+                    </p>
+                  )}
+              </div>
             )}
             {result !== null && !result.ok && (
               <p role="alert" className="rounded-lg bg-red-50 px-4 py-2 text-sm font-medium text-red-700">
