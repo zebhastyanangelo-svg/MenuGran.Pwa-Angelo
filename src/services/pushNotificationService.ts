@@ -129,7 +129,7 @@ export async function subscribeCurrentUserToPush(userId: string): Promise<Subscr
 }
 
 type InvokePushPayload =
-  | { target: 'user' }
+  | { target: 'user'; title?: string; body?: string }
   | { target: 'all'; title: string; body: string };
 
 /** Invoca la Edge Function send-push-notification con manejo de errores. */
@@ -173,6 +173,15 @@ async function invokeSendPushNotification(payload: InvokePushPayload): Promise<S
 /** Envía una notificación de prueba al dispositivo del usuario autenticado. */
 export function sendTestPushNotification(): Promise<SendPushResult> {
   return invokeSendPushNotification({ target: 'user' });
+}
+
+/** Envía una notificación de comercio cercano al dispositivo del usuario autenticado. */
+export function sendNearbyMerchantNotification(merchantName: string): Promise<SendPushResult> {
+  return invokeSendPushNotification({
+    target: 'user',
+    title: '¡Comercio cerca de ti!',
+    body: `Tienes ${merchantName} cerca. ¡Descubre sus ofertas!`,
+  });
 }
 
 /** Envía una notificación masiva a todos los clientes (solo superadmin). */

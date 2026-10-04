@@ -4,10 +4,12 @@ import { useQuery } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { useAuth } from './hooks/useAuth';
+import { useGeofencing } from './hooks/useGeofencing';
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { OfflineBanner } from './components/pwa/OfflineBanner';
 import { ReloadPrompt } from './components/pwa/ReloadPrompt';
+import { PushNotificationOnboarding } from './components/pwa/PushNotificationOnboarding';
 import { NotificationToastProvider, NotificationToastList } from './components/pwa/NotificationToast';
 import { CustomerOnboardingGate } from './components/onboarding/CustomerOnboardingGate';
 import { CookieConsentBanner } from './components/cookies/CookieConsentBanner';
@@ -136,6 +138,7 @@ function RootRedirect() {
 
 function AppRoutes() {
   useGoogleAnalytics();
+  useGeofencing();
   return (
     <>
       <ErrorBoundary>
@@ -204,6 +207,7 @@ function AppRoutes() {
         </ErrorBoundary>
         <CustomerOnboardingGate />
         <ReloadPrompt />
+        <PushNotificationOnboarding />
         <CartFab />
         <CookieConsentBanner />
     </>

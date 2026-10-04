@@ -183,7 +183,12 @@ async function getAllSubscriptions(client: SupabaseClient): Promise<Array<PushSu
     .select('user_id, endpoint, p256dh, auth')
     .eq('is_active', true);
 
-  if (subsError !== null || subsData === null) return [];
+  if (subsError !== null) {
+    console.error('Error al obtener suscripciones:', subsError);
+    return [];
+  }
+
+  if (subsData === null || subsData.length === 0) return [];
 
   const userIds = [...new Set(subsData.map((s: { user_id: string }) => s.user_id))];
 
@@ -299,8 +304,8 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ sent: 0, failed: 0, deactivated: 0, total: 0 });
       }
 
-      const title = 'MenuGran';
-      const bodyText = 'Tienes una nueva notificación.';
+      const title = body.title ?? 'MenuGran';
+      const bodyText = body.body ?? 'Tienes una nueva notificación.';
 
       let sent = 0;
       let failed = 0;
