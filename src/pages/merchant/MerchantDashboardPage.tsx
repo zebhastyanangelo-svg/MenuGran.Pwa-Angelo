@@ -11,6 +11,7 @@ import type { OrderStatus, OrderType } from '../../types/database';
 import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
 import { getOrderDeliveryCoordinates } from '../../utils/delivery';
 import type { OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
+import posthog, { isPostHogEnabled } from '../../posthog';
 
 const PAYMENT_PROOF_BUCKET = 'payment-proofs';
 
@@ -205,6 +206,13 @@ export function MerchantDashboardPage() {
     setAssignSubmitting(false);
   }, []);
 
+  const handleAssignDriver = useCallback(async (orderId: string, driverId: string) => {
+    await assignDriver(orderId, driverId);
+    if (isPostHogEnabled) {
+      posthog.capture('driver_assigned');
+    }
+  }, [assignDriver]);
+
   const handleConfirmAssignDriver = useCallback(async () => {
     if (!driverModalOrder) return;
     if (!selectedDriverId) {
@@ -214,13 +222,13 @@ export function MerchantDashboardPage() {
     setAssignSubmitting(true);
     setAssignError(null);
     try {
-      await assignDriver(driverModalOrder.id, selectedDriverId);
+      await handleAssignDriver(driverModalOrder.id, selectedDriverId);
       handleCloseDriverModal();
     } catch (err) {
       setAssignError(err instanceof Error ? err.message : 'No se pudo asignar el repartidor');
       setAssignSubmitting(false);
     }
-  }, [driverModalOrder, selectedDriverId, assignDriver, handleCloseDriverModal]);
+  }, [driverModalOrder, selectedDriverId, handleAssignDriver, handleCloseDriverModal]);
 
   const handleUnassignDriver = useCallback(async () => {
     if (!driverModalOrder) return;
@@ -269,8 +277,11 @@ export function MerchantDashboardPage() {
     void toggleStoreOpen(!isOpen);
   }
 
-  function handleAction(order: OrderWithCustomer, next: OrderStatus) {
-    void updateOrderStatus(order.id, next);
+  async function handleAction(order: OrderWithCustomer, next: OrderStatus) {
+    await updateOrderStatus(order.id, next);
+    if (isPostHogEnabled) {
+      posthog.capture('order_status_changed', { status: next, order_type: order.type });
+    }
   }
 
 return (
@@ -530,7 +541,7 @@ return (
                               onChange={(e) => {
                                 const driverId = e.target.value;
                                 if (driverId) {
-                                  void assignDriver(order.id, driverId);
+                                  void handleAssignDriver(order.id, driverId);
                                 }
                               }}
                             >

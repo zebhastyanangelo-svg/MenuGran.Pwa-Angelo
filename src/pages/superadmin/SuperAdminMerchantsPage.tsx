@@ -9,6 +9,7 @@ import { CreateMerchantForm } from '../../components/superadmin/CreateMerchantFo
 import { useSuperAdminMerchants } from '../../hooks/useSuperAdminMerchants';
 import type { MerchantAccountListItem } from '../../services/superAdminService';
 import type { CreateMerchantAccountInput } from '../../utils/merchantRegistration';
+import posthog, { isPostHogEnabled } from '../../posthog';
 
 const STATUS_LABELS: Record<string, string> = {
   active: 'Activo',
@@ -37,6 +38,9 @@ export function SuperAdminMerchantsPage() {
   const handleCreate = useCallback(
     async (input: CreateMerchantAccountInput) => {
       await addMerchant(input);
+      if (isPostHogEnabled) {
+        posthog.capture('merchant_account_created');
+      }
     },
     [addMerchant],
   );

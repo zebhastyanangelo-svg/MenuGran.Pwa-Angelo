@@ -6,6 +6,7 @@ import { fetchCurrentSessionRole } from '../../context/auth-profile';
 import { suggestEmailDomain } from '../../utils/emailSuggestions';
 import { getPostLoginPath } from '../../utils/postLoginRedirect';
 import { TermsAcceptanceCheckbox } from '../legal/TermsAcceptanceCheckbox';
+import posthog, { isPostHogEnabled } from '../../posthog';
 
 type AuthTab = 'login' | 'register';
 
@@ -135,6 +136,9 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
     try {
       await signInWithPassword(email, password);
+      if (isPostHogEnabled) {
+        posthog.capture('user_signed_in', { authentication_method: 'password' });
+      }
       const role = await fetchCurrentSessionRole();
       navigate(getPostLoginPath(requestedFrom, role), { replace: true });
     } catch (err) {

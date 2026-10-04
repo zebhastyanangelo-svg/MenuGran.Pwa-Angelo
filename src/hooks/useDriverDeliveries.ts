@@ -4,6 +4,7 @@ import { supabase, TABLE_NAMES } from '../services/supabase'
 import { NEW_DELIVERY_STATUSES, TRACKED_DELIVERY_STATUSES } from '../utils/delivery'
 import type { OrderRow, OrderStatus, UserRole } from '../types/database'
 import type { DriverOrder } from './useDriverDashboard'
+import posthog, { isPostHogEnabled } from '../posthog'
 
 export type { DriverOrder }
 
@@ -259,6 +260,9 @@ export function useDriverDeliveries(
       setActionError(null)
       try {
         await updateOrderStatus(orderId, 'on_the_way', user.id)
+        if (isPostHogEnabled) {
+          posthog.capture('delivery_started')
+        }
         setOrders((prev) =>
           prev.map((o) =>
             o.id === orderId ? { ...o, status: 'on_the_way', driver_id: user.id } : o,
@@ -282,6 +286,9 @@ export function useDriverDeliveries(
       setActionError(null)
       try {
         await updateOrderStatus(orderId, 'on_the_way', user.id)
+        if (isPostHogEnabled) {
+          posthog.capture('delivery_started')
+        }
         setOrders((prev) =>
           prev.map((o) =>
             o.id === orderId ? { ...o, status: 'on_the_way', driver_id: user.id } : o,

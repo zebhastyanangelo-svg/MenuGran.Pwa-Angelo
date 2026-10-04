@@ -3,6 +3,7 @@ import type { AddItemResult, CartItem, CartContextValue } from '../types/cart';
 import type { ProductRow } from '../types/database';
 import { loadCartFromStorage, saveCartToStorage } from '../types/cart';
 import { CartContext } from './cart-context';
+import posthog, { isPostHogEnabled } from '../posthog';
 
 interface CartProviderProps {
   children: ReactNode;
@@ -48,6 +49,9 @@ export function CartProvider({ children }: CartProviderProps) {
   }, [items]);
 
   const addItem = useCallback((product: ProductRow, quantity: number = 1, notes?: string): void => {
+    if (isPostHogEnabled) {
+      posthog.capture('cart_item_added', { quantity, cart_action: 'add' });
+    }
     setItems((prev) => {
       const existingIndex = prev.findIndex(
         (item) => item.product.id === product.id,
@@ -73,10 +77,16 @@ export function CartProvider({ children }: CartProviderProps) {
       const differentMerchant = hasItems && items[0].product.merchant_id !== product.merchant_id;
 
       if (differentMerchant) {
+        if (isPostHogEnabled) {
+          posthog.capture('cart_item_added', { quantity, cart_action: 'cleared_then_added' });
+        }
         setItems([{ product, quantity, notes }]);
         return { action: 'cleared-then-added' };
       }
 
+      if (isPostHogEnabled) {
+        posthog.capture('cart_item_added', { quantity, cart_action: 'add' });
+      }
       setItems((prev) => {
         const existingIndex = prev.findIndex(
           (item) => item.product.id === product.id,

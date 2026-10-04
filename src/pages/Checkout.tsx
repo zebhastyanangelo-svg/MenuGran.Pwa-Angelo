@@ -18,6 +18,7 @@ import { supabase } from '../services/supabase';
 import { isMerchantOpenNow } from '../utils/dateUtils';
 import { haversineDistance } from '../utils/distance';
 import { parseGeoPoint } from '../utils/geoPoint';
+import posthog, { isPostHogEnabled } from '../posthog';
 
 type CheckoutPaymentMethod = Extract<PaymentMethod, 'pago_movil' | 'card_pos' | 'cash'>;
 
@@ -229,6 +230,15 @@ export function Checkout() {
             : null,
         paymentProofUrl: proofPath,
       });
+
+      if (isPostHogEnabled) {
+        posthog.capture('order_placed', {
+          order_type: orderType,
+          payment_method: paymentMethod,
+          item_count: totalItems,
+          total_amount: Number(totalAmount),
+        });
+      }
 
       showToast({
         variant: 'success',

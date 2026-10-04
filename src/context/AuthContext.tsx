@@ -2,10 +2,12 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
+import posthog, { isPostHogEnabled } from '../posthog';
 import { supabase } from '../services/supabase';
 import type { ProfileRow, UserRole } from '../types/database';
 import { requiresEmailConfirmation } from '../utils/emailSuggestions';
@@ -16,6 +18,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const identifiedUserIdRef = useRef<string | null>(null);
+
+  const identifySession = useCallback((nextSession: Session): void => {
+    const { user } = nextSession;
+
+    if (!isPostHogEnabled || identifiedUserIdRef.current === user.id) return;
+
+    if (identifiedUserIdRef.current !== null) {
+      posthog.reset();
+    }
+
+    const fullName = user.user_metadata?.full_name;
+    posthog.identify(user.id, {
+      ...(user.email !== undefined ? { email: user.email } : {}),
+      ...(typeof fullName === 'string' ? { name: fullName } : {}),
+    });
+    identifiedUserIdRef.current = user.id;
+  }, []);
 
   const refreshProfile = useCallback(
     async (userId: string, email: string | null = null): Promise<void> => {
@@ -32,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         case 'SIGNED_IN':
           setSession(nextSession);
           if (nextSession?.user !== undefined) {
+            identifySession(nextSession);
             void refreshProfile(nextSession.user.id, nextSession.user.email ?? null);
           }
           break;
@@ -45,6 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           break;
         case 'SIGNED_OUT':
+          if (isPostHogEnabled && identifiedUserIdRef.current !== null) {
+            posthog.reset();
+          }
+          identifiedUserIdRef.current = null;
           setSession(null);
           setProfile(null);
           break;
@@ -52,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           break;
       }
     },
-    [refreshProfile],
+    [identifySession, refreshProfile],
   );
 
   useEffect(() => {
@@ -62,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!isMounted) return;
       setSession(data.session);
       if (data.session?.user !== undefined) {
+        identifySession(data.session);
         // Esperar el perfil antes de quitar el estado de carga para que las
         // guardias de ruta validen el rol real desde el primer render.
         await refreshProfile(data.session.user.id, data.session.user.email ?? null);
@@ -80,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isMounted = false;
       subscription.subscription.unsubscribe();
     };
-  }, [handleAuthEvent, refreshProfile]);
+  }, [handleAuthEvent, identifySession, refreshProfile]);
 
   const signInWithGoogle = useCallback(
     async (redirectPath?: string | null): Promise<void> => {

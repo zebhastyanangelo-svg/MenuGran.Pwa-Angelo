@@ -26,6 +26,7 @@ import { MapView } from '../components/map/MapView';
 import type { MapMarker } from '../components/map/MapView';
 import { MapErrorBoundary } from '../components/map/MapErrorBoundary';
 import { useQueryClient } from '@tanstack/react-query';
+import posthog, { isPostHogEnabled } from '../posthog';
 
 interface ProductNameMap {
   [productId: string]: string;
@@ -128,6 +129,9 @@ export function OrderTracker() {
       // UPDATE explícito ANTES de cambiar la vista local; lanza error si
       // RLS bloquea la fila (0 filas sin error) o si la mutación falla.
       const updated = await confirmOrderDelivery(orderId);
+      if (isPostHogEnabled) {
+        posthog.capture('order_received', { order_type: order.type });
+      }
 
       // Update local state immediately so UI switches to celebration view
       setOrder((prev) => (prev ? { ...prev, status: updated.status } : null));

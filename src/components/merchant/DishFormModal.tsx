@@ -6,6 +6,7 @@ import {
 } from './ImageUploadField';
 import type { CategoryRow, ProductRow } from '../../types/database';
 import { validateProductForm, type ProductFormData } from '../../utils/productForm';
+import posthog, { isPostHogEnabled } from '../../posthog';
 
 export interface DishFormModalProps {
   isOpen: boolean;
@@ -131,6 +132,13 @@ export function DishFormModal({
 
     try {
       await onSave(formData);
+      if (isPostHogEnabled) {
+        posthog.capture('menu_item_saved', {
+          action: initialData ? 'updated' : 'created',
+          is_available: isAvailable,
+          has_image: image.url !== null,
+        });
+      }
       onClose();
     } catch (err: unknown) {
       setErrors({
