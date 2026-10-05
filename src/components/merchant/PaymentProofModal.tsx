@@ -1,4 +1,5 @@
 import { formatPrice } from '../../types/cart';
+import { getPaymentMethodLabel } from '../../utils/paymentMethod';
 import type { OrderRow } from '../../types/database';
 
 export interface PaymentProofModalProps {
@@ -6,21 +7,6 @@ export interface PaymentProofModalProps {
   proofUrl: string | null;
   error?: string | null;
   onClose: () => void;
-}
-
-function getPaymentMethodLabel(method: OrderRow['payment_method']): string {
-  switch (method) {
-    case 'pago_movil':
-      return 'Pago Móvil';
-    case 'cash':
-      return 'Efectivo';
-    case 'zelle':
-      return 'Zelle';
-    case 'card':
-      return 'Tarjeta';
-    default:
-      return method;
-  }
 }
 
 export function PaymentProofModal({

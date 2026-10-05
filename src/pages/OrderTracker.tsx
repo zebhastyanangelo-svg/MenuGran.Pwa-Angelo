@@ -27,9 +27,38 @@ import type { MapMarker } from '../components/map/MapView';
 import { MapErrorBoundary } from '../components/map/MapErrorBoundary';
 import { useQueryClient } from '@tanstack/react-query';
 import posthog, { isPostHogEnabled } from '../posthog';
+import { formatUSD, formatVES } from '../utils/format';
+import { getPaymentMethodLabel } from '../utils/paymentMethod';
+import { useBCVRate } from '../hooks/useExchangeRate';
+import type { OrderType } from '../types/database';
 
 interface ProductNameMap {
   [productId: string]: string;
+}
+
+/**
+ * Línea de envío del resumen. Solo aparece si el pedido fue a domicilio y se
+ * cobró algo: el precio queda congelado en la orden, así que el cliente ve
+ * exactamente lo que pagó aunque el comercio ya haya cambiado su tarifa.
+ */
+function DeliveryFeeRow({
+  orderType,
+  fee,
+}: {
+  orderType: OrderType;
+  fee: string;
+}) {
+  const amount = Number(fee);
+  if (orderType !== 'delivery' || !Number.isFinite(amount) || amount <= 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex justify-between">
+      <span className="text-gray-600">Envío:</span>
+      <span className="font-medium">{formatUSD(amount)}</span>
+    </div>
+  );
 }
 
 function isValidGeoPoint(point: GeoPoint | null | undefined): point is GeoPoint {
@@ -89,6 +118,7 @@ export function OrderTracker() {
   const [driverLocation, setDriverLocation] = useState<GeoPoint | null>(null);
 
   const { showToast } = useNotificationToast();
+  const bcvRate = useBCVRate();
   const { permission, showNotification } = useNotifications();
   const { isOnline } = useOnlineStatus();
   const previousStatusRef = useRef<OrderStatus | null>(null);
@@ -579,20 +609,40 @@ export function OrderTracker() {
               <span className="font-medium capitalize">{order.type}</span>
             </div>
 
-            <div className="flex justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-gray-600">Método de pago:</span>
-              <span className="font-medium capitalize">{order.payment_method}</span>
-              {order.payment_method === 'pago_movil' && order.payment_reference && (
-                <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                  Ref: {order.payment_reference}
+              <span className="flex items-center gap-2">
+                <span className="font-medium">
+                  {getPaymentMethodLabel(order.payment_method)}
                 </span>
-              )}
+                {order.payment_method === 'pago_movil' &&
+                  order.payment_reference && (
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                      Ref: {order.payment_reference}
+                    </span>
+                  )}
+              </span>
             </div>
+
+            <DeliveryFeeRow
+              orderType={order.type}
+              fee={order.delivery_fee ?? '0'}
+            />
 
             <div className="flex justify-between">
               <span className="text-gray-600">Total:</span>
-              <span className="font-medium text-lg">
-                ${parseFloat(order.total_amount).toFixed(2)}
+              <span className="text-right">
+                <span className="block font-medium text-lg">
+                  {formatUSD(Number(order.total_amount))}
+                </span>
+                {bcvRate > 0 && (
+                  <span
+                    className="block text-sm font-semibold text-emerald-700"
+                    data-testid="order-total-ves"
+                  >
+                    ≈ {formatVES(Number(order.total_amount) * bcvRate)}
+                  </span>
+                )}
               </span>
             </div>
 
@@ -603,10 +653,23 @@ export function OrderTracker() {
               </div>
             )}
 
-            {order.delivery_address_notes && (
+            {(order.delivery_address || order.delivery_address_notes) && (
+              <div className="flex justify-between gap-4">
+                <span className="shrink-0 text-gray-600">
+                  {order.delivery_address
+                    ? 'Dirección de entrega:'
+                    : 'Instrucciones de entrega:'}
+                </span>
+                <span className="text-right text-gray-700">
+                  {order.delivery_address ?? order.delivery_address_notes}
+                </span>
+              </div>
+            )}
+
+            {order.customer_tax_id && (
               <div className="flex justify-between">
-                <span className="text-gray-600">Instrucciones de entrega:</span>
-                <span className="text-gray-700">{order.delivery_address_notes}</span>
+                <span className="text-gray-600">RIF / Cédula:</span>
+                <span className="font-medium">{order.customer_tax_id}</span>
               </div>
             )}
           </div>

@@ -14,6 +14,7 @@ import { ReloadPrompt } from './components/pwa/ReloadPrompt';
 import { PushNotificationOnboarding } from './components/pwa/PushNotificationOnboarding';
 import { NotificationToastProvider, NotificationToastList } from './components/pwa/NotificationToast';
 import { CustomerOnboardingGate } from './components/onboarding/CustomerOnboardingGate';
+import { ServiceModeGate } from './components/onboarding/ServiceModeGate';
 import { CookieConsentBanner } from './components/cookies/CookieConsentBanner';
 import { SupportWidget } from './components/support/SupportWidget';
 import { PwaInstallProvider } from './contexts/PwaInstallContext';
@@ -41,6 +42,9 @@ const MarketplacePage = lazy(() => import('./pages/MarketplacePage').then((mod) 
 const MerchantStorePage = lazy(() => import('./pages/MerchantStorePage').then((mod) => ({ default: mod.MerchantStorePage })));
 const MerchantQrRedirectPage = lazy(() =>
   import('./pages/MerchantQrRedirectPage').then((mod) => ({ default: mod.MerchantQrRedirectPage })),
+);
+const QrScanPage = lazy(() =>
+  import('./pages/QrScanPage').then((mod) => ({ default: mod.QrScanPage })),
 );
 const MerchantDashboardPage = lazy(() =>
   import('./pages/MerchantDashboardPage').then((mod) => ({ default: mod.MerchantDashboardPage })),
@@ -163,6 +167,8 @@ function AppRoutes() {
   <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
   {/* Destino de los códigos QR impresos por el comercio. */}
   <Route path="/q/:token" element={<MerchantQrRedirectPage />} />
+  {/* Lector de QR de mesa: a dónde lleva la opción "Estoy en el negocio". */}
+  <Route path="/scan" element={<QrScanPage />} />
   <Route path="/checkout" element={<Checkout />} />
   <Route
     path="/profile"
@@ -216,6 +222,7 @@ function AppRoutes() {
           </Suspense>
         </ErrorBoundary>
         <CustomerOnboardingGate />
+        <ServiceModeGate />
         <ReloadPrompt />
         <PushNotificationOnboarding />
         <CartFab />

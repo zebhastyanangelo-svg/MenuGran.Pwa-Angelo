@@ -1,4 +1,4 @@
-import { useState, type FormEvent, useEffect, useCallback } from 'react';
+import { useState, type FormEvent, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MapPin,
@@ -10,11 +10,10 @@ import {
   AlertCircle,
   FileText,
   Receipt,
-  ShoppingBag,
-  Ticket,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { PaymentProofUploader } from '../components/cart/PaymentProofUploader';
+import { OrderTicket } from '../components/cart/OrderTicket';
 import { LocationPicker } from '../components/map/LocationPicker';
 import { TermsAcceptanceCheckbox } from '../components/legal/TermsAcceptanceCheckbox';
 import { useCart } from '../hooks/useCart';
@@ -23,10 +22,23 @@ import { useToast } from '../hooks/useToast';
 import { useMerchantPagoMovil } from '../hooks/useMerchantPagoMovil';
 import { useBCVRate } from '../hooks/useExchangeRate';
 import { compressImage } from '../utils/imageCompressor';
+import { formatVES } from '../utils/format';
+import {
+  calculateOrderTotal,
+  isDeliveryAvailable,
+  resolveDeliveryFee,
+  type MerchantDeliveryPolicy,
+} from '../utils/deliveryPolicy';
+import {
+  isOrderTypeLockedByMode,
+  readServiceMode,
+  resolveOrderTypeForMode,
+  type ServiceMode,
+} from '../utils/serviceMode';
 import type { GeoPoint, OrderType, PaymentMethod } from '../types/database';
 import type { MerchantPagoMovilInfo } from '../services/merchantPaymentService';
 import { createOrder, uploadPaymentProofTemp } from '../services/checkoutService';
-import { supabase } from '../services/supabase';
+import { supabase, TABLE_NAMES } from '../services/supabase';
 import { isMerchantOpenNow } from '../utils/dateUtils';
 import { haversineDistance } from '../utils/distance';
 import { parseGeoPoint } from '../utils/geoPoint';
@@ -43,6 +55,8 @@ interface ValidateParams {
   file: File | null;
   orderType: OrderType;
   deliveryLocation: GeoPoint | null;
+  /** `false` si el comercio no ofrece delivery y el pedido lo exige. */
+  merchantAcceptsDelivery: boolean;
 }
 
 function validateCheckoutForm(params: ValidateParams): string | null {
@@ -57,8 +71,13 @@ function validateCheckoutForm(params: ValidateParams): string | null {
       return 'Adjunta una foto o PDF del comprobante (máx. 5 MB).';
     }
   }
-  if (params.orderType === 'delivery' && !params.deliveryLocation) {
-    return 'Selecciona tu ubicación de entrega en el mapa.';
+  if (params.orderType === 'delivery') {
+    if (!params.merchantAcceptsDelivery) {
+      return 'Este comercio no ofrece delivery. Vuelve al marketplace y elige otro comercio.';
+    }
+    if (!params.deliveryLocation) {
+      return 'Selecciona tu ubicación de entrega en el mapa.';
+    }
   }
   return null;
 }
@@ -110,31 +129,22 @@ export function Checkout() {
   const [openingTimeStr, setOpeningTimeStr] = useState('');
   const [closingTimeStr, setClosingTimeStr] = useState('');
   const [merchantLocation, setMerchantLocation] = useState<GeoPoint | null>(null);
+  const [deliveryPolicy, setDeliveryPolicy] = useState<MerchantDeliveryPolicy>({});
 
-  function formatVES(amount: number): string {
-    return new Intl.NumberFormat('es-VE', {
-      style: 'currency',
-      currency: 'VES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  }
-
-  function formatUSD(amount: number): string {
-    return new Intl.NumberFormat('es-VE', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  }
+  /**
+   * Modo de servicio elegido en la pantalla de bienvenida. Cuando el cliente
+   * ya respondió, el tipo de despacho queda fijado y el selector desaparece:
+   * no se vuelve a preguntar y el checkout va directo a los métodos de pago.
+   */
+  const [serviceMode] = useState<ServiceMode | null>(() => readServiceMode());
+  const isDispatchLocked = isOrderTypeLockedByMode(serviceMode);
 
   useEffect(() => {
     if (!merchantId) return;
     let cancelled = false;
     supabase
-      .from('merchants')
-      .select('opening_time, closing_time, location')
+      .from(TABLE_NAMES.merchants)
+      .select('opening_time, closing_time, location, offers_delivery, delivery_fee')
       .eq('id', merchantId)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -147,6 +157,10 @@ export function Checkout() {
           setOpeningTimeStr(data.opening_time ?? '');
           setClosingTimeStr(data.closing_time ?? '');
           setIsOpenNow(isMerchantOpenNow(data.opening_time, data.closing_time));
+          setDeliveryPolicy({
+            offers_delivery: data.offers_delivery,
+            delivery_fee: data.delivery_fee,
+          });
           const parsed = parseGeoPoint(data.location);
           if (parsed !== null) {
             setMerchantLocation({ x: parsed.x, y: parsed.y });
@@ -158,7 +172,27 @@ export function Checkout() {
     };
   }, [merchantId]);
 
-  const [orderType, setOrderType] = useState<OrderType>('delivery');
+  const merchantAcceptsDelivery = isDeliveryAvailable(deliveryPolicy);
+
+  /**
+   * Tipo de despacho. Si el cliente ya eligió modo en la pantalla de
+   * bienvenida, su decisión gana y el selector queda bloqueado; si no, manda
+   * el estado local.
+   */
+  const [manualOrderType, setManualOrderType] = useState<OrderType>(() =>
+    resolveOrderTypeForMode(serviceMode) ?? 'delivery',
+  );
+  const requestedOrderType: OrderType = isDispatchLocked
+    ? (resolveOrderTypeForMode(serviceMode) as OrderType)
+    : manualOrderType;
+
+  // Un comercio sin delivery no puede recibir un pedido a domicilio aunque el
+  // cliente llegue por una URL directa: se degrada a retiro en local.
+  const orderType: OrderType =
+    requestedOrderType === 'delivery' && !merchantAcceptsDelivery
+      ? 'pickup'
+      : requestedOrderType;
+
   const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>('pago_movil');
   const [reference, setReference] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState<GeoPoint | null>(null);
@@ -170,6 +204,29 @@ export function Checkout() {
   const [deliveryCoverageError, setDeliveryCoverageError] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [customerTaxId, setCustomerTaxId] = useState('');
+
+  const setOrderType = useCallback(
+    (value: OrderType) => {
+      if (value === 'delivery' && !merchantAcceptsDelivery) return;
+      setManualOrderType(value);
+      setOutOfRange(false);
+      setDeliveryCoverageError(null);
+      setError(null);
+    },
+    [merchantAcceptsDelivery],
+  );
+
+  // El envío se cobra en tiempo real: cambia con la tarifa del comercio y con
+  // el tipo de despacho, y el total se recalcula sin recargar nada.
+  const subtotal = Number(totalAmount);
+  const deliveryFee = useMemo(
+    () => resolveDeliveryFee(deliveryPolicy, orderType),
+    [deliveryPolicy, orderType],
+  );
+  const orderTotal = useMemo(
+    () => calculateOrderTotal(subtotal, deliveryFee),
+    [subtotal, deliveryFee],
+  );
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -187,6 +244,7 @@ export function Checkout() {
       file,
       orderType,
       deliveryLocation,
+      merchantAcceptsDelivery,
     });
     if (formError) {
       setError(formError);
@@ -230,7 +288,8 @@ export function Checkout() {
         orderType,
         paymentMethod,
         paymentReference: paymentMethod === 'pago_movil' ? reference.trim() : '',
-        totalAmount: Number(totalAmount),
+        totalAmount: orderTotal,
+        deliveryFee,
         items: items.map((item) => ({
           product_id: item.product.id,
           quantity: item.quantity,
@@ -250,7 +309,8 @@ export function Checkout() {
           order_type: orderType,
           payment_method: paymentMethod,
           item_count: totalItems,
-          total_amount: Number(totalAmount),
+          total_amount: orderTotal,
+          delivery_fee: deliveryFee,
         });
       }
 
@@ -318,139 +378,62 @@ export function Checkout() {
     <div className="mx-auto max-w-lg p-4 pb-24">
       <h1 className="mb-4 text-xl font-bold text-gray-900">Finalizar pedido</h1>
 
-      <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <h2 className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
-          <ShoppingBag className="h-4 w-4 text-brand-red" aria-hidden="true" />
-          Resumen ({totalItems} ítems)
-        </h2>
-        <div className="p-4">
-          <ul className="space-y-1">
-            {items.map((item) => {
-              const unitPriceUSD = parseFloat(item.product.price);
-              const lineTotalUSD = unitPriceUSD * item.quantity;
-              const lineTotalVES = bcvRate > 0 ? lineTotalUSD * bcvRate : 0;
-              return (
-                <li
-                  key={item.product.id}
-                  className="flex flex-col gap-0.5 text-sm text-gray-600"
-                >
-                  <span className="flex justify-between">
-                    <span>
-                      {item.quantity} × {item.product.title}
-                    </span>
-                    <span>{formatUSD(lineTotalUSD)}</span>
-                  </span>
-                  {bcvRate > 0 && lineTotalVES > 0 && (
-                    <span className="ml-4 text-xs text-emerald-700">
-                      ≈ {formatVES(lineTotalVES)}
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-
-          <dl className="mt-3 space-y-1.5 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
-            <div className="flex items-center justify-between">
-              <dt className="inline-flex items-center gap-1.5">
-                <ShoppingBag className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
-                Subtotal
-              </dt>
-              <dd>{formatUSD(Number(totalAmount))}</dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="inline-flex items-center gap-1.5">
-                <Bike className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
-                Envío
-              </dt>
-              <dd>Gratis</dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="inline-flex items-center gap-1.5">
-                <Receipt className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
-                Tarifa de servicio
-              </dt>
-              <dd>Sin cargos</dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="inline-flex items-center gap-1.5">
-                <Ticket className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
-                Cupón
-              </dt>
-              <dd>No aplicado</dd>
-            </div>
-          </dl>
-
-          {bcvRate > 0 && (
-            <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
-              <div className="mb-1 font-semibold">
-                Tasa de cambio BCV aplicada: Bs. {bcvRate.toFixed(2)} / USD
-              </div>
-              <div>Total en USD: {formatUSD(Number(totalAmount))}</div>
-              <div>
-                Total a pagar en Bolívares:{' '}
-                {formatVES(Number(totalAmount) * bcvRate)}
-              </div>
-            </div>
-          )}
-
-          <div className="mt-2 flex flex-col gap-0.5 border-t border-slate-100 pt-2 text-sm font-bold text-gray-900">
-            <div className="flex justify-between">
-              <span>Total</span>
-              <span>{formatUSD(Number(totalAmount))}</span>
-            </div>
-            {bcvRate > 0 && (
-              <span className="ml-4 text-base text-emerald-700">
-                ≈ {formatVES(Number(totalAmount) * bcvRate)}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
+      <OrderTicket
+        items={items}
+        subtotal={subtotal}
+        deliveryFee={deliveryFee}
+        orderType={orderType}
+        bcvRate={bcvRate}
+        total={orderTotal}
+      />
 
       <form className="space-y-4" onSubmit={handleSubmit} noValidate>
-        <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <legend className="flex items-center gap-1.5 px-1 text-sm font-semibold text-slate-700">
-            <Bike className="h-4 w-4 text-brand-red" aria-hidden="true" />
-            Opciones de Despacho
-          </legend>
-          <div className="flex rounded-full bg-slate-100 p-1">
-            <button
-              type="button"
-              onClick={() => {
-                setOrderType('delivery');
-                setOutOfRange(false);
-              }}
-              aria-pressed={orderType === 'delivery'}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition ${
-                orderType === 'delivery'
-                  ? 'bg-brand-red text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Bike className="h-4 w-4" aria-hidden="true" />
-              Entrega a domicilio
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setOrderType('pickup');
-                setOutOfRange(false);
-                setDeliveryCoverageError(null);
-                setError(null);
-              }}
-              aria-pressed={orderType === 'pickup'}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition ${
-                orderType === 'pickup'
-                  ? 'bg-brand-red text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Store className="h-4 w-4" aria-hidden="true" />
-              Retiro en local
-            </button>
-          </div>
-        </fieldset>
+        {!isDispatchLocked && (
+          <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <legend className="flex items-center gap-1.5 px-1 text-sm font-semibold text-slate-700">
+              <Bike className="h-4 w-4 text-brand-red" aria-hidden="true" />
+              Opciones de Despacho
+            </legend>
+            {merchantAcceptsDelivery ? (
+              <div className="flex rounded-full bg-slate-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => setOrderType('delivery')}
+                  aria-pressed={orderType === 'delivery'}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition ${
+                    orderType === 'delivery'
+                      ? 'bg-brand-red text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Bike className="h-4 w-4" aria-hidden="true" />
+                  Entrega a domicilio
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrderType('pickup')}
+                  aria-pressed={orderType === 'pickup'}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition ${
+                    orderType === 'pickup'
+                      ? 'bg-brand-red text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Store className="h-4 w-4" aria-hidden="true" />
+                  Retiro en local
+                </button>
+              </div>
+            ) : (
+              <p
+                className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+                role="note"
+              >
+                Este comercio no ofrece delivery a domicilio, así que tu pedido
+                será para retiro en el local.
+              </p>
+            )}
+          </fieldset>
+        )}
 
         {orderType === 'delivery' && (
           <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -518,7 +501,7 @@ export function Checkout() {
                 setFile(selected);
                 setError(null);
               }}
-              totalAmount={Number(totalAmount)}
+              totalAmount={orderTotal}
               bcvRate={bcvRate}
             />
           )}
@@ -603,7 +586,7 @@ const PAYMENT_METHOD_OPTIONS: {
 }[] = [
   { id: 'card_pos', label: 'Tarjeta', icon: CreditCard },
   { id: 'cash', label: 'Efectivo', icon: Banknote },
-  { id: 'pago_movil', label: 'Transferencia', icon: Smartphone },
+  { id: 'pago_movil', label: 'Pago Móvil', icon: Smartphone },
 ];
 
 function PaymentMethodSelector({ value, onChange }: PaymentMethodSelectorProps) {
@@ -661,15 +644,6 @@ function PagoMovilSection({
   bcvRate,
 }: PagoMovilSectionProps) {
   const totalVES = bcvRate > 0 ? totalAmount * bcvRate : 0;
-
-  function formatVES(amount: number): string {
-    return new Intl.NumberFormat('es-VE', {
-      style: 'currency',
-      currency: 'VES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  }
 
   return (
     <div className="mt-3 space-y-3">

@@ -1,8 +1,14 @@
 import { useState, type FormEvent } from 'react';
-import { LogOut, Mail, UserCircle2, Phone, CreditCard, Save, Loader2, AlertTriangle, Bell } from 'lucide-react';
+import { LogOut, Mail, UserCircle2, Phone, CreditCard, Save, Loader2, AlertTriangle, Bell, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useUpdateProfile, type ProfileUpdatePayload } from '../hooks/useUpdateProfile';
+import {
+  DELIVERY_MARKETPLACE_PATH,
+  clearServiceMode,
+  readServiceMode,
+  type ServiceMode,
+} from '../utils/serviceMode';
 import { supabase } from '../services/supabase';
 import {
   isPushSupported,
@@ -36,6 +42,24 @@ export function ProfilePage() {
   const [pushMessage, setPushMessage] = useState<string | null>(null);
   const [pushError, setPushError] = useState<string | null>(null);
   const pushSupported = isPushSupported();
+
+  /**
+   * Cambiar de modo de servicio desde el perfil.
+   *
+   * El modo se fijó al entrar y gobierna el marketplace (solo comercios con
+   * delivery) y el checkout (ya no pregunta el tipo de despacho). Sin esta
+   * salida el cliente quedaría atascado en su primera respuesta, así que se
+   * borra la marca y se vuelve a la pantalla de elección.
+   */
+  const [serviceMode, setServiceMode] = useState<ServiceMode | null>(() =>
+    readServiceMode(),
+  );
+
+  function handleChangeServiceMode() {
+    clearServiceMode();
+    setServiceMode(null);
+    navigate(DELIVERY_MARKETPLACE_PATH, { replace: true });
+  }
 
   /** Suscribe el dispositivo (si hace falta) y envía un push de verificación. */
   const handleTestNotification = async () => {
@@ -274,6 +298,28 @@ export function ProfilePage() {
               {pushError}
             </p>
           )}
+        </div>
+
+        {/* Modo de servicio — permite cambiar la decisión del onboarding */}
+        <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <Store className="h-5 w-5" aria-hidden="true" />
+            Cómo quieres pedir
+          </h3>
+          <p className="mb-3 text-sm text-slate-600">
+            {serviceMode === 'delivery'
+              ? 'Ahora mismo estás en modo delivery: el marketplace te muestra los comercios cercanos que entregan a domicilio.'
+              : serviceMode === 'in_store'
+                ? 'Ahora mismo estás en modo "en el negocio": escaneas el QR de tu mesa para abrir el menú.'
+                : 'Todavía no has elegido si pides en el local o por delivery.'}
+          </p>
+          <button
+            type="button"
+            onClick={handleChangeServiceMode}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
+          >
+            Cambiar a {serviceMode === 'delivery' ? 'en el negocio' : 'delivery'}
+          </button>
         </div>
 
         {/* Zona de peligro */}

@@ -213,8 +213,11 @@ export function MerchantStorePage() {
           Volver a comercios
         </button>
 
-        {/* Cabecera: banner a sangre completa con el avatar superpuesto y
-            delimitado por el anillo blanco. */}
+        {/* Cabecera: banner a sangre completa con el avatar flotando
+            centrado sobre su borde inferior.
+            El `overflow-hidden` vive SOLO en la caja del banner: si se
+            subiera al contenedor `relative`, recortaría la mitad del logo
+            que sobresale por debajo. */}
         <div className="relative">
           <div className="h-40 w-full overflow-hidden rounded-2xl bg-gradient-to-r from-brand-red via-[#f64a62] to-brand-amber/80 sm:h-48">
             {merchant.banner_url && !isBannerError ? (
@@ -248,10 +251,11 @@ export function MerchantStorePage() {
             ) : null}
           </div>
 
-          {/* El logo se solapa exactamente la mitad del banner (-mt-10 sobre un
-              círculo de h-20) y lo delimita un anillo blanco, de modo que ni el
-              banner ni el nombre quedan recortados. */}
-          <div className="absolute -bottom-10 left-4">
+          {/* El logo se ancla al borde inferior del banner y se desplaza la mitad de
+              su propia altura, así queda exactamente mitad dentro / mitad
+              fuera, centrado en el eje horizontal y sin depender del alto
+              del banner. El anillo blanco lo separa del banner. */}
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
             <div className="h-20 w-20 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-lg">
               {merchant.logo_url && !isLogoError ? (
                 <img
@@ -273,7 +277,10 @@ export function MerchantStorePage() {
           </div>
         </div>
 
-        <div className="mt-14">
+        {/* Espacio reservado = la mitad del logo que sobresale (½ de h-20 =
+            2.5rem). El mismo margen debe usarse si cambia el tamaño del
+            avatar; `mt-14` dejaba 16 px de hueco muerto. */}
+        <div className="mt-10">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="truncate text-xl font-bold text-slate-900">{merchant.name}</h2>

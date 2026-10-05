@@ -13,11 +13,19 @@ import type { ImageFieldState } from '../../components/merchant/ImageUploadField
 import { ImageUploadField } from '../../components/merchant/ImageUploadField';
 import { LocationSettingsForm } from '../../components/merchant/LocationSettingsForm';
 import { formatGeoPointOrNull } from '../../utils/distance';
+import { formatUSD } from '../../utils/format';
 import { parseGeoPoint } from '../../utils/geoPoint';
 import { NoMerchantWarning } from '../../components/merchant/NoMerchantWarning';
 import { MerchantQrPanel } from '../../components/merchant/MerchantQrPanel';
+import { ProductPromoPicker } from '../../components/merchant/ProductPromoPicker';
 import { WeeklyHoursEditor } from '../../components/merchant/WeeklyHoursEditor';
 import { createDefaultWeeklyHours, parseWeeklyHours, summarizeWeeklyHours } from '../../utils/weeklyHours';
+import {
+  MAX_DELIVERY_FEE,
+  MIN_DELIVERY_FEE,
+  isDeliveryFeeInputInvalid,
+  parseDeliveryFee,
+} from '../../utils/deliveryPolicy';
 import {
   MAX_BADGE_LABEL_LENGTH,
   MAX_DISCOUNT_PERCENTAGE,
@@ -49,7 +57,7 @@ const MERCHANT_CATEGORIES: MerchantCategory[] = [
   'Otro',
 ];
 
-type SettingsTab = 'general' | 'location' | 'identity' | 'payments' | 'qr' | 'promos';
+type SettingsTab = 'general' | 'location' | 'identity' | 'delivery' | 'payments' | 'qr' | 'promos';
 
 /** Bancos frecuentes para Pago Móvil (orientativo; el campo admite texto libre). */
 const PAGO_MOVIL_BANKS: readonly string[] = [
@@ -97,6 +105,8 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
   const [promoLabel, setPromoLabel] = useState('');
   const [discountInput, setDiscountInput] = useState('');
   const [estimatedInput, setEstimatedInput] = useState('');
+  const [offersDelivery, setOffersDelivery] = useState(true);
+  const [deliveryFeeInput, setDeliveryFeeInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -127,6 +137,12 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
           ? String(merchant.estimated_delivery_minutes)
           : '',
       );
+      setOffersDelivery(merchant.offers_delivery !== false);
+      setDeliveryFeeInput(
+        merchant.delivery_fee != null && Number(merchant.delivery_fee) > 0
+          ? String(merchant.delivery_fee)
+          : '',
+      );
     }
   }, [merchant]);
 
@@ -147,9 +163,14 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
     if (isEstimatedMinutesInputInvalid(estimatedInput)) {
       errors.estimated_delivery_minutes = `El tiempo debe estar entre 1 y ${MAX_ESTIMATED_MINUTES} minutos.`;
     }
+    // La tarifa solo se valida si el comercio ofrece delivery: con el delivery
+    // desactivado el campo está oculto y su valor no debe bloquear el guardado.
+    if (offersDelivery && isDeliveryFeeInputInvalid(deliveryFeeInput)) {
+      errors.delivery_fee = `El costo de envío debe estar entre ${MIN_DELIVERY_FEE} y ${MAX_DELIVERY_FEE} USD.`;
+    }
 
     return errors;
-  }, [promoLabel, discountInput, estimatedInput]);
+  }, [promoLabel, discountInput, estimatedInput, offersDelivery, deliveryFeeInput]);
 
   const handleImageChange = async (
     e: ChangeEvent<HTMLInputElement>,
@@ -207,7 +228,9 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
     const promoErrors = collectPromoErrors();
     if (Object.keys(promoErrors).length > 0) {
       setFormErrors(promoErrors);
-      setActiveTab('promos');
+      const failedTab: SettingsTab =
+        'delivery_fee' in promoErrors ? 'delivery' : 'promos';
+      setActiveTab(failedTab);
       return;
     }
 
@@ -230,6 +253,11 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
         promo_label: parseBadgeLabel(promoLabel),
         discount_percentage: parseDiscountPercentage(discountInput),
         estimated_delivery_minutes: parseEstimatedMinutes(estimatedInput),
+        offers_delivery: offersDelivery,
+        // Con el delivery desactivado la tarifa se guarda en 0 para que no
+        // quede un cobro huérfano reactivándose si el comercio lo vuelve a
+        // encender más adelante.
+        delivery_fee: offersDelivery ? (parseDeliveryFee(deliveryFeeInput) ?? 0) : 0,
         // `opening_time`/`closing_time` se derivan de la agenda semanal para que las
         // vistas que aún leen esas columnas sigan mostrando un rango coherente.
         ...summarizeWeeklyHours(weeklyHours),
@@ -339,6 +367,14 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
         </button>
         <button
           type="button"
+          className={tabClass('delivery')}
+          onClick={() => setActiveTab('delivery')}
+          aria-pressed={activeTab === 'delivery'}
+        >
+          Delivery
+        </button>
+        <button
+          type="button"
           className={tabClass('payments')}
           onClick={() => setActiveTab('payments')}
           aria-pressed={activeTab === 'payments'}
@@ -408,6 +444,16 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
           />
         )}
 
+        {activeTab === 'delivery' && (
+          <DeliveryTab
+            offersDelivery={offersDelivery}
+            onOffersDeliveryChange={setOffersDelivery}
+            feeInput={deliveryFeeInput}
+            onFeeInputChange={setDeliveryFeeInput}
+            error={formErrors.delivery_fee}
+          />
+        )}
+
         {activeTab === 'payments' && (
           <PagoMovilTab
             bank={pagoMovilBank}
@@ -421,6 +467,7 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
 
         {activeTab === 'promos' && (
           <PromosTab
+            merchantId={merchant.id}
             promoLabel={promoLabel}
             onPromoLabelChange={setPromoLabel}
             discountInput={discountInput}
@@ -680,6 +727,8 @@ function IdentityTab({
 }
 
 interface PromosTabProps {
+  /** Comercio dueño del menú: sus platos son los seleccionables. */
+  merchantId: string;
   promoLabel: string;
   onPromoLabelChange: (value: string) => void;
   discountInput: string;
@@ -689,12 +738,110 @@ interface PromosTabProps {
   errors: Record<string, string>;
 }
 
+interface DeliveryTabProps {
+  offersDelivery: boolean;
+  onOffersDeliveryChange: (value: boolean) => void;
+  feeInput: string;
+  onFeeInputChange: (value: string) => void;
+  error?: string;
+}
+
+/**
+ * Política de envío: si el comercio entrega a domicilio y, cuando entrega, si
+ * el envío es gratis o tiene costo.
+ *
+ * Desactivar el delivery tiene un efecto visible más allá del formulario: el
+ * marketplace oculta el comercio para los clientes en flujo de delivery y el
+ * checkout fuerza el retiro en local. El texto lo dice para que la decisión no
+ * se tome a ciegas.
+ */
+function DeliveryTab({
+  offersDelivery,
+  onOffersDeliveryChange,
+  feeInput,
+  onFeeInputChange,
+  error,
+}: DeliveryTabProps) {
+  const fee = parseDeliveryFee(feeInput);
+  const isFree = fee !== null && fee === 0;
+
+  return (
+    <div className="space-y-5">
+      <fieldset className="rounded-lg border border-gray-200 p-4">
+        <legend className="px-1 text-sm font-semibold text-gray-800">
+          Entrega a domicilio
+        </legend>
+
+        <label className="flex items-start gap-3" htmlFor="merchant-offers-delivery">
+          <input
+            id="merchant-offers-delivery"
+            type="checkbox"
+            checked={offersDelivery}
+            onChange={(e) => onOffersDeliveryChange(e.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          <span>
+            <span className="block text-sm font-medium text-gray-700">
+              Ofrezco delivery a domicilio
+            </span>
+            <span className="mt-0.5 block text-xs text-gray-500">
+              Si lo desactivas, tu comercio deja de aparecer para los clientes
+              que pidieron delivery y el checkout solo permitirá retiro en el
+              local.
+            </span>
+          </span>
+        </label>
+      </fieldset>
+
+      {offersDelivery && (
+        <div>
+          <label
+            htmlFor="merchant-delivery-fee"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Costo del envío (USD)
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id="merchant-delivery-fee"
+              type="number"
+              inputMode="decimal"
+              min={MIN_DELIVERY_FEE}
+              max={MAX_DELIVERY_FEE}
+              step="0.01"
+              value={feeInput}
+              onChange={(e) => onFeeInputChange(e.target.value)}
+              placeholder="0.00"
+              aria-describedby="merchant-delivery-fee-help"
+              className={`w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                error ? 'border-red-500' : 'border-gray-300'
+              }`}
+            />
+            <span
+              className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800"
+              data-testid="merchant-delivery-fee-preview"
+            >
+              {isFree || fee === null ? 'Envío gratis' : `${formatUSD(fee)} envío`}
+            </span>
+          </div>
+          <p id="merchant-delivery-fee-help" className="mt-1 text-xs text-gray-500">
+            Déjalo vacío o en 0 para entregar gratis. El monto se suma al total
+            del pedido en el checkout y se ve en la tarjeta de tu comercio.
+          </p>
+          {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Señales visuales del comercio: etiqueta flotante, descuento y tiempo
  * estimado. Todo lo que se configura aquí es lo que el marketplace muestra
  * dinámicamente en la tarjeta del comercio y en la cabecera del local.
  */
 function PromosTab({
+  merchantId,
   promoLabel,
   onPromoLabelChange,
   discountInput,
@@ -810,6 +957,17 @@ function PromosTab({
           )}
         </div>
       </div>
+
+      {/* Vincula la promoción a los platos concretos, no solo al comercio. */}
+      <section aria-labelledby="promo-dishes-heading" className="border-t pt-5">
+        <h3
+          id="promo-dishes-heading"
+          className="mb-2 text-sm font-semibold text-gray-800"
+        >
+          Aplicar la promoción a platos específicos
+        </h3>
+        <ProductPromoPicker merchantId={merchantId} />
+      </section>
     </div>
   );
 }

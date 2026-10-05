@@ -506,7 +506,7 @@ return (
                       </div>
                     ) : (
                       <span className="text-xs text-gray-400 italic mt-1 block">
-                        Sin capture
+                        Sin comprobante
                       </span>
                     ))}
                     <div className="flex flex-wrap gap-2">

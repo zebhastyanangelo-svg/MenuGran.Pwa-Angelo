@@ -19,6 +19,12 @@ interface CreateOrderParams {
   paymentProofUrl?: string | null;
   /** RIF/cédula declarada por el cliente para el comprobante fiscal. */
   customerTaxId?: string | null;
+  /**
+   * Snapshot del costo de envío cobrado (USD). El checkout lo resuelve desde
+   * `merchants.delivery_fee` y lo congela aquí para que cambiar la tarifa del
+   * comercio no altere el histórico de pedidos ya realizados.
+   */
+  deliveryFee?: number | null;
 }
 
 /**
@@ -41,6 +47,7 @@ export async function createOrder(params: CreateOrderParams): Promise<string> {
     payment_reference: params.paymentReference || null,
     payment_proof_url: params.paymentProofUrl ?? undefined,
     total_amount: String(params.totalAmount),
+    delivery_fee: String(params.deliveryFee ?? 0),
     items: params.items,
     latitude: params.deliveryLocation?.y ?? undefined,
     longitude: params.deliveryLocation?.x ?? undefined,

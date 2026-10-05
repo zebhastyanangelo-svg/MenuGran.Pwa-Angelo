@@ -58,7 +58,7 @@ describe('CartDrawer', () => {
     expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0);
   });
 
-  it('desglose subtotal, envío, tarifa y cupón con iconos', () => {
+  it('desglose subtotal, tarifa y cupón con iconos, sin inventar el envío', () => {
     render(
       <CartProvider>
         <MemoryRouter>
@@ -67,7 +67,11 @@ describe('CartDrawer', () => {
       </CartProvider>,
     );
 
-    expect(screen.getByText('Envío')).toBeInTheDocument();
+    // El envío no se lista en el carrito: depende del comercio y del tipo de
+    // despacho, que aún no se han elegido. El texto sí dice que se calcula
+    // después, para que el total no se lea como cerrado.
+    expect(screen.queryByText('Envío')).not.toBeInTheDocument();
+    expect(screen.getByText(/Se calcula en el checkout/i)).toBeInTheDocument();
     expect(screen.getByText('Tarifa de servicio')).toBeInTheDocument();
     expect(screen.getByText('Cupón')).toBeInTheDocument();
     expect(screen.getByText('Total')).toBeInTheDocument();

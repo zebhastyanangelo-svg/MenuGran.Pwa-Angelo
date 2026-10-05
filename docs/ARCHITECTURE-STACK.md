@@ -16,11 +16,11 @@ MenuGran es una plataforma web progresiva (PWA) multi-tenant diseñada para men�
 | **Base de Datos** | PostgreSQL (Supabase) | Modelo relacional único con identificadores UUIDv7, soporte JSONB y PostGIS. |
 | **Autenticación** | Supabase Auth | Manejo nativo de Google OAuth 2.0, registro por email y JWT. |
 | **Storage (Catálogos)** | Cloudinary (Cuenta Maestra Única) | CDN especializado (25 GB free) para fotos de productos y logos optimizados. |
-| **Storage (Captures)** | Supabase Storage | Bucket privado (1 GB free) para comprobantes con purga automática a 30 días. |
+| **Storage (Captures)** | Supabase Storage | Bucket privado (1 GB free) para comprobantes con purga automática a 60 días. |
 | **Mapas Realtime** | Leaflet.js + OpenStreetMap + Supabase Realtime | Rastreo de entregas estilo Uber sin depender de la API de pago de Google Maps. |
 
 ---
 
 ## 3. Arquitectura de Almacenamiento
 * **Fotos de Menú y Logos:** Se suben a Cloudinary mediante un Unsigned Upload Preset desde la PWA, almacenando solo la URL optimizada en PostgreSQL.
-* **Captures de Pago Móvil:** Se almacenan en Supabase Storage. Una función programada en PostgreSQL (Cron Job) elimina automáticamente los archivos con más de 30 días de antigüedad de pedidos finalizados o cancelados, manteniendo la cuota de almacenamiento limpia.
+* **Captures de Pago Móvil:** Se almacenan en Supabase Storage. Una función programada en PostgreSQL (Cron Job) elimina automáticamente los archivos con más de 60 días de antigüedad (incluidos los comprobantes huérfanos de un checkout abandonado), manteniendo la cuota de almacenamiento limpia. La ventana de retención vive en la función `public.payment_proof_retention_days()`.

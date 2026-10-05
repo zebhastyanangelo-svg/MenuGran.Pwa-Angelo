@@ -1,6 +1,11 @@
-import { Clock, MapPin, ShoppingBag } from 'lucide-react';
+import { Bike, Clock, MapPin, ShoppingBag } from 'lucide-react';
 import type { MerchantRow } from '../../types/database';
+import { formatUSD } from '../../utils/format';
 import { getMerchantAvailability } from '../../utils/merchantAvailability';
+import {
+  isDeliveryAvailable,
+  parseDeliveryFee,
+} from '../../utils/deliveryPolicy';
 import { formatEstimatedDeliveryRange, resolveMerchantPromoChips } from '../../utils/promos';
 
 export interface MerchantCardProps {
@@ -32,6 +37,37 @@ function PromoChips({ merchant }: { merchant: MerchantRow }) {
         </span>
       ))}
     </div>
+  );
+}
+
+/**
+ * Traduce la política de envío del comercio a un chip legible: si no entrega,
+ * se dice explícitamente; si entrega, se dice si es gratis o cuánto cuesta.
+ * Evita que el cliente descubra la tarifa al final del checkout.
+ */
+function DeliveryPolicyChip({ merchant }: { merchant: MerchantRow }) {
+  if (!isDeliveryAvailable(merchant)) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600"
+        data-testid="merchant-delivery-chip"
+      >
+        <Bike className="h-3 w-3" aria-hidden="true" />
+        Sin delivery
+      </span>
+    );
+  }
+
+  const fee = parseDeliveryFee(merchant.delivery_fee ?? null);
+
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800"
+      data-testid="merchant-delivery-chip"
+    >
+      <Bike className="h-3 w-3" aria-hidden="true" />
+      {fee !== null && fee > 0 ? `${formatUSD(fee)} envío` : 'Delivery gratis'}
+    </span>
   );
 }
 
@@ -142,6 +178,7 @@ export function MerchantCard({ merchant, onClick, distance }: MerchantCardProps)
           <span className="truncate rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
             {merchant.category}
           </span>
+          <DeliveryPolicyChip merchant={merchant} />
         </div>
 
         <div className="mt-auto flex items-center justify-end gap-2 pt-4">

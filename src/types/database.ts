@@ -202,6 +202,17 @@ export interface MerchantRow {
   discount_percentage?: number | null;
   /** Tiempo base de preparación en minutos (1-240). */
   estimated_delivery_minutes?: number | null;
+  /**
+   * `true` si el comercio presta delivery a domicilio. Cuando es `false` el
+   * marketplace oculta el comercio en el flujo de delivery y el checkout no
+   * permite elegir entrega. Por defecto `true` en la base de datos.
+   */
+  offers_delivery?: boolean | null;
+  /**
+   * Costo del delivery en USD (>= 0). `0` significa envío gratis. Solo aplica
+   * cuando `offers_delivery` es verdadero.
+   */
+  delivery_fee?: number | null;
 }
 
 export interface MerchantStaffRow {
@@ -261,6 +272,12 @@ export interface OrderRow {
   longitude: number | null;
   /** RIF o cédula declarada por el cliente para el comprobante fiscal. */
   customer_tax_id?: string | null;
+  /**
+   * Snapshot del costo de envío cobrado en esta orden (USD, string por DECIMAL).
+   * Se congela al pedir para que cambiar la tarifa del comercio no altere el
+   * histórico. `'0.00'` si el envío fue gratis o el pedido fue para retiro.
+   */
+  delivery_fee?: string | null;
   items: readonly OrderItem[];
   created_at: IsoTimestamp;
 }
@@ -335,6 +352,7 @@ export type OrderInsert = Pick<
       | 'latitude'
       | 'longitude'
       | 'customer_tax_id'
+      | 'delivery_fee'
     > & {
       delivery_location?: DbPoint | null;
     }

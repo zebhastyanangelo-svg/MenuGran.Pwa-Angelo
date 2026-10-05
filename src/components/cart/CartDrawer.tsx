@@ -6,7 +6,6 @@ import {
   Minus,
   Trash2,
   ArrowRight,
-  Bike,
   Receipt,
   Ticket,
   ShoppingBag,
@@ -14,6 +13,8 @@ import {
 import { useCart } from '../../hooks/useCart';
 import { useNavigate } from 'react-router-dom';
 import { formatPrice } from '../../types/cart';
+import { formatVES } from '../../utils/format';
+import { useBCVRate } from '../../hooks/useExchangeRate';
 
 export interface CartDrawerProps {
   isOpen: boolean;
@@ -23,9 +24,12 @@ export interface CartDrawerProps {
 /**
  * Desglose de costos con icono por concepto.
  *
- * La plataforma no cobra envío ni tarifa hoy, así que esas líneas se
- * presentan como informativas en lugar de inventar importes: cualquier cargo
- * futuro debe entrar aquí y en `createOrder` para que el total siga cuadrando.
+ * La tarifa de servicio y el cupón siguen siendo informativos: la plataforma no
+ * los cobra. El envío NO aparece aquí: su importe depende del comercio y del
+ * tipo de despacho, que el cliente aún no ha elegido en este punto. Por eso el
+ * carrito no puede mostrar un total final cerrado y remite al checkout, que es
+ * donde ya se conoce la política de envío del comercio. Cualquier cargo nuevo
+ * debe entrar aquí y en `createOrder` para que el total siga cuadrando.
  */
 const SUMMARY_ROWS: readonly {
   key: string;
@@ -33,12 +37,12 @@ const SUMMARY_ROWS: readonly {
   value: string;
   icon: typeof ShoppingBag;
 }[] = [
-  { key: 'delivery', label: 'Envío', value: 'Gratis', icon: Bike },
   { key: 'fee', label: 'Tarifa de servicio', value: 'Sin cargos', icon: Receipt },
   { key: 'coupon', label: 'Cupón', value: 'No aplicado', icon: Ticket },
 ];
 
 export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
+  const bcvRate = useBCVRate();
   const {
     items,
     totalAmount,
@@ -220,10 +224,26 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             ))}
           </dl>
 
-          <div className="mt-3 flex items-center justify-between border-t border-dashed border-gray-200 pt-3 text-base">
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-dashed border-gray-200 pt-3 text-base">
             <span className="font-bold text-gray-900">Total</span>
-            <span className="font-bold text-gray-900">{formatPrice(totalAmount)}</span>
+            <span className="text-right">
+              <span className="block font-bold text-gray-900">
+                {formatPrice(totalAmount)}
+              </span>
+              {bcvRate > 0 && (
+                <span
+                  className="block text-sm font-semibold text-emerald-700"
+                  data-testid="cart-total-ves"
+                >
+                  ≈ {formatVES(Number(totalAmount) * bcvRate)}
+                </span>
+              )}
+            </span>
           </div>
+
+          <p className="mt-1 text-right text-[11px] text-gray-400">
+            Sin costo de envío. Se calcula en el checkout.
+          </p>
 
           {validationError !== null && items.length > 0 ? (
             <div className="mt-2 rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800">

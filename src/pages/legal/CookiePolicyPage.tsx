@@ -33,6 +33,7 @@ export function CookiePolicyPage() {
             'menugram_cart: guarda tu carrito mientras navegas entre comercios (localStorage).',
             'menugram_order_cache_v1: caché de tus pedidos activos/recientes para uso sin conexión (localStorage).',
             'menugram_onboarding_completed: recuerda que ya completaste la bienvenida (localStorage).',
+            'menugram_service_mode: recuerda si pediste "en el negocio" o "delivery" al entrar, para no volver a preguntártelo (localStorage).',
             'menugram_bcv_exchange_rate: caché diaria de la tasa BCV de referencia (localStorage).',
             'sb-*-auth-token: cookies de Supabase Auth que mantienen tu sesión iniciada de forma segura.',
           ]}

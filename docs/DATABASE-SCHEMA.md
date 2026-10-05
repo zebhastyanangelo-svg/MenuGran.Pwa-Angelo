@@ -85,6 +85,12 @@ CREATE TABLE public.merchants (
         CHECK (discount_percentage IS NULL OR discount_percentage BETWEEN 1 AND 100),
     estimated_delivery_minutes SMALLINT
         CHECK (estimated_delivery_minutes IS NULL OR estimated_delivery_minutes BETWEEN 1 AND 240),
+    -- Política de envío (migration 20261006120000_merchant_delivery_policy.sql)
+    -- offers_delivery = false oculta el comercio en el flujo de delivery del
+    -- marketplace y obliga al checkout al retiro en local.
+    offers_delivery BOOLEAN NOT NULL DEFAULT TRUE,
+    delivery_fee DECIMAL(10, 2) NOT NULL DEFAULT 0.00
+        CHECK (delivery_fee >= 0),
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
@@ -139,6 +145,11 @@ CREATE TABLE public.orders (
     total_amount DECIMAL(10, 2) NOT NULL,
     -- RIF/cedula declarada por el cliente para el comprobante fiscal
     customer_tax_id TEXT,
+    -- Snapshot del envio cobrado: congelado al pedir para que cambiar la
+    -- tarifa del comercio no altere el historico (migration
+    -- 20261006120000_merchant_delivery_policy.sql).
+    delivery_fee DECIMAL(10, 2) NOT NULL DEFAULT 0.00
+        CHECK (delivery_fee >= 0),
     table_number TEXT,
     delivery_location POINT,
     delivery_address_notes TEXT,
@@ -166,6 +177,8 @@ CREATE UNIQUE INDEX idx_merchants_slug ON public.merchants(slug) WHERE status = 
 CREATE INDEX idx_products_merchant_category ON public.products(merchant_id, category_id);
 CREATE INDEX idx_orders_merchant_status ON public.orders(merchant_id, status, created_at DESC);
 CREATE INDEX idx_deliveries_driver ON public.deliveries(driver_id, status);
+CREATE INDEX idx_merchants_active_with_delivery ON public.merchants (is_active, status)
+    WHERE offers_delivery = true;
 
 -- TABLA SUSCRIPCIONES PUSH (WEB PUSH / VAPID)
 -- Una fila por endpoint de navegador. Solo el dueño (RLS) puede gestionarlas;

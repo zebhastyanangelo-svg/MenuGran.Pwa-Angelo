@@ -126,7 +126,7 @@ describe('OrdersBoard', () => {
     expect(
       screen.queryByRole('button', { name: /Ver comprobante/i }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText(/Sin capture/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Sin comprobante/i)).not.toBeInTheDocument();
   });
 
   it('muestra "Efectivo" sin botón de comprobante para cash', () => {

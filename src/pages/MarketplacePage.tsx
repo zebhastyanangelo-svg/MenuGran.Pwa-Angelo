@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Navigation, X, CheckCircle, Map as MapIcon, Navigation2 } from 'lucide-react';
+import { MapPin, Navigation, X, CheckCircle, Map as MapIcon, Navigation2, Bike } from 'lucide-react';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { GeoPoint, MerchantCategory, MerchantRow } from '../types/database';
 import { SearchBar } from '../components/marketplace/SearchBar';
@@ -21,8 +21,9 @@ import {
 } from '../utils/distance';
 import { isValidGeoPoint } from '../utils/geo';
 import { parseGeoPoint } from '../utils/geoPoint';
+import { DELIVERY_COVERAGE_RADIUS_KM, readServiceMode, type ServiceMode } from '../utils/serviceMode';
 
-const COVERAGE_RADIUS_KM = 1.0;
+const COVERAGE_RADIUS_KM = DELIVERY_COVERAGE_RADIUS_KM;
 
 type PermissionState = 'prompt' | 'granted' | 'denied' | 'unsupported';
 
@@ -55,6 +56,7 @@ function computeDistances(
 export function MarketplacePage() {
   const navigate = useNavigate();
   const [merchants, setMerchants] = useState<MerchantRow[]>([]);
+  const [serviceMode] = useState<ServiceMode | null>(() => readServiceMode());
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<MerchantCategory | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,17 +73,27 @@ export function MarketplacePage() {
  * para que `MerchantCard` pueda renderizar los chips de descuento.
  */
 const MERCHANT_COLUMNS =
-  'id, name, slug, logo_url, banner_url, status, is_active, is_open, location, created_at, rif, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, pago_movil_bank, pago_movil_id_number, pago_movil_phone, opening_time, closing_time, weekly_hours, promo_label, discount_percentage, estimated_delivery_minutes';
+  'id, name, slug, logo_url, banner_url, status, is_active, is_open, location, created_at, rif, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, pago_movil_bank, pago_movil_id_number, pago_movil_phone, opening_time, closing_time, weekly_hours, promo_label, discount_percentage, estimated_delivery_minutes, offers_delivery, delivery_fee';
 
 const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const { data, error: supabaseError } = await supabase
+      let query = supabase
         .from(TABLE_NAMES.merchants)
         .select(MERCHANT_COLUMNS)
         .eq('is_active', true)
         .eq('status', 'active');
+
+      // Si el cliente ya eligió el flujo de delivery en la pantalla de
+      // bienvenida, los comercios sin entrega a domicilio no son una opción
+      // y se filtran en SQL en lugar de ocultarse en el cliente: así no se
+      // descargan filas que nadie puede pedir.
+      if (serviceMode === 'delivery') {
+        query = query.eq('offers_delivery', true);
+      }
+
+      const { data, error: supabaseError } = await query;
 
       if (supabaseError) throw supabaseError;
 
@@ -104,7 +116,7 @@ const fetchData = useCallback(async () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [serviceMode]);
 
   useEffect(() => {
     void fetchData();
@@ -357,8 +369,19 @@ const fetchData = useCallback(async () => {
             </button>
           </div>
         ) : (
-          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
-{filteredMerchants.length === 0 ? (
+          <>
+            {serviceMode === 'delivery' && filteredMerchants.length > 0 && (
+              <p className="mb-1 flex items-start gap-2 rounded-xl border border-brand-red/20 bg-red-50 p-3 text-xs text-red-900">
+                <Bike className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                <span>
+                  Mostrando solo comercios con delivery a menos de{' '}
+                  {COVERAGE_RADIUS_KM} km. Los que no entregan a domicilio
+                  están ocultos.
+                </span>
+              </p>
+            )}
+            <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
+              {filteredMerchants.length === 0 ? (
                 userLocation ? (
                   <div className="col-span-full py-8 text-center">
                     <p className="text-sm text-gray-500">
@@ -379,16 +402,17 @@ const fetchData = useCallback(async () => {
                   </p>
                 )
               ) : (
-              filteredMerchants.map(({ merchant, distance }) => (
-                <MerchantCard
-                  key={merchant.id}
-                  merchant={merchant}
-                  distance={distance ?? undefined}
-                  onClick={handleMerchantClick}
-                />
-              ))
-            )}
-          </div>
+                filteredMerchants.map(({ merchant, distance }) => (
+                  <MerchantCard
+                    key={merchant.id}
+                    merchant={merchant}
+                    distance={distance ?? undefined}
+                    onClick={handleMerchantClick}
+                  />
+                ))
+              )}
+            </div>
+          </>
         )}
       </main>
     </div>

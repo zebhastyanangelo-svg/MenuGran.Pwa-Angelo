@@ -57,7 +57,20 @@ vi.mock('../hooks/useAuth', () => ({
 
 // Mock supabase client used in Checkout to fetch merchant location
 const mockMerchantSelect = vi.fn().mockResolvedValue({ data: null, error: null });
+// Mock supabase client used in Checkout to fetch merchant hours and delivery policy.
+// `TABLE_NAMES` se reexporta porque Checkout lo usa en lugar del literal, igual
+// que el resto de la app.
 vi.mock('../services/supabase', () => ({
+  TABLE_NAMES: {
+    profiles: 'profiles',
+    merchants: 'merchants',
+    merchantStaff: 'merchant_staff',
+    categories: 'categories',
+    products: 'products',
+    orders: 'orders',
+    deliveries: 'deliveries',
+    userPushSubscriptions: 'user_push_subscriptions',
+  },
   supabase: {
     from: vi.fn(() => ({
       select: vi.fn(() => ({
@@ -367,12 +380,12 @@ describe('Checkout', () => {
     expect(screen.getByText(/Comprobante Fiscal/i)).toBeInTheDocument();
   });
 
-  it('ofrece Tarjeta, Efectivo y Transferencia como metodos de pago', () => {
+  it('ofrece Tarjeta, Efectivo y Pago Móvil como metodos de pago', () => {
     renderCheckout();
 
     expect(screen.getByRole('button', { name: /Tarjeta/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Efectivo/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Transferencia/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Pago Móvil/ })).toBeInTheDocument();
   });
 
   it('desglose subtotal, envio, tarifa y cupon en el resumen', () => {
@@ -382,6 +395,76 @@ describe('Checkout', () => {
     expect(screen.getByText('Envío')).toBeInTheDocument();
     expect(screen.getByText('Tarifa de servicio')).toBeInTheDocument();
     expect(screen.getByText('Cupón')).toBeInTheDocument();
+  });
+
+  it('muestra el total en dólares y su equivalente en bolívares', () => {
+    renderCheckout();
+
+    // Subtotal 100 USD con la tasa BCV simulada de 36.5. El formateador
+    // venezolano usa '.' para los miles, así que 3.650,00.
+    expect(screen.getByTestId('ticket-total-usd')).toHaveTextContent('$100.00');
+    expect(screen.getByTestId('ticket-total-ves')).toHaveTextContent('Bs. 3.650,00');
+  });
+
+  it('suma la tarifa del comercio al total cuando entrega es a domicilio', async () => {
+    mockMerchantSelect.mockResolvedValueOnce({
+      data: {
+        opening_time: '08:00',
+        closing_time: '20:00',
+        location: '(-66.9,10.5)',
+        offers_delivery: true,
+        delivery_fee: '2.50',
+      },
+      error: null,
+    });
+    renderCheckout();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ticket-delivery-fee')).toHaveTextContent('$2.50');
+    });
+    expect(screen.getByTestId('ticket-total-usd')).toHaveTextContent('$102.50');
+  });
+
+  it('marca el envío como gratis cuando el comercio no cobra tarifa', async () => {
+    mockMerchantSelect.mockResolvedValueOnce({
+      data: {
+        opening_time: '08:00',
+        closing_time: '20:00',
+        location: '(-66.9,10.5)',
+        offers_delivery: true,
+        delivery_fee: '0.00',
+      },
+      error: null,
+    });
+    renderCheckout();
+
+    await waitFor(() => {
+      expect(screen.getByText('Gratis')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('ticket-total-usd')).toHaveTextContent('$100.00');
+  });
+
+  it('fuerza el retiro en local cuando el comercio no ofrece delivery', async () => {
+    mockMerchantSelect.mockResolvedValueOnce({
+      data: {
+        opening_time: '08:00',
+        closing_time: '20:00',
+        location: '(-66.9,10.5)',
+        offers_delivery: false,
+        delivery_fee: '0.00',
+      },
+      error: null,
+    });
+    renderCheckout();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/no ofrece delivery a domicilio/i),
+      ).toBeInTheDocument();
+    });
+    // Sin delivery no se pide ubicación ni se cobra envío.
+    expect(screen.queryByTestId('delivery-coordinates')).not.toBeInTheDocument();
+    expect(screen.getByText(/No aplica \(retiro en local\)/)).toBeInTheDocument();
   });
 
   it('envia el RIF del comprobante fiscal al crear el pedido', async () => {

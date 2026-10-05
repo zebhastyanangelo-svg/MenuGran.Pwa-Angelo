@@ -1,0 +1,208 @@
+/**
+ * Lector de códigos QR de mesa.
+ *
+ * Es el destino de la opción "Estoy en el negocio" del onboarding: el cliente
+ * está físicamente en el local y escanea el QR impreso para abrir el menú.
+ *
+ * No se exige sesión: el mismo QR impreso que apunta a `/q/:token` funciona
+ * con la cámara nativa del teléfono, así que el lector solo acelera el caso
+ * de quien ya tiene la PWA abierta. Por eso el acceso a la cámara es
+ * opcional y siempre hay una alternativa manual (escribir/pegar el token).
+ *
+ * El escaneo usa la API nativa `BarcodeDetector` (Chromium/Android, sin
+ * dependencias) y degrada con elegancia donde no existe: Safari y Firefox no
+ * la implementan, y en jsdom tampoco está, por eso su disponibilidad se
+ * comprueba antes de construir nada.
+ */
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { QrCode, ScanLine, Keyboard } from 'lucide-react';
+import { MERCHANT_QR_PATH } from '../services/qrCodeService';
+import {
+  extractQrToken,
+  getBarcodeDetector,
+  isBarcodeDetectorSupported,
+} from '../utils/qrToken';
+
+export function QrScanPage() {
+  const navigate = useNavigate();
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [manualToken, setManualToken] = useState('');
+
+  const isSupported = isBarcodeDetectorSupported();
+
+  const stopStream = useCallback(() => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setIsScanning(false);
+  }, []);
+
+  const openToken = useCallback(
+    (token: string) => {
+      navigate(`${MERCHANT_QR_PATH}/${encodeURIComponent(token)}`);
+    },
+    [navigate],
+  );
+
+  const startScanning = useCallback(async () => {
+    const Detector = getBarcodeDetector();
+    if (Detector === null) return;
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError('Este navegador no permite usar la cámara desde la web.');
+      return;
+    }
+
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      });
+      streamRef.current = stream;
+
+      const video = videoRef.current;
+      if (video !== null) {
+        video.srcObject = stream;
+        await video.play();
+      }
+
+      const detector = new Detector({ formats: ['qr_code'] });
+      setIsScanning(true);
+
+      const tick = async (): Promise<void> => {
+        const element = videoRef.current;
+        if (element === null || element.readyState < 2) {
+          requestAnimationFrame(() => void tick());
+          return;
+        }
+        try {
+          const codes = await detector.detect(element);
+          const token = extractQrToken(codes[0]?.rawValue ?? '');
+          if (token !== null) {
+            stopStream();
+            openToken(token);
+            return;
+          }
+        } catch {
+          // Un frame ilegible es normal mientras la cámara enfoca.
+        }
+        requestAnimationFrame(() => void tick());
+      };
+      void tick();
+    } catch (cameraError: unknown) {
+      stopStream();
+      const message =
+        cameraError instanceof Error ? cameraError.message : 'Error desconocido';
+      setError(
+        `No pudimos abrir la cámara (${message}). Puedes escribir el código del QR a mano.`,
+      );
+    }
+  }, [openToken, stopStream]);
+
+  // La cámara se libera al salir de la vista: dejar el stream vivo consume la
+  // batería del dispositivo y mantiene el indicador de grabación encendido.
+  useEffect(() => stopStream, [stopStream]);
+
+  function handleManualSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    const token = extractQrToken(manualToken) ?? manualToken.trim();
+    if (!token) {
+      setError('Escribe el código que aparece en el QR de la mesa.');
+      return;
+    }
+    openToken(token);
+  }
+
+  return (
+    <div className="mx-auto max-w-md px-4 py-8">
+      <div className="mb-6 text-center">
+        <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-brand-red">
+          <QrCode className="h-7 w-7" aria-hidden="true" />
+        </span>
+        <h1 className="text-xl font-bold text-slate-900">Escanea el QR de tu mesa</h1>
+        <p className="mt-1 text-sm text-slate-600">
+          Apunta la cámara al código QR impreso en la mesa o en la barra del
+          commerce para abrir su menú.
+        </p>
+      </div>
+
+      {isSupported ? (
+        <div className="space-y-3">
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-900">
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              aria-label="Vista de la cámara para escanear el código QR"
+              className="aspect-square w-full object-cover"
+            />
+            <div className="pointer-events-none absolute inset-8 rounded-2xl border-2 border-white/80" />
+            {isScanning && (
+              <p
+                role="status"
+                className="absolute inset-x-0 bottom-3 text-center text-xs font-medium text-white"
+              >
+                Buscando un código QR...
+              </p>
+            )}
+          </div>
+
+          {!isScanning && (
+            <button
+              type="button"
+              onClick={() => void startScanning()}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#c80024]"
+            >
+              <ScanLine className="h-4 w-4" aria-hidden="true" />
+              Activar la cámara
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Este navegador no puede leer códigos QR desde la web. Usa la cámara
+          de tu teléfono para abrir el QR impreso, o escribe el código aquí
+          abajo.
+        </p>
+      )}
+
+      <form onSubmit={handleManualSubmit} className="mt-6 space-y-2" noValidate>
+        <label
+          htmlFor="qr-token"
+          className="flex items-center gap-1.5 text-sm font-medium text-slate-700"
+        >
+          <Keyboard className="h-4 w-4" aria-hidden="true" />
+          ¿Prefieres escribir el código?
+        </label>
+        <input
+          id="qr-token"
+          type="text"
+          value={manualToken}
+          onChange={(event) => {
+            setManualToken(event.target.value);
+            setError(null);
+          }}
+          placeholder="Código del QR"
+          autoComplete="off"
+          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red"
+        />
+        <button
+          type="submit"
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        >
+          Abrir menú
+        </button>
+      </form>
+
+      {error !== null && (
+        <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}

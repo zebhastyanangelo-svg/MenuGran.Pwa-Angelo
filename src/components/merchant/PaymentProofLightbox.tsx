@@ -4,21 +4,7 @@ import type { MouseEvent } from 'react';
 import { X, ExternalLink } from 'lucide-react';
 import type { OrderRow } from '../../types/database';
 import { formatPrice } from '../../types/cart';
-
-function getPaymentMethodLabel(method: OrderRow['payment_method']): string {
-  switch (method) {
-    case 'pago_movil':
-      return 'Pago Móvil';
-    case 'cash':
-      return 'Efectivo';
-    case 'zelle':
-      return 'Zelle';
-    case 'card':
-      return 'Tarjeta';
-    default:
-      return method;
-  }
-}
+import { getPaymentMethodLabel } from '../../utils/paymentMethod';
 
 export interface PaymentProofLightboxProps {
   order: OrderRow;

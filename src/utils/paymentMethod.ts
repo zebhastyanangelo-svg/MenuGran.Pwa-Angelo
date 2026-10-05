@@ -3,6 +3,11 @@ import type { PaymentMethod } from '../types/database';
 /**
  * Etiqueta legible del método de pago registrado en `orders.payment_method`.
  * Usada en el panel de pedidos del comercio (columna PAGO) y en el detalle.
+ *
+ * `card_pos` se etiqueta "Punto de Venta" porque describe el momento del pago
+ * (el cliente paga con tarjeta al recibir o en caja), que es lo que el comercio
+ * necesita leer en el panel, mientras que en el checkout la misma opción se
+ * ofrece como "Tarjeta" por ser el lenguaje del cliente.
  */
 export function getPaymentMethodLabel(method: PaymentMethod): string {
   switch (method) {

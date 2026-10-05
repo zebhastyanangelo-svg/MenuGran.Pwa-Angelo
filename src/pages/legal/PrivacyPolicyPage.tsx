@@ -44,7 +44,7 @@ export function PrivacyPolicyPage() {
         </p>
         <p>
           Los comprobantes de <strong>pago</strong> se almacenan de forma temporal con
-          acceso restringido y se eliminan automáticamente después de 30 días, o cuando el
+          acceso restringido y se eliminan automáticamente después de 60 días, o cuando el
           comercio verifica el pago y el registro ya no es necesario.
         </p>
         <p>
@@ -79,7 +79,7 @@ export function PrivacyPolicyPage() {
         <p>
           Conservamos tu cuenta y tu historial de pedidos mientras esté activa o mientras
           existan obligaciones legales. Los comprobantes de pago se eliminan
-          automáticamente a los 30 días. Puedes solicitar la eliminación de tu cuenta
+          automáticamente a los 60 días. Puedes solicitar la eliminación de tu cuenta
           escribiendo a soporte, salvo los datos que debamos retener por ley.
         </p>
       </LegalSection>

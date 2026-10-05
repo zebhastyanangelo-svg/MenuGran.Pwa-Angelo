@@ -315,7 +315,7 @@ export function OrdersBoard({
                           </button>
                         ) : (
                           <span className="mt-1.5 block text-xs text-gray-400 italic">
-                            Sin capture
+                            Sin comprobante
                           </span>
                         ))}
                       </td>
@@ -449,7 +449,7 @@ export function OrdersBoard({
                       </button>
                     ) : (
                       <span className="mt-1.5 block text-xs text-gray-400 italic">
-                        Sin capture
+                        Sin comprobante
                       </span>
                     ))}
                   </div>
@@ -598,6 +598,14 @@ export function OrdersBoard({
                   <p className="text-gray-900">{selectedOrder.payment_reference}</p>
                 </div>
               )}
+              {Number(selectedOrder.delivery_fee ?? 0) > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Envío</p>
+                  <p className="text-gray-900">
+                    {formatPrice(selectedOrder.delivery_fee ?? '0')}
+                  </p>
+                </div>
+              )}
               <div>
                 <p className="text-sm font-medium text-gray-500">Total (USD)</p>
                 <p className="font-semibold text-gray-900">{formatPrice(selectedOrder.total_amount)}</p>
@@ -608,10 +616,20 @@ export function OrdersBoard({
                   <p className="font-semibold text-emerald-700">{formatVES(Number(selectedOrder.total_amount) * bcvRate)}</p>
                 </div>
               )}
-              {selectedOrder.delivery_address_notes && (
+              {(selectedOrder.delivery_address ||
+                selectedOrder.delivery_address_notes) && (
                 <div className="sm:col-span-2">
                   <p className="text-sm font-medium text-gray-500">Dirección de entrega</p>
-                  <p className="text-gray-900 whitespace-pre-line">{selectedOrder.delivery_address_notes}</p>
+                  <p className="text-gray-900 whitespace-pre-line">
+                    {selectedOrder.delivery_address ??
+                      selectedOrder.delivery_address_notes}
+                  </p>
+                </div>
+              )}
+              {selectedOrder.customer_tax_id && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">RIF / Cédula del cliente</p>
+                  <p className="text-gray-900">{selectedOrder.customer_tax_id}</p>
                 </div>
               )}
               {selectedOrder.payment_proof_url && (
