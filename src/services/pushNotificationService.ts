@@ -23,7 +23,7 @@ import type { UserPushSubscriptionInsert } from '../types/database';
  * privada que usa la Edge Function.
  */
 const FALLBACK_VAPID_PUBLIC_KEY =
-  'BNhcrcsKnkvKvPQBUUA8h3a9z_91SJAA_Vsqv156f_ZNBhRY1xyjxiWtboXCzIZKpN5dc93dOyPLCocBkglrr2k';
+  'BGA1EzGF0QyJayhieF08t9qYpRFx9-8jVfx6pvofoUBbqUsxmdwVpmH_ILImjdDDUCxHKSZyp3FIWQ0Y8vQJzls';
 
 export const VAPID_PUBLIC_KEY =
   import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY?.trim() || FALLBACK_VAPID_PUBLIC_KEY;

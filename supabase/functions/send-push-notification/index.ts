@@ -237,6 +237,68 @@ async function assertSuperadmin(authorizationHeader: string | null): Promise<{ o
   }
 }
 
+/**
+ * Compara dos secretos en tiempo constante.
+ *
+ * Un `!==` normal filtra information por tiempos: un atacante que sondea el
+ * header cron puede acortar el secreto byte a byte. Aquí ambos valores se
+ * recorren siempre completos y el resultado no se sale antes de tiempo.
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+/**
+ * Autentica las llamadas programadas (pg_cron) mediante el secreto compartido.
+ *
+ * Precedencia del secreto:
+ *  1. `CRON_SECRET` del entorno de la Edge Function.
+ *  2. `app_push_config.cron_secret`, que es donde ya viven los cron jobs.
+ *
+ * Acepta el secreto en el header `x-cron-secret` y, por compatibilidad con
+ * `pg_net`, también como bearer cuando el header no viene.
+ */
+async function assertCronAuthorized(req: Request, client: SupabaseClient): Promise<{ ok: true } | { ok: false; response: Response }> {
+  const provided = req.headers.get('x-cron-secret')?.trim()
+    ?? extractBearerToken(req.headers.get('authorization'))
+    ?? '';
+
+  if (provided === '') {
+    return { ok: false, response: jsonResponse({ error: 'Falta el secreto del cron.' }, 401) };
+  }
+
+  const expected = readEnvKey('CRON_SECRET', 'PUSH_CRON_SECRET') ?? await readCronSecretFromDb(client);
+  if (expected === null || expected === '') {
+    return { ok: false, response: jsonResponse({ error: 'El secreto del cron no está configurado.' }, 500) };
+  }
+
+  if (!timingSafeEqual(provided, expected)) {
+    return { ok: false, response: jsonResponse({ error: 'Secreto del cron inválido.' }, 403) };
+  }
+
+  return { ok: true };
+}
+
+/** Lee `app_push_config.cron_secret`, o `null` si no está disponible. */
+async function readCronSecretFromDb(client: SupabaseClient): Promise<string | null> {
+  const { data, error } = await client
+    .from('app_push_config')
+    .select('cron_secret')
+    .eq('id', 1)
+    .maybeSingle();
+
+  if (error !== null || data === null) {
+    console.error('No se pudo leer app_push_config.cron_secret:', error);
+    return null;
+  }
+  return data.cron_secret;
+}
+
 function replaceTemplateVariables(template: string, fullName: string | null): string {
   const name = (fullName ?? '').trim() || 'cliente';
   const firstName = name.split(/\s+/)[0];
@@ -254,6 +316,78 @@ function hasTemplateVariables(text: string): boolean {
 function addPersonalizedGreeting(template: string): string {
   if (hasTemplateVariables(template)) return template;
   return `¡Hola, {nombre}! ${template}`;
+}
+
+/**
+ * Copys de los disparadores automáticos de antojo.
+ *
+ * El copy se elige por franja horaria y de forma determinista por día, de modo
+ * que el mismo usuario no recibe el mismo texto todas las mañanas (lo que hace
+ * que el push se vuelva ruido) pero la variación sigue siendo reproducible al
+ * depurar. `{nombre}` lo reemplaza la lógica de personalización ya existente.
+ */
+const SCHEDULED_COPY: ReadonlyArray<{
+  slot: string;
+  tag: string;
+  titles: readonly string[];
+  bodies: readonly string[];
+}> = [
+  {
+    slot: 'desayuno',
+    tag: 'menugram-cron-desayuno',
+    titles: ['☕ MenuGram', '🍳 Menú de la mañana', 'Buenos días'],
+    bodies: [
+      '¡Buenos días, {nombre}! ☕ ¿Qué se te antoja desayunar hoy? Hay comercios abiertos cerca de ti.',
+      '☕ El día pide desayuno. Mira qué tienes disponible en tu zona.',
+      '¡Arrancamos con todo, {nombre}! Pan caliente, jugos y tus favoritos a pocos minutos de ti.',
+    ],
+  },
+  {
+    slot: 'media-manana',
+    tag: 'menugram-cron-media-manana',
+    titles: ['🥗 Entre horas', '🍽️ Se antoja', 'MenuGram'],
+    bodies: [
+      '¡Esa hambre de media mañana te delató, {nombre}! 🍽️ Encuentra qué hay abierto ahora cerca de ti.',
+      '🥪 ¿Un sándwich rápido? Hoy varios comercios de tu zona tienen especiales para picar.',
+      'Momento de merienda, {nombre}! Descubre los lugares abiertos que más te quedan cerca.',
+    ],
+  },
+  {
+    slot: 'cena',
+    tag: 'menugram-cron-cena',
+    titles: ['🌙 Hora de la cena', '🍔 MenuGram', '¿Qué cenamos?'],
+    bodies: [
+      '¡Es hora de la cena, {nombre}! 🌙 ¿Qué se te antoja cenar? Ya hay comercios abiertos cerca.',
+      '🍝 Termina el día con un buen plato. Mira qué restaurantes están abiertos en tu zona.',
+      'Cena sin complicarte con la hornalla, {nombre}! Pide tu favorito y recíbelo en casa.',
+    ],
+  },
+  {
+    slot: 'noche',
+    tag: 'menugram-cron-noche',
+    titles: ['🍕 Noche de Antojos', '🌜 Menú de noche', 'MenuGram'],
+    bodies: [
+      '🍕 Todavía hay hambre a estas horas, {nombre}! Descubre los comercios abiertos cerca de ti.',
+      '🌜 Antojo nocturno aprobado. Pide ahora y disfruta sin salir de casa.',
+      'La noche también se sirve, {nombre}! Encuentra quién sigue abierto en tu zona.',
+    ],
+  },
+];
+
+/**
+ * Elige el copy del día para la franja indicada.
+ *
+ * `dayOfYear` rota los índices con el día del año en lugar de con un número
+ * aleatorio: es estable entre reintentos del cron y reparte los copys a lo
+ * largo de la semana sin necesidad de estado.
+ */
+function pickScheduledCopy(slot: string, dayOfYear: number) {
+  const group = SCHEDULED_COPY.find((entry) => entry.slot === slot) ?? SCHEDULED_COPY[0]!;
+  return {
+    title: group.titles[dayOfYear % group.titles.length]!,
+    body: group.bodies[dayOfYear % group.bodies.length]!,
+    tag: group.tag,
+  };
 }
 
 interface PushSubscription {
@@ -428,7 +562,7 @@ async function importVapidPrivateKey(publicKey: string, privateKey: string): Pro
   if (privateBytes.length !== 32) {
     return crypto.subtle.importKey(
       'pkcs8',
-      privateBytes,
+      privateBytes as BufferSource,
       { name: 'ECDSA', namedCurve: 'P-256' },
       false,
       ['sign'],
@@ -584,6 +718,13 @@ async function deliverToSubscriptions(
   return report;
 }
 
+/** Dia del ano en UTC, usado para rotar los copys de forma reproducible. */
+function currentDayOfYear(): number {
+  const now = new Date();
+  const startOfYear = Date.UTC(now.getUTCFullYear(), 0, 0);
+  return Math.floor((now.getTime() - startOfYear) / 86_400_000);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -595,9 +736,60 @@ Deno.serve(async (req: Request) => {
 
   try {
     const authHeader = req.headers.get('authorization');
-    const body = await req.json() as { target?: string; title?: string; body?: string };
+    const body = await req.json() as {
+      target?: string;
+      title?: string;
+      body?: string;
+      slot?: string;
+      tag?: string;
+      url?: string;
+    };
 
     const client = buildServiceRoleClient();
+
+    /**
+     * Disparadores automáticos de pg_cron.
+     *
+     * No hay usuario detrás de la llamada (por eso el 401/403 previo), así que
+     * la autorización es el secreto compartido. El copy lo elige la función
+     * según la franja, de modo que los cron jobs no pueden inventarse textos.
+     */
+    if (body.target === 'scheduled') {
+      const auth = await assertCronAuthorized(req, client);
+      if (!auth.ok) return auth.response;
+
+      const slot = body.slot ?? 'desayuno';
+      const vapidKeys = await resolveVapidKeys(client);
+      const copy = pickScheduledCopy(slot, currentDayOfYear());
+      const title = replaceTemplateVariables(body.title ?? copy.title, null);
+      const bodyText = replaceTemplateVariables(body.body ?? copy.body, null);
+
+      const subscriptions = await getAllSubscriptions(client);
+      if (subscriptions.length === 0) {
+        return jsonResponse({
+          sent: 0, failed: 0, deleted: 0, deactivated: 0, total: 0,
+          slot, vapidSource: vapidKeys.source,
+        });
+      }
+
+      const report = await deliverToSubscriptions(
+        client,
+        subscriptions,
+        (sub) => ({
+          title: replaceTemplateVariables(title, sub.full_name ?? null),
+          body: replaceTemplateVariables(bodyText, sub.full_name ?? null),
+        }),
+        vapidKeys,
+      );
+
+      return jsonResponse({
+        ...report,
+        deactivated: report.deleted,
+        total: subscriptions.length,
+        slot,
+        vapidSource: vapidKeys.source,
+      });
+    }
 
     if (body.target === 'user') {
       const auth = await assertAuthenticated(authHeader);
@@ -631,12 +823,17 @@ Deno.serve(async (req: Request) => {
     }
 
     if (body.target === 'all') {
-      const auth = await assertSuperadmin(authHeader);
-      if (!auth.ok) return auth.response;
+      // Masivas manuales: superadmin con sesión, o bien el cron con el secreto
+      // compartido (mismo camino que `scheduled`, sin copy automático).
+      const sessionAuth = await assertSuperadmin(authHeader);
+      if (!sessionAuth.ok) {
+        const cronAuth = await assertCronAuthorized(req, client);
+        if (!cronAuth.ok) return sessionAuth.response;
+      }
 
       const vapidKeys = await resolveVapidKeys(client);
 
-      const title = addPersonalizedGreeting(body.title ?? 'MenuGran');
+      const title = addPersonalizedGreeting(body.title ?? 'MenuGram');
       const bodyText = addPersonalizedGreeting(body.body ?? '');
 
       const subscriptions = await getAllSubscriptions(client);
