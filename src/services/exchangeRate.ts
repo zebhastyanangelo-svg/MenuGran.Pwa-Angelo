@@ -1,10 +1,10 @@
 /**
  * Servicio central de MenuGran para obtener y cachear la tasa oficial BCV
- * (Banco Central de Venezuela) desde DolarApi Venezuela.
+ * (Banco Central de Venezuela) desde DolarVZLA.
  *
- * Endpoint oficial: https://ve.dolarapi.com/v1/dolares/oficial
- * De la respuesta JSON se extrae estrictamente la propiedad `promedio`,
- * que corresponde a la tasa del dólar oficial del BCV.
+ * Fuente de verdad: https://rates.dolarvzla.com/bcv/current.json
+ * Endpoint estático, público y sin API key. La tasa se lee de `current.usd`
+ * y la fecha de la tasa de `current.date`.
  *
  * Estrategia de resiliencia:
  * 1. Caché en memoria + localStorage con TTL de 5 horas (evita llamar a la API
@@ -19,10 +19,27 @@ export const EXCHANGE_RATE_TTL_MS = 5 * 60 * 60 * 1000; // 5 horas en milisegund
 /** Última tasa conocida; se usa solo cuando la API y la caché fallan. */
 export const DEFAULT_FALLBACK_RATE = 857.0;
 
+/**
+ * Fuente de verdad de la tasa BCV: endpoint estático, público y sin API key.
+ *
+ * Devuelve `{ current: { date, usd, eur }, previous: {...}, changePercentage: {...} }`.
+ */
+export const DOLARVZLA_BCV_URL = 'https://rates.dolarvzla.com/bcv/current.json';
+
+/** Etiqueta de `source` que identifica al endpoint de DolarVZLA. */
+export const DOLARVZLA_SOURCE = 'rates.dolarvzla.com/bcv';
+
 export interface ExchangeRateData {
   rate: number;
   timestamp: number;
   source: string;
+  /**
+   * Fecha de la tasa según la fuente (DolarVZLA la publica como `YYYY-MM-DD`).
+   *
+   * Opcional para no romper las entradas de caché escritas antes de que existiera
+   * este campo, y para los endpoints de respaldo que no publican fecha.
+   */
+  rateDate?: string;
 }
 
 export interface BCVRateResponse {
@@ -31,7 +48,32 @@ export interface BCVRateResponse {
   source: string;
 }
 
-/** Respuesta de DolarApi Venezuela para la tasa BCV. */
+/** Cotización de DolarVZLA: tasa por moneda y día al que corresponde. */
+export interface DolarVzlaQuote {
+  /** Fecha de la tasa en formato `YYYY-MM-DD`. */
+  date?: string;
+  /** Bolívares por dólar. */
+  usd?: number | string | null;
+  /** Bolívares por euro. */
+  eur?: number | string | null;
+}
+
+/**
+ * Respuesta de `https://rates.dolarvzla.com/bcv/current.json`.
+ *
+ * `current` es la tasa vigente; `previous` y `changePercentage` describen la
+ * variación respecto al día anterior y no intervienen en el cálculo de precios.
+ */
+export interface DolarVzlaResponse {
+  current?: DolarVzlaQuote;
+  previous?: DolarVzlaQuote;
+  changePercentage?: {
+    usd?: number | null;
+    eur?: number | null;
+  };
+}
+
+/** Respuesta de DolarApi Venezuela para la tasa BCV (endpoint de respaldo). */
 export interface DolarApiVenezuelaResponse {
   moneda?: string;
   fuente?: string;
@@ -71,8 +113,30 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 /**
- * Parser estricto de DolarApi Venezuela: extrae exclusivamente la
- * propiedad `promedio` de la respuesta y valida que sea una tasa positiva.
+ * Parser de DolarVZLA: la tasa vive en `current.usd` y la fecha en
+ * `current.date`.
+ *
+ * Se leen solo esos dos campos; `previous` y `changePercentage` son histórico y
+ * no intervienen en el cálculo de precios. Un `current.usd` ausente, no numérico
+ * o no positivo descarta el endpoint para que la cadena de respaldo pruebe con
+ * el siguiente, en lugar de fijar una tasa falsa en los checkout.
+ */
+function parseDolarVzlaCurrent(data: unknown, source: string): BCVRateResponse {
+  const current = asRecord(asRecord(data).current);
+  const price = toFiniteNumber(current.usd);
+
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new Error(`Tasa inválida (current.usd) recibida de ${source}`);
+  }
+
+  const dateCandidate = current.date;
+  const date = typeof dateCandidate === 'string' ? dateCandidate : new Date().toISOString();
+  return { price, date, source };
+}
+
+/**
+ * Parser del endpoint de respaldo de DolarApi Venezuela: extrae exclusivamente
+ * la propiedad `promedio` de la respuesta y valida que sea una tasa positiva.
  */
 function parseDolarApiPromedio(data: unknown, source: string): BCVRateResponse {
   const record = asRecord(data);
@@ -109,13 +173,17 @@ function parseLegacyBCVEndpoint(data: unknown, source: string): BCVRateResponse 
 }
 
 /**
- * APIs públicas para obtener la tasa BCV oficial.
- * Se intentan en orden hasta que una responda correctamente:
- * 1. DolarApi Venezuela (endpoint oficial BCV, propiedad `promedio`).
- * 2. DolarApi Venezuela (dominio legacy, misma propiedad `promedio`).
- * 3-4. Endpoints legacy de la comunidad como respaldo.
+ * Fuentes de la tasa BCV oficial, en orden de precedencia.
+ * Se intentan en orden hasta que una responda con una tasa válida:
+ * 1. DolarVZLA (fuente de verdad: endpoint estático y sin API key).
+ * 2-5. DolarApi Venezuela y endpoints legacy de la comunidad, como respaldo
+ *      para que una caída de DolarVZLA no deje la app sin tasa.
  */
 const BCV_API_ENDPOINTS: BCVApiEndpoint[] = [
+  {
+    url: DOLARVZLA_BCV_URL,
+    parser: (data) => parseDolarVzlaCurrent(data, DOLARVZLA_SOURCE),
+  },
   {
     url: 'https://ve.dolarapi.com/v1/dolares/oficial',
     parser: (data) => parseDolarApiPromedio(data, 've.dolarapi.com/oficial'),
@@ -169,12 +237,16 @@ export function getCachedExchangeRate(): ExchangeRateData | null {
 
 /**
  * Guarda la tasa BCV en memoria y localStorage con timestamp actual.
+ *
+ * `rateDate` es opcional para no romper a los llamadores que solo pasan tasa y
+ * origen, ni las entradas de caché ya guardadas.
  */
-export function setCachedExchangeRate(rate: number, source: string): void {
+export function setCachedExchangeRate(rate: number, source: string, rateDate?: string): void {
   const data: ExchangeRateData = {
     rate,
     timestamp: Date.now(),
     source,
+    ...(rateDate ? { rateDate } : {}),
   };
 
   memoryCache = data;
@@ -247,6 +319,7 @@ async function fetchBCVFromEndpoint(endpoint: BCVApiEndpoint): Promise<ExchangeR
       rate: parsed.price,
       timestamp: Date.now(),
       source: parsed.source,
+      rateDate: parsed.date,
     };
   } finally {
     clearTimeout(timeoutId);
@@ -302,7 +375,7 @@ export async function getBCVRate(): Promise<number> {
 
   try {
     const fresh = await fetchBCVRateFromAPI();
-    setCachedExchangeRate(fresh.rate, fresh.source);
+    setCachedExchangeRate(fresh.rate, fresh.source, fresh.rateDate);
     return fresh.rate;
   } catch (error) {
     console.warn('Error al obtener tasa BCV de la API:', error);
@@ -363,7 +436,7 @@ export function startHourlyBCVRefresh(): void {
   const refresh = async () => {
     try {
       const fresh = await fetchBCVRateFromAPI();
-      setCachedExchangeRate(fresh.rate, fresh.source);
+      setCachedExchangeRate(fresh.rate, fresh.source, fresh.rateDate);
     } catch {
       // Silencioso: la próxima lectura usará fallback o caché existente.
     }

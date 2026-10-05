@@ -8,6 +8,8 @@ import {
   getBCVRate,
   EXCHANGE_RATE_TTL_MS,
   DEFAULT_FALLBACK_RATE,
+  DOLARVZLA_BCV_URL,
+  DOLARVZLA_SOURCE,
 } from '../services/exchangeRate';
 
 // Mock localStorage
@@ -43,6 +45,19 @@ function jsonResponse(body: unknown, init: { ok?: boolean; status?: number; stat
     status: init.status ?? 200,
     statusText: init.statusText ?? 'OK',
     json: () => Promise.resolve(body),
+  };
+}
+
+/**
+ * Construye un cuerpo con la forma real de
+ * `https://rates.dolarvzla.com/bcv/current.json`, incluyendo `previous` y
+ * `changePercentage` para que el parser no dependa de un payload recortado.
+ */
+function dolarVzlaPayload(usd: number | string | null, date: string | null = '2026-10-05') {
+  return {
+    current: { date, usd, eur: 981.17880877 },
+    previous: { date: '2026-10-02', usd: 866.5612, eur: 973.92813268 },
+    changePercentage: { usd: 0.5548021305362009, eur: 0.7444775283416522 },
   };
 }
 
@@ -157,19 +172,11 @@ describe('exchangeRate service', () => {
   });
 
   describe('fetchBCVRateFromAPI', () => {
-    const PRIMARY_BCV_ENDPOINT = 'https://ve.dolarapi.com/v1/dolares/oficial';
+    const PRIMARY_BCV_ENDPOINT = DOLARVZLA_BCV_URL;
 
-    it('consulta el endpoint oficial de DolarApi Venezuela y extrae data.promedio', async () => {
+    it('consulta el endpoint de DolarVZLA y extrae current.usd', async () => {
       const fetchMock = vi.fn().mockResolvedValue(
-        jsonResponse({
-          moneda: 'USD',
-          fuente: 'bcv',
-          nombre: 'Dólar',
-          compra: null,
-          venta: null,
-          promedio: 857.89,
-          fechaActualizacion: '2026-09-29T00:00:00-04:00',
-        }),
+        jsonResponse(dolarVzlaPayload(871.3689)),
       );
       vi.stubGlobal('fetch', fetchMock);
 
@@ -179,12 +186,38 @@ describe('exchangeRate service', () => {
       expect(fetchMock).toHaveBeenCalledWith(PRIMARY_BCV_ENDPOINT, expect.objectContaining({
         headers: { Accept: 'application/json' },
       }));
-      expect(result.rate).toBe(857.89);
-      expect(result.source).toBe('ve.dolarapi.com/oficial');
+      expect(result.rate).toBe(871.3689);
+      expect(result.source).toBe(DOLARVZLA_SOURCE);
     });
 
-    it('acepta promedio numérico como string', async () => {
-      const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ promedio: '905.25' }));
+    it('lee la fecha de la tasa desde current.date', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        jsonResponse(dolarVzlaPayload(871.3689, '2026-10-05')),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      const result = await fetchBCVRateFromAPI();
+
+      expect(result.rateDate).toBe('2026-10-05');
+    });
+
+    it('ignora eur, previous y changePercentage al calcular la tasa', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        jsonResponse({
+          current: { date: '2026-10-05', usd: 871.3689, eur: 981.17880877 },
+          previous: { date: '2026-10-02', usd: 866.5612, eur: 973.92813268 },
+          changePercentage: { usd: 0.5548021305362009, eur: 0.7444775283416522 },
+        }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      const result = await fetchBCVRateFromAPI();
+
+      expect(result.rate).toBe(871.3689);
+    });
+
+    it('acepta current.usd numérico como string', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse(dolarVzlaPayload('905.25')));
       vi.stubGlobal('fetch', fetchMock);
 
       const result = await fetchBCVRateFromAPI();
@@ -192,17 +225,18 @@ describe('exchangeRate service', () => {
       expect(result.rate).toBe(905.25);
     });
 
-    it('ignora compra/venta y exige un promedio válido', async () => {
+    it('exige un current.usd válido y cae al siguiente endpoint', async () => {
       const fetchMock = vi.fn()
-        .mockResolvedValueOnce(jsonResponse({ compra: 850, venta: 860 }))
+        .mockResolvedValueOnce(jsonResponse({ current: { usd: null }, compra: 850, venta: 860 }))
         .mockResolvedValueOnce(jsonResponse({ promedio: 858.1 }));
       vi.stubGlobal('fetch', fetchMock);
 
       const result = await fetchBCVRateFromAPI();
 
       expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock.mock.calls[0][0]).toBe(PRIMARY_BCV_ENDPOINT);
       expect(result.rate).toBe(858.1);
-      expect(result.source).toBe('dolarapi.com/venezuela/bcv');
+      expect(result.source).toBe('ve.dolarapi.com/oficial');
     });
 
     it('hace fallback al siguiente endpoint si la red devuelve error HTTP', async () => {
@@ -223,11 +257,11 @@ describe('exchangeRate service', () => {
       vi.stubGlobal('fetch', fetchMock);
 
       await expect(fetchBCVRateFromAPI()).rejects.toThrow('Network down');
-      expect(fetchMock).toHaveBeenCalledTimes(4);
+      expect(fetchMock).toHaveBeenCalledTimes(5);
     });
 
-    it('rechaza cuando promedio es inválido en todos los endpoints', async () => {
-      const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ promedio: -1 }));
+    it('rechaza cuando current.usd es inválido en todos los endpoints', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse(dolarVzlaPayload(-1)));
       vi.stubGlobal('fetch', fetchMock);
 
       await expect(fetchBCVRateFromAPI()).rejects.toThrow(/Tasa inválida/);
@@ -242,7 +276,7 @@ describe('exchangeRate service', () => {
 
       const firstCall = fetchBCVRateFromAPI();
       const secondCall = fetchBCVRateFromAPI();
-      resolveFetch(jsonResponse({ promedio: 860.5 }));
+      resolveFetch(jsonResponse(dolarVzlaPayload(860.5)));
 
       const [first, second] = await Promise.all([firstCall, secondCall]);
 
@@ -255,12 +289,12 @@ describe('exchangeRate service', () => {
       const fetchMock = vi.fn().mockRejectedValue(new Error('Sin conexión'));
       vi.stubGlobal('fetch', fetchMock);
 
-      // El primer intento falla en todos los endpoints (4 fetch rechazados).
+      // El primer intento falla en todos los endpoints (5 fetch rechazados).
       await expect(fetchBCVRateFromAPI()).rejects.toThrow('Sin conexión');
-      expect(fetchMock).toHaveBeenCalledTimes(4);
+      expect(fetchMock).toHaveBeenCalledTimes(5);
 
       // Tras la falla, una nueva llamada debe poder consultar la API.
-      fetchMock.mockResolvedValue(jsonResponse({ promedio: 870 }));
+      fetchMock.mockResolvedValue(jsonResponse(dolarVzlaPayload(870)));
       const result = await fetchBCVRateFromAPI();
       expect(result.rate).toBe(870);
     });
@@ -268,13 +302,24 @@ describe('exchangeRate service', () => {
 
   describe('getBCVRate', () => {
     it('retorna la tasa fresca de la API y la guarda en caché', async () => {
-      const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ promedio: 859.9 }));
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse(dolarVzlaPayload(859.9)));
       vi.stubGlobal('fetch', fetchMock);
 
       const rate = await getBCVRate();
 
       expect(rate).toBe(859.9);
       expect(getCachedExchangeRate()?.rate).toBe(859.9);
+    });
+
+    it('conserva la fecha de la tasa al guardarla en caché', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        jsonResponse(dolarVzlaPayload(859.9, '2026-10-05')),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      await getBCVRate();
+
+      expect(getCachedExchangeRate()?.rateDate).toBe('2026-10-05');
     });
 
     it('usa la caché válida sin llamar a la API', async () => {
