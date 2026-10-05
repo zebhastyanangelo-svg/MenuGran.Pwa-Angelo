@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useState,
   type ChangeEvent,
@@ -17,6 +18,20 @@ import { NoMerchantWarning } from '../../components/merchant/NoMerchantWarning';
 import { MerchantQrPanel } from '../../components/merchant/MerchantQrPanel';
 import { WeeklyHoursEditor } from '../../components/merchant/WeeklyHoursEditor';
 import { createDefaultWeeklyHours, parseWeeklyHours, summarizeWeeklyHours } from '../../utils/weeklyHours';
+import {
+  MAX_BADGE_LABEL_LENGTH,
+  MAX_DISCOUNT_PERCENTAGE,
+  MAX_ESTIMATED_MINUTES,
+  MIN_DISCOUNT_PERCENTAGE,
+  PROMO_LABEL_SUGGESTIONS,
+  formatDiscountBadge,
+  formatEstimatedDeliveryRange,
+  isDiscountPercentageInputInvalid,
+  isEstimatedMinutesInputInvalid,
+  parseBadgeLabel,
+  parseDiscountPercentage,
+  parseEstimatedMinutes,
+} from '../../utils/promos';
 import type {
   GeoPoint,
   MerchantCategory,
@@ -34,7 +49,7 @@ const MERCHANT_CATEGORIES: MerchantCategory[] = [
   'Otro',
 ];
 
-type SettingsTab = 'general' | 'location' | 'identity' | 'payments' | 'qr';
+type SettingsTab = 'general' | 'location' | 'identity' | 'payments' | 'qr' | 'promos';
 
 /** Bancos frecuentes para Pago Móvil (orientativo; el campo admite texto libre). */
 const PAGO_MOVIL_BANKS: readonly string[] = [
@@ -79,7 +94,11 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
   const [pagoMovilPhone, setPagoMovilPhone] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [weeklyHours, setWeeklyHours] = useState<WeeklyHours>(() => createDefaultWeeklyHours());
+  const [promoLabel, setPromoLabel] = useState('');
+  const [discountInput, setDiscountInput] = useState('');
+  const [estimatedInput, setEstimatedInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (merchant) {
@@ -97,8 +116,40 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
       setPagoMovilIdNumber(merchant.pago_movil_id_number ?? '');
       setPagoMovilPhone(merchant.pago_movil_phone ?? '');
       setWeeklyHours(parseWeeklyHours(merchant.weekly_hours));
+      setPromoLabel(merchant.promo_label ?? '');
+      setDiscountInput(
+        merchant.discount_percentage != null
+          ? String(merchant.discount_percentage)
+          : '',
+      );
+      setEstimatedInput(
+        merchant.estimated_delivery_minutes != null
+          ? String(merchant.estimated_delivery_minutes)
+          : '',
+      );
     }
   }, [merchant]);
+
+  /**
+   * Valida los campos de promoción sobre el texto crudo del input: los
+   * parsers normalizan a `null` lo inválido, y sin esta comprobación un valor
+   * fuera de rango se descartaría en silencio al guardar.
+   */
+  const collectPromoErrors = useCallback((): Record<string, string> => {
+    const errors: Record<string, string> = {};
+
+    if (promoLabel.trim().length > MAX_BADGE_LABEL_LENGTH) {
+      errors.promo_label = `La etiqueta no puede superar ${MAX_BADGE_LABEL_LENGTH} caracteres.`;
+    }
+    if (isDiscountPercentageInputInvalid(discountInput)) {
+      errors.discount_percentage = `El descuento debe estar entre ${MIN_DISCOUNT_PERCENTAGE} y ${MAX_DISCOUNT_PERCENTAGE}%.`;
+    }
+    if (isEstimatedMinutesInputInvalid(estimatedInput)) {
+      errors.estimated_delivery_minutes = `El tiempo debe estar entre 1 y ${MAX_ESTIMATED_MINUTES} minutos.`;
+    }
+
+    return errors;
+  }, [promoLabel, discountInput, estimatedInput]);
 
   const handleImageChange = async (
     e: ChangeEvent<HTMLInputElement>,
@@ -153,6 +204,14 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
     const anyUploading = logo.uploading || banner.uploading;
     if (anyUploading) return;
 
+    const promoErrors = collectPromoErrors();
+    if (Object.keys(promoErrors).length > 0) {
+      setFormErrors(promoErrors);
+      setActiveTab('promos');
+      return;
+    }
+
+    setFormErrors({});
     setSaving(true);
     try {
       const updates: MerchantUpdate = {
@@ -168,6 +227,9 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
         pago_movil_bank: pagoMovilBank.trim() || null,
         pago_movil_id_number: pagoMovilIdNumber.trim() || null,
         pago_movil_phone: pagoMovilPhone.trim() || null,
+        promo_label: parseBadgeLabel(promoLabel),
+        discount_percentage: parseDiscountPercentage(discountInput),
+        estimated_delivery_minutes: parseEstimatedMinutes(estimatedInput),
         // `opening_time`/`closing_time` se derivan de la agenda semanal para que las
         // vistas que aún leen esas columnas sigan mostrando un rango coherente.
         ...summarizeWeeklyHours(weeklyHours),
@@ -291,9 +353,17 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
         >
           Código QR
         </button>
+        <button
+          type="button"
+          className={tabClass('promos')}
+          onClick={() => setActiveTab('promos')}
+          aria-pressed={activeTab === 'promos'}
+        >
+          Promociones
+        </button>
       </nav>
 
-      <form onSubmit={handleSave} className="space-y-5">
+      <form onSubmit={handleSave} className="space-y-5" noValidate>
         {activeTab === 'general' && (
           <GeneralTab
             name={name}
@@ -346,6 +416,18 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
             onIdNumberChange={setPagoMovilIdNumber}
             phone={pagoMovilPhone}
             onPhoneChange={setPagoMovilPhone}
+          />
+        )}
+
+        {activeTab === 'promos' && (
+          <PromosTab
+            promoLabel={promoLabel}
+            onPromoLabelChange={setPromoLabel}
+            discountInput={discountInput}
+            onDiscountInputChange={setDiscountInput}
+            estimatedInput={estimatedInput}
+            onEstimatedInputChange={setEstimatedInput}
+            errors={formErrors}
           />
         )}
 
@@ -592,6 +674,141 @@ function IdentityTab({
         >
           Comercio activo
         </label>
+      </div>
+    </div>
+  );
+}
+
+interface PromosTabProps {
+  promoLabel: string;
+  onPromoLabelChange: (value: string) => void;
+  discountInput: string;
+  onDiscountInputChange: (value: string) => void;
+  estimatedInput: string;
+  onEstimatedInputChange: (value: string) => void;
+  errors: Record<string, string>;
+}
+
+/**
+ * Señales visuales del comercio: etiqueta flotante, descuento y tiempo
+ * estimado. Todo lo que se configura aquí es lo que el marketplace muestra
+ * dinámicamente en la tarjeta del comercio y en la cabecera del local.
+ */
+function PromosTab({
+  promoLabel,
+  onPromoLabelChange,
+  discountInput,
+  onDiscountInputChange,
+  estimatedInput,
+  onEstimatedInputChange,
+  errors,
+}: PromosTabProps) {
+  const discountPreview = formatDiscountBadge(discountInput);
+  const etaPreview = formatEstimatedDeliveryRange(estimatedInput);
+
+  const inputClass = (hasError: boolean) =>
+    `w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+      hasError ? 'border-red-500' : 'border-gray-300'
+    }`;
+
+  return (
+    <div className="space-y-5">
+      <p className="rounded-lg bg-indigo-50 p-3 text-xs text-indigo-900">
+        Estas etiquetas aparecen en la tarjeta de tu comercio dentro de
+        MenuGran. Déjalas vacías si no quieres mostrarlas.
+      </p>
+
+      <div>
+        <label htmlFor="merchant-promo-label" className="block text-sm font-medium text-gray-700 mb-1">
+          Etiqueta promocional
+        </label>
+        <input
+          id="merchant-promo-label"
+          type="text"
+          list="merchant-promo-suggestions"
+          value={promoLabel}
+          onChange={(e) => onPromoLabelChange(e.target.value)}
+          placeholder="Ej. 2x1"
+          className={inputClass(Boolean(errors.promo_label))}
+        />
+        <datalist id="merchant-promo-suggestions">
+          {PROMO_LABEL_SUGGESTIONS.map((suggestion) => (
+            <option key={suggestion} value={suggestion} />
+          ))}
+        </datalist>
+        {errors.promo_label && (
+          <p className="mt-1 text-xs text-red-600">{errors.promo_label}</p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div>
+          <label htmlFor="merchant-discount" className="block text-sm font-medium text-gray-700 mb-1">
+            Descuento (%)
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id="merchant-discount"
+              type="number"
+              min={MIN_DISCOUNT_PERCENTAGE}
+              max={MAX_DISCOUNT_PERCENTAGE}
+              step={1}
+              value={discountInput}
+              onChange={(e) => onDiscountInputChange(e.target.value)}
+              placeholder="0"
+              className={inputClass(Boolean(errors.discount_percentage))}
+            />
+            {discountPreview !== null && (
+              <span
+                className="shrink-0 rounded-full bg-brand-red px-2.5 py-1 text-xs font-semibold text-white"
+                data-testid="merchant-discount-preview"
+              >
+                {discountPreview}
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-gray-500">
+            Vacío o 0 para no mostrar descuento.
+          </p>
+          {errors.discount_percentage && (
+            <p className="mt-1 text-xs text-red-600">{errors.discount_percentage}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="merchant-estimated-minutes" className="block text-sm font-medium text-gray-700 mb-1">
+            Tiempo estimado de preparación (min)
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id="merchant-estimated-minutes"
+              type="number"
+              min={1}
+              max={MAX_ESTIMATED_MINUTES}
+              step={1}
+              value={estimatedInput}
+              onChange={(e) => onEstimatedInputChange(e.target.value)}
+              placeholder="25"
+              className={inputClass(Boolean(errors.estimated_delivery_minutes))}
+            />
+            {etaPreview !== null && (
+              <span
+                className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700"
+                data-testid="merchant-eta-preview"
+              >
+                {etaPreview}
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-gray-500">
+            Se muestra como rango junto al reloj (Ej. 25 → “25-35 min”).
+          </p>
+          {errors.estimated_delivery_minutes && (
+            <p className="mt-1 text-xs text-red-600">
+              {errors.estimated_delivery_minutes}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

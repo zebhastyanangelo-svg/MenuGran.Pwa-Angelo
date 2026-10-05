@@ -147,8 +147,103 @@ describe('DishFormModal', () => {
         category_id: 'cat-1',
         is_available: true,
         image_url: null,
+        badge_label: null,
+        discount_percentage: null,
       });
     });
+  });
+
+  it('persiste la etiqueta y el descuento configurados por el comercio', async () => {
+    const handleSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <DishFormModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={handleSave}
+        categories={mockCategories}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/nombre del platillo/i), {
+      target: { value: 'Combo Parejo' },
+    });
+    fireEvent.change(screen.getByLabelText(/precio/i), {
+      target: { value: '12.00' },
+    });
+    fireEvent.change(screen.getByLabelText(/categoría/i), {
+      target: { value: 'cat-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/etiqueta/i), {
+      target: { value: 'Más vendido' },
+    });
+    fireEvent.change(screen.getByLabelText(/descuento/i), {
+      target: { value: '20' },
+    });
+
+    expect(screen.getByTestId('dish-discount-preview')).toHaveTextContent('20% OFF');
+
+    fireEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() => {
+      expect(handleSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Combo Parejo',
+          badge_label: 'Más vendido',
+          discount_percentage: 20,
+        }),
+      );
+    });
+  });
+
+  it('rechaza un descuento fuera del rango permitido', async () => {
+    const handleSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <DishFormModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={handleSave}
+        categories={mockCategories}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/nombre del platillo/i), {
+      target: { value: 'Combo Parejo' },
+    });
+    fireEvent.change(screen.getByLabelText(/precio/i), {
+      target: { value: '12.00' },
+    });
+    fireEvent.change(screen.getByLabelText(/categoría/i), {
+      target: { value: 'cat-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/descuento/i), {
+      target: { value: '250' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/El descuento debe estar entre 1 y 100/)).toBeInTheDocument();
+    });
+    expect(handleSave).not.toHaveBeenCalled();
+  });
+
+  it('muestra las etiquetas guardadas al editar un platillo', () => {
+    render(
+      <DishFormModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        categories={mockCategories}
+        initialData={{
+          ...mockProducts[0],
+          badge_label: 'Más vendido',
+          discount_percentage: 20,
+        }}
+      />
+    );
+
+    expect(screen.getByLabelText(/etiqueta/i)).toHaveValue('Más vendido');
+    expect(screen.getByLabelText(/descuento/i)).toHaveValue(20);
   });
 });
 

@@ -1,6 +1,18 @@
 import { useState, type FormEvent, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Store, Bike, Smartphone, CreditCard, Banknote, AlertCircle } from 'lucide-react';
+import {
+  MapPin,
+  Store,
+  Bike,
+  Smartphone,
+  CreditCard,
+  Banknote,
+  AlertCircle,
+  FileText,
+  Receipt,
+  ShoppingBag,
+  Ticket,
+} from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { PaymentProofUploader } from '../components/cart/PaymentProofUploader';
 import { LocationPicker } from '../components/map/LocationPicker';
@@ -157,6 +169,7 @@ export function Checkout() {
   const [outOfRange, setOutOfRange] = useState(false);
   const [deliveryCoverageError, setDeliveryCoverageError] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [customerTaxId, setCustomerTaxId] = useState('');
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -229,6 +242,7 @@ export function Checkout() {
             ? deliveryAddress.trim()
             : null,
         paymentProofUrl: proofPath,
+        customerTaxId: customerTaxId.trim() || null,
       });
 
       if (isPostHogEnabled) {
@@ -304,53 +318,102 @@ export function Checkout() {
     <div className="mx-auto max-w-lg p-4 pb-24">
       <h1 className="mb-4 text-xl font-bold text-gray-900">Finalizar pedido</h1>
 
-      <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-semibold text-slate-700">
+      <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <h2 className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
+          <ShoppingBag className="h-4 w-4 text-brand-red" aria-hidden="true" />
           Resumen ({totalItems} ítems)
         </h2>
-        <ul className="space-y-1">
-          {items.map((item) => {
-            const unitPriceUSD = parseFloat(item.product.price);
-            const lineTotalUSD = unitPriceUSD * item.quantity;
-            const lineTotalVES = bcvRate > 0 ? lineTotalUSD * bcvRate : 0;
-            return (
-              <li key={item.product.id} className="flex flex-col gap-0.5 text-sm text-gray-600">
-                <span className="flex justify-between">
-                  <span>{item.quantity} × {item.product.title}</span>
-                  <span>{formatUSD(lineTotalUSD)}</span>
-                </span>
-                {bcvRate > 0 && lineTotalVES > 0 && (
-                  <span className="text-xs text-emerald-700 ml-4">
-                    ≈ {formatVES(lineTotalVES)}
+        <div className="p-4">
+          <ul className="space-y-1">
+            {items.map((item) => {
+              const unitPriceUSD = parseFloat(item.product.price);
+              const lineTotalUSD = unitPriceUSD * item.quantity;
+              const lineTotalVES = bcvRate > 0 ? lineTotalUSD * bcvRate : 0;
+              return (
+                <li
+                  key={item.product.id}
+                  className="flex flex-col gap-0.5 text-sm text-gray-600"
+                >
+                  <span className="flex justify-between">
+                    <span>
+                      {item.quantity} × {item.product.title}
+                    </span>
+                    <span>{formatUSD(lineTotalUSD)}</span>
                   </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        {bcvRate > 0 && (
-          <div className="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-100 text-sm text-blue-900">
-            <div className="font-semibold mb-1">Tasa de cambio BCV aplicada: Bs. {bcvRate.toFixed(2)} / USD</div>
-            <div>Total en USD: {formatUSD(Number(totalAmount))}</div>
-            <div>Total a pagar en Bolívares: {formatVES(Number(totalAmount) * bcvRate)}</div>
-          </div>
-        )}
-        <div className="mt-2 flex flex-col gap-0.5 border-t border-gray-100 pt-2 text-sm font-bold text-gray-900">
-          <div className="flex justify-between">
-            <span>Total</span>
-            <span>{formatUSD(Number(totalAmount))}</span>
-          </div>
+                  {bcvRate > 0 && lineTotalVES > 0 && (
+                    <span className="ml-4 text-xs text-emerald-700">
+                      ≈ {formatVES(lineTotalVES)}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+
+          <dl className="mt-3 space-y-1.5 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+            <div className="flex items-center justify-between">
+              <dt className="inline-flex items-center gap-1.5">
+                <ShoppingBag className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                Subtotal
+              </dt>
+              <dd>{formatUSD(Number(totalAmount))}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="inline-flex items-center gap-1.5">
+                <Bike className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                Envío
+              </dt>
+              <dd>Gratis</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="inline-flex items-center gap-1.5">
+                <Receipt className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                Tarifa de servicio
+              </dt>
+              <dd>Sin cargos</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="inline-flex items-center gap-1.5">
+                <Ticket className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                Cupón
+              </dt>
+              <dd>No aplicado</dd>
+            </div>
+          </dl>
+
           {bcvRate > 0 && (
-            <span className="text-emerald-700 text-base ml-4">
-              ≈ {formatVES(Number(totalAmount) * bcvRate)}
-            </span>
+            <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
+              <div className="mb-1 font-semibold">
+                Tasa de cambio BCV aplicada: Bs. {bcvRate.toFixed(2)} / USD
+              </div>
+              <div>Total en USD: {formatUSD(Number(totalAmount))}</div>
+              <div>
+                Total a pagar en Bolívares:{' '}
+                {formatVES(Number(totalAmount) * bcvRate)}
+              </div>
+            </div>
           )}
+
+          <div className="mt-2 flex flex-col gap-0.5 border-t border-slate-100 pt-2 text-sm font-bold text-gray-900">
+            <div className="flex justify-between">
+              <span>Total</span>
+              <span>{formatUSD(Number(totalAmount))}</span>
+            </div>
+            {bcvRate > 0 && (
+              <span className="ml-4 text-base text-emerald-700">
+                ≈ {formatVES(Number(totalAmount) * bcvRate)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
+      <form className="space-y-4" onSubmit={handleSubmit} noValidate>
         <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <legend className="px-1 text-sm font-semibold text-slate-700">Tipo de pedido</legend>
+          <legend className="flex items-center gap-1.5 px-1 text-sm font-semibold text-slate-700">
+            <Bike className="h-4 w-4 text-brand-red" aria-hidden="true" />
+            Opciones de Despacho
+          </legend>
           <div className="flex rounded-full bg-slate-100 p-1">
             <button
               type="button"
@@ -393,7 +456,7 @@ export function Checkout() {
           <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <legend className="flex items-center gap-1 px-1 text-sm font-semibold text-slate-700">
               <MapPin className="h-4 w-4 text-brand-red" aria-hidden="true" />
-              Ubicación de entrega
+              Dirección de Entrega
             </legend>
             <div className="space-y-3">
               <div>
@@ -432,7 +495,10 @@ export function Checkout() {
         )}
 
         <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <legend className="px-1 text-sm font-semibold text-slate-700">Método de pago</legend>
+          <legend className="flex items-center gap-1.5 px-1 text-sm font-semibold text-slate-700">
+            <CreditCard className="h-4 w-4 text-brand-red" aria-hidden="true" />
+            Métodos de Pago
+          </legend>
           <PaymentMethodSelector
             value={paymentMethod}
             onChange={(value) => {
@@ -468,6 +534,34 @@ export function Checkout() {
               (retiro en local).
             </PaymentNotice>
           )}
+        </fieldset>
+
+        <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <legend className="flex items-center gap-1.5 px-1 text-sm font-semibold text-slate-700">
+            <FileText className="h-4 w-4 text-brand-red" aria-hidden="true" />
+            Comprobante Fiscal
+          </legend>
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="customer-tax-id" className="mb-1 block text-sm font-medium text-slate-700">
+                RIF o cédula (opcional)
+              </label>
+              <input
+                id="customer-tax-id"
+                type="text"
+                value={customerTaxId}
+                onChange={(e) => setCustomerTaxId(e.target.value)}
+                placeholder="Ej. J-12345678-0"
+                maxLength={20}
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red"
+              />
+            </div>
+            <p className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+              <Receipt className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" aria-hidden="true" />
+              Lo usamos solo para emitir tu comprobante. Déjalo vacío si prefieres
+              recibir el pedido sin datos fiscales.
+            </p>
+          </div>
         </fieldset>
 
         <TermsAcceptanceCheckbox
@@ -507,21 +601,21 @@ const PAYMENT_METHOD_OPTIONS: {
   label: string;
   icon: typeof Smartphone;
 }[] = [
-  { id: 'pago_movil', label: 'Pago Móvil', icon: Smartphone },
-  { id: 'card_pos', label: 'Punto de Venta', icon: CreditCard },
+  { id: 'card_pos', label: 'Tarjeta', icon: CreditCard },
   { id: 'cash', label: 'Efectivo', icon: Banknote },
+  { id: 'pago_movil', label: 'Transferencia', icon: Smartphone },
 ];
 
 function PaymentMethodSelector({ value, onChange }: PaymentMethodSelectorProps) {
   return (
-    <div className="grid grid-cols-3 gap-2" role="group" aria-label="Método de pago">
+    <div className="grid grid-cols-3 gap-2" role="group" aria-label="Métodos de pago">
       {PAYMENT_METHOD_OPTIONS.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
           type="button"
           onClick={() => onChange(id)}
           aria-pressed={value === id}
-          className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-3 text-xs font-medium transition ${
+          className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-medium transition ${
             value === id
               ? 'border-brand-red bg-brand-red/5 text-brand-red shadow-sm'
               : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'

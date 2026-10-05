@@ -376,4 +376,56 @@ describe('MarketplacePage', () => {
       expect(screen.getByText(/^\d+ m$/)).toBeInTheDocument();
     });
   });
+  it('filtra los comercios por la categoria seleccionada en la barra superior', async () => {
+    mocks.getCurrentGeoPointMock.mockRejectedValue(new Error('no gps'));
+    mockTableResults({
+      merchants: {
+        data: [
+          { ...buildMerchant('m1', 'La Esquina'), category: 'Restaurante' },
+          { ...buildMerchant('m2', 'Soda Bar'), category: 'Bebidas' },
+        ],
+        error: null,
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <MarketplacePage />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('La Esquina')).toBeInTheDocument();
+    expect(screen.getByText('Soda Bar')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Bebidas/ }));
+
+    expect(screen.queryByText('La Esquina')).not.toBeInTheDocument();
+    expect(screen.getByText('Soda Bar')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Todas/ }));
+
+    expect(screen.getByText('La Esquina')).toBeInTheDocument();
+  });
+
+  it('oculta la barra de categorias cuando todos los comercios comparten una', async () => {
+    mocks.getCurrentGeoPointMock.mockRejectedValue(new Error('no gps'));
+    mockTableResults({
+      merchants: {
+        data: [
+          buildMerchant('m1', 'La Esquina'),
+          buildMerchant('m2', 'La Esquina 2'),
+        ],
+        error: null,
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <MarketplacePage />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('La Esquina');
+    expect(screen.queryByRole('navigation', { name: /Categorías de comercios/i })).not.toBeInTheDocument();
+  });
 });

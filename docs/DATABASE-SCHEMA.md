@@ -78,6 +78,13 @@ CREATE TABLE public.merchants (
     pago_movil_bank TEXT,
     pago_movil_id_number TEXT,
     pago_movil_phone TEXT,
+    -- Promociones configurables desde el panel del comercio
+    -- (migration 20261005120000_merchant_and_product_promos.sql)
+    promo_label TEXT,
+    discount_percentage SMALLINT
+        CHECK (discount_percentage IS NULL OR discount_percentage BETWEEN 1 AND 100),
+    estimated_delivery_minutes SMALLINT
+        CHECK (estimated_delivery_minutes IS NULL OR estimated_delivery_minutes BETWEEN 1 AND 240),
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
@@ -111,6 +118,11 @@ CREATE TABLE public.products (
     price DECIMAL(10, 2) NOT NULL,
     image_url TEXT,
     is_available BOOLEAN DEFAULT TRUE NOT NULL,
+    -- Etiquetas del plato configurables desde el panel del comercio
+    -- (migration 20261005120000_merchant_and_product_promos.sql)
+    badge_label TEXT,
+    discount_percentage SMALLINT
+        CHECK (discount_percentage IS NULL OR discount_percentage BETWEEN 1 AND 100),
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
@@ -125,6 +137,8 @@ CREATE TABLE public.orders (
     payment_reference TEXT,
     payment_proof_url TEXT,
     total_amount DECIMAL(10, 2) NOT NULL,
+    -- RIF/cedula declarada por el cliente para el comprobante fiscal
+    customer_tax_id TEXT,
     table_number TEXT,
     delivery_location POINT,
     delivery_address_notes TEXT,

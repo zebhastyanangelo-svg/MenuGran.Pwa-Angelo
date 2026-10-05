@@ -55,7 +55,22 @@ describe('CartDrawer', () => {
     );
 
     expect(screen.getByText('Subtotal (0 ítems):')).toBeInTheDocument();
-    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0);
+  });
+
+  it('desglose subtotal, envío, tarifa y cupón con iconos', () => {
+    render(
+      <CartProvider>
+        <MemoryRouter>
+          <CartDrawer isOpen={true} onClose={vi.fn()} />
+        </MemoryRouter>
+      </CartProvider>,
+    );
+
+    expect(screen.getByText('Envío')).toBeInTheDocument();
+    expect(screen.getByText('Tarifa de servicio')).toBeInTheDocument();
+    expect(screen.getByText('Cupón')).toBeInTheDocument();
+    expect(screen.getByText('Total')).toBeInTheDocument();
   });
 
   it('llama onClose al pulsar botón cerrar', async () => {

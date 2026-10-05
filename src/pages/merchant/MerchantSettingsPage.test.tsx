@@ -634,4 +634,99 @@ describe('MerchantSettingsPage', () => {
       );
     });
   });
+  it('renderiza el tab de Promociones con los valores configurados', async () => {
+    await setMockState({
+      merchant: {
+        ...mockMerchant,
+        promo_label: '2x1',
+        discount_percentage: 20,
+        estimated_delivery_minutes: 25,
+      },
+    });
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Promociones/i }));
+
+    expect(screen.getByLabelText(/Etiqueta promocional/i)).toHaveValue('2x1');
+    expect(screen.getByLabelText(/Descuento/i)).toHaveValue(20);
+    expect(screen.getByLabelText(/Tiempo estimado/i)).toHaveValue(25);
+    expect(screen.getByTestId('merchant-discount-preview')).toHaveTextContent('20% OFF');
+    expect(screen.getByTestId('merchant-eta-preview')).toHaveTextContent('25-35 min');
+  });
+
+  it('persiste la etiqueta, el descuento y el tiempo estimado', async () => {
+    await setMockState();
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Promociones/i }));
+
+    fireEvent.change(screen.getByLabelText(/Etiqueta promocional/i), {
+      target: { value: 'Envío gratis' },
+    });
+    fireEvent.change(screen.getByLabelText(/Descuento/i), {
+      target: { value: '30' },
+    });
+    fireEvent.change(screen.getByLabelText(/Tiempo estimado/i), {
+      target: { value: '40' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }));
+
+    await waitFor(() => {
+      expect(authMocks.saveSettingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          promo_label: 'Envío gratis',
+          discount_percentage: 30,
+          estimated_delivery_minutes: 40,
+        }),
+      );
+    });
+  });
+
+  it('envía null en las promociones cuando los campos quedan vacíos', async () => {
+    await setMockState();
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }));
+
+    await waitFor(() => {
+      expect(authMocks.saveSettingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          promo_label: null,
+          discount_percentage: null,
+          estimated_delivery_minutes: null,
+        }),
+      );
+    });
+  });
+
+  it('bloquea el guardado si el descuento o el tiempo están fuera de rango', async () => {
+    await setMockState();
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Promociones/i }));
+    fireEvent.change(screen.getByLabelText(/Descuento/i), {
+      target: { value: '150' },
+    });
+    fireEvent.change(screen.getByLabelText(/Tiempo estimado/i), {
+      target: { value: '9999' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/El descuento debe estar entre 1 y 100%/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/El tiempo debe estar entre 1 y 240 minutos/),
+      ).toBeInTheDocument();
+    });
+
+    expect(authMocks.saveSettingsMock).not.toHaveBeenCalled();
+  });
 });

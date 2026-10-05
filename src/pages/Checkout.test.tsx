@@ -246,10 +246,10 @@ describe('Checkout', () => {
     expect(validCart.clearCart).toHaveBeenCalled();
   }, 10000);
 
-  it('Punto de Venta no solicita captura y registra card_pos', async () => {
+  it('Tarjeta no solicita captura y registra card_pos', async () => {
     renderCheckout();
 
-    await user.click(screen.getByRole('button', { name: /Punto de Venta/i }));
+    await user.click(screen.getByRole('button', { name: /Tarjeta/i }));
     expect(screen.queryByLabelText(/Comprobante \(foto o PDF\)/i)).not.toBeInTheDocument();
     expect(
       screen.getByText(/Pagarás con tarjeta \/ punto de venta/i),
@@ -357,5 +357,65 @@ describe('Checkout', () => {
     const alerts = await screen.findAllByText(/más de 1 km/);
     expect(alerts.length).toBeGreaterThan(0);
     expect(mockCreateOrder).not.toHaveBeenCalled();
+  }, 10000);
+  it('muestra los bloques de despacho, direccion, pago y comprobante fiscal', () => {
+    renderCheckout();
+
+    expect(screen.getByText(/Opciones de Despacho/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Dirección de Entrega/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Métodos de Pago/i)).toBeInTheDocument();
+    expect(screen.getByText(/Comprobante Fiscal/i)).toBeInTheDocument();
+  });
+
+  it('ofrece Tarjeta, Efectivo y Transferencia como metodos de pago', () => {
+    renderCheckout();
+
+    expect(screen.getByRole('button', { name: /Tarjeta/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Efectivo/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Transferencia/ })).toBeInTheDocument();
+  });
+
+  it('desglose subtotal, envio, tarifa y cupon en el resumen', () => {
+    renderCheckout();
+
+    expect(screen.getByText('Subtotal')).toBeInTheDocument();
+    expect(screen.getByText('Envío')).toBeInTheDocument();
+    expect(screen.getByText('Tarifa de servicio')).toBeInTheDocument();
+    expect(screen.getByText('Cupón')).toBeInTheDocument();
+  });
+
+  it('envia el RIF del comprobante fiscal al crear el pedido', async () => {
+    renderCheckout();
+
+    await user.type(screen.getByLabelText(/RIF o cédula/i), 'J-12345678-0');
+    await user.click(screen.getByRole('button', { name: /Tarjeta/i }));
+    await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar pedido/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockCreateOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ customerTaxId: 'J-12345678-0' }),
+      );
+    }, { timeout: 5000 });
+  }, 10000);
+
+  it('envia null el comprobante fiscal cuando el campo queda vacío', async () => {
+    renderCheckout();
+
+    await user.click(screen.getByRole('button', { name: /Retiro en local/i }));
+    await user.click(screen.getByRole('button', { name: /Efectivo/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar pedido/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockCreateOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ customerTaxId: null }),
+      );
+    }, { timeout: 5000 });
   }, 10000);
 });

@@ -219,3 +219,125 @@ describe('MerchantCard lazy image loading', () => {
     expect(bannerImg).toHaveAttribute('loading', 'lazy');
   });
 });
+describe('MerchantCard promociones', () => {
+  it('muestra el chip de descuento configurado por el comercio', () => {
+    const merchant = {
+      ...buildMerchant('m1', 'La Esquina', 'la-esquina'),
+      discount_percentage: 20,
+    };
+    render(<MerchantCard merchant={merchant} />);
+
+    expect(screen.getByText('20% OFF')).toBeInTheDocument();
+    expect(screen.getByTestId('merchant-promo-chips')).toBeInTheDocument();
+  });
+
+  it('muestra la etiqueta promocional del comercio', () => {
+    const merchant = {
+      ...buildMerchant('m1', 'La Esquina', 'la-esquina'),
+      promo_label: '2x1',
+    };
+    render(<MerchantCard merchant={merchant} />);
+
+    expect(screen.getByText('2x1')).toBeInTheDocument();
+  });
+
+  it('muestra descuento y etiqueta a la vez', () => {
+    const merchant = {
+      ...buildMerchant('m1', 'La Esquina', 'la-esquina'),
+      discount_percentage: 30,
+      promo_label: 'Envío gratis',
+    };
+    render(<MerchantCard merchant={merchant} />);
+
+    expect(screen.getByText('30% OFF')).toBeInTheDocument();
+    expect(screen.getByText('Envío gratis')).toBeInTheDocument();
+  });
+
+  it('no muestra chips cuando el comercio no tiene promociones', () => {
+    const merchant = buildMerchant('m1', 'La Esquina', 'la-esquina');
+    render(<MerchantCard merchant={merchant} />);
+
+    expect(screen.queryByTestId('merchant-promo-chips')).not.toBeInTheDocument();
+  });
+
+  it('muestra el tiempo estimado como rango junto al reloj', () => {
+    const merchant = {
+      ...buildMerchant('m1', 'La Esquina', 'la-esquina'),
+      estimated_delivery_minutes: 25,
+    };
+    render(<MerchantCard merchant={merchant} />);
+
+    expect(screen.getByTestId('merchant-eta')).toHaveTextContent('25-35 min');
+  });
+
+  it('cae en el horario del día cuando no hay tiempo estimado', () => {
+    const merchant = buildMerchant('m1', 'La Esquina', 'la-esquina');
+    render(<MerchantCard merchant={merchant} />);
+
+    expect(screen.queryByTestId('merchant-eta')).not.toBeInTheDocument();
+  });
+
+  it('el botón Pedir menú navega al comercio una sola vez', async () => {
+    const user = userEvent.setup();
+    const merchant = buildMerchant('m1', 'La Esquina', 'la-esquina');
+    const onClick = vi.fn();
+    render(<MerchantCard merchant={merchant} onClick={onClick} />);
+
+    await user.click(screen.getByRole('button', { name: /Pedir menú en La Esquina/i }));
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(onClick).toHaveBeenCalledWith(merchant);
+  });
+describe('ProductCard promociones', () => {
+  it('renderiza el descuento y el distintivo configurados', () => {
+    const product = {
+      ...buildProduct('p1', 'Hamburguesa', '12.50'),
+      discount_percentage: 20,
+      badge_label: 'Más vendido',
+    };
+    render(<ProductCard product={product} />);
+
+    const badges = screen.getByTestId('product-badges');
+    expect(badges).toHaveTextContent('20% OFF');
+    expect(badges).toHaveTextContent('Más vendido');
+  });
+
+  it('renderiza solo el descuento cuando no hay distintivo', () => {
+    const product = {
+      ...buildProduct('p1', 'Hamburguesa', '12.50'),
+      discount_percentage: 15,
+    };
+    render(<ProductCard product={product} />);
+
+    expect(screen.getByTestId('product-badges')).toHaveTextContent('15% OFF');
+  });
+
+  it('no renderiza badges cuando el plato no tiene ninguno', () => {
+    const product = buildProduct('p1', 'Hamburguesa', '12.50');
+    render(<ProductCard product={product} />);
+
+    expect(screen.queryByTestId('product-badges')).not.toBeInTheDocument();
+  });
+
+  it('el boton Agregar agrega el plato una sola vez', async () => {
+    const user = userEvent.setup();
+    const product = buildProduct('p1', 'Hamburguesa', '12.50');
+    const onSelect = vi.fn();
+    render(<ProductCard product={product} onSelect={onSelect} />);
+
+    await user.click(screen.getByRole('button', { name: /Agregar Hamburguesa al carrito/i }));
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith(product);
+  });
+
+  it('no muestra el boton Agregar sin manejador de seleccion', () => {
+    const product = buildProduct('p1', 'Hamburguesa', '12.50');
+    render(<ProductCard product={product} />);
+
+    expect(
+      screen.queryByRole('button', { name: /Agregar Hamburguesa al carrito/i }),
+    ).not.toBeInTheDocument();
+  });
+});
+});

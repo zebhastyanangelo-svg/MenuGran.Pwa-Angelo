@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Navigation, X, CheckCircle, Map, Navigation2 } from 'lucide-react';
+import { MapPin, Navigation, X, CheckCircle, Map as MapIcon, Navigation2 } from 'lucide-react';
 import { supabase, TABLE_NAMES } from '../services/supabase';
-import type { GeoPoint, MerchantRow } from '../types/database';
+import type { GeoPoint, MerchantCategory, MerchantRow } from '../types/database';
 import { SearchBar } from '../components/marketplace/SearchBar';
 import { MerchantCard } from '../components/marketplace/MerchantCard';
 import { MarketplaceSkeleton } from '../components/marketplace/MarketplaceSkeleton';
+import {
+  StoreCategoryBar,
+  type StoreCategoryOption,
+} from '../components/marketplace/StoreCategoryBar';
 import { LocationPicker } from '../components/map/LocationPicker';
 import {
   getCurrentGeoPoint,
@@ -52,6 +56,7 @@ export function MarketplacePage() {
   const navigate = useNavigate();
   const [merchants, setMerchants] = useState<MerchantRow[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<MerchantCategory | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,13 +65,21 @@ export function MarketplacePage() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [permissionState, setPermissionState] = useState<PermissionState>('prompt');
 
+/**
+ * Columnas solicitadas al marketplace. La lista es explícita para no arrastrar
+ * campos pesados del comercio; las columnas de promoción deben añadirse aquí
+ * para que `MerchantCard` pueda renderizar los chips de descuento.
+ */
+const MERCHANT_COLUMNS =
+  'id, name, slug, logo_url, banner_url, status, is_active, is_open, location, created_at, rif, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, pago_movil_bank, pago_movil_id_number, pago_movil_phone, opening_time, closing_time, weekly_hours, promo_label, discount_percentage, estimated_delivery_minutes';
+
 const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const { data, error: supabaseError } = await supabase
         .from(TABLE_NAMES.merchants)
-        .select('id, name, slug, logo_url, banner_url, status, is_active, is_open, location, created_at, rif, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, pago_movil_bank, pago_movil_id_number, pago_movil_phone, opening_time, closing_time, weekly_hours')
+        .select(MERCHANT_COLUMNS)
         .eq('is_active', true)
         .eq('status', 'active');
 
@@ -158,8 +171,14 @@ const fetchData = useCallback(async () => {
       m.merchant.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
+    // luego la categoría elegida en la barra superior
+    const byCategory =
+      selectedCategory === null
+        ? bySearch
+        : bySearch.filter((m) => m.merchant.category === selectedCategory);
+
     // sort by distance (null last) for better UX
-    const sorted = [...bySearch].sort((a, b) => {
+    const sorted = [...byCategory].sort((a, b) => {
       if (a.distance === null && b.distance === null) return 0;
       if (a.distance === null) return 1;
       if (b.distance === null) return -1;
@@ -175,7 +194,19 @@ const fetchData = useCallback(async () => {
     );
 
     return nearby;
-  }, [merchantsWithDistance, searchQuery, userLocation]);
+  }, [merchantsWithDistance, searchQuery, selectedCategory, userLocation]);
+
+  /** Categorías presentes en los resultados, ordenadas por cantidad. */
+  const categoryOptions = useMemo<StoreCategoryOption[]>(() => {
+    const counts = new Map<MerchantCategory, number>();
+    merchantsWithDistance.forEach(({ merchant }) => {
+      const category = merchant.category;
+      counts.set(category, (counts.get(category) ?? 0) + 1);
+    });
+    return [...counts.entries()]
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category));
+  }, [merchantsWithDistance]);
 
   const handleMerchantClick = useCallback(
     (merchant: MerchantRow) => {
@@ -231,7 +262,7 @@ const fetchData = useCallback(async () => {
         <section className="mb-4" aria-label="Selector de ubicación del cliente">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-              <Map className="h-4 w-4" aria-hidden="true" />
+              <MapIcon className="h-4 w-4" aria-hidden="true" />
               Tu ubicación de entrega
             </h2>
             {userLocation && (
@@ -279,6 +310,16 @@ const fetchData = useCallback(async () => {
         )}
 
         <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+
+        {!isLoading && !error && categoryOptions.length > 1 ? (
+          <div className="mt-3">
+            <StoreCategoryBar
+              options={categoryOptions}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+            />
+          </div>
+        ) : null}
 
         {isLocating && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-500">

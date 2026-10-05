@@ -82,6 +82,88 @@ describe('productForm utilities', () => {
       expect(result.isValid).toBe(false);
       expect(result.errors.category_id).toBe('Debes seleccionar una categoría.');
     });
+
+    it('acepta una etiqueta y un descuento dentro de rango', () => {
+      const product: ProductFormData = {
+        title: 'Combo 2x1',
+        description: null,
+        price: '10.00',
+        category_id: 'cat-123',
+        is_available: true,
+        image_url: null,
+        badge_label: 'Más vendido',
+        discount_percentage: 20,
+      };
+
+      const result = validateProductForm(product);
+      expect(result.isValid).toBe(true);
+      expect(Object.keys(result.errors)).toHaveLength(0);
+    });
+
+    it('acepta platillos sin etiqueta ni descuento', () => {
+      const product: ProductFormData = {
+        title: 'Pizza',
+        description: null,
+        price: '10.00',
+        category_id: 'cat-123',
+        is_available: true,
+        image_url: null,
+        badge_label: null,
+        discount_percentage: null,
+      };
+
+      expect(validateProductForm(product).isValid).toBe(true);
+    });
+
+    it('debe fallar si la etiqueta supera la longitud máxima', () => {
+      const product: ProductFormData = {
+        title: 'Pizza',
+        description: null,
+        price: '10.00',
+        category_id: 'cat-123',
+        is_available: true,
+        image_url: null,
+        badge_label: 'a'.repeat(25),
+      };
+
+      const result = validateProductForm(product);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.badge_label).toContain('no puede superar 24 caracteres');
+    });
+
+    it('debe fallar si el descuento está fuera del rango 1-100', () => {
+      const base: ProductFormData = {
+        title: 'Pizza',
+        description: null,
+        price: '10.00',
+        category_id: 'cat-123',
+        is_available: true,
+        image_url: null,
+      };
+
+      const tooLow = validateProductForm({ ...base, discount_percentage: 0 });
+      expect(tooLow.isValid).toBe(false);
+      expect(tooLow.errors.discount_percentage).toContain('entre 1 y 100');
+
+      const tooHigh = validateProductForm({ ...base, discount_percentage: 101 });
+      expect(tooHigh.isValid).toBe(false);
+      expect(tooHigh.errors.discount_percentage).toContain('entre 1 y 100');
+    });
+
+    it('debe fallar si el descuento no es un entero', () => {
+      const result = validateProductForm({
+        title: 'Pizza',
+        description: null,
+        price: '10.00',
+        category_id: 'cat-123',
+        is_available: true,
+        image_url: null,
+        discount_percentage: 12.5,
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors.discount_percentage).toBe('El descuento debe ser un número entero.');
+    });
   });
 
   describe('validateCategoryForm', () => {

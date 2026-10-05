@@ -439,4 +439,97 @@ describe('MerchantStorePage', () => {
     });
     expect(screen.getByText('L')).toBeInTheDocument();
   });
+  it('muestra los chips de promocion configurados por el comercio', async () => {
+    mockTableResults({
+      merchants: {
+        data: [
+          {
+            ...buildMerchant('merchant-1', 'La Esquina'),
+            discount_percentage: 20,
+            promo_label: '2x1',
+          },
+        ],
+        error: null,
+      },
+      categories: { data: [], error: null },
+      products: { data: [], error: null },
+    });
+
+    renderWithProviders(
+      <MemoryRouter initialEntries={['/merchant/merchant-1']}>
+        <Routes>
+          <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('store-promo-chips')).toBeInTheDocument();
+    expect(screen.getByText('20% OFF')).toBeInTheDocument();
+    expect(screen.getByText('2x1')).toBeInTheDocument();
+  });
+
+  it('no muestra chips cuando el comercio no tiene promociones', async () => {
+    mockTableResults({
+      merchants: { data: [buildMerchant('merchant-1', 'La Esquina')], error: null },
+      categories: { data: [], error: null },
+      products: { data: [], error: null },
+    });
+
+    renderWithProviders(
+      <MemoryRouter initialEntries={['/merchant/merchant-1']}>
+        <Routes>
+          <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('La Esquina');
+    expect(screen.queryByTestId('store-promo-chips')).not.toBeInTheDocument();
+  });
+
+  it('muestra el tiempo estimado del comercio junto al reloj', async () => {
+    mockTableResults({
+      merchants: {
+        data: [
+          {
+            ...buildMerchant('merchant-1', 'La Esquina'),
+            estimated_delivery_minutes: 25,
+          },
+        ],
+        error: null,
+      },
+      categories: { data: [], error: null },
+      products: { data: [], error: null },
+    });
+
+    renderWithProviders(
+      <MemoryRouter initialEntries={['/merchant/merchant-1']}>
+        <Routes>
+          <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('store-eta')).toHaveTextContent('25-35 min');
+  });
+
+  it('renderiza las subcategorias como pestanas fijas', async () => {
+    mockTableResults({
+      merchants: { data: [buildMerchant('merchant-1', 'La Esquina')], error: null },
+      categories: { data: [buildCategory('cat-1', 'Pizzas')], error: null },
+      products: { data: [], error: null },
+    });
+
+    renderWithProviders(
+      <MemoryRouter initialEntries={['/merchant/merchant-1']}>
+        <Routes>
+          <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const tab = await screen.findByRole('tab', { name: /Pizzas/i });
+    expect(tab).toBeInTheDocument();
+    expect(tab.closest('[role="tablist"]')).toHaveClass('sticky');
+  });
 });

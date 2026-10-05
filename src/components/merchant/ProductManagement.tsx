@@ -4,6 +4,7 @@ import type { CategoryRow, ProductRow } from '../../types/database';
 import { formatPrice } from '../../types/cart';
 import { DishFormModal } from './DishFormModal';
 import type { ProductFormData } from '../../utils/productForm';
+import { resolveProductBadges } from '../../utils/promos';
 
 export interface ProductManagementProps {
   merchantId: string;
@@ -98,6 +99,11 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
 
   // Crear o actualizar producto
   const handleSaveProduct = async (formData: ProductFormData) => {
+    const promoFields = {
+      badge_label: formData.badge_label ?? null,
+      discount_percentage: formData.discount_percentage ?? null,
+    };
+
     if (editingProduct) {
       // Actualización
       const { error: updateError } = await supabase
@@ -109,6 +115,7 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
           category_id: formData.category_id,
           is_available: formData.is_available,
           image_url: formData.image_url,
+          ...promoFields,
         })
         .eq('id', editingProduct.id);
 
@@ -125,6 +132,7 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
           price: formData.price,
           is_available: formData.is_available,
           image_url: formData.image_url,
+          ...promoFields,
         });
 
       if (insertError) throw insertError;
@@ -340,7 +348,9 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProducts.map((prod) => (
+          {filteredProducts.map((prod) => {
+            const promoBadges = resolveProductBadges(prod);
+            return (
             <div
               key={prod.id}
               className={`bg-white border rounded-lg shadow-sm p-4 flex flex-col justify-between transition-all ${
@@ -374,6 +384,23 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
                     <h3 className="font-bold text-gray-900 text-sm mt-1 truncate">
                       {prod.title}
                     </h3>
+
+                    {promoBadges.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {promoBadges.map((badge) => (
+                          <span
+                            key={badge.key}
+                            className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${
+                              badge.kind === 'discount'
+                                ? 'bg-brand-red text-white'
+                                : 'bg-brand-amber/30 text-amber-900'
+                            }`}
+                          >
+                            {badge.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     {prod.description && (
                       <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">
@@ -432,7 +459,8 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

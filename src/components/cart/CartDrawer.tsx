@@ -1,5 +1,16 @@
 import { useEffect, useRef } from 'react';
-import { X, ShoppingCart, Plus, Minus, Trash2, ArrowRight } from 'lucide-react';
+import {
+  X,
+  ShoppingCart,
+  Plus,
+  Minus,
+  Trash2,
+  ArrowRight,
+  Bike,
+  Receipt,
+  Ticket,
+  ShoppingBag,
+} from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 import { useNavigate } from 'react-router-dom';
 import { formatPrice } from '../../types/cart';
@@ -8,6 +19,24 @@ export interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+/**
+ * Desglose de costos con icono por concepto.
+ *
+ * La plataforma no cobra envío ni tarifa hoy, así que esas líneas se
+ * presentan como informativas en lugar de inventar importes: cualquier cargo
+ * futuro debe entrar aquí y en `createOrder` para que el total siga cuadrando.
+ */
+const SUMMARY_ROWS: readonly {
+  key: string;
+  label: string;
+  value: string;
+  icon: typeof ShoppingBag;
+}[] = [
+  { key: 'delivery', label: 'Envío', value: 'Gratis', icon: Bike },
+  { key: 'fee', label: 'Tarifa de servicio', value: 'Sin cargos', icon: Receipt },
+  { key: 'coupon', label: 'Cupón', value: 'No aplicado', icon: Ticket },
+];
 
 export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const {
@@ -171,8 +200,28 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         </main>
 
         <footer className="sticky bottom-0 border-t border-gray-200 bg-white p-4">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Subtotal ({totalItems} ítems):</span>
+          <dl className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <dt className="inline-flex items-center gap-1.5 text-gray-600">
+                <ShoppingBag className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                Subtotal ({totalItems} ítems):
+              </dt>
+              <dd className="font-semibold text-gray-900">{formatPrice(totalAmount)}</dd>
+            </div>
+
+            {SUMMARY_ROWS.map(({ key, label, value, icon: Icon }) => (
+              <div key={key} className="flex items-center justify-between">
+                <dt className="inline-flex items-center gap-1.5 text-gray-600">
+                  <Icon className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                  {label}
+                </dt>
+                <dd className="text-gray-500">{value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <div className="mt-3 flex items-center justify-between border-t border-dashed border-gray-200 pt-3 text-base">
+            <span className="font-bold text-gray-900">Total</span>
             <span className="font-bold text-gray-900">{formatPrice(totalAmount)}</span>
           </div>
 

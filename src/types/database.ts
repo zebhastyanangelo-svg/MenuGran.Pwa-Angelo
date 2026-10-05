@@ -196,6 +196,12 @@ export interface MerchantRow {
   weekly_hours?: WeeklyHours | null;
   /** Token estable del código QR del comercio. */
   qr_token?: string | null;
+  /** Etiqueta promocional flotante (ej. '2x1', 'Envío gratis'). */
+  promo_label?: string | null;
+  /** Descuento del comercio en porcentaje (1-100). */
+  discount_percentage?: number | null;
+  /** Tiempo base de preparación en minutos (1-240). */
+  estimated_delivery_minutes?: number | null;
 }
 
 export interface MerchantStaffRow {
@@ -227,6 +233,10 @@ export interface ProductRow {
   image_url: string | null;
   is_available: boolean;
   created_at: IsoTimestamp;
+  /** Distintivo del plato (ej. 'Más vendido', 'Nuevo', '2x1'). */
+  badge_label?: string | null;
+  /** Descuento del plato en porcentaje (1-100). */
+  discount_percentage?: number | null;
 }
 
 export interface OrderRow {
@@ -249,6 +259,8 @@ export interface OrderRow {
   latitude: number | null;
   /** Longitud del punto de entrega (GeoPoint.x de delivery_location). */
   longitude: number | null;
+  /** RIF o cédula declarada por el cliente para el comprobante fiscal. */
+  customer_tax_id?: string | null;
   items: readonly OrderItem[];
   created_at: IsoTimestamp;
 }
@@ -301,7 +313,7 @@ export type ProductInsert = Pick<
   'merchant_id' | 'category_id' | 'title' | 'price'
 > &
   Partial<
-    Pick<ProductRow, 'description' | 'image_url' | 'is_available'>
+    Pick<ProductRow, 'description' | 'image_url' | 'is_available' | 'badge_label' | 'discount_percentage'>
   >;
 
 export type OrderInsert = Pick<
@@ -322,6 +334,7 @@ export type OrderInsert = Pick<
       | 'delivery_address'
       | 'latitude'
       | 'longitude'
+      | 'customer_tax_id'
     > & {
       delivery_location?: DbPoint | null;
     }

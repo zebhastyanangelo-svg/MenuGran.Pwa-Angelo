@@ -1,9 +1,11 @@
+import { Plus } from 'lucide-react';
 import { useBCVRate } from '../../hooks/useExchangeRate';
 import type { ProductRow } from '../../types/database';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Skeleton } from '../ui/Skeleton';
 import { formatUSD, formatVES } from '../../utils/format';
+import { resolveProductBadges } from '../../utils/promos';
 
 export interface ProductCardProps {
   product: ProductRow;
@@ -15,6 +17,29 @@ function formatPrice(price: string): string {
   const numeric = parseFloat(price);
   if (isNaN(numeric)) return price;
   return formatUSD(numeric);
+}
+
+/** Distintivos y descuento que el comercio configuró para el plato. */
+function ProductBadges({ product }: { product: ProductRow }) {
+  const badges = resolveProductBadges(product);
+  if (badges.length === 0) return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5" data-testid="product-badges">
+      {badges.map((badge) => (
+        <span
+          key={badge.key}
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold leading-none ${
+            badge.kind === 'discount'
+              ? 'bg-brand-red text-white'
+              : 'bg-brand-amber text-slate-900'
+          }`}
+        >
+          {badge.label}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export function ProductCard({ product, categoryName, onSelect }: ProductCardProps) {
@@ -40,7 +65,7 @@ export function ProductCard({ product, categoryName, onSelect }: ProductCardProp
             }
           : undefined
       }
-      className={`flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-red ${
+      className={`group flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-card transition hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-red ${
         interactive ? 'cursor-pointer' : 'cursor-default'
       }`}
     >
@@ -48,6 +73,8 @@ export function ProductCard({ product, categoryName, onSelect }: ProductCardProp
         <h4 className="text-base font-semibold leading-snug text-slate-900">
           {product.title}
         </h4>
+
+        <ProductBadges product={product} />
 
         {(categoryName !== undefined || !product.is_available) && (
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -62,14 +89,33 @@ export function ProductCard({ product, categoryName, onSelect }: ProductCardProp
           </p>
         ) : null}
 
-        <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <span className="text-base font-bold leading-none text-slate-900">
-            {formatPrice(product.price)}
-          </span>
-          {showVES ? (
-            <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-xs font-medium leading-none text-emerald-700">
-              {formatVES(priceVES)}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="text-base font-bold leading-none text-slate-900">
+              {formatPrice(product.price)}
             </span>
+            {showVES ? (
+              <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-xs font-medium leading-none text-emerald-700">
+                {formatVES(priceVES)}
+              </span>
+            ) : null}
+          </div>
+
+          {interactive ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                // La tarjeta completa ya es un control activable; sin stopPropagation
+                // este clic dispararía onSelect dos veces.
+                event.stopPropagation();
+                onSelect(product);
+              }}
+              aria-label={`Agregar ${product.title} al carrito`}
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-red px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-red"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              Agregar
+            </button>
           ) : null}
         </div>
       </div>

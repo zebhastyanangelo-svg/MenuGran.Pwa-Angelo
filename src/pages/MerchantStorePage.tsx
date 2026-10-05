@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { CategoryRow, MerchantRow, ProductRow } from '../types/database';
-import { ArrowLeft, MapPin, Package, DollarSign } from 'lucide-react';
+import { ArrowLeft, MapPin, Package, DollarSign, Clock } from 'lucide-react';
 import { CategoryFilter } from '../components/marketplace/CategoryFilter';
 import { ProductCard, ProductCardSkeleton } from '../components/marketplace/ProductCard';
 import { SearchBar } from '../components/marketplace/SearchBar';
@@ -10,6 +10,7 @@ import { Badge } from '../components/ui/Badge';
 import { useCart } from '../hooks/useCart';
 import { useToast } from '../hooks/useToast';
 import { useBCVRate } from '../hooks/useExchangeRate';
+import { formatEstimatedDeliveryRange, resolveMerchantPromoChips } from '../utils/promos';
 
 const SKELETON_COUNT = 4;
 
@@ -118,6 +119,10 @@ export function MerchantStorePage() {
   );
 
   const isOpen = merchant?.is_active && merchant?.is_open;
+  const promoChips = merchant ? resolveMerchantPromoChips(merchant) : [];
+  const etaLabel = merchant
+    ? formatEstimatedDeliveryRange(merchant.estimated_delivery_minutes)
+    : null;
 
   if (isLoading) {
     return (
@@ -208,8 +213,10 @@ export function MerchantStorePage() {
           Volver a comercios
         </button>
 
-        <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="h-32 w-full bg-gradient-to-r from-brand-red via-[#f64a62] to-brand-amber/80">
+        {/* Cabecera: banner a sangre completa con el avatar superpuesto y
+            delimitado por el anillo blanco. */}
+        <div className="relative">
+          <div className="h-40 w-full overflow-hidden rounded-2xl bg-gradient-to-r from-brand-red via-[#f64a62] to-brand-amber/80 sm:h-48">
             {merchant.banner_url && !isBannerError ? (
               <img
                 src={merchant.banner_url}
@@ -219,71 +226,105 @@ export function MerchantStorePage() {
                 className="h-full w-full object-cover"
               />
             ) : null}
+
+            {promoChips.length > 0 ? (
+              <div
+                className="absolute left-3 top-3 flex flex-wrap gap-1.5"
+                data-testid="store-promo-chips"
+              >
+                {promoChips.map((chip) => (
+                  <span
+                    key={chip.key}
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none shadow-sm ${
+                      chip.kind === 'discount'
+                        ? 'bg-brand-red text-white'
+                        : 'bg-brand-amber text-slate-900'
+                    }`}
+                  >
+                    {chip.label}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
 
-          <div className="px-4 pb-4">
-            {/* El logo se solapa exactamente la mitad del banner (-mt-8 sobre un
-                círculo de h-16) y lo delimita un anillo blanco, de modo que ni el
-                banner ni el nombre quedan recortados. */}
-            <div className="-mt-8 flex items-center">
-              <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-md">
-                {merchant.logo_url && !isLogoError ? (
-                  <img
-                    src={merchant.logo_url}
-                    alt={`Logo de ${merchant.name}`}
-                    loading="lazy"
-                    onError={() => setIsLogoError(true)}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-red-50 text-lg font-bold text-brand-red">
-                    {merchant.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </div>
+          {/* El logo se solapa exactamente la mitad del banner (-mt-10 sobre un
+              círculo de h-20) y lo delimita un anillo blanco, de modo que ni el
+              banner ni el nombre quedan recortados. */}
+          <div className="absolute -bottom-10 left-4">
+            <div className="h-20 w-20 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-lg">
+              {merchant.logo_url && !isLogoError ? (
+                <img
+                  src={merchant.logo_url}
+                  alt={`Logo de ${merchant.name}`}
+                  loading="lazy"
+                  onError={() => setIsLogoError(true)}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div
+                  className="flex h-full w-full items-center justify-center bg-red-50 text-xl font-bold text-brand-red"
+                  aria-hidden="true"
+                >
+                  {merchant.name.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
+          </div>
+        </div>
 
-            <div className="mt-3 flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="truncate text-lg font-bold text-slate-900">{merchant.name}</h2>
-                <p className="truncate text-xs text-slate-500">@{merchant.slug}</p>
-              </div>
-              <Badge variant={isOpen ? 'success' : 'neutral'}>
-                {isOpen ? 'Abierto' : 'Cerrado'}
-              </Badge>
+        <div className="mt-14">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="truncate text-xl font-bold text-slate-900">{merchant.name}</h2>
+              <p className="truncate text-xs text-slate-500">@{merchant.slug}</p>
             </div>
+            <Badge variant={isOpen ? 'success' : 'neutral'}>
+              {isOpen ? 'Abierto' : 'Cerrado'}
+            </Badge>
+          </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-600">
-              {merchant.category && (
-                <span className="inline-flex items-center gap-1">
-                  <Package className="h-3 w-3" />
-                  {merchant.category}
-                </span>
-              )}
-              {merchant.zone && (
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  {merchant.zone}
-                </span>
-              )}
-              {bcvRate > 0 && (
-                <span className="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
-                  <DollarSign className="h-3 w-3" />
-                  Tasa BCV: Bs. {bcvRate.toFixed(2)} / USD
-                </span>
-              )}
-            </div>
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-600">
+            {merchant.category && (
+              <span className="inline-flex items-center gap-1">
+                <Package className="h-3 w-3" />
+                {merchant.category}
+              </span>
+            )}
+            {merchant.zone && (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {merchant.zone}
+              </span>
+            )}
+            {etaLabel !== null && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-brand-red/10 px-2 py-0.5 font-semibold text-brand-red"
+                data-testid="store-eta"
+              >
+                <Clock className="h-3 w-3" aria-hidden="true" />
+                {etaLabel}
+              </span>
+            )}
+            {bcvRate > 0 && (
+              <span className="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
+                <DollarSign className="h-3 w-3" />
+                Tasa BCV: Bs. {bcvRate.toFixed(2)} / USD
+              </span>
+            )}
           </div>
         </div>
 
         <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
         {categories.length > 0 ? (
-          <div className="mt-5">
+          <div className="mt-4">
             <CategoryFilter
               categories={categories}
               selectedCategoryId={selectedCategoryId}
               onSelectCategory={setSelectedCategoryId}
+              variant="tabs"
+              sticky
             />
           </div>
         ) : null}

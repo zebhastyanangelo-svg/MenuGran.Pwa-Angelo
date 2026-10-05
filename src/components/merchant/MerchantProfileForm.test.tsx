@@ -177,6 +177,9 @@ describe('MerchantProfileForm', () => {
       name: 'Pizzería Actualizada',
       logo_url: null,
       banner_url: null,
+      promo_label: null,
+      discount_percentage: null,
+      estimated_delivery_minutes: null,
     });
     expect(builder.update.mock.results[0].value.eq).toHaveBeenCalled();
   }, 10000);
@@ -203,5 +206,87 @@ describe('MerchantProfileForm', () => {
         screen.getByText(/La API key de ImgBB no está configurada./i),
       ).toBeInTheDocument();
     });
+  });
+
+  it('persiste la etiqueta, el descuento y el tiempo estimado del comercio', async () => {
+    mockSupabase();
+
+    render(<MerchantProfileForm merchantId="merchant-123" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Guardar cambios')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText(/Etiqueta promocional/i), {
+      target: { value: '2x1' },
+    });
+    fireEvent.change(screen.getByLabelText(/Descuento/i), {
+      target: { value: '20' },
+    });
+    fireEvent.change(screen.getByLabelText(/Tiempo estimado/i), {
+      target: { value: '25' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Perfil actualizado correctamente/i)).toBeInTheDocument();
+    });
+
+    const builder = (supabase.from as ReturnType<typeof vi.fn>).mock
+      .results[0].value;
+    expect(builder.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        promo_label: '2x1',
+        discount_percentage: 20,
+        estimated_delivery_minutes: 25,
+      }),
+    );
+  });
+
+  it('bloquea el guardado si el descuento está fuera de rango', async () => {
+    mockSupabase();
+
+    render(<MerchantProfileForm merchantId="merchant-123" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Guardar cambios')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText(/Descuento/i), {
+      target: { value: '300' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/El descuento debe estar entre 1 y 100%/),
+      ).toBeInTheDocument();
+    });
+
+    const builder = (supabase.from as ReturnType<typeof vi.fn>).mock
+      .results[0].value;
+    expect(builder.update).not.toHaveBeenCalled();
+  });
+
+  it('muestra los valores ya configurados en el formulario', async () => {
+    mockSupabase({
+      merchant: {
+        ...mockMerchant,
+        promo_label: 'Envío gratis',
+        discount_percentage: 15,
+        estimated_delivery_minutes: 30,
+      },
+    });
+
+    render(<MerchantProfileForm merchantId="merchant-123" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Guardar cambios')).toBeInTheDocument();
+    });
+
+    expect(screen.getByLabelText(/Etiqueta promocional/i)).toHaveValue('Envío gratis');
+    expect(screen.getByLabelText(/Descuento/i)).toHaveValue(15);
+    expect(screen.getByLabelText(/Tiempo estimado/i)).toHaveValue(30);
   });
 });

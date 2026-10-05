@@ -1,3 +1,9 @@
+import {
+  MAX_BADGE_LABEL_LENGTH,
+  MAX_DISCOUNT_PERCENTAGE,
+  MIN_DISCOUNT_PERCENTAGE,
+} from './promos';
+
 export interface ProductFormData {
   title: string;
   description: string | null;
@@ -5,6 +11,10 @@ export interface ProductFormData {
   category_id: string;
   is_available: boolean;
   image_url: string | null;
+  /** Distintivo del plato (ej. 'Más vendido'). `null` si no tiene. */
+  badge_label?: string | null;
+  /** Descuento porcentual (1-100). `null` si no tiene. */
+  discount_percentage?: number | null;
 }
 
 export interface CategoryFormData {
@@ -52,6 +62,27 @@ export function validateProductForm(data: ProductFormData): ValidationResult {
   const trimmedCategoryId = data.category_id ? data.category_id.trim() : '';
   if (!trimmedCategoryId) {
     errors.category_id = 'Debes seleccionar una categoría.';
+  }
+
+  if (data.badge_label) {
+    const trimmedBadge = data.badge_label.trim();
+    if (trimmedBadge.length > MAX_BADGE_LABEL_LENGTH) {
+      errors.badge_label = `La etiqueta no puede superar ${MAX_BADGE_LABEL_LENGTH} caracteres.`;
+    }
+  }
+
+  if (
+    data.discount_percentage !== null &&
+    data.discount_percentage !== undefined &&
+    !Number.isInteger(data.discount_percentage)
+  ) {
+    errors.discount_percentage = 'El descuento debe ser un número entero.';
+  } else if (
+    typeof data.discount_percentage === 'number' &&
+    (data.discount_percentage < MIN_DISCOUNT_PERCENTAGE ||
+      data.discount_percentage > MAX_DISCOUNT_PERCENTAGE)
+  ) {
+    errors.discount_percentage = `El descuento debe estar entre ${MIN_DISCOUNT_PERCENTAGE} y ${MAX_DISCOUNT_PERCENTAGE}%.`;
   }
 
   return {
