@@ -291,13 +291,15 @@ interface MetricCardProps {
 
 function MetricCard({ icon, label, value, testId }: MetricCardProps) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+    <div className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
       <div className="flex items-center gap-2">
-        {icon}
-        <span className="text-sm text-gray-500">{label}</span>
+        <span className="shrink-0" aria-hidden="true">
+          {icon}
+        </span>
+        <span className="min-w-0 text-sm text-gray-500">{label}</span>
       </div>
       <p
-        className="mt-2 text-2xl font-bold text-gray-900"
+        className="mt-2 break-words text-2xl font-bold text-gray-900"
         data-testid={testId}
       >
         {value}

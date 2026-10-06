@@ -596,28 +596,30 @@ export function OrderTracker() {
           <h2 className="text-xl font-bold mb-4 text-gray-800">Resumen de la Orden</h2>
 
           <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Fecha:</span>
-              <span className="font-medium">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="shrink-0 text-gray-600">Fecha:</span>
+              <span className="min-w-0 break-words text-right font-medium">
                 {new Date(order.created_at).toLocaleDateString()}{' '}
                 {new Date(order.created_at).toLocaleTimeString()}
               </span>
             </div>
 
-            <div className="flex justify-between">
-              <span className="text-gray-600">Tipo:</span>
-              <span className="font-medium capitalize">{order.type}</span>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="shrink-0 text-gray-600">Tipo:</span>
+              <span className="min-w-0 break-words text-right font-medium capitalize">
+                {order.type}
+              </span>
             </div>
 
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-gray-600">Método de pago:</span>
-              <span className="flex items-center gap-2">
-                <span className="font-medium">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="shrink-0 text-gray-600">Método de pago:</span>
+              <span className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+                <span className="break-words font-medium">
                   {getPaymentMethodLabel(order.payment_method)}
                 </span>
                 {order.payment_method === 'pago_movil' &&
                   order.payment_reference && (
-                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                    <span className="shrink-0 rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
                       Ref: {order.payment_reference}
                     </span>
                   )}
@@ -629,9 +631,9 @@ export function OrderTracker() {
               fee={order.delivery_fee ?? '0'}
             />
 
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total:</span>
-              <span className="text-right">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="shrink-0 text-gray-600">Total:</span>
+              <span className="min-w-0 text-right">
                 <span className="block font-medium text-lg">
                   {formatUSD(Number(order.total_amount))}
                 </span>
@@ -647,29 +649,22 @@ export function OrderTracker() {
             </div>
 
             {order.table_number && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Mesa:</span>
-                <span className="font-medium">#{order.table_number}</span>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <span className="shrink-0 text-gray-600">Mesa:</span>
+                <span className="min-w-0 break-words font-medium">#{order.table_number}</span>
               </div>
             )}
 
             {(order.delivery_address || order.delivery_address_notes) && (
-              <div className="flex justify-between gap-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <span className="shrink-0 text-gray-600">
                   {order.delivery_address
                     ? 'Dirección de entrega:'
                     : 'Instrucciones de entrega:'}
                 </span>
-                <span className="text-right text-gray-700">
+                <span className="min-w-0 break-words text-right text-gray-700">
                   {order.delivery_address ?? order.delivery_address_notes}
                 </span>
-              </div>
-            )}
-
-            {order.customer_tax_id && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">RIF / Cédula:</span>
-                <span className="font-medium">{order.customer_tax_id}</span>
               </div>
             )}
           </div>
@@ -680,14 +675,16 @@ export function OrderTracker() {
           {order.items && order.items.length > 0 ? (
             <div className="space-y-3">
               {order.items.map((item, index) => (
-                <div key={`${item.product_id}-${index}`} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-                  <div>
-                    <p className="font-semibold text-gray-800">
+                <div key={`${item.product_id}-${index}`} className="flex items-center justify-between gap-3 border-b border-gray-100 py-2 last:border-0">
+                  <div className="min-w-0">
+                    <p className="break-words font-semibold text-gray-800">
                       {productNames[item.product_id] ?? `Producto #${item.product_id.slice(0, 8)}`}
                     </p>
                     <p className="text-sm text-gray-500">Cantidad: {item.quantity} x ${item.unit_price}</p>
                   </div>
-                  <p className="font-bold text-gray-900">${(item.quantity * item.unit_price).toFixed(2)}</p>
+                  <p className="shrink-0 break-words text-right font-bold text-gray-900">
+                    ${(item.quantity * item.unit_price).toFixed(2)}
+                  </p>
                 </div>
               ))}
               <div className="mt-4 pt-3 border-t border-gray-200 text-right">
@@ -703,28 +700,30 @@ export function OrderTracker() {
         <section className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
           <h2 className="text-xl font-bold mb-4 text-gray-800">Información del Comercio</h2>
           <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Comercio:</span>
-              <span className="font-medium">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="shrink-0 text-gray-600">Comercio:</span>
+              <span className="min-w-0 break-words text-right font-medium">
                 {merchantName ?? `Comercio #${order.merchant_id.slice(0, 8)}`}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Cliente:</span>
-              <span className="font-medium">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="shrink-0 text-gray-600">Cliente:</span>
+              <span className="min-w-0 break-words text-right font-medium">
                 {customerName ?? (order.customer_id ? `Cliente #${order.customer_id.slice(0, 8)}` : 'Cliente invitado')}
               </span>
             </div>
             {customerPhone && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Teléfono:</span>
-                <span className="font-medium">{customerPhone}</span>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <span className="shrink-0 text-gray-600">Teléfono:</span>
+                <span className="min-w-0 break-words font-medium">{customerPhone}</span>
               </div>
             )}
             {customerDocumentId && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Cédula:</span>
-                <span className="font-medium font-mono">{customerDocumentId}</span>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <span className="shrink-0 text-gray-600">Cédula:</span>
+                <span className="min-w-0 break-words font-mono font-medium">
+                  {customerDocumentId}
+                </span>
               </div>
             )}
           </div>

@@ -8,8 +8,6 @@ import {
   CreditCard,
   Banknote,
   AlertCircle,
-  FileText,
-  Receipt,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { PaymentProofUploader } from '../components/cart/PaymentProofUploader';
@@ -203,7 +201,6 @@ export function Checkout() {
   const [outOfRange, setOutOfRange] = useState(false);
   const [deliveryCoverageError, setDeliveryCoverageError] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [customerTaxId, setCustomerTaxId] = useState('');
 
   const setOrderType = useCallback(
     (value: OrderType) => {
@@ -301,7 +298,6 @@ export function Checkout() {
             ? deliveryAddress.trim()
             : null,
         paymentProofUrl: proofPath,
-        customerTaxId: customerTaxId.trim() || null,
       });
 
       if (isPostHogEnabled) {
@@ -517,34 +513,6 @@ export function Checkout() {
               (retiro en local).
             </PaymentNotice>
           )}
-        </fieldset>
-
-        <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <legend className="flex items-center gap-1.5 px-1 text-sm font-semibold text-slate-700">
-            <FileText className="h-4 w-4 text-brand-red" aria-hidden="true" />
-            Comprobante Fiscal
-          </legend>
-          <div className="space-y-3">
-            <div>
-              <label htmlFor="customer-tax-id" className="mb-1 block text-sm font-medium text-slate-700">
-                RIF o cédula (opcional)
-              </label>
-              <input
-                id="customer-tax-id"
-                type="text"
-                value={customerTaxId}
-                onChange={(e) => setCustomerTaxId(e.target.value)}
-                placeholder="Ej. J-12345678-0"
-                maxLength={20}
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red"
-              />
-            </div>
-            <p className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-              <Receipt className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" aria-hidden="true" />
-              Lo usamos solo para emitir tu comprobante. Déjalo vacío si prefieres
-              recibir el pedido sin datos fiscales.
-            </p>
-          </div>
         </fieldset>
 
         <TermsAcceptanceCheckbox

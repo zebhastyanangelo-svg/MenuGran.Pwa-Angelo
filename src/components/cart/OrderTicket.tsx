@@ -29,12 +29,14 @@ function SummaryRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2">
-      <dt className="inline-flex items-center gap-1.5">
-        {icon}
-        {label}
+    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
+      <dt className="inline-flex min-w-0 items-center gap-1.5">
+        <span className="shrink-0" aria-hidden="true">
+          {icon}
+        </span>
+        <span>{label}</span>
       </dt>
-      <dd>{children}</dd>
+      <dd className="min-w-0 break-words">{children}</dd>
     </div>
   );
 }
@@ -67,8 +69,13 @@ export function OrderTicket({
   return (
     <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <h2 className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
-        <ShoppingBag className="h-4 w-4 text-brand-red" aria-hidden="true" />
-        Resumen ({items.reduce((sum, item) => sum + item.quantity, 0)} ítems)
+        <ShoppingBag
+          className="h-4 w-4 shrink-0 text-brand-red"
+          aria-hidden="true"
+        />
+        <span className="min-w-0 break-words">
+          Resumen ({items.reduce((sum, item) => sum + item.quantity, 0)} ítems)
+        </span>
       </h2>
 
       <div className="p-4">
@@ -149,9 +156,11 @@ export function OrderTicket({
         </dl>
 
         <div className="mt-3 flex flex-col gap-0.5 border-t border-slate-100 pt-2 text-sm font-bold text-gray-900">
-          <div className="flex justify-between gap-2">
-            <span>Total</span>
-            <span data-testid="ticket-total-usd">{formatUSD(total)}</span>
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="shrink-0">Total</span>
+            <span className="min-w-0 break-words text-right" data-testid="ticket-total-usd">
+              {formatUSD(total)}
+            </span>
           </div>
           {hasRate && (
             <>

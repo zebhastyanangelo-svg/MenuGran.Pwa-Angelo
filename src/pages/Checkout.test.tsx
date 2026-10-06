@@ -385,13 +385,15 @@ describe('Checkout', () => {
     expect(alerts.length).toBeGreaterThan(0);
     expect(mockCreateOrder).not.toHaveBeenCalled();
   }, 10000);
-  it('muestra los bloques de despacho, direccion, pago y comprobante fiscal', () => {
+  it('muestra los bloques de despacho, direccion y pago sin datos fiscales', () => {
     renderCheckout();
 
     expect(screen.getByText(/Opciones de Despacho/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Dirección de Entrega/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Métodos de Pago/i)).toBeInTheDocument();
-    expect(screen.getByText(/Comprobante Fiscal/i)).toBeInTheDocument();
+    // MenuGran no emite comprobantes fiscales: nada de esa opción en el checkout.
+    expect(screen.queryByText(/Comprobante Fiscal/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/RIF o cédula/i)).not.toBeInTheDocument();
   });
 
   it('ofrece Tarjeta, Efectivo y Pago Móvil como metodos de pago', () => {
@@ -481,25 +483,7 @@ describe('Checkout', () => {
     expect(screen.getByText(/No aplica \(retiro en local\)/)).toBeInTheDocument();
   });
 
-  it('envia el RIF del comprobante fiscal al crear el pedido', async () => {
-    renderCheckout();
-
-    await user.type(screen.getByLabelText(/RIF o cédula/i), 'J-12345678-0');
-    await user.click(screen.getByRole('button', { name: /Tarjeta/i }));
-    await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
-
-    const form = screen.getByRole('button', { name: /Confirmar pedido/i }).closest('form');
-    if (!form) throw new Error('No se encontró el formulario');
-    fireEvent.submit(form);
-
-    await waitFor(() => {
-      expect(mockCreateOrder).toHaveBeenCalledWith(
-        expect.objectContaining({ customerTaxId: 'J-12345678-0' }),
-      );
-    }, { timeout: 5000 });
-  }, 10000);
-
-  it('envia null el comprobante fiscal cuando el campo queda vacío', async () => {
+  it('crea el pedido sin enviar datos de comprobante fiscal', async () => {
     renderCheckout();
 
     await user.click(screen.getByRole('button', { name: /Retiro en local/i }));
@@ -510,10 +494,11 @@ describe('Checkout', () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(mockCreateOrder).toHaveBeenCalledWith(
-        expect.objectContaining({ customerTaxId: null }),
-      );
+      expect(mockCreateOrder).toHaveBeenCalled();
     }, { timeout: 5000 });
+
+    const [params] = mockCreateOrder.mock.calls[0];
+    expect(params).not.toHaveProperty('customerTaxId');
   }, 10000);
 
   afterEach(() => {

@@ -17,8 +17,6 @@ interface CreateOrderParams {
   deliveryAddressNotes?: string | null;
   tableNumber?: string | null;
   paymentProofUrl?: string | null;
-  /** RIF/cédula declarada por el cliente para el comprobante fiscal. */
-  customerTaxId?: string | null;
   /**
    * Snapshot del costo de envío cobrado (USD). El checkout lo resuelve desde
    * `merchants.delivery_fee` y lo congela aquí para que cambiar la tarifa del
@@ -54,7 +52,6 @@ export async function createOrder(params: CreateOrderParams): Promise<string> {
     delivery_address: params.deliveryAddress ?? undefined,
     delivery_address_notes: params.deliveryAddressNotes ?? undefined,
     table_number: params.tableNumber ?? undefined,
-    customer_tax_id: params.customerTaxId ?? undefined,
   };
 
   const { data, error } = await supabase

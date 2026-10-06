@@ -22,9 +22,11 @@ function MetricRow({
   value: string;
 }) {
   return (
-    <div className="flex justify-between gap-2 py-2">
-      <span className="text-sm text-slate-600">{label}</span>
-      <span className="text-sm font-semibold text-slate-900">{value}</span>
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2">
+      <span className="min-w-0 text-sm text-slate-600">{label}</span>
+      <span className="shrink-0 break-words text-sm font-semibold text-slate-900">
+        {value}
+      </span>
     </div>
   );
 }
@@ -64,12 +66,12 @@ function MetricsGrid({ metrics }: { metrics: MerchantMetrics }) {
         value={formatCurrency(metrics.totalRevenue)}
       />
       <MetricRow label="Pedidos totales" value={String(metrics.totalOrders)} />
-      <div className="flex justify-between gap-2 py-2">
-        <span className="text-sm text-slate-600">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2">
+        <span className="min-w-0 text-sm text-slate-600">
           Desglose completados vs cancelados
         </span>
-        <span className="text-sm font-semibold text-slate-900">
-          <Badge variant="success" className="mr-1">
+        <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-slate-900">
+          <Badge variant="success">
             {metrics.completedOrders} completados
           </Badge>
           <Badge variant="danger">{metrics.cancelledOrders} cancelados</Badge>
@@ -79,10 +81,10 @@ function MetricsGrid({ metrics }: { metrics: MerchantMetrics }) {
         label="Ticket promedio"
         value={formatCurrency(metrics.averageTicket)}
       />
-      <div className="flex justify-between gap-2 py-2">
-        <span className="text-sm text-slate-600">Nivel de actividad</span>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2">
+        <span className="min-w-0 text-sm text-slate-600">Nivel de actividad</span>
         <span
-          className={`text-sm font-semibold ${activityColor(metrics.activityLevel)}`}
+          className={`shrink-0 break-words text-sm font-semibold ${activityColor(metrics.activityLevel)}`}
         >
           {metrics.activityLevel} ({metrics.ordersLast30Days} en 30 días)
         </span>
@@ -138,8 +140,11 @@ export function MerchantMetricsModal({
       }
     >
       <div className="flex items-start gap-3">
-        <ClipboardList className="mt-0.5 h-5 w-5 text-brand-red" aria-hidden="true" />
-        {body}
+        <ClipboardList
+          className="mt-0.5 h-5 w-5 shrink-0 text-brand-red"
+          aria-hidden="true"
+        />
+        <div className="min-w-0 flex-1">{body}</div>
       </div>
     </Modal>
   );

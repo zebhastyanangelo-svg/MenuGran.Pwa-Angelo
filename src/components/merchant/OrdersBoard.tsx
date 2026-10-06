@@ -555,81 +555,75 @@ export function OrdersBoard({
       >
         {selectedOrder && (
           <div className="space-y-4 max-h-[70vh] overflow-y-auto">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-500">ID</p>
-                <p className="font-mono text-gray-900">{selectedOrder.id}</p>
+                <p className="break-all font-mono text-gray-900">{selectedOrder.id}</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-500">Código</p>
                 <p className="font-mono text-gray-900">{selectedOrder.id.slice(0, 4).toUpperCase()}</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-500">Cliente</p>
-                <p className="text-gray-900">{getCustomerLabel(selectedOrder)}</p>
+                <p className="break-words text-gray-900">{getCustomerLabel(selectedOrder)}</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-500">Email</p>
-                <p className="text-gray-900">{selectedOrder.profiles?.email ?? '—'}</p>
+                <p className="break-all text-gray-900">{selectedOrder.profiles?.email ?? '—'}</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-500">Cédula</p>
-                <p className="text-gray-900">{selectedOrder.profiles?.ci ?? '—'}</p>
+                <p className="break-all text-gray-900">{selectedOrder.profiles?.ci ?? '—'}</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-500">Teléfono</p>
-                <p className="text-gray-900">{selectedOrder.profiles?.phone ?? '—'}</p>
+                <p className="break-words text-gray-900">{selectedOrder.profiles?.phone ?? '—'}</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-500">Tipo</p>
-                <p className="text-gray-900 capitalize">{selectedOrder.type.replace('_', ' ')}</p>
+                <p className="break-words text-gray-900 capitalize">{selectedOrder.type.replace('_', ' ')}</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-500">Estado</p>
-                <p className="text-gray-900 capitalize">{getOrderStatusLabel(selectedOrder.status)}</p>
+                <p className="break-words text-gray-900 capitalize">{getOrderStatusLabel(selectedOrder.status)}</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-500">Método de pago</p>
-                <p className="text-gray-900">{getPaymentMethodLabel(selectedOrder.payment_method)}</p>
+                <p className="break-words text-gray-900">{getPaymentMethodLabel(selectedOrder.payment_method)}</p>
               </div>
               {selectedOrder.payment_reference && (
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-500">Referencia</p>
-                  <p className="text-gray-900">{selectedOrder.payment_reference}</p>
+                  <p className="break-all text-gray-900">{selectedOrder.payment_reference}</p>
                 </div>
               )}
               {Number(selectedOrder.delivery_fee ?? 0) > 0 && (
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-500">Envío</p>
-                  <p className="text-gray-900">
+                  <p className="break-words text-gray-900">
                     {formatPrice(selectedOrder.delivery_fee ?? '0')}
                   </p>
                 </div>
               )}
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-500">Total (USD)</p>
-                <p className="font-semibold text-gray-900">{formatPrice(selectedOrder.total_amount)}</p>
+                <p className="break-words font-semibold text-gray-900">{formatPrice(selectedOrder.total_amount)}</p>
               </div>
               {bcvRate > 0 && (
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-500">Total (Bs.)</p>
-                  <p className="font-semibold text-emerald-700">{formatVES(Number(selectedOrder.total_amount) * bcvRate)}</p>
+                  <p className="break-words font-semibold text-emerald-700">{formatVES(Number(selectedOrder.total_amount) * bcvRate)}</p>
                 </div>
               )}
               {(selectedOrder.delivery_address ||
                 selectedOrder.delivery_address_notes) && (
-                <div className="sm:col-span-2">
+                <div className="min-w-0 sm:col-span-2">
                   <p className="text-sm font-medium text-gray-500">Dirección de entrega</p>
-                  <p className="text-gray-900 whitespace-pre-line">
+                  <p className="break-words whitespace-pre-line text-gray-900">
                     {selectedOrder.delivery_address ??
                       selectedOrder.delivery_address_notes}
                   </p>
-                </div>
-              )}
-              {selectedOrder.customer_tax_id && (
-                <div>
-                  <p className="text-sm font-medium text-gray-500">RIF / Cédula del cliente</p>
-                  <p className="text-gray-900">{selectedOrder.customer_tax_id}</p>
                 </div>
               )}
               {selectedOrder.payment_proof_url && (

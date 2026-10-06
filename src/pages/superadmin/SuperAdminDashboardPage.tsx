@@ -21,15 +21,20 @@ interface MetricCardProps {
 
 function MetricCard({ icon, label, value }: MetricCardProps) {
   return (
-    <Card className="p-5 flex items-center gap-4">
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-50 text-brand-red">
-        {icon}
-      </div>
-      <div>
-        <p className="text-sm text-slate-500">{label}</p>
-        <p className="text-2xl font-bold text-slate-900" data-testid={`metric-${label}`}>
-          {value}
-        </p>
+    <Card className="p-5">
+      <div className="flex items-center gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-50 text-brand-red">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm text-slate-500">{label}</p>
+          <p
+            className="break-words text-2xl font-bold text-slate-900"
+            data-testid={`metric-${label}`}
+          >
+            {value}
+          </p>
+        </div>
       </div>
     </Card>
   );
