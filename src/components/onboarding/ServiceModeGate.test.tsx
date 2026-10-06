@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { ServiceModeGate } from './ServiceModeGate';
 import {
   SERVICE_MODE_KEY,
+  SERVICE_MODE_SESSION_KEY,
   clearServiceMode,
   isServiceModeSessionResolved,
   readServiceMode,
@@ -70,8 +71,10 @@ describe('ServiceModeGate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorageMock.clear();
-    // La resolución de sesión vive en memoria del módulo: hay que resetearla
-    // para que cada prueba empiece como un arranque fresco de la app.
+    sessionStorage.clear();
+    // La resolución de sesión se guarda en `sessionStorage` y se refleja en el
+    // módulo: hay que resetearla para que cada prueba arranque como una
+    // pestaña nueva.
     clearServiceMode();
   });
 
@@ -164,5 +167,35 @@ describe('ServiceModeGate', () => {
     });
 
     expect(screen.getByTestId('service-mode-chooser')).toBeInTheDocument();
+  });
+
+  it('guarda la elección en sessionStorage para sobrevivir a salir y volver de la PWA', async () => {
+    setAuth({ id: 'user-1' }, customerProfile);
+
+    renderGate();
+    fireEvent.click(screen.getByTestId('service-mode-delivery'));
+
+    // Al volver de la galería la PWA puede recargarse: el módulo se recrea y
+    // lee la bandera de `sessionStorage` en lugar de la memoria de JS.
+    expect(sessionStorage.getItem(SERVICE_MODE_SESSION_KEY)).toBe('true');
+    vi.resetModules();
+    const reloaded = await import('../../utils/serviceMode');
+
+    expect(reloaded.isServiceModeSessionResolved()).toBe(true);
+  });
+
+  it('vuelve a preguntar en una pestaña nueva (sessionStorage se limpia al cerrar)', async () => {
+    setAuth({ id: 'user-1' }, customerProfile);
+
+    renderGate();
+    fireEvent.click(screen.getByTestId('service-mode-in-store'));
+
+    // Cerrar la pestaña borra `sessionStorage`; con la memoria del módulo
+    // recreada, la siguiente apertura vuelve a preguntar la modalidad.
+    sessionStorage.clear();
+    vi.resetModules();
+    const reloaded = await import('../../utils/serviceMode');
+
+    expect(reloaded.isServiceModeSessionResolved()).toBe(false);
   });
 });

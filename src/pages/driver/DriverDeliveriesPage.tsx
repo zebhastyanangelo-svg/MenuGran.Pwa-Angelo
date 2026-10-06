@@ -220,7 +220,11 @@ export function DriverDeliveriesPage() {
         </div>
 
         {/* Tab Navigation */}
-        <nav className="mt-4 flex gap-1 overflow-x-auto pb-2" role="tablist" aria-label="Estados de entrega">
+        <nav
+    className="no-scrollbar mt-4 flex snap-x gap-1 overflow-x-auto pb-2"
+    role="tablist"
+    aria-label="Estados de entrega"
+  >
           {TABS.map((tab) => {
             const orders = getOrdersForTab(tab.key)
             const isActive = activeTab === tab.key
@@ -232,7 +236,7 @@ export function DriverDeliveriesPage() {
                 aria-controls={`panel-${tab.key}`}
                 id={`tab-${tab.key}`}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+                className={`flex shrink-0 snap-start items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
                   isActive
                     ? `${tab.color} shadow-sm`
                     : 'text-gray-500 hover:bg-gray-100'

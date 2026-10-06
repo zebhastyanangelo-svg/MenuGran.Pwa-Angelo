@@ -285,7 +285,7 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
   };
 
   const tabClass = (tab: SettingsTab) =>
-    `px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+    `shrink-0 snap-start whitespace-nowrap px-4 py-2 rounded-md text-sm font-medium transition-colors ${
       activeTab === tab
         ? 'bg-indigo-600 text-white shadow-sm'
         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -337,67 +337,77 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
         </div>
       </header>
 
-      <nav
-        className="flex gap-2 mb-6 bg-white p-1 rounded-lg shadow-sm"
-        aria-label="Secciones de configuración"
-      >
-        <button
-          type="button"
-          className={tabClass('general')}
-          onClick={() => setActiveTab('general')}
-          aria-pressed={activeTab === 'general'}
+      {/*
+        Siete secciones no caben en el ancho de un móvil. El contenedor conserva
+        la tarjeta blanca y el desplazamiento horizontal ocurre dentro de él, en
+        una sola línea: `overflow-x-auto` mantiene rueda, táctil y teclado,
+        `no-scrollbar` solo oculta la barra visual y `snap-x` ancla cada
+        pestaña al empezar, para que ninguna etiqueta se corte ni se salga de
+        los márgenes de la pantalla.
+      */}
+      <div className="mb-6 rounded-lg bg-white p-1 shadow-sm">
+        <nav
+          className="no-scrollbar flex snap-x gap-2 overflow-x-auto"
+          aria-label="Secciones de configuración"
         >
-          Datos Generales
-        </button>
-        <button
-          type="button"
-          className={tabClass('location')}
-          onClick={() => setActiveTab('location')}
-          aria-pressed={activeTab === 'location'}
-        >
-          Ubicación
-        </button>
-        <button
-          type="button"
-          className={tabClass('identity')}
-          onClick={() => setActiveTab('identity')}
-          aria-pressed={activeTab === 'identity'}
-        >
-          Horarios e Identidad
-        </button>
-        <button
-          type="button"
-          className={tabClass('delivery')}
-          onClick={() => setActiveTab('delivery')}
-          aria-pressed={activeTab === 'delivery'}
-        >
-          Delivery
-        </button>
-        <button
-          type="button"
-          className={tabClass('payments')}
-          onClick={() => setActiveTab('payments')}
-          aria-pressed={activeTab === 'payments'}
-        >
-          Pago Móvil
-        </button>
-        <button
-          type="button"
-          className={tabClass('qr')}
-          onClick={() => setActiveTab('qr')}
-          aria-pressed={activeTab === 'qr'}
-        >
-          Código QR
-        </button>
-        <button
-          type="button"
-          className={tabClass('promos')}
-          onClick={() => setActiveTab('promos')}
-          aria-pressed={activeTab === 'promos'}
-        >
-          Promociones
-        </button>
-      </nav>
+          <button
+            type="button"
+            className={tabClass('general')}
+            onClick={() => setActiveTab('general')}
+            aria-pressed={activeTab === 'general'}
+          >
+            Datos Generales
+          </button>
+          <button
+            type="button"
+            className={tabClass('location')}
+            onClick={() => setActiveTab('location')}
+            aria-pressed={activeTab === 'location'}
+          >
+            Ubicación
+          </button>
+          <button
+            type="button"
+            className={tabClass('identity')}
+            onClick={() => setActiveTab('identity')}
+            aria-pressed={activeTab === 'identity'}
+          >
+            Horarios e Identidad
+          </button>
+          <button
+            type="button"
+            className={tabClass('delivery')}
+            onClick={() => setActiveTab('delivery')}
+            aria-pressed={activeTab === 'delivery'}
+          >
+            Delivery
+          </button>
+          <button
+            type="button"
+            className={tabClass('payments')}
+            onClick={() => setActiveTab('payments')}
+            aria-pressed={activeTab === 'payments'}
+          >
+            Pago Móvil
+          </button>
+          <button
+            type="button"
+            className={tabClass('qr')}
+            onClick={() => setActiveTab('qr')}
+            aria-pressed={activeTab === 'qr'}
+          >
+            Código QR
+          </button>
+          <button
+            type="button"
+            className={tabClass('promos')}
+            onClick={() => setActiveTab('promos')}
+            aria-pressed={activeTab === 'promos'}
+          >
+            Promociones
+          </button>
+        </nav>
+      </div>
 
       <form onSubmit={handleSave} className="space-y-5" noValidate>
         {activeTab === 'general' && (

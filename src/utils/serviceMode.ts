@@ -7,9 +7,15 @@
  * domicilio sin volver a preguntar por el tipo de despacho.
  *
  * Persistencia local siguiendo el mismo patrón que `onboardingStorage`:
- * módulo separado del componente (no rompe el fast-refresh de React), clave
- * propia con prefijo `menugram_`, y errores de `localStorage` ignorados en
+ * módulo separado del componente (no rompe el fast-refresh de React), claves
+ * propias con prefijo `menugram_`, y errores de almacenamiento ignorados en
  * silencio (modo privado, cuota agotada, SSR).
+ *
+ * Dos niveles de almacenamiento con intenciones distintas:
+ * - `localStorage` guarda el modo elegido, para no romper el checkout ni el
+ *   perfil entre sesiones.
+ * - `sessionStorage` marca que el cliente ya respondió en la pestaña actual,
+ *   para que el selector no reaparezca al salir y volver a la PWA.
  */
 
 import type { OrderType } from '../types/database';
@@ -19,17 +25,35 @@ export type ServiceMode = 'in_store' | 'delivery';
 export const SERVICE_MODE_KEY = 'menugram_service_mode';
 
 /**
- * Resolución de la elección en la sesión actual (memoria del módulo).
+ * Clave de `sessionStorage` que marca que el cliente ya eligió modalidad en
+ * esta sesión de la pestaña.
+ *
+ * Se separa de `SERVICE_MODE_KEY` a propósito: el modo vive en `localStorage`
+ * (sobrevive al cierre de la app), mientras que la *pregunta* solo debe
+ * desaparecer mientras la pestaña siga abierta.
+ */
+export const SERVICE_MODE_SESSION_KEY = 'menugram_service_mode_session';
+
+/**
+ * Resolución de la elección en la sesión actual.
  *
  * `localStorage` guarda el modo entre sesiones para no romper el checkout ni
  * el perfil, pero NO puede usarse para saber si el cliente ya pasó por el
  * selector en *esta* sesión: al reabrir la PWA el valor viejo sigue ahí y el
- * marketplace se renderizaría antes de la elección. Esta bandera vive solo en
- * memoria: arranca en `false` en cada carga de la app (exactamente la
- * cadencia con la que `ServiceModeGate` vuelve a preguntar) y se enciende al
- * elegir. Los interesados (gate, marketplace) se suscriben a los cambios.
+ * marketplace se renderizaría antes de la elección.
+ *
+ * Por eso la bandera vive en `sessionStorage`, que sobrevive a que el usuario
+ * salga temporalmente de la PWA (ir a la galería, consultar un comprobante de
+ * pago móvil) sin que la PWA se descargue del todo, pero se limpia al cerrar
+ * la pestaña o el navegador: exactamente la cadencia que pidió el cliente
+ * para que el modal no reaparezca a los pocos segundos.
+ *
+ * La variable del módulo es solo un espejo en memoria: mantiene el
+ * `useSyncExternalStore` estable y sirve de respaldo cuando `sessionStorage`
+ * no está disponible o falla (modo privado, SSR, pruebas sin DOM).
  */
 let sessionResolved = false;
+let sessionResolvedLoaded = false;
 
 type ServiceModeListener = () => void;
 const listeners = new Set<ServiceModeListener>();
@@ -48,9 +72,41 @@ function notifyServiceModeListeners(): void {
   });
 }
 
+/**
+ * Restaura la bandera de resolución desde `sessionStorage` la primera vez que
+ * se consulta, para que recargar o restaurar la PWA no vuelva a mostrar el
+ * selector mientras la pestaña siga viva.
+ */
+function loadSessionResolvedFromStorage(): boolean {
+  if (sessionResolvedLoaded) return sessionResolved;
+  sessionResolvedLoaded = true;
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionResolved = sessionStorage.getItem(SERVICE_MODE_SESSION_KEY) === 'true';
+    }
+  } catch {
+    // Sin sessionStorage disponible se mantiene el valor en memoria.
+  }
+  return sessionResolved;
+}
+
 /** `true` si el cliente ya eligió modalidad en esta sesión de la app. */
 export function isServiceModeSessionResolved(): boolean {
-  return sessionResolved;
+  return loadSessionResolvedFromStorage();
+}
+
+/** Guarda (o borra) la bandera de resolución en `sessionStorage`. */
+function persistSessionResolved(resolved: boolean): void {
+  try {
+    if (typeof sessionStorage === 'undefined') return;
+    if (resolved) {
+      sessionStorage.setItem(SERVICE_MODE_SESSION_KEY, 'true');
+    } else {
+      sessionStorage.removeItem(SERVICE_MODE_SESSION_KEY);
+    }
+  } catch {
+    // Ignorar errores de sessionStorage (modo privado, cuota, etc.)
+  }
 }
 
 /** Destino tras elegir "Estoy en el negocio": el lector de códigos QR. */
@@ -97,6 +153,8 @@ export function saveServiceMode(mode: ServiceMode): void {
     // Ignorar errores de localStorage (modo privado, cuota, etc.)
   }
   sessionResolved = true;
+  sessionResolvedLoaded = true;
+  persistSessionResolved(true);
   notifyServiceModeListeners();
 }
 
@@ -114,6 +172,8 @@ export function clearServiceMode(): void {
     // Ignorar errores de localStorage (modo privado, cuota, etc.)
   }
   sessionResolved = false;
+  sessionResolvedLoaded = true;
+  persistSessionResolved(false);
   notifyServiceModeListeners();
 }
 

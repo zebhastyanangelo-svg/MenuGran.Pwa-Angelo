@@ -425,7 +425,7 @@ return (
 
           <section className="bg-white rounded-xl shadow-sm p-4 space-y-4">
             <nav
-              className="flex gap-2 overflow-x-auto"
+              className="no-scrollbar flex snap-x gap-2 overflow-x-auto"
               aria-label="Filtrar pedidos por estado"
             >
               {TABS.map((tab) => (
@@ -434,7 +434,7 @@ return (
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
                   aria-pressed={activeTab === tab.key}
-                  className={`flex-1 min-w-[7rem] px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex-1 min-w-[7rem] shrink-0 snap-start whitespace-nowrap px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     activeTab === tab.key
                       ? 'bg-indigo-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'

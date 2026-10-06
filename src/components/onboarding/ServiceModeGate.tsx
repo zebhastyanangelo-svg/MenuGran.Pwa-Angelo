@@ -21,10 +21,15 @@ import { ServiceModeChooser } from './ServiceModeChooser';
  *
  * La visibilidad se DERIVA de dos señales en lugar de guardarse en un estado
  * local: el rol del usuario (`useAuth`) y la resolución de la sesión
- * (`isServiceModeSessionResolved`, en memoria). Así el gate vuelve a aparecer
- * si algo borra el modo a mitad de sesión (p. ej. "cambiar modalidad" desde
- * el perfil) y el marketplace puede esperar la misma señal sin acoplarse al
- * componente.
+ * (`isServiceModeSessionResolved`, respaldada por `sessionStorage`). Así el
+ * gate vuelve a aparecer si algo borra el modo a mitad de sesión (p. ej.
+ * "cambiar modalidad" desde el perfil) y el marketplace puede esperar la misma
+ * señal sin acoplarse al componente.
+ *
+ * Como la resolución vive en `sessionStorage`, el selector NO reaparece si el
+ * usuario sale un momento de la PWA (p. ej. a la galería a buscar el
+ * comprobante de un pago móvil) y vuelve: la pestaña sigue viva, así que la
+ * elección se conserva. Se limpia sola al cerrar la pestaña o el navegador.
  *
  * Solo aplica al rol `customer`: un comercio o un repartidor entran por sus
  * propias rutas y no pasan por el marketplace.

@@ -298,11 +298,11 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
       {/* Filtros: Categorías y Búsqueda */}
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
         {/* Chips de Categorías */}
-        <div className="flex gap-1.5 overflow-x-auto w-full sm:w-auto pb-1">
+        <div className="no-scrollbar flex snap-x gap-1.5 overflow-x-auto w-full sm:w-auto pb-1">
           <button
             type="button"
             onClick={() => setSelectedCategoryId('')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+            className={`shrink-0 snap-start px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
               !selectedCategoryId
                 ? 'bg-indigo-600 text-white'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -317,7 +317,7 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategoryId(cat.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                className={`shrink-0 snap-start px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                   selectedCategoryId === cat.id
                     ? 'bg-indigo-600 text-white'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'

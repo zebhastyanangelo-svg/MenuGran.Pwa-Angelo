@@ -50,7 +50,7 @@ export function MerchantDashboard() {
   const tabClass = (
     tab: 'orders' | 'catalog' | 'profile',
   ) =>
-    `flex-1 sm:flex-none px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
+    `flex-1 sm:flex-none shrink-0 whitespace-nowrap snap-start px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
       activeTab === tab
         ? 'bg-indigo-600 text-white shadow-sm'
         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -87,7 +87,7 @@ export function MerchantDashboard() {
             )}
 
             <nav
-              className="flex gap-2 bg-white p-1 rounded-lg shadow-sm"
+              className="no-scrollbar flex snap-x gap-2 overflow-x-auto bg-white p-1 rounded-lg shadow-sm"
               aria-label="Secciones del panel"
             >
               <button

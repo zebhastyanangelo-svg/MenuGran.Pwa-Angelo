@@ -729,4 +729,43 @@ describe('MerchantSettingsPage', () => {
 
     expect(authMocks.saveSettingsMock).not.toHaveBeenCalled();
   });
+
+  describe('barra de pestañas responsiva', () => {
+    it('permite desplazamiento horizontal en pantallas estrechas', async () => {
+      await setMockState();
+
+      renderPage();
+
+      const tabBar = screen.getByRole('navigation', {
+        name: /Secciones de configuración/i,
+      });
+
+      expect(tabBar).toHaveClass('overflow-x-auto');
+      expect(tabBar).toHaveClass('no-scrollbar');
+    });
+
+    it('impide que las etiquetas se partan o se compriman', async () => {
+      await setMockState();
+
+      renderPage();
+
+      const labels = [
+        /Datos Generales/i,
+        /Ubicación/i,
+        /Horarios e Identidad/i,
+        /Delivery/i,
+        /Pago Móvil/i,
+        /Código QR/i,
+        /Promociones/i,
+      ];
+
+      labels.forEach((label) => {
+        const tab = screen.getByRole('button', { name: label });
+        // `whitespace-nowrap` evita cortes de línea y `shrink-0` evita que la
+        // pestaña se aplaste para caber: siempre se desplazan juntas.
+        expect(tab).toHaveClass('whitespace-nowrap');
+        expect(tab).toHaveClass('shrink-0');
+      });
+    });
+  });
 });

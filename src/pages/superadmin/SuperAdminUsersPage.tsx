@@ -96,7 +96,7 @@ export function SuperAdminUsersPage() {
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => setRoleFilter(opt.value)}
-                  className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                  className={`inline-flex items-center whitespace-nowrap px-3 py-1.5 text-sm rounded-full border transition-colors ${
                     isActive
                       ? 'bg-brand-red text-white border-brand-red'
                       : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'

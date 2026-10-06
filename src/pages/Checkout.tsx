@@ -400,7 +400,7 @@ export function Checkout() {
                   type="button"
                   onClick={() => setOrderType('delivery')}
                   aria-pressed={orderType === 'delivery'}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition ${
+                  className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-center text-sm font-medium transition ${
                     orderType === 'delivery'
                       ? 'bg-brand-red text-white shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
@@ -413,7 +413,7 @@ export function Checkout() {
                   type="button"
                   onClick={() => setOrderType('pickup')}
                   aria-pressed={orderType === 'pickup'}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition ${
+                  className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-center text-sm font-medium transition ${
                     orderType === 'pickup'
                       ? 'bg-brand-red text-white shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
