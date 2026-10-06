@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Navigation, X, CheckCircle, Map as MapIcon, Navigation2, Bike } from 'lucide-react';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { GeoPoint, MerchantCategory, MerchantRow } from '../types/database';
+import { useAuth } from '../hooks/useAuth';
 import { SearchBar } from '../components/marketplace/SearchBar';
 import { MerchantCard } from '../components/marketplace/MerchantCard';
 import { MarketplaceSkeleton } from '../components/marketplace/MarketplaceSkeleton';
@@ -21,7 +22,12 @@ import {
 } from '../utils/distance';
 import { isValidGeoPoint } from '../utils/geo';
 import { parseGeoPoint } from '../utils/geoPoint';
-import { DELIVERY_COVERAGE_RADIUS_KM, readServiceMode, type ServiceMode } from '../utils/serviceMode';
+import {
+  DELIVERY_COVERAGE_RADIUS_KM,
+  isServiceModeSessionResolved,
+  readServiceMode,
+  subscribeToServiceMode,
+} from '../utils/serviceMode';
 
 const COVERAGE_RADIUS_KM = DELIVERY_COVERAGE_RADIUS_KM;
 
@@ -55,8 +61,16 @@ function computeDistances(
 
 export function MarketplacePage() {
   const navigate = useNavigate();
+  const { user, profile, isLoading: isAuthLoading } = useAuth();
   const [merchants, setMerchants] = useState<MerchantRow[]>([]);
-  const [serviceMode] = useState<ServiceMode | null>(() => readServiceMode());
+  // El modo y su resolución se leen del store de `serviceMode` (no de un
+  // `useState` inicial): así la página reacciona cuando `ServiceModeGate`
+  // guarda la elección, aunque la ruta no cambie.
+  const serviceMode = useSyncExternalStore(subscribeToServiceMode, readServiceMode);
+  const isSessionResolved = useSyncExternalStore(
+    subscribeToServiceMode,
+    isServiceModeSessionResolved,
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<MerchantCategory | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,6 +80,21 @@ export function MarketplacePage() {
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [permissionState, setPermissionState] = useState<PermissionState>('prompt');
+
+  /**
+   * `true` mientras la sesión todavía debe pasar por `ServiceModeGate`.
+   *
+   * El listado no puede renderizarse antes de la elección: el modo define
+   * qué comercios descargar (solo con delivery) y mostrarlo antes habría sido
+   * el bug visual del contenido apareciendo tras el selector. Se bloquea
+   * también mientras la sesión carga porque hasta entonces no se sabe si el
+   * usuario es un cliente al que hay que preguntarle. Los roles distintos de
+   * `customer` y los visitantes sin sesión nunca pasan por el gate, así que
+   * para ellos la página no se bloquea.
+   */
+  const isCustomerSession =
+    user !== null && profile !== null && profile.role === 'customer';
+  const isGatePending = !isSessionResolved && (isAuthLoading || isCustomerSession);
 
 /**
  * Columnas solicitadas al marketplace. La lista es explícita para no arrastrar
@@ -118,11 +147,18 @@ const fetchData = useCallback(async () => {
     }
   }, [serviceMode]);
 
+  // Los comercios no se descargan hasta resolver la modalidad: hacerlo antes
+  // descargaría filas que aún no corresponden al flujo elegido (y con el
+  // selector tapando la pantalla, nadie las vería).
   useEffect(() => {
+    if (isGatePending) return;
     void fetchData();
-  }, [fetchData]);
+  }, [fetchData, isGatePending]);
 
+  // La geolocalización también espera: su diálogo de permiso no debería
+  // aparecer detrás del selector de modalidad.
   useEffect(() => {
+    if (isGatePending) return;
     if (!isGeolocationSupported()) {
       setLocationError(
         'Tu navegador no soporta geolocalización. Puedes explorar todos los comercios.',
@@ -170,7 +206,7 @@ const fetchData = useCallback(async () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isGatePending]);
 
   const merchantsWithDistance = useMemo(
     () => computeDistances(merchants, userLocation),
@@ -259,6 +295,13 @@ const fetchData = useCallback(async () => {
     () => merchantsWithDistance.filter((m) => m.distance !== null && m.distance <= COVERAGE_RADIUS_KM).length,
     [merchantsWithDistance],
   );
+
+  // Bloqueo estricto del listado: mientras la modalidad de la sesión no esté
+  // resuelta no se renderiza nada del marketplace (ni cabecera, ni comercios,
+  // ni skeletons) para que ningún negocio asome detrás del selector.
+  if (isGatePending) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">

@@ -1,8 +1,9 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { screen, waitFor, cleanup } from '@testing-library/react';
+import { screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import { render } from './test/test-utils';
 import App from './App';
 import { useAuth } from './hooks/useAuth';
+import { clearServiceMode } from './utils/serviceMode';
 import type { AuthContextValue } from './context/auth-context-core';
 
 vi.mock('./services/exchangeRate', () => ({
@@ -106,6 +107,10 @@ describe('App Router Integration', () => {
   afterEach(() => {
     vi.clearAllMocks();
     cleanup();
+    // La resolución de la modalidad vive en memoria del módulo: sin
+    // reiniciarla, un test que elige modalidad dejaría desbloqueado el
+    // marketplace de los siguientes y el orden de ejecución importaría.
+    clearServiceMode();
     window.history.replaceState({}, '/', '/');
   });
 
@@ -136,6 +141,11 @@ describe('App Router Integration', () => {
 
     window.history.pushState({}, '', '/');
     render(<App />);
+
+    // El marketplace está bloqueado hasta que el cliente elige modalidad
+    // (`ServiceModeGate`): primero se resuelve esa decisión y solo después
+    // tiene sentido buscar el buscador del marketplace.
+    fireEvent.click(await screen.findByTestId('service-mode-delivery', {}, { timeout: 30000 }));
 
     expect(await screen.findByPlaceholderText(/Buscar comercios o platillos/i, {}, { timeout: 30000 })).toBeInTheDocument();
   }, 45000);

@@ -14,11 +14,16 @@
  * la implementan, y en jsdom tampoco está, por eso su disponibilidad se
  * comprueba antes de construir nada.
  *
- * El permiso de cámara se pide explícitamente con `getUserMedia` al montar la
- * vista: es la única llamada que abre el diálogo nativo del navegador. Los tres
- * estados que importa se distinguen y se comunican al cliente: `granted`
- * (escaneando), `denied` (hay que actuar desde el candado de la barra de
- * direcciones) y `unsupported` (contexto no seguro o API ausente).
+ * El permiso de cámara se consulta sin diálogo al montar la vista con
+ * `permissions.query`; el diálogo nativo solo lo abre `getUserMedia` y los
+ * navegadores (Safari iOS incluido) lo rechazan si no nace de un gesto del
+ * usuario, así que la petición se dispara exclusivamente desde el botón
+ * "Activar la cámara". La única excepción es el arranque automático cuando el
+ * permiso ya estaba concedido: ahí no hay diálogo que mostrar y la cámara
+ * arranca sola. Los estados que importan se distinguen y se comunican al
+ * cliente: `granted` (escaneando), `denied` (hay que actuar desde el candado
+ * de la barra de direcciones) y `unsupported` (contexto no seguro o API
+ * ausente).
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -43,6 +48,11 @@ export function QrScanPage() {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  // `true` en cuanto `startScanning` se ejecuta (por gesto o por permiso ya
+  // concedido). La consulta de permisos del montaje es asíncrona y su
+  // resultado puede llegar después: si el cliente ya actuó, su resultado es
+  // el autoritativo y no debe sobrescribirse.
+  const hasInteractedRef = useRef(false);
   const [isScanning, setIsScanning] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
   const [permissionState, setPermissionState] =
@@ -66,6 +76,7 @@ export function QrScanPage() {
   );
 
   const startScanning = useCallback(async () => {
+    hasInteractedRef.current = true;
     const Detector = getBarcodeDetector();
     if (Detector === null) return;
 
@@ -130,17 +141,26 @@ export function QrScanPage() {
     }
   }, [openToken, stopStream]);
 
-  // El permiso de cámara se consulta al entrar para saber si el navegador ya lo
-  // tiene resuelto, y la cámara se activa una sola vez por montaje (nunca en
-  // cada render) para no provocar permisos efímeros que el navegador descarta
-  // al recargar. Android Chrome acepta `getUserMedia` sin gesto previo; en
-  // escritorio el diálogo aparece igualmente y el botón permite reintentar.
+  // Al montar solo se CONSULTA el permiso (`permissions.query` no muestra
+  // diálogo). La cámara se activa sola únicamente si el permiso ya estaba
+  // concedido; en cualquier otro caso el diálogo nativo debe nacer del gesto
+  // de pulsar "Activar la cámara", porque Safari iOS y varios navegadores de
+  // escritorio rechazan con `NotAllowedError` cualquier `getUserMedia`
+  // automático — y ese rechazo era el que dejaba la vista clavada en
+  // "Permiso de cámara denegado" sin que el cliente hubiera denegado nada.
   useEffect(() => {
     let cancelled = false;
     void queryCameraPermission().then((state) => {
-      if (!cancelled) setPermissionState(state);
+      // Si el cliente ya pulsó el botón, su resultado manda: la consulta del
+      // montaje llegó tarde y no debe volver a pintar el estado inicial.
+      if (cancelled || hasInteractedRef.current) return;
+      setPermissionState(state);
+      if (state === 'granted') {
+        void startScanning();
+      } else if (state === 'unsupported') {
+        setError(CAMERA_UNSUPPORTED_MESSAGE);
+      }
     });
-    void startScanning();
     return () => {
       cancelled = true;
     };
@@ -197,7 +217,7 @@ export function QrScanPage() {
                 role="status"
                 className="absolute inset-0 flex items-center justify-center px-6 text-center text-xs font-medium text-white"
               >
-                Allowiendo el uso de la cámara...
+                Abriendo la cámara…
               </p>
             )}
             {!isScanning && !isRequesting && permissionState === 'denied' && (
@@ -212,9 +232,17 @@ export function QrScanPage() {
                 </p>
               </div>
             )}
+            {!isScanning && !isRequesting && permissionState !== 'denied' && permissionState !== 'unsupported' && (
+              <p
+                className="absolute inset-0 flex items-center justify-center px-6 text-center text-xs font-medium text-white/90"
+                data-testid="camera-idle-hint"
+              >
+                Toca «Activar la cámara» para escanear el QR de tu mesa.
+              </p>
+            )}
           </div>
 
-          {!isScanning && (
+          {!isScanning && permissionState !== 'unsupported' && (
             <button
               type="button"
               onClick={() => void startScanning()}

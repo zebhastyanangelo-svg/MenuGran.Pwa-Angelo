@@ -102,7 +102,7 @@ export function MerchantCard({ merchant, onClick, distance }: MerchantCardProps)
         isInteractive ? 'cursor-pointer' : ''
       }`}
     >
-      <div className="relative h-32 w-full bg-gradient-to-r from-brand-red via-[#f34a5f] to-brand-amber/80">
+      <div className="relative h-32 w-full shrink-0 bg-gradient-to-r from-brand-red via-[#f34a5f] to-brand-amber/80">
         {merchant.banner_url ? (
           <img
             src={merchant.banner_url}
@@ -113,7 +113,8 @@ export function MerchantCard({ merchant, onClick, distance }: MerchantCardProps)
         ) : null}
 
         {/* Los chips flotantes se posicionan sobre la imagen para que el
-            descuento sea lo primero que el cliente vea. */}
+            descuento sea lo primero que el cliente vea. Van arriba: abajo el
+            avatar central invade el banner. */}
         <div className="absolute left-2 top-2 right-2 flex items-start justify-between gap-2">
           <PromoChips merchant={merchant} />
           {typeof distance === 'number' ? (
@@ -123,37 +124,43 @@ export function MerchantCard({ merchant, onClick, distance }: MerchantCardProps)
             </span>
           ) : null}
         </div>
+
+        {/*
+          Avatar anclado al borde inferior del banner: `bottom-0` +
+          `translate-y-1/2` dejan exactamente la mitad del círculo sobre la
+          imagen y la mitad sobre el contenido, sin márgenes negativos que
+          dependan del orden de los hijos. Al estar en flujo absoluto no
+          empuja el texto: ese hueco lo reserva el `pt-12` del bloque inferior,
+          de modo que ningún nombre o chip queda tapado ni recortado.
+        */}
+        <div className="absolute bottom-0 left-1/2 z-10 h-16 w-16 -translate-x-1/2 translate-y-1/2 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-md">
+          {merchant.logo_url ? (
+            <img
+              src={merchant.logo_url}
+              alt={`Logo de ${merchant.name}`}
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div
+              className="flex h-full w-full items-center justify-center bg-red-50 text-lg font-bold text-brand-red"
+              aria-hidden="true"
+            >
+              {merchant.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="flex flex-1 flex-col p-4 pt-0">
-        <div className="-mt-8 flex items-end gap-3">
-          <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-md">
-            {merchant.logo_url ? (
-              <img
-                src={merchant.logo_url}
-                alt={`Logo de ${merchant.name}`}
-                loading="lazy"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div
-                className="flex h-full w-full items-center justify-center bg-red-50 text-lg font-bold text-brand-red"
-                aria-hidden="true"
-              >
-                {merchant.name.charAt(0).toUpperCase()}
-              </div>
-            )}
-          </div>
-
-          <div className="min-w-0 flex-1 pb-1">
-            <h3 className="truncate text-base font-bold leading-tight text-slate-900 group-hover:text-brand-red">
-              {merchant.name}
-            </h3>
-            <p className="truncate text-xs text-slate-500">@{merchant.slug}</p>
-          </div>
+      <div className="flex flex-1 flex-col p-4 pt-12">
+        <div className="text-center">
+          <h3 className="truncate text-base font-bold leading-tight text-slate-900 group-hover:text-brand-red">
+            {merchant.name}
+          </h3>
+          <p className="truncate text-xs text-slate-500">@{merchant.slug}</p>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-xs">
           <span
             className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 font-semibold ${
               availability.isOpen ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'

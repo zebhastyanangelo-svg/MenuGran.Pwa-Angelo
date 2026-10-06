@@ -1,8 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ServiceModeGate } from './ServiceModeGate';
-import { SERVICE_MODE_KEY, readServiceMode } from '../../utils/serviceMode';
+import {
+  SERVICE_MODE_KEY,
+  clearServiceMode,
+  isServiceModeSessionResolved,
+  readServiceMode,
+} from '../../utils/serviceMode';
 import { useAuth } from '../../hooks/useAuth';
 
 const localStorageMock = (() => {
@@ -65,6 +70,9 @@ describe('ServiceModeGate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorageMock.clear();
+    // La resolución de sesión vive en memoria del módulo: hay que resetearla
+    // para que cada prueba empiece como un arranque fresco de la app.
+    clearServiceMode();
   });
 
   it('pregunta la modalidad al abrir la app sin modalidad guardada', () => {
@@ -131,5 +139,30 @@ describe('ServiceModeGate', () => {
     );
 
     expect(screen.queryByTestId('service-mode-chooser')).not.toBeInTheDocument();
+  });
+
+  it('marca la sesión como resuelta al elegir', () => {
+    setAuth({ id: 'user-1' }, customerProfile);
+
+    renderGate();
+    fireEvent.click(screen.getByTestId('service-mode-in-store'));
+
+    expect(isServiceModeSessionResolved()).toBe(true);
+  });
+
+  it('vuelve a mostrar el selector si se borra el modo a mitad de sesión', () => {
+    // Simula "cambiar modalidad" desde el perfil: el modo se borra y el
+    // cliente debe volver a pasar por la elección.
+    setAuth({ id: 'user-1' }, customerProfile);
+
+    renderGate();
+    fireEvent.click(screen.getByTestId('service-mode-delivery'));
+    expect(screen.queryByTestId('service-mode-chooser')).not.toBeInTheDocument();
+
+    act(() => {
+      clearServiceMode();
+    });
+
+    expect(screen.getByTestId('service-mode-chooser')).toBeInTheDocument();
   });
 });

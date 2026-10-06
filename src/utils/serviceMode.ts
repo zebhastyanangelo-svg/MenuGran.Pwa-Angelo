@@ -18,6 +18,41 @@ export type ServiceMode = 'in_store' | 'delivery';
 
 export const SERVICE_MODE_KEY = 'menugram_service_mode';
 
+/**
+ * Resolución de la elección en la sesión actual (memoria del módulo).
+ *
+ * `localStorage` guarda el modo entre sesiones para no romper el checkout ni
+ * el perfil, pero NO puede usarse para saber si el cliente ya pasó por el
+ * selector en *esta* sesión: al reabrir la PWA el valor viejo sigue ahí y el
+ * marketplace se renderizaría antes de la elección. Esta bandera vive solo en
+ * memoria: arranca en `false` en cada carga de la app (exactamente la
+ * cadencia con la que `ServiceModeGate` vuelve a preguntar) y se enciende al
+ * elegir. Los interesados (gate, marketplace) se suscriben a los cambios.
+ */
+let sessionResolved = false;
+
+type ServiceModeListener = () => void;
+const listeners = new Set<ServiceModeListener>();
+
+/** Suscripción a cambios del modo/resolución. Deviene la función de baja. */
+export function subscribeToServiceMode(listener: ServiceModeListener): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function notifyServiceModeListeners(): void {
+  listeners.forEach((listener) => {
+    listener();
+  });
+}
+
+/** `true` si el cliente ya eligió modalidad en esta sesión de la app. */
+export function isServiceModeSessionResolved(): boolean {
+  return sessionResolved;
+}
+
 /** Destino tras elegir "Estoy en el negocio": el lector de códigos QR. */
 export const IN_STORE_SCAN_PATH = '/scan';
 
@@ -46,24 +81,40 @@ export function readServiceMode(): ServiceMode | null {
   }
 }
 
-/** Guarda el modo de servicio elegido. */
+/**
+ * Guarda el modo de servicio elegido y marca la sesión como resuelta.
+ *
+ * Es la única vía de resolver la sesión: la llama `ServiceModeGate` tras la
+ * elección del cliente, así que cualquier superficie (marketplace incluida)
+ * puede esperar a `isServiceModeSessionResolved()` sin acoplarse al gate.
+ */
 export function saveServiceMode(mode: ServiceMode): void {
   try {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(SERVICE_MODE_KEY, mode);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(SERVICE_MODE_KEY, mode);
+    }
   } catch {
     // Ignorar errores de localStorage (modo privado, cuota, etc.)
   }
+  sessionResolved = true;
+  notifyServiceModeListeners();
 }
 
-/** Olvida el modo de servicio, para que la próxima entrada vuelva a preguntar. */
+/**
+ * Olvida el modo de servicio y vuelve a marcar la sesión sin resolver, para
+ * que la próxima entrada vuelva a preguntar (p. ej. "cambiar modalidad"
+ * desde el perfil).
+ */
 export function clearServiceMode(): void {
   try {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.removeItem(SERVICE_MODE_KEY);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(SERVICE_MODE_KEY);
+    }
   } catch {
     // Ignorar errores de localStorage (modo privado, cuota, etc.)
   }
+  sessionResolved = false;
+  notifyServiceModeListeners();
 }
 
 /** Ruta a la que debe ir el cliente después de elegir modo de servicio. */

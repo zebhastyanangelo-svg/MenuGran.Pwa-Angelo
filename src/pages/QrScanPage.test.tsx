@@ -17,7 +17,6 @@ function setPermissions(state: string): void {
   Object.defineProperty(navigator, 'permissions', {
     value: { query: vi.fn().mockResolvedValue({ state }) },
     configurable: true,
-    writable: true,
   });
 }
 
@@ -29,7 +28,6 @@ function installBarcodeDetector(): void {
       }
     },
     configurable: true,
-    writable: true,
   });
 }
 
@@ -47,12 +45,10 @@ function installPlayableVideo(): void {
   Object.defineProperty(window.HTMLMediaElement.prototype, 'play', {
     value: vi.fn().mockResolvedValue(undefined),
     configurable: true,
-    writable: true,
   });
   Object.defineProperty(window.HTMLMediaElement.prototype, 'readyState', {
     value: 4,
     configurable: true,
-    writable: true,
   });
 }
 
@@ -91,7 +87,32 @@ describe('QrScanPage — permisos de cámara', () => {
     });
   });
 
-  it('solicita el permiso de cámara con la cámara trasera al montar', async () => {
+  it('no abre el diálogo de permisos al montar: espera el gesto del usuario', async () => {
+    const getUserMedia = vi.fn().mockResolvedValue(createStream());
+    setMediaDevices({ getUserMedia });
+
+    renderPage();
+
+    const button = screen.getByRole('button', { name: /Activar la cámara/i });
+    expect(button).toBeInTheDocument();
+    // El diálogo nativo (`getUserMedia`) no puede dispararse sin gesto: los
+    // navegadores lo rechazan con NotAllowedError y la vista quedaba clavada
+    // en "Permiso de cámara denegado".
+    expect(getUserMedia).not.toHaveBeenCalled();
+
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(getUserMedia).toHaveBeenCalledWith({
+        video: { facingMode: 'environment' },
+        audio: false,
+      });
+    });
+  });
+
+  it('arranca sola cuando el permiso ya estaba concedido', async () => {
+    setPermissions('granted');
+
     renderPage();
 
     await waitFor(() => {
@@ -105,6 +126,8 @@ describe('QrScanPage — permisos de cámara', () => {
   });
 
   it('abre el menú con el token leído cuando el permiso se concede', async () => {
+    setPermissions('granted');
+
     renderPage();
 
     await waitFor(() => {
@@ -112,8 +135,23 @@ describe('QrScanPage — permisos de cámara', () => {
     });
   });
 
-  it('informa cuando el permiso es denegado y ofrece reintentar', async () => {
+  it('muestra el estado denegado sin llamar a getUserMedia cuando el permiso ya estaba bloqueado', async () => {
     setPermissions('denied');
+    const getUserMedia = vi.fn().mockResolvedValue(createStream());
+    setMediaDevices({ getUserMedia });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Permiso de cámara denegado')).toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole('button', { name: /Reintentar con la cámara/i }),
+    ).toBeInTheDocument();
+    expect(getUserMedia).not.toHaveBeenCalled();
+  });
+
+  it('informa cuando el permiso es denegado y ofrece reintentar', async () => {
     setMediaDevices({
       getUserMedia: vi
         .fn()
@@ -121,6 +159,8 @@ describe('QrScanPage — permisos de cámara', () => {
     });
 
     renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Activar la cámara/i }));
 
     await waitFor(() => {
       expect(screen.getByText('Permiso de cámara denegado')).toBeInTheDocument();
@@ -132,7 +172,6 @@ describe('QrScanPage — permisos de cámara', () => {
   });
 
   it('vuelve a pedir el permiso al pulsar reintentar', async () => {
-    setPermissions('denied');
     const getUserMedia = vi
       .fn()
       .mockRejectedValue(new DOMException('x', 'NotAllowedError'));
@@ -140,16 +179,17 @@ describe('QrScanPage — permisos de cámara', () => {
 
     renderPage();
 
+    fireEvent.click(screen.getByRole('button', { name: /Activar la cámara/i }));
+
     await waitFor(() => {
       expect(screen.getByText('Permiso de cámara denegado')).toBeInTheDocument();
     });
 
-    const getUserMediaMock = getUserMedia;
-    getUserMediaMock.mockResolvedValue(createStream());
+    getUserMedia.mockResolvedValue(createStream());
     fireEvent.click(screen.getByRole('button', { name: /Reintentar con la cámara/i }));
 
     await waitFor(() => {
-      expect(getUserMediaMock).toHaveBeenCalledTimes(2);
+      expect(getUserMedia).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -174,6 +214,8 @@ describe('QrScanPage — permisos de cámara', () => {
 
     renderPage();
 
+    fireEvent.click(screen.getByRole('button', { name: /Activar la cámara/i }));
+
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(
         /No encontramos ninguna cámara/i,
@@ -189,6 +231,8 @@ describe('QrScanPage — permisos de cámara', () => {
     });
 
     renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Activar la cámara/i }));
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toBeInTheDocument();

@@ -1,8 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { GeoPoint, MerchantRow } from '../types/database';
 import { MarketplacePage } from './MarketplacePage';
+import { useAuth } from '../hooks/useAuth';
+import { clearServiceMode, saveServiceMode } from '../utils/serviceMode';
 
 // Mock navigator.permissions for tests
 Object.defineProperty(navigator, 'permissions', {
@@ -11,6 +13,18 @@ Object.defineProperty(navigator, 'permissions', {
   },
   configurable: true,
 });
+
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: vi.fn(),
+}));
+
+function setAuth(user: unknown, profile: unknown, isLoading = false): void {
+  vi.mocked(useAuth).mockReturnValue({
+    user,
+    profile,
+    isLoading,
+  } as never);
+}
 
 const mocks = vi.hoisted(() => ({
   supabaseMock: { from: vi.fn() },
@@ -110,6 +124,10 @@ const userLocation: GeoPoint = { x: -66.9036, y: 10.4806 };
 
 describe('MarketplacePage', () => {
   beforeEach(() => {
+    // Visitante sin sesión por defecto: el marketplace no se bloquea para
+    // quien nunca pasa por el selector de modalidad.
+    setAuth(null, null, false);
+    clearServiceMode();
     mocks.supabaseMock.from = vi.fn();
     mocks.navigateMock.mockReset();
     mocks.getCurrentGeoPointMock.mockReset();
@@ -427,5 +445,72 @@ describe('MarketplacePage', () => {
 
     await screen.findByText('La Esquina');
     expect(screen.queryByRole('navigation', { name: /Categorías de comercios/i })).not.toBeInTheDocument();
+  });
+
+  describe('bloqueo hasta elegir modalidad (ServiceModeGate)', () => {
+    const customerProfile = { id: 'user-1', role: 'customer' };
+
+    it('no renderiza ni descarga comercios mientras el cliente no elige modalidad', async () => {
+      setAuth({ id: 'user-1' }, customerProfile);
+      mocks.getCurrentGeoPointMock.mockRejectedValue(new Error('no gps'));
+      mockTableResults({
+        merchants: { data: [buildMerchant('m1', 'La Esquina')], error: null },
+      });
+
+      render(
+        <MemoryRouter>
+          <MarketplacePage />
+        </MemoryRouter>,
+      );
+
+      // Nada del marketplace asoma detrás del selector: ni cabecera ni datos.
+      expect(screen.queryByText('MenuGran')).not.toBeInTheDocument();
+      expect(screen.queryByText('La Esquina')).not.toBeInTheDocument();
+      expect(mocks.supabaseMock.from).not.toHaveBeenCalled();
+
+      act(() => {
+        saveServiceMode('delivery');
+      });
+
+      expect(await screen.findByText('La Esquina')).toBeInTheDocument();
+      expect(mocks.supabaseMock.from).toHaveBeenCalledWith('merchants');
+    });
+
+    it('tampoco renderiza mientras la sesión está cargando', () => {
+      setAuth(null, null, true);
+      mockTableResults({
+        merchants: { data: [buildMerchant('m1', 'La Esquina')], error: null },
+      });
+
+      render(
+        <MemoryRouter>
+          <MarketplacePage />
+        </MemoryRouter>,
+      );
+
+      // Hasta saber quién es el usuario no se puede descartar que deba pasar
+      // por el selector, así que nada se muestra todavía.
+      expect(screen.queryByText('MenuGran')).not.toBeInTheDocument();
+      expect(mocks.supabaseMock.from).not.toHaveBeenCalled();
+    });
+
+    it('un rol distinto de customer ve el marketplace sin elegir modalidad', async () => {
+      setAuth(
+        { id: 'owner-1' },
+        { ...customerProfile, id: 'owner-1', role: 'merchant_owner' },
+      );
+      mocks.getCurrentGeoPointMock.mockRejectedValue(new Error('no gps'));
+      mockTableResults({
+        merchants: { data: [buildMerchant('m1', 'La Esquina')], error: null },
+      });
+
+      render(
+        <MemoryRouter>
+          <MarketplacePage />
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText('La Esquina')).toBeInTheDocument();
+    });
   });
 });
