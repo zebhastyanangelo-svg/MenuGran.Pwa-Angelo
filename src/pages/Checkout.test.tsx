@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -115,10 +115,24 @@ beforeAll(() => {
   process.env.VITE_SUPABASE_ANON_KEY = 'anon-key';
 });
 
+/**
+ * Los comercios de estos tests declaran horario `08:00`-`20:00`, así que el
+ * resultado dependía de la hora real de ejecución: de noche el Checkout
+ * renderizaba el aviso "el comercio está cerrado" y los tests de la tarifa
+ * fallaban. Se congela el reloj a mediodía LOCAL (construido con componentes,
+ * no ISO, para que `getHours()` dé 12 sea cual sea el TZ del runner) y así la
+ * suite es determinista.
+ */
+const FIXED_WITHIN_OPENING_HOURS = new Date(2026, 0, 15, 12, 0, 0);
+
 describe('Checkout', () => {
-  const user = userEvent.setup();
+  let user: ReturnType<typeof userEvent.setup>;
 
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true, now: FIXED_WITHIN_OPENING_HOURS });
+    // `userEvent` cachea el reloj al crearse, así que se instancia después de
+    // instalar los timers falsos para que sus esperas no se cuelguen.
+    user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     mockShowToast.mockClear();
     mockCreateOrder.mockClear().mockResolvedValue('order-abc-123');
     mockUploadPaymentProofTemp.mockClear().mockResolvedValue('tmp/abc123.jpg');
@@ -501,4 +515,8 @@ describe('Checkout', () => {
       );
     }, { timeout: 5000 });
   }, 10000);
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 });

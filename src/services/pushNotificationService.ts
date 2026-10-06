@@ -296,9 +296,25 @@ export async function reconcilePushSubscription(userId: string): Promise<Reconci
   }
 }
 
+/** Destino y contenido comunes a todos los envíos. */
+interface PushPayloadBase {
+  title?: string;
+  body?: string;
+  /** Ruta interna a la que debe llevar el clic (deep link). */
+  url?: string;
+  /** Agrupa notificaciones con el mismo tag en el dispositivo. */
+  tag?: string;
+}
+
+/**
+ * Cuerpo que acepta la Edge Function `send-push-notification`.
+ *
+ * Una masiva exige título y cuerpo (no hay copy automático); un envío a un
+ * usuario puede omitirlos y la función pone los valores por defecto.
+ */
 type InvokePushPayload =
-  | { target: 'user'; title?: string; body?: string }
-  | { target: 'all'; title: string; body: string };
+  | ({ target: 'user' } & PushPayloadBase)
+  | ({ target: 'all'; title: string; body: string } & PushPayloadBase);
 
 /**
  * Extrae el mensaje de error que devuelve la Edge Function.
@@ -380,7 +396,64 @@ export function sendNearbyMerchantNotification(merchantName: string): Promise<Se
   });
 }
 
+/**
+ * Envía una notificación de seguimiento de pedido al cliente.
+ *
+ * El `url` apunta al tracker para que el clic abra el pedido concreto: sin él
+ * el service worker aterrizaría en la raíz de la app y el cliente tendría que
+ * buscar su pedido a mano.
+ */
+export function sendOrderUpdatePushNotification(
+  orderId: string,
+  title: string,
+  body: string,
+): Promise<SendPushResult> {
+  return invokeSendPushNotification({
+    target: 'user',
+    title,
+    body,
+    url: `/orders/${encodeURIComponent(orderId)}`,
+    tag: `order-${orderId}`,
+  });
+}
+
 /** Envía una notificación masiva a todos los clientes (solo superadmin). */
-export function sendBulkPushNotification(title: string, body: string): Promise<SendPushResult> {
-  return invokeSendPushNotification({ target: 'all', title, body });
+export function sendBulkPushNotification(
+  title: string,
+  body: string,
+  options?: { url?: string; tag?: string },
+): Promise<SendPushResult> {
+  return invokeSendPushNotification({
+    target: 'all',
+    title,
+    body,
+    url: options?.url,
+    tag: options?.tag,
+  });
+}
+
+/**
+ * Cuenta los dispositivos alcanzables por una masiva, para que el superadmin
+ * sepa a Quantos usuarios va a tocar antes de confirmar un envío irreversible.
+ *
+ * Devuelve `null` si el conteo no se puede obtener (RLS, red): la UI debe
+ * poder enviar igual, solo pierde el dato informativo.
+ */
+export async function countPushAudience(): Promise<{ devices: number; users: number } | null> {
+  try {
+    const { data, error } = await supabase
+      .from(TABLE_NAMES.userPushSubscriptions)
+      .select('user_id')
+      .eq('is_active', true);
+
+    if (error !== null || data === null) return null;
+
+    const rows = data as Array<{ user_id: string }>;
+    return {
+      devices: rows.length,
+      users: new Set(rows.map((row) => row.user_id)).size,
+    };
+  } catch {
+    return null;
+  }
 }

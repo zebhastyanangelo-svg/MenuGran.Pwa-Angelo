@@ -468,10 +468,45 @@ function audienceForEndpoint(endpoint: string): string {
   return new URL(endpoint).origin;
 }
 
+/** Contenido que se envía dentro del payload del push. */
+interface PushMessage {
+  title: string;
+  body: string;
+  /** Ruta interna a la que debe llevar el clic. */
+  url: string;
+  /** Agrupa/reemplaza notificaciones con el mismo tag en el dispositivo. */
+  tag: string;
+}
+
+/**
+ * Sanea el destino del clic: solo rutas internas.
+ *
+ * Un payload con esquema propio o protocol-relative podría sacar al cliente de
+ * la PWA hacia un origen ajeno, así que cae al marketplace.
+ */
+function resolveTargetUrl(rawUrl: unknown, fallback: string): string {
+  if (typeof rawUrl !== 'string') return fallback;
+  const value = rawUrl.trim();
+  if (value === '') return fallback;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(value) || value.startsWith('//')) return fallback;
+  return value.startsWith('/') ? value : `/${value}`;
+}
+
+/**
+ * Tag de la notificación.
+ *
+ * El service worker genera un tag único cuando el payload no lo trae, pero
+ * enviarlo desde aquí permite que una masiva se comporte como una pila real
+ * (cada envío se apila) en lugar de depender del reloj del dispositivo.
+ */
+function resolveMessageTag(rawTag: unknown): string {
+  if (typeof rawTag !== 'string') return '';
+  return rawTag.trim().slice(0, 120);
+}
+
 async function sendPushNotification(
   subscription: PushSubscription,
-  title: string,
-  body: string,
+  message: PushMessage,
   vapidKeys: VapidKeys,
 ): Promise<PushOutcome> {
   const token = await createVapidToken(
@@ -481,14 +516,22 @@ async function sendPushNotification(
     audienceForEndpoint(subscription.endpoint),
   );
 
+  const payload: Record<string, string> = {
+    title: message.title,
+    body: message.body,
+    url: message.url,
+  };
+  if (message.tag !== '') payload.tag = message.tag;
+
   const response = await fetch(subscription.endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `vapid t=${token}, k=${vapidKeys.publicKey}`,
       TTL: '86400',
+      Urgency: 'normal',
     },
-    body: JSON.stringify({ title, body, url: '/' }),
+    body: JSON.stringify(payload),
     signal: AbortSignal.timeout(10000),
   });
 
@@ -675,19 +718,69 @@ interface DeliveryReport {
   configError?: string;
 }
 
+/**
+ * Entregas simultáneas máximas.
+ *
+ * Antes el envío era un `for` secuencial con 10 s de timeout por push: con
+ * `pg_cron` configurado en `timeout_milliseconds = 10000`, una masiva a
+ * docenas de suscriptores se cortaba a mitad y los últimos nunca recibían nada.
+ * El paralelismo acota la duración total sin abrir un connection pool
+ * ilimitado contra los push services (FCM/Mozilla), que responden con 429 si se
+ * les martillea.
+ */
+const MAX_CONCURRENT_DELIVERIES = 8;
+
+/** Ejecuta `tasks` con un máximo de `limit` en vuelo a la vez. */
+async function runWithConcurrency<T>(
+  tasks: Array<() => Promise<T>>,
+  limit: number,
+): Promise<T[]> {
+  const results: T[] = new Array(tasks.length);
+  let cursor = 0;
+
+  async function worker(): Promise<void> {
+    while (cursor < tasks.length) {
+      const index = cursor;
+      cursor += 1;
+      results[index] = await tasks[index]!();
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.min(limit, tasks.length) },
+    () => worker(),
+  );
+  await Promise.all(workers);
+  return results;
+}
+
 async function deliverToSubscriptions(
   client: SupabaseClient,
   subscriptions: Array<PushSubscription & { full_name?: string | null }>,
-  buildPayload: (sub: PushSubscription & { full_name?: string | null }) => { title: string; body: string },
+  buildMessage: (
+    sub: PushSubscription & { full_name?: string | null },
+  ) => { title: string; body: string },
   vapidKeys: VapidKeyPair,
+  routing?: { url: string; tag: string },
 ): Promise<DeliveryReport> {
   const report: DeliveryReport = { sent: 0, deleted: 0, failed: 0, authErrors: 0 };
 
-  for (const sub of subscriptions) {
-    const { title, body } = buildPayload(sub);
+  const deliver = async (
+    sub: PushSubscription & { full_name?: string | null },
+  ): Promise<void> => {
+    const { title, body } = buildMessage(sub);
 
     try {
-      const outcome = await sendPushNotification(sub, title, body, vapidKeys);
+      const outcome = await sendPushNotification(
+        sub,
+        {
+          title,
+          body,
+          url: routing?.url ?? '/marketplace',
+          tag: routing?.tag ?? '',
+        },
+        vapidKeys,
+      );
 
       switch (outcome.status) {
         case 'sent':
@@ -713,7 +806,12 @@ async function deliverToSubscriptions(
       report.configError ??= message;
       console.error('Fallo local al enviar push (la suscripción se conserva):', message);
     }
-  }
+  };
+
+  await runWithConcurrency(
+    subscriptions.map((sub) => () => deliver(sub)),
+    MAX_CONCURRENT_DELIVERIES,
+  );
 
   return report;
 }
@@ -780,6 +878,7 @@ Deno.serve(async (req: Request) => {
           body: replaceTemplateVariables(bodyText, sub.full_name ?? null),
         }),
         vapidKeys,
+        { url: resolveTargetUrl(body.url, '/marketplace'), tag: resolveMessageTag(body.tag) },
       );
 
       return jsonResponse({
@@ -817,6 +916,7 @@ Deno.serve(async (req: Request) => {
         subscriptions,
         () => ({ title, body: bodyText }),
         vapidKeys,
+        { url: resolveTargetUrl(body.url, '/marketplace'), tag: resolveMessageTag(body.tag) },
       );
 
       return jsonResponse({ ...report, deactivated: report.deleted, total: subscriptions.length });
@@ -833,7 +933,7 @@ Deno.serve(async (req: Request) => {
 
       const vapidKeys = await resolveVapidKeys(client);
 
-      const title = addPersonalizedGreeting(body.title ?? 'MenuGram');
+      const title = addPersonalizedGreeting(body.title ?? 'MenuGran');
       const bodyText = addPersonalizedGreeting(body.body ?? '');
 
       const subscriptions = await getAllSubscriptions(client);
@@ -856,6 +956,7 @@ Deno.serve(async (req: Request) => {
           body: replaceTemplateVariables(bodyText, sub.full_name ?? null),
         }),
         vapidKeys,
+        { url: resolveTargetUrl(body.url, '/marketplace'), tag: resolveMessageTag(body.tag) },
       );
 
       return jsonResponse({

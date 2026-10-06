@@ -250,14 +250,20 @@ export function LocationPicker({
     }
   }, [onLocationChange, onAddressChange, showToast]);
 
+  // `isolate` crea un contexto de apilamiento propio: sin él, el `z-index` del
+  // botón escapaba al contexto raíz y lo pintaba por encima del encabezado
+  // sticky, de la barra inferior, del carrito flotante e incluso de los modales
+  // (`z-50`), porque el contenedor solo era `relative` (z-index: auto).
+  // Dentro del contexto aislado basta un `z-10` para quedar sobre el mapa
+  // (`relative z-0`) sin competir con el resto de la interfaz.
   return (
-    <div className="relative">
-      <div ref={mapRef} className={`${className} z-0`} />
+    <div className="relative isolate">
+      <div ref={mapRef} className={`${className} relative z-0`} />
       <button
         type="button"
         onClick={handleDetectLocation}
         disabled={isLocating}
-        className="absolute top-2 right-2 z-[1000] pointer-events-auto flex items-center gap-1.5 rounded-lg bg-brand-red px-3 py-2 text-xs font-semibold text-white shadow-lg transition hover:brightness-110 disabled:opacity-60"
+        className="absolute top-2 right-2 z-10 flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-lg bg-brand-red px-3 py-2 text-xs font-semibold text-white shadow-lg transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 disabled:opacity-60"
       >
         {isLocating ? (
           <>

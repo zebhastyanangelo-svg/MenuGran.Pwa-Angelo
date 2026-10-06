@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Loader2, Send, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Loader2, Send, Users, X } from 'lucide-react';
 import {
+  countPushAudience,
   sendBulkPushNotification,
   type SendPushResult,
 } from '../../services/pushNotificationService';
@@ -13,6 +14,12 @@ interface BulkNotificationModalProps {
 /** Nombre de ejemplo usado en la vista previa de las variables dinámicas. */
 const PREVIEW_SAMPLE_NAME = 'María Pérez';
 
+/** Audiencia alcanzable, o `null` mientras carga / si el conteo no está disponible. */
+interface Audience {
+  devices: number;
+  users: number;
+}
+
 /**
  * Modal interactivo del SuperAdmin para enviar una notificación push masiva
  * a todos los clientes suscritos. Soporta variables dinámicas ({nombre},
@@ -23,10 +30,27 @@ export function BulkNotificationModal({ onClose }: BulkNotificationModalProps) {
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<SendPushResult | null>(null);
+  const [audience, setAudience] = useState<Audience | null>(null);
 
-  const canSend = title.trim().length > 0 && body.trim().length > 0 && !sending;
+  const canSend =
+  title.trim().length > 0 &&
+  body.trim().length > 0 &&
+  !sending &&
+  (audience === null || audience.devices > 0);
   const previewTitle = replaceTemplateVariables(title, PREVIEW_SAMPLE_NAME);
   const previewBody = replaceTemplateVariables(body, PREVIEW_SAMPLE_NAME);
+
+  // Una masiva es irreversible: se muestra a cuántos dispositivos llega antes de
+  // que el superadmin confirme, no después.
+  useEffect(() => {
+    let cancelled = false;
+    void countPushAudience().then((count) => {
+      if (!cancelled) setAudience(count);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSend = async () => {
     if (!canSend) return;
@@ -59,6 +83,24 @@ export function BulkNotificationModal({ onClose }: BulkNotificationModalProps) {
               <p className="mt-1 text-sm text-slate-500">
                 Se enviará a todos los clientes con notificaciones activas.
               </p>
+              {audience !== null && (
+                <p
+                  data-testid="bulk-notification-audience"
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"
+                >
+                  <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                  Alcanza a {audience.users}{' '}
+                  {audience.users === 1 ? 'usuario' : 'usuarios'} en{' '}
+                  {audience.devices}{' '}
+                  {audience.devices === 1 ? 'dispositivo' : 'dispositivos'}
+                </p>
+              )}
+              {audience !== null && audience.devices === 0 && (
+                <p className="mt-2 text-xs font-medium text-amber-700">
+                  Ningún dispositivo tiene notificaciones activas: el envío no
+                  llegaría a nadie.
+                </p>
+              )}
             </div>
             <button
               type="button"

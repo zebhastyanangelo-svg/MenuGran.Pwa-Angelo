@@ -86,6 +86,24 @@ describe('LocationPicker', () => {
     expect(button?.textContent).toContain('Usar mi ubicación');
   });
 
+  it('aísla el botón de ubicación para que no se encime con el resto de la UI', () => {
+    const onLocationChange = vi.fn();
+    const { container } = render(
+      <LocationPicker onLocationChange={onLocationChange} />,
+    );
+
+    // El contenedor crea su propio contexto de apilamiento: sin `isolate` el
+    // `z-index` del botón escapaba y se pintaba sobre el encabezado, el carrito
+    // e incluso los modales (`z-50`).
+    const wrapper = container.querySelector('.isolate');
+    expect(wrapper).not.toBeNull();
+
+    const button = container.querySelector('button');
+    // Dentro del contexto aislado basta un z-index bajo para ir sobre el mapa.
+    expect(button?.className).toContain('z-10');
+    expect(button?.className).not.toContain('z-[1000]');
+  });
+
   it('no llama onLocationChange al montar sin interacción', () => {
     const onLocationChange = vi.fn();
     render(<LocationPicker onLocationChange={onLocationChange} />);

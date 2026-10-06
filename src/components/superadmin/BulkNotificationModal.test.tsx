@@ -3,9 +3,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BulkNotificationModal } from './BulkNotificationModal';
 
 const sendBulkPushNotificationMock = vi.fn();
+const countPushAudienceMock = vi.fn().mockResolvedValue({ devices: 3, users: 2 });
 
 vi.mock('../../services/pushNotificationService', () => ({
   sendBulkPushNotification: (...args: unknown[]) => sendBulkPushNotificationMock(...args),
+  countPushAudience: () => countPushAudienceMock(),
 }));
 
 describe('BulkNotificationModal', () => {
@@ -13,8 +15,9 @@ describe('BulkNotificationModal', () => {
     vi.clearAllMocks();
   });
 
-  it('renderiza los campos de título, cuerpo y el botón de envío masivo', () => {
+  it('renderiza los campos de título, cuerpo y el botón de envío masivo', async () => {
     render(<BulkNotificationModal onClose={vi.fn()} />);
+    await waitFor(() => expect(countPushAudienceMock).toHaveBeenCalled());
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Enviar Notificación Masiva a Clientes/i })).toBeInTheDocument();
@@ -23,16 +26,18 @@ describe('BulkNotificationModal', () => {
     expect(screen.getByRole('button', { name: /Enviar Notificación a Todos/i })).toBeInTheDocument();
   });
 
-  it('deshabilita el envío cuando el cuerpo está vacío', () => {
+  it('deshabilita el envío cuando el cuerpo está vacío', async () => {
     render(<BulkNotificationModal onClose={vi.fn()} />);
+    await waitFor(() => expect(countPushAudienceMock).toHaveBeenCalled());
 
     const sendButton = screen.getByRole('button', { name: /Enviar Notificación a Todos/i });
     expect(sendButton).toBeDisabled();
     expect(sendBulkPushNotificationMock).not.toHaveBeenCalled();
   });
 
-  it('muestra la vista previa con las variables reemplazadas', () => {
+  it('muestra la vista previa con las variables reemplazadas', async () => {
     render(<BulkNotificationModal onClose={vi.fn()} />);
+    await waitFor(() => expect(countPushAudienceMock).toHaveBeenCalled());
 
     const bodyInput = screen.getByLabelText(/Cuerpo del mensaje/i);
     fireEvent.change(bodyInput, { target: { value: '¡Hola {nombre}! Hoy 2x1 🍔' } });
@@ -43,7 +48,7 @@ describe('BulkNotificationModal', () => {
   it('envía la notificación masiva con el título y cuerpo al hacer clic', async () => {
     sendBulkPushNotificationMock.mockResolvedValue({
       ok: true,
-      summary: { sent: 8, failed: 1, deactivated: 1, total: 9 },
+      summary: { sent: 8, failed: 1, deactivated: 1, deleted: 1, total: 9 },
     });
     const onClose = vi.fn();
     render(<BulkNotificationModal onClose={onClose} />);
@@ -89,14 +94,59 @@ describe('BulkNotificationModal', () => {
     });
   });
 
-  it('cierra el modal con el botón Cancelar y con la X', () => {
+  it('cierra el modal con el botón Cancelar y con la X', async () => {
     const onClose = vi.fn();
     render(<BulkNotificationModal onClose={onClose} />);
+    await waitFor(() => expect(countPushAudienceMock).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole('button', { name: /Cancelar/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('button', { name: /Cerrar/i }));
     expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('muestra a cuántos dispositivos alcanza antes de enviar', async () => {
+    render(<BulkNotificationModal onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('bulk-notification-audience')).toHaveTextContent(
+        /Alcanza a 2 usuarios en 3 dispositivos/i,
+      );
+    });
+  });
+
+  it('bloquea el envío si no hay ningún dispositivo suscrito', async () => {
+    countPushAudienceMock.mockResolvedValue({ devices: 0, users: 0 });
+    render(<BulkNotificationModal onClose={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText(/Cuerpo del mensaje/i), {
+      target: { value: 'Mensaje de prueba' },
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /Enviar Notificación a Todos/i }),
+      ).toBeDisabled();
+    });
+    expect(sendBulkPushNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it('permite enviar aunque el conteo de audiencia no esté disponible', async () => {
+    countPushAudienceMock.mockResolvedValue(null);
+    render(<BulkNotificationModal onClose={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText(/Cuerpo del mensaje/i), {
+      target: { value: 'Mensaje de prueba' },
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /Enviar Notificación a Todos/i }),
+      ).toBeEnabled();
+    });
+    expect(
+      screen.queryByTestId('bulk-notification-audience'),
+    ).not.toBeInTheDocument();
   });
 });

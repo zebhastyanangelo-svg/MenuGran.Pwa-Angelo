@@ -13,12 +13,26 @@
  * dependencias) y degrada con elegancia donde no existe: Safari y Firefox no
  * la implementan, y en jsdom tampoco está, por eso su disponibilidad se
  * comprueba antes de construir nada.
+ *
+ * El permiso de cámara se pide explícitamente con `getUserMedia` al montar la
+ * vista: es la única llamada que abre el diálogo nativo del navegador. Los tres
+ * estados que importa se distinguen y se comunican al cliente: `granted`
+ * (escaneando), `denied` (hay que actuar desde el candado de la barra de
+ * direcciones) y `unsupported` (contexto no seguro o API ausente).
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { QrCode, ScanLine, Keyboard } from 'lucide-react';
+import { QrCode, ScanLine, Keyboard, CameraOff, RefreshCw } from 'lucide-react';
 import { MERCHANT_QR_PATH } from '../services/qrCodeService';
+import {
+  CAMERA_UNSUPPORTED_MESSAGE,
+  isCameraSupported,
+  queryCameraPermission,
+  requestCameraStream,
+  resolveCameraErrorMessage,
+  type CameraPermissionState,
+} from '../utils/cameraPermission';
 import {
   extractQrToken,
   getBarcodeDetector,
@@ -30,6 +44,9 @@ export function QrScanPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [permissionState, setPermissionState] =
+    useState<CameraPermissionState>('prompt');
   const [error, setError] = useState<string | null>(null);
   const [manualToken, setManualToken] = useState('');
 
@@ -52,17 +69,21 @@ export function QrScanPage() {
     const Detector = getBarcodeDetector();
     if (Detector === null) return;
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setError('Este navegador no permite usar la cámara desde la web.');
+    if (!isCameraSupported()) {
+      setPermissionState('unsupported');
+      setError(CAMERA_UNSUPPORTED_MESSAGE);
       return;
     }
 
     setError(null);
+    setIsRequesting(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-      });
+      // `getUserMedia` es lo que abre el diálogo nativo de permisos. Se pide
+      // antes de tocar el `<video>` para que el permiso quede concedido (y no
+      // efímero) antes de empezar a reproducir el stream.
+      const stream = await requestCameraStream();
       streamRef.current = stream;
+      setPermissionState('granted');
 
       const video = videoRef.current;
       if (video !== null) {
@@ -95,13 +116,35 @@ export function QrScanPage() {
       void tick();
     } catch (cameraError: unknown) {
       stopStream();
-      const message =
-        cameraError instanceof Error ? cameraError.message : 'Error desconocido';
-      setError(
-        `No pudimos abrir la cámara (${message}). Puedes escribir el código del QR a mano.`,
-      );
+      // `NotAllowedError` cubre tanto el rechazo explícito como el bloqueo
+      // previo en los ajustes del navegador; en ambos casos hay que actuar
+      // desde el candado de la barra de direcciones.
+      const denied =
+        cameraError !== null &&
+        typeof cameraError === 'object' &&
+        (cameraError as { name?: unknown }).name === 'NotAllowedError';
+      setPermissionState(denied ? 'denied' : 'prompt');
+      setError(resolveCameraErrorMessage(cameraError));
+    } finally {
+      setIsRequesting(false);
     }
   }, [openToken, stopStream]);
+
+  // El permiso de cámara se consulta al entrar para saber si el navegador ya lo
+  // tiene resuelto, y la cámara se activa una sola vez por montaje (nunca en
+  // cada render) para no provocar permisos efímeros que el navegador descarta
+  // al recargar. Android Chrome acepta `getUserMedia` sin gesto previo; en
+  // escritorio el diálogo aparece igualmente y el botón permite reintentar.
+  useEffect(() => {
+    let cancelled = false;
+    void queryCameraPermission().then((state) => {
+      if (!cancelled) setPermissionState(state);
+    });
+    void startScanning();
+    return () => {
+      cancelled = true;
+    };
+  }, [startScanning]);
 
   // La cámara se libera al salir de la vista: dejar el stream vivo consume la
   // batería del dispositivo y mantiene el indicador de grabación encendido.
@@ -149,16 +192,45 @@ export function QrScanPage() {
                 Buscando un código QR...
               </p>
             )}
+            {!isScanning && isRequesting && (
+              <p
+                role="status"
+                className="absolute inset-0 flex items-center justify-center px-6 text-center text-xs font-medium text-white"
+              >
+                Allowiendo el uso de la cámara...
+              </p>
+            )}
+            {!isScanning && !isRequesting && permissionState === 'denied' && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/85 px-6 text-center">
+                <CameraOff className="h-6 w-6 text-white" aria-hidden="true" />
+                <p className="text-xs font-medium text-white">
+                  Permiso de cámara denegado
+                </p>
+                <p className="text-xs text-slate-300">
+                  Actívalo desde el candado de la barra de direcciones y vuelve
+                  a intentar.
+                </p>
+              </div>
+            )}
           </div>
 
           {!isScanning && (
             <button
               type="button"
               onClick={() => void startScanning()}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#c80024]"
+              disabled={isRequesting}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#c80024] disabled:opacity-60"
             >
-              <ScanLine className="h-4 w-4" aria-hidden="true" />
-              Activar la cámara
+              {permissionState === 'denied' ? (
+                <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <ScanLine className="h-4 w-4" aria-hidden="true" />
+              )}
+              {isRequesting
+                ? 'Abriendo cámara…'
+                : permissionState === 'denied'
+                  ? 'Reintentar con la cámara'
+                  : 'Activar la cámara'}
             </button>
           )}
         </div>

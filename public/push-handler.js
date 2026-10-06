@@ -13,60 +13,147 @@
  *
  * Payload esperado (JSON enviado por la Edge Function send-push-notification):
  *  { title, body, url?, tag?, icon?, badge? }
+ *
+ * Script clásico (no ESM) porque `importScripts` lo carga así. Para poder
+ * probarlo desde vitest, las funciones se cuelgan de `self.__pushHandlerTest`.
  */
 /* eslint-env worker */
 
-self.addEventListener('push', function (event) {
-  var payload = {};
-  try {
-    payload = event.data ? event.data.json() : {};
-  } catch {
+(function (scope) {
+  'use strict';
+
+  /** Destino cuando el payload no trae una ruta utilizable. */
+  var FALLBACK_URL = '/marketplace';
+
+  /** Prefijo de los tags generados cuando el payload no trae uno. */
+  var TAG_PREFIX = 'menugram-';
+
+  /**
+   * Sanea la URL de destino.
+   *
+   * Solo se aceptan rutas internas: un payload con esquema propio (`https:`) o
+   * protocol-relative (`//host`) podría sacar al cliente de la PWA hacia un
+   * origen ajeno, así que caen al destino por defecto.
+   */
+  function resolveTargetUrl(rawUrl) {
+    if (typeof rawUrl !== 'string') return FALLBACK_URL;
+    var value = rawUrl.trim();
+    if (value === '') return FALLBACK_URL;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(value) || value.indexOf('//') === 0) {
+      return FALLBACK_URL;
+    }
+    return value.charAt(0) === '/' ? value : '/' + value;
+  }
+
+  /**
+   * Reduce una URL a su ruta comparable: sin query, sin hash y sin barra final.
+   *
+   * La comparación anterior (`url.split('/')[3]`) solo resolvía rutas de un
+   * único segmento, de modo que un deep link como `/orders/123` nunca enfocaba
+   * la pestaña abierta y el clic terminaba abriendo una segunda copia de la PWA.
+   */
+  function normalizePathname(rawPath) {
+    var value = String(rawPath || '').split('?')[0].split('#')[0];
+    if (value.length > 1 && value.charAt(value.length - 1) === '/') {
+      value = value.slice(0, -1);
+    }
+    return value === '' ? '/' : value;
+  }
+
+  function pathOf(clientUrl) {
     try {
-      payload = { body: event.data ? event.data.text() : '' };
+      return normalizePathname(new URL(String(clientUrl)).pathname);
     } catch {
-      payload = {};
+      return '/';
     }
   }
 
-  var title = (payload && payload.title) || 'MenuGran';
-  var url = (payload && payload.url) || '/marketplace';
-
-  var options = {
-    body: (payload && payload.body) || '',
-    icon: (payload && payload.icon) || '/pwa-192x192.png',
-    badge: (payload && payload.badge) || '/pwa-192x192.png',
-    tag: (payload && payload.tag) || 'menugram-notification',
-    renotify: false,
-    data: { url: url },
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
-self.addEventListener('notificationclick', function (event) {
-  event.notification.close();
-
-  var url = '/marketplace';
-  try {
-    if (event.notification.data && event.notification.data.url) {
-      url = event.notification.data.url;
-    }
-  } catch {
-    url = '/marketplace';
+  /** `true` si el cliente ya está mostrando ese destino. */
+  function isShowingTarget(clientUrl, targetPath) {
+    return pathOf(clientUrl) === normalizePathname(targetPath);
   }
 
-  event.waitUntil(
-    self.clients
-      .matchAll({ type: 'window', includeUncontrolled: true })
-      .then(function (clientList) {
-        for (var i = 0; i < clientList.length; i++) {
-          var client = clientList[i];
-          var clientPath = '/' + String(client.url).split('/')[3];
-          if (clientPath === url && 'focus' in client) {
-            return client.focus();
+  /**
+   * Lee el payload tolerando JSON inválido y payloads cifrados o vacíos.
+   * Antes, un cuerpo que no era JSON perdía el título y mostraba "MenuGran".
+   */
+  function readPushPayload(event) {
+    if (!event || !event.data) return {};
+    try {
+      var parsed = event.data.json();
+      if (parsed && typeof parsed === 'object') return parsed;
+      return { body: String(parsed) };
+    } catch {
+      try {
+        return { body: event.data.text() };
+      } catch {
+        return {};
+      }
+    }
+  }
+
+  scope.addEventListener('push', function (event) {
+    var payload = readPushPayload(event);
+    var targetUrl = resolveTargetUrl(payload.url);
+
+    var options = {
+      body: payload.body || '',
+      icon: payload.icon || '/pwa-192x192.png',
+      badge: payload.badge || '/pwa-192x192.png',
+      // Sin `tag` propio cada mensaje necesita uno único: con una constante,
+      // dos notificaciones simultáneas se reemplazaban y solo se veía la última.
+      tag: payload.tag || TAG_PREFIX + Date.now(),
+      renotify: false,
+      requireInteraction: false,
+      data: { url: targetUrl },
+    };
+
+    event.waitUntil(scope.registration.showNotification(payload.title || 'MenuGran', options));
+  });
+
+  scope.addEventListener('notificationclick', function (event) {
+    event.notification.close();
+
+    var targetUrl = resolveTargetUrl(
+      event.notification && event.notification.data && event.notification.data.url
+    );
+
+    event.waitUntil(
+      scope.clients
+        .matchAll({ type: 'window', includeUncontrolled: true })
+        .then(function (clientList) {
+          var i;
+          var existing;
+
+          for (i = 0; i < clientList.length; i += 1) {
+            existing = clientList[i];
+            if (isShowingTarget(existing.url, targetUrl) && 'focus' in existing) {
+              return existing.focus();
+            }
           }
-        }
-        return self.clients.openWindow(url);
-      })
-  );
-});
+
+          // La PWA ya está abierta en otra pantalla: se reutiliza esa ventana
+          // en vez de abrir una segunda copia que compite por el mismo usuario.
+          for (i = 0; i < clientList.length; i += 1) {
+            existing = clientList[i];
+            if ('focus' in existing && typeof existing.navigate === 'function') {
+              return existing.focus().then(function (focusedClient) {
+                return focusedClient.navigate(targetUrl);
+              });
+            }
+          }
+
+          return scope.clients.openWindow(targetUrl);
+        })
+    );
+  });
+
+  // Superficie de pruebas: el resto del archivo no depende del DOM.
+  scope.__pushHandlerTest = {
+    FALLBACK_URL: FALLBACK_URL,
+    resolveTargetUrl: resolveTargetUrl,
+    normalizePathname: normalizePathname,
+    isShowingTarget: isShowingTarget,
+    readPushPayload: readPushPayload,
+  };
+})(typeof self !== 'undefined' ? self : this);
