@@ -6,16 +6,23 @@
  * Endpoint estático, público y sin API key. La tasa se lee de `current.usd`
  * y la fecha de la tasa de `current.date`.
  *
- * Estrategia de resiliencia:
- * 1. Caché en memoria + localStorage con TTL de 5 horas (evita llamar a la API
- *    en cada renderizado o recarga de página).
- * 2. Deduplicación de peticiones concurrentes (un solo fetch compartido).
- * 3. Fallbacks: endpoints públicos alternativos, última tasa en caché
+ * Estrategia para mantener la tasa siempre fresca:
+ * 1. Caché en memoria + localStorage con TTL de 1 hora: nunca se sirve una
+ *    tasa con más de 1 hora de antigüedad sin reintentar la consulta.
+ * 2. `startHourlyBCVRefresh` (invocado en `main.tsx`): consulta la API cada
+ *    1 hora mientras la app esté abierta.
+ * 3. `refreshBCVRateIfStale`: consulta al recuperar el foco (al volver de
+ *    segundo plano), solo si la caché ya expiró.
+ * 4. Deduplicación de peticiones concurrentes (un solo fetch compartido).
+ * 5. Fallbacks: endpoints públicos alternativos, última tasa en caché
  *    (aunque haya expirado) y tasa por defecto como último recurso.
  */
 
 export const EXCHANGE_RATE_STORAGE_KEY = 'menugram_bcv_exchange_rate';
-export const EXCHANGE_RATE_TTL_MS = 5 * 60 * 60 * 1000; // 5 horas en milisegundos
+/** Vigencia de la caché: la tasa nunca se sirve con más de 1 hora. */
+export const EXCHANGE_RATE_TTL_MS = 60 * 60 * 1000; // 1 hora en milisegundos
+/** Intervalo de la actualización automática en segundo plano (1 hora). */
+export const EXCHANGE_RATE_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 /** Última tasa conocida; se usa solo cuando la API y la caché fallan. */
 export const DEFAULT_FALLBACK_RATE = 857.0;
 
@@ -427,24 +434,31 @@ export function formatUSD(amount: number): string {
 let hourlyRefreshInterval: ReturnType<typeof setInterval> | null = null;
 
 /**
+ * Consulta la tasa BCV desde las APIs y actualiza la caché.
+ * Silenciosa ante fallos: la próxima lectura usará fallback o caché existente.
+ */
+async function refreshExchangeRateCache(): Promise<void> {
+  try {
+    const fresh = await fetchBCVRateFromAPI();
+    setCachedExchangeRate(fresh.rate, fresh.source, fresh.rateDate);
+  } catch {
+    // Silencioso: la próxima lectura usará fallback o caché existente.
+  }
+}
+
+/**
  * Inicia la actualización automática de la tasa BCV cada hora.
- * Llama a fetchBCVRateFromAPI y guarda en caché; ignora errores para no romper la app.
+ * Ejecuta una consulta inmediata y repite con `setInterval` mientras la app
+ * esté abierta, para que la tasa nunca quede estancada con el valor del día
+ * anterior.
  */
 export function startHourlyBCVRefresh(): void {
   if (typeof window === 'undefined' || hourlyRefreshInterval !== null) return;
 
-  const refresh = async () => {
-    try {
-      const fresh = await fetchBCVRateFromAPI();
-      setCachedExchangeRate(fresh.rate, fresh.source, fresh.rateDate);
-    } catch {
-      // Silencioso: la próxima lectura usará fallback o caché existente.
-    }
-  };
-
-  // Ejecutar inmediatamente y luego cada hora.
-  refresh();
-  hourlyRefreshInterval = setInterval(refresh, EXCHANGE_RATE_TTL_MS);
+  void refreshExchangeRateCache();
+  hourlyRefreshInterval = setInterval(() => {
+    void refreshExchangeRateCache();
+  }, EXCHANGE_RATE_REFRESH_INTERVAL_MS);
 }
 
 /**
@@ -455,4 +469,16 @@ export function stopHourlyBCVRefresh(): void {
     clearInterval(hourlyRefreshInterval);
     hourlyRefreshInterval = null;
   }
+}
+
+/**
+ * Refresca la tasa BCV solo si la caché ya expiró.
+ *
+ * Pensado para el evento `visibilitychange`: al recuperar el foco (volver de
+ * segundo plano) se fuerza la consulta, pero sin martillar la API en cada
+ * cambio de pestaña mientras la caché siga vigente.
+ */
+export async function refreshBCVRateIfStale(): Promise<void> {
+  if (getCachedExchangeRate() !== null) return;
+  await refreshExchangeRateCache();
 }

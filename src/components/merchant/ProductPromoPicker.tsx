@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCheck, ListChecks, Loader2, Tag, X } from 'lucide-react';
 import {
   applyPromoToProducts,
@@ -41,26 +41,42 @@ export function ProductPromoPicker({ merchantId }: ProductPromoPickerProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  /**
+   * Evita llamar `setState` después de desmontar: la carga es async y su
+   * `finally` podía ejecutarse cuando el componente ya no existe (en tests,
+   * después de que vitist destruye el entorno, produciendo el unhandled
+   * rejection `window is not defined` desde MerchantSettingsPage.test.tsx).
+   */
+  const isMountedRef = useRef(true);
 
   const loadProducts = useCallback(async () => {
     if (!merchantId) return;
     setIsLoading(true);
     setError(null);
     try {
-      setProducts(await fetchMerchantProducts(merchantId));
+      const loaded = await fetchMerchantProducts(merchantId);
+      if (!isMountedRef.current) return;
+      setProducts(loaded);
     } catch (loadError: unknown) {
+      if (!isMountedRef.current) return;
       setError(
         loadError instanceof Error
           ? loadError.message
           : 'No se pudo cargar tu menú.',
       );
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [merchantId]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     void loadProducts();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [loadProducts]);
 
   const discountInvalid = isDiscountPercentageInputInvalid(discountInput);
@@ -108,19 +124,23 @@ export function ProductPromoPicker({ merchantId }: ProductPromoPickerProps) {
         badgeLabel: parseBadgeLabel(badgeLabel),
         discountPercentage: parseDiscountPercentage(discountInput),
       });
+      if (!isMountedRef.current) return;
       setSuccess(
         `Promoción aplicada a ${updated} ${updated === 1 ? 'plato' : 'platos'}.`,
       );
       setSelectedIds([]);
       await loadProducts();
     } catch (saveError: unknown) {
+      if (!isMountedRef.current) return;
       setError(
         saveError instanceof Error
           ? saveError.message
           : 'No se pudo aplicar la promoción.',
       );
     } finally {
-      setIsSaving(false);
+      if (isMountedRef.current) {
+        setIsSaving(false);
+      }
     }
   }
 

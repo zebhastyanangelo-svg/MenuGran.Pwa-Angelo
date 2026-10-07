@@ -205,6 +205,29 @@ describe('QrScanPage — permisos de cámara', () => {
     });
   });
 
+  it('no deja el panel de vídeo en negro cuando la cámara no está disponible', async () => {
+    setMediaDevices(undefined);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('camera-unsupported-notice')).toBeInTheDocument();
+    });
+    // El aviso va dentro del panel: el recuadro negro es el síntoma que se
+    // reportaba como "la app se queda en blanco".
+    expect(screen.getByTestId('camera-unsupported-notice')).toHaveTextContent(
+      /conexión segura/i,
+    );
+    // Sin botón de reintentar: no hay a qué reintentar sin API de cámara.
+    expect(
+      screen.queryByRole('button', { name: /Activar la cámara/i }),
+    ).not.toBeInTheDocument();
+    // La alternativa manual sigue disponible.
+    expect(
+      screen.getByLabelText(/¿Prefieres escribir el código/i),
+    ).toBeInTheDocument();
+  });
+
   it('traduce la falta de cámara física a un mensaje legible', async () => {
     setMediaDevices({
       getUserMedia: vi

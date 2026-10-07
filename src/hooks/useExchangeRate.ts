@@ -18,7 +18,8 @@ export interface UseExchangeRateReturn {
  * DolarVZLA (https://rates.dolarvzla.com/bcv/current.json).
  * Es la fuente central de la tasa para toda la app (Checkout, carrito,
  * paneles de comercio y admin). Usa caché en memoria/localStorage con TTL
- * de 5 horas y deduplica peticiones concurrentes a la API.
+ * de 1 hora y deduplica peticiones concurrentes a la API; `main.tsx`
+ * mantiene además un refresco automático cada hora y al recuperar el foco.
  */
 export function useExchangeRate(): UseExchangeRateReturn {
   const [rate, setRate] = useState<number | null>(null);

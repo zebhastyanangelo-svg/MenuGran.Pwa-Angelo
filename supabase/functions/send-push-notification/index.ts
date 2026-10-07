@@ -450,6 +450,13 @@ async function getAllSubscriptions(client: SupabaseClient): Promise<Array<PushSu
  * deliberada: solo un 404/410 del push service significa que la suscripción
  * ya no existe y debe eliminarse. Cualquier otro fallo (error local de
  * configuración, red, 429, 5xx) NO invalida la suscripción.
+ *
+ * Excepción: un 401/403 se trata como `auth_error` y TAMBIÉN elimina la
+ * suscripción. Como el par VAPID se valida antes de firmar
+ * (`assertPrivateKeyMatchesPublicKey`), un 401/403 del push service solo puede
+ * significar que el dispositivo se suscribió con una clave VAPID anterior
+ * (bundle cacheado en una rotación de claves): esa suscripción nunca podrá
+ * entregarse con el par actual y el cliente la recreará al abrir la app.
  */
 type PushOutcome =
   | { status: 'sent' }
@@ -593,33 +600,61 @@ function publicKeyToCoordinates(publicKey: string): { x: string; y: string } {
  * Importa la clave privada VAPID como clave ECDSA firmante.
  *
  * Acepta los dos formatos con los que se ha desplegado esta clave:
- *  - escalar P-256 crudo de 32 bytes (base64url): se importa por JWK, lo que
- *    además hace que un desajuste entre la pública y la privada falle aquí en
- *    lugar de convertirse en 400 notificaciones rechazadas;
+ *  - escalar P-256 crudo de 32 bytes (base64url);
  *  - contenedor PKCS8 DER (base64), que es lo que escriben varias
  *    herramientas de generación de claves VAPID.
+ *
+ * En ambos casos se verifica que la clave privada realmente pertenezca a la
+ * clave pública declarada, comparando el punto EC derivado con las
+ * coordenadas de `publicKey`. Sin esa comprobación, un par desalineado
+ * importaría sin error (PKCS8 no lleva la pública) y cada envío acabaría en
+ * 401/403 del push service sin que nada en el servidor lo señalara.
  */
 async function importVapidPrivateKey(publicKey: string, privateKey: string): Promise<CryptoKey> {
   const privateBytes = base64UrlToBytes(privateKey);
-
-  if (privateBytes.length !== 32) {
-    return crypto.subtle.importKey(
-      'pkcs8',
-      privateBytes as BufferSource,
-      { name: 'ECDSA', namedCurve: 'P-256' },
-      false,
-      ['sign'],
-    );
-  }
-
   const { x, y } = publicKeyToCoordinates(publicKey);
 
-  return crypto.subtle.importKey(
-    'jwk',
-    { kty: 'EC', crv: 'P-256', d: privateKey, x, y, ext: true },
-    { name: 'ECDSA', namedCurve: 'P-256' },
-    false,
-    ['sign'],
+  const signingKey =
+    privateBytes.length === 32
+      ? await crypto.subtle.importKey(
+        'jwk',
+        { kty: 'EC', crv: 'P-256', d: privateKey, x, y, ext: true },
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        true,
+        ['sign'],
+      )
+      : await crypto.subtle.importKey(
+        'pkcs8',
+        privateBytes as BufferSource,
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        true,
+        ['sign'],
+      );
+
+  await assertPrivateKeyMatchesPublicKey(signingKey, x, y);
+  return signingKey;
+}
+
+/**
+ * Comprueba que el punto público derivado de la clave privada coincida con la
+ * clave pública VAPID configurada.
+ *
+ * WebCrypto no valida esta correspondencia al importar, así que es la única
+ * forma de detectar una clave privada de otro par antes de firmar. Comparar
+ * en tiempo constante evita además filtrar bytes por tiempos.
+ */
+async function assertPrivateKeyMatchesPublicKey(
+  signingKey: CryptoKey,
+  expectedX: string,
+  expectedY: string,
+): Promise<void> {
+  const jwk = await crypto.subtle.exportKey('jwk', signingKey);
+  if (timingSafeEqual(jwk.x ?? '', expectedX) && timingSafeEqual(jwk.y ?? '', expectedY)) {
+    return;
+  }
+  throw new Error(
+    'La clave privada VAPID no corresponde a la clave pública configurada. ' +
+      'Regenera el par VAPID y actualiza ambas a la vez.',
   );
 }
 
@@ -708,11 +743,11 @@ async function deleteSubscription(client: SupabaseClient, endpoint: string): Pro
 
 interface DeliveryReport {
   sent: number;
-  /** Suscritos que el push service rechazó con 404/410 y fueron eliminados. */
+  /** Suscritos que el push service rechazó (404/410 o clave VAPID antigua) y fueron eliminados. */
   deleted: number;
   /** Fallos que no invalidan la suscripción (red, 429, 5xx, 4xx). */
   failed: number;
-  /** Respuestas 401/403: indican un problema de claves VAPID, no del cliente. */
+  /** Respuestas 401/403: suscripciones creadas con una clave VAPID anterior; eliminadas. */
   authErrors: number;
   /** Errores locales de configuración (claves VAPID inválidas, etc.). */
   configError?: string;
@@ -792,8 +827,15 @@ async function deliverToSubscriptions(
           await deleteSubscription(client, sub.endpoint);
           break;
         case 'auth_error':
+          // El par VAPID ya se validó antes de firmar, así que un 401/403
+          // significa que la suscripción quedó ligada a una clave VAPID
+          // anterior (rotación con bundle cacheado). Es indelebre desde el
+          // servidor: se elimina y el dispositivo se re-suscribe solo al
+          // abrir la app con el bundle actualizado.
           report.failed += 1;
           report.authErrors += 1;
+          report.deleted += 1;
+          await deleteSubscription(client, sub.endpoint);
           break;
         default:
           report.failed += 1;

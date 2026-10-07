@@ -166,8 +166,10 @@ export function BulkNotificationModal({ onClose }: BulkNotificationModalProps) {
                 )}
                 {(result.summary.authErrors ?? 0) > 0 && (
                   <p className="mt-1 font-semibold">
-                    {result.summary.authErrors} rechazos por claves VAPID (401/403). Revisa que
-                    VITE_WEB_PUSH_PUBLIC_KEY y la clave privada coincidan.
+                    {result.summary.authErrors} suscripciones rechazadas (401/403): son dispositivos
+                    que se suscribieron con una clave VAPID anterior a una rotación y ya fueron
+                    eliminadas. Esos dispositivos se re-suscribirán solos al abrir la app
+                    actualizada; el resto de la configuración VAPID ya está verificada.
                   </p>
                 )}
                 {result.summary.configError !== undefined && (

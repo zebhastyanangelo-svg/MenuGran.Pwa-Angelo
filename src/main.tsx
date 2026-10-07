@@ -7,6 +7,7 @@ import 'animate.css'
 import './index.css'
 import App from './App.tsx'
 import posthog, { isPostHogEnabled } from './posthog'
+import { refreshBCVRateIfStale, startHourlyBCVRefresh } from './services/exchangeRate'
 
 let swRegistration: ServiceWorkerRegistration | undefined
 
@@ -59,10 +60,20 @@ if ('serviceWorker' in navigator) {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && swRegistration) {
-    void swRegistration.update()
+  if (!document.hidden) {
+    // Al volver de segundo plano se fuerza la consulta de la tasa BCV si la
+    // caché ya expiró, para no calcular precios en bolívares con una tasa
+    // estancada del día anterior.
+    void refreshBCVRateIfStale();
+    if (swRegistration) {
+      void swRegistration.update()
+    }
   }
 })
+
+// Tasa BCV siempre fresca: consulta a DolarVZLA cada 1 hora mientras la app
+// esté abierta (la caché también vence a la 1 hora).
+startHourlyBCVRefresh()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

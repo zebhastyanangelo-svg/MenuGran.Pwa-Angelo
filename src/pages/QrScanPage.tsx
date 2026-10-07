@@ -28,7 +28,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { QrCode, ScanLine, Keyboard, CameraOff, RefreshCw } from 'lucide-react';
+import {
+  QrCode,
+  ScanLine,
+  Keyboard,
+  CameraOff,
+  RefreshCw,
+  ShieldOff,
+} from 'lucide-react';
 import { MERCHANT_QR_PATH } from '../services/qrCodeService';
 import {
   CAMERA_UNSUPPORTED_MESSAGE,
@@ -229,6 +236,21 @@ export function QrScanPage() {
                 <p className="text-xs text-slate-300">
                   Actívalo desde el candado de la barra de direcciones y vuelve
                   a intentar.
+                </p>
+              </div>
+            )}
+            {!isScanning && !isRequesting && permissionState === 'unsupported' && (
+              <div
+                className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/85 px-6 text-center"
+                data-testid="camera-unsupported-notice"
+              >
+                <ShieldOff className="h-6 w-6 text-white" aria-hidden="true" />
+                <p className="text-xs font-medium text-white">
+                  Cámara no disponible
+                </p>
+                <p className="text-xs text-slate-300">
+                  Abre la PWA en una conexión segura (https) o escribe el
+                  código abajo.
                 </p>
               </div>
             )}

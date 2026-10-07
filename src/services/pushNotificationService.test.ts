@@ -181,7 +181,7 @@ describe('subscribeCurrentUserToPush', () => {
         auth: 'BAUTH',
         is_active: true,
       }),
-      { onConflict: 'endpoint' },
+      { onConflict: 'user_id,endpoint' },
     );
   });
 
@@ -339,7 +339,7 @@ describe('reconcilePushSubscription', () => {
     expect(result).toEqual({ status: 'synced' });
     expect(upsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ user_id: 'user-1', is_active: true }),
-      { onConflict: 'endpoint' },
+      { onConflict: 'user_id,endpoint' },
     );
   });
 
@@ -355,7 +355,7 @@ describe('reconcilePushSubscription', () => {
     expect(result).toEqual({ status: 'synced' });
     expect(upsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ endpoint: subscriptionJson.endpoint, is_active: true }),
-      { onConflict: 'endpoint' },
+      { onConflict: 'user_id,endpoint' },
     );
   });
 
@@ -383,7 +383,7 @@ describe('reconcilePushSubscription', () => {
     expect(stale.unsubscribe).toHaveBeenCalled();
     expect(upsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ user_id: 'user-1', endpoint: subscriptionJson.endpoint }),
-      { onConflict: 'endpoint' },
+      { onConflict: 'user_id,endpoint' },
     );
   });
 

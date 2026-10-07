@@ -41,12 +41,16 @@ export type SubscribePushResult =
 export interface PushSendSummary {
   sent: number;
   failed: number;
-  /** Suscripciones eliminadas por el servidor al confirmar un 404/410. */
+  /** Suscripciones eliminadas por el servidor (404/410 o clave VAPID antigua). */
   deleted: number;
   /** @deprecated Alias de `deleted`, conservado por compatibilidad. */
   deactivated: number;
   total: number;
-  /** Respuestas 401/403: el problema es la configuración VAPID, no el cliente. */
+  /**
+   * Respuestas 401/403: el dispositivo se suscribió con una clave VAPID
+   * anterior a una rotación (bundle cacheado). El servidor elimina esas
+   * filas; el dispositivo se re-suscribe al abrir la app actualizada.
+   */
   authErrors?: number;
   /** `'env'` o `'db'`: de dónde se obtuvo el par de claves VAPID. */
   vapidSource?: string;
@@ -95,9 +99,14 @@ async function persistSubscription(userId: string, subscription: PushSubscriptio
     is_active: true,
   };
 
+  // El conflicto se resuelve por (user_id, endpoint), no solo por endpoint: el
+  // endpoint push pertenece al navegador, así que el mismo dispositivo puede
+  // usar varias cuentas. Con `onConflict: 'endpoint'` el upsert intentaba
+  // actualizar la fila del usuario anterior, la política RLS la rechazaba y la
+  // operación terminaba en 403 sin registrar nada.
   const { error } = await supabase
     .from(TABLE_NAMES.userPushSubscriptions)
-    .upsert(row, { onConflict: 'endpoint' });
+    .upsert(row, { onConflict: 'user_id,endpoint' });
 
   if (error !== null) {
     throw new Error('No se pudo registrar tu dispositivo para notificaciones.');

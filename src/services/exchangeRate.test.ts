@@ -6,7 +6,11 @@ import {
   clearExchangeRateCache,
   fetchBCVRateFromAPI,
   getBCVRate,
+  startHourlyBCVRefresh,
+  stopHourlyBCVRefresh,
+  refreshBCVRateIfStale,
   EXCHANGE_RATE_TTL_MS,
+  EXCHANGE_RATE_REFRESH_INTERVAL_MS,
   DEFAULT_FALLBACK_RATE,
   DOLARVZLA_BCV_URL,
   DOLARVZLA_SOURCE,
@@ -76,6 +80,7 @@ describe('exchangeRate service', () => {
     });
     localStorageMock.clear();
     clearExchangeRateCache();
+    stopHourlyBCVRefresh();
     vi.useFakeTimers();
   });
 
@@ -344,9 +349,9 @@ describe('exchangeRate service', () => {
       expect(rate).toBe(777.77);
     });
 
-    it('retorna la tasa en caché si tiene menos de 5 horas de antigüedad', async () => {
+    it('retorna la tasa en caché si tiene menos de 1 hora de antigüedad', async () => {
       setCachedExchangeRate(500.0, 'test');
-      vi.advanceTimersByTime(4 * 60 * 60 * 1000); // 4 horas
+      vi.advanceTimersByTime(EXCHANGE_RATE_TTL_MS - 5 * 60 * 1000); // 55 minutos
       const fetchMock = vi.fn();
       vi.stubGlobal('fetch', fetchMock);
 
@@ -356,6 +361,18 @@ describe('exchangeRate service', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
+    it('vuelve a consultar la API cuando la caché supera la hora', async () => {
+      setCachedExchangeRate(500.0, 'test');
+      vi.advanceTimersByTime(EXCHANGE_RATE_TTL_MS + 1000);
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse(dolarVzlaPayload(871.36)));
+      vi.stubGlobal('fetch', fetchMock);
+
+      const rate = await getBCVRate();
+
+      expect(rate).toBe(871.36);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
     it('retorna la tasa por defecto cuando no hay caché y la API falla', async () => {
       const fetchMock = vi.fn().mockRejectedValue(new Error('Sin conexión'));
       vi.stubGlobal('fetch', fetchMock);
@@ -363,6 +380,90 @@ describe('exchangeRate service', () => {
       const rate = await getBCVRate();
 
       expect(rate).toBe(DEFAULT_FALLBACK_RATE);
+    });
+  });
+
+  describe('startHourlyBCVRefresh', () => {
+    it('consulta la API al iniciar y repite cada hora', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse(dolarVzlaPayload(871)));
+      vi.stubGlobal('fetch', fetchMock);
+
+      startHourlyBCVRefresh();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(getCachedExchangeRate()?.rate).toBe(871);
+
+      fetchMock.mockResolvedValue(jsonResponse(dolarVzlaPayload(872)));
+      await vi.advanceTimersByTimeAsync(EXCHANGE_RATE_REFRESH_INTERVAL_MS);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(getCachedExchangeRate()?.rate).toBe(872);
+    });
+
+    it('no registra un segundo intervalo si ya está activo', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse(dolarVzlaPayload(871)));
+      vi.stubGlobal('fetch', fetchMock);
+
+      startHourlyBCVRefresh();
+      startHourlyBCVRefresh();
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(EXCHANGE_RATE_REFRESH_INTERVAL_MS);
+
+      // 1 consulta inmediata + 1 del intervalo único: sin duplicación.
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('conserva la caché existente si la API falla durante el refresco', async () => {
+      setCachedExchangeRate(870.5, 'test');
+      const fetchMock = vi.fn().mockRejectedValue(new Error('Sin conexión'));
+      vi.stubGlobal('fetch', fetchMock);
+
+      startHourlyBCVRefresh();
+      await vi.advanceTimersByTimeAsync(EXCHANGE_RATE_REFRESH_INTERVAL_MS);
+
+      expect(getCachedExchangeRateIgnoringTTL()?.rate).toBe(870.5);
+    });
+
+    it('stopHourlyBCVRefresh detiene el intervalo', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse(dolarVzlaPayload(871)));
+      vi.stubGlobal('fetch', fetchMock);
+
+      startHourlyBCVRefresh();
+      await vi.advanceTimersByTimeAsync(0);
+      stopHourlyBCVRefresh();
+      await vi.advanceTimersByTimeAsync(EXCHANGE_RATE_REFRESH_INTERVAL_MS);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('refreshBCVRateIfStale', () => {
+    it('no consulta la API si la caché sigue vigente', async () => {
+      setCachedExchangeRate(500, 'test');
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+
+      await refreshBCVRateIfStale();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('consulta la API al recuperar el foco si la caché expiró', async () => {
+      setCachedExchangeRate(500, 'test');
+      vi.advanceTimersByTime(EXCHANGE_RATE_TTL_MS + 1000);
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse(dolarVzlaPayload(871)));
+      vi.stubGlobal('fetch', fetchMock);
+
+      await refreshBCVRateIfStale();
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(getCachedExchangeRate()?.rate).toBe(871);
+    });
+
+    it('falla en silencio si la API no responde', async () => {
+      const fetchMock = vi.fn().mockRejectedValue(new Error('Sin conexión'));
+      vi.stubGlobal('fetch', fetchMock);
+
+      await expect(refreshBCVRateIfStale()).resolves.toBeUndefined();
     });
   });
 
