@@ -24,8 +24,8 @@ import { parseGeoPoint } from '../utils/geoPoint';
 import { confirmOrderDelivery } from '../services/orderDeliveryService';
 import { OrderStatusStep } from '../components/orders/OrderStatusStep';
 import { getAllowedTransitions, getTransitionLabel, getTransitionButtonClass } from '../utils/orderStatus';
-import { PartyPopper, ArrowLeft, PackageCheck, AlertCircle } from 'lucide-react';
-import { DriverNavigationPanel } from '../components/orders/DriverNavigationPanel';
+import { PartyPopper, ArrowLeft, PackageCheck, AlertCircle, Navigation } from 'lucide-react';
+import { OrderTrackingPanel } from '../components/orders/OrderTrackingPanel';
 import { MapErrorBoundary } from '../components/map/MapErrorBoundary';
 import { useQueryClient } from '@tanstack/react-query';
 import posthog, { isPostHogEnabled } from '../posthog';
@@ -98,6 +98,8 @@ export function OrderTracker() {
     phone: string | null;
     avatar_url: string | null;
   } | null>(null);
+  const [merchantLocation, setMerchantLocation] = useState<GeoPoint | null>(null);
+  const [trackingOpen, setTrackingOpen] = useState(true);
 
   const { showToast } = useNotificationToast();
   const bcvRate = useBCVRate();
@@ -252,7 +254,7 @@ export function OrderTracker() {
         productIds.length > 0
           ? supabase.from('products').select('id, title').in('id', productIds)
           : { data: [], error: null },
-        supabase.from('merchants').select('name').eq('id', data.merchant_id).single(),
+        supabase.from('merchants').select('name, location').eq('id', data.merchant_id).single(),
         data.customer_id
           ? supabase.from('profiles').select('full_name, phone, ci').eq('id', data.customer_id).single()
           : { data: null, error: null },
@@ -268,6 +270,7 @@ export function OrderTracker() {
 
       if (merchantResult.data) {
         setMerchantName(merchantResult.data.name);
+        setMerchantLocation(parseGeoPoint(merchantResult.data.location));
       }
 
       if (customerResult.data) {
@@ -376,6 +379,11 @@ export function OrderTracker() {
       supabase.removeChannel(channel);
     };
   }, [orderId, order?.status]);
+
+  // Reabre el mapa panorámico cada vez que la entrega pasa a "en camino".
+  useEffect(() => {
+    if (order?.status === 'on_the_way') setTrackingOpen(true);
+  }, [order?.status]);
 
   // Auto-clear cached order after delivery/cancellation
   useEffect(() => {
@@ -609,22 +617,36 @@ export function OrderTracker() {
       </div>
 
       {order.status === 'on_the_way' && isValidGeoPoint(deliveryPoint) && (
-        <MapErrorBoundary fallbackMessage="No se pudo mostrar el mapa.">
-          <DriverNavigationPanel
-            driverLocation={driverLocation}
-            destination={deliveryPoint}
-            driverName={driverProfile?.full_name ?? null}
-            driverPhone={driverProfile?.phone ?? null}
-            driverAvatarUrl={driverProfile?.avatar_url ?? null}
-            orderCode={deliveryCode}
-            statusLabel={statusDisplayMap[order.status]}
-            canConfirmDelivery={
-              !isCompleted && order.status === 'on_the_way' && order.customer_id === user?.id
-            }
-            isConfirming={loading}
-            onConfirmDelivery={() => void confirmDeliveryByClient()}
-          />
-        </MapErrorBoundary>
+        trackingOpen ? (
+          <MapErrorBoundary fallbackMessage="No se pudo mostrar el mapa.">
+            <OrderTrackingPanel
+              driverLocation={driverLocation}
+              destination={deliveryPoint}
+              merchantPoint={merchantLocation}
+              driverName={driverProfile?.full_name ?? null}
+              driverPhone={driverProfile?.phone ?? null}
+              driverAvatarUrl={driverProfile?.avatar_url ?? null}
+              orderCode={deliveryCode}
+              statusLabel={statusDisplayMap[order.status]}
+              canConfirmDelivery={
+                !isCompleted && order.status === 'on_the_way' && order.customer_id === user?.id
+              }
+              isConfirming={loading}
+              onConfirmDelivery={() => void confirmDeliveryByClient()}
+              onClose={() => setTrackingOpen(false)}
+            />
+          </MapErrorBoundary>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setTrackingOpen(true)}
+            data-testid="open-tracking-map"
+            className="mb-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-4 text-base font-semibold text-white shadow-lg transition hover:bg-emerald-700"
+          >
+            <Navigation className="h-5 w-5" aria-hidden="true" />
+            Ver seguimiento en vivo
+          </button>
+        )
       )}
 
       <div className="grid gap-6">

@@ -540,6 +540,48 @@ describe('Checkout', () => {
     expect(mockCreateOrder).not.toHaveBeenCalled();
   }, 15000);
 
+  it('bloquea también el pedido de retiro en local (pickup) con perfil incompleto', async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 'user-123' } as any,
+      profile: {
+        id: 'user-123',
+        email: 'cli@test.com',
+        full_name: 'Cliente',
+        role: 'customer',
+        phone: null,
+        ci: 'V12345678',
+        avatar_url: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      } as any,
+      isLoading: false,
+      signInWithGoogle: vi.fn(),
+      signInWithPassword: vi.fn(),
+      signUpWithPassword: vi.fn(),
+      resendConfirmationEmail: vi.fn(),
+      signOut: vi.fn(),
+    });
+
+    renderCheckout();
+
+    // El modal aparece al montar, antes de elegir la modalidad.
+    expect(await screen.findByText('Completa tu perfil para pedir')).toBeInTheDocument();
+    expect(screen.getByText(/Falta: Teléfono/i)).toBeInTheDocument();
+
+    // Cierro el modal para poder interactuar con el formulario y elegir pickup.
+    await user.click(screen.getByRole('button', { name: /Seguir viendo mi carrito/i }));
+    await user.click(screen.getByRole('button', { name: /Retiro en local/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(screen.getByText('Completa tu perfil para pedir')).toBeInTheDocument();
+    });
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+  }, 15000);
+
   afterEach(() => {
     vi.useRealTimers();
   });

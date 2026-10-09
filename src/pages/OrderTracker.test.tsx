@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { OrderTracker } from './OrderTracker';
 import { AuthProvider } from '../context/AuthContext';
 import { CartProvider } from '../context/CartContext';
@@ -546,7 +547,8 @@ describe('OrderTracker', () => {
     expect(lastCall.status).toBeNull();
   });
 
-  it('muestra el panel de navegación GPS cuando el repartidor está en camino', async () => {
+  it('muestra el panel de rastreo panorámico cuando el repartidor está en camino', async () => {
+    const user = userEvent.setup();
     useAuthMock.user = { id: 'test-customer-id', email: 'test@example.com' };
     const onTheWayOrder = {
       ...mockOrder,
@@ -569,12 +571,14 @@ describe('OrderTracker', () => {
     const { wrapper } = createWrapper();
     render(<OrderTracker />, { wrapper });
 
-    const panel = await screen.findByTestId('driver-navigation-panel');
+    const panel = await screen.findByTestId('order-tracking-panel');
     expect(panel).toBeInTheDocument();
 
     expect(await screen.findByText('Carlos Pérez')).toBeInTheDocument();
-    const card = screen.getByTestId('navigation-person-card');
-    expect(within(card).getByText('REPARTIDOR:')).toBeInTheDocument();
+    expect(screen.getByTestId('tracking-delivery-code')).toHaveTextContent('#TEST-ORD');
+
+    // El botón de confirmación vive en los detalles expandidos de la tarjeta.
+    await user.click(screen.getByTestId('tracking-card-toggle'));
     expect(screen.getByTestId('confirm-delivery')).toBeInTheDocument();
   });
 });
