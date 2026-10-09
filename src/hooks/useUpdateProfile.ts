@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { ProfileRow } from '../types/database';
+import { useAuth } from './useAuth';
 
 export interface ProfileUpdatePayload {
   full_name?: string;
@@ -32,10 +33,34 @@ async function checkCiUnique(ci: string, excludeUserId: string): Promise<void> {
   }
 }
 
+async function updateProfileRow(
+  userId: string,
+  payload: ProfileUpdatePayload,
+): Promise<ProfileRow> {
+  const { data, error: updateError } = await supabase
+    .from(TABLE_NAMES.profiles)
+    .update({
+      ...(payload.full_name !== undefined && { full_name: payload.full_name }),
+      ...(payload.ci !== undefined && { ci: payload.ci }),
+      ...(payload.phone !== undefined && { phone: payload.phone }),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (updateError !== null) {
+    throw new Error(updateError.message);
+  }
+
+  return data as ProfileRow;
+}
+
 export function useUpdateProfile(): UseUpdateProfileResult {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { reloadProfile } = useAuth();
 
   const updateProfile = useCallback(
     async (userId: string, payload: ProfileUpdatePayload): Promise<ProfileRow> => {
@@ -47,23 +72,18 @@ export function useUpdateProfile(): UseUpdateProfileResult {
           await checkCiUnique(payload.ci, userId);
         }
 
-        const { data, error: updateError } = await supabase
-          .from(TABLE_NAMES.profiles)
-          .update({
-            ...(payload.full_name !== undefined && { full_name: payload.full_name }),
-            ...(payload.ci !== undefined && { ci: payload.ci }),
-            ...(payload.phone !== undefined && { phone: payload.phone }),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', userId)
-          .select()
-          .single();
+        const updatedProfile = await updateProfileRow(userId, payload);
 
-        if (updateError !== null) {
-          throw new Error(updateError.message);
+        // El guardado ya fue exitoso: invalidar la caché global del perfil
+        // (AuthContext) para que la UI se actualice sin recargar la página.
+        // Un fallo aquí no debe reportarse como error de guardado.
+        try {
+          await reloadProfile();
+        } catch (reloadError) {
+          console.error('Error al refrescar el perfil tras guardar', reloadError);
         }
 
-        return data as ProfileRow;
+        return updatedProfile;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Error al actualizar el perfil';
         setError(message);
@@ -72,7 +92,7 @@ export function useUpdateProfile(): UseUpdateProfileResult {
         setIsSaving(false);
       }
     },
-    [],
+    [reloadProfile],
   );
 
   const deleteAccount = useCallback(

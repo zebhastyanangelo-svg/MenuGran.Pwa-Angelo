@@ -56,6 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const reloadProfile = useCallback(async (): Promise<void> => {
+    const currentSession = sessionRef.current;
+    if (currentSession?.user === undefined) return;
+    await refreshProfile(currentSession.user.id, currentSession.user.email ?? null);
+  }, [refreshProfile]);
+
   const handleAuthEvent = useCallback(
     (event: AuthChangeEvent, nextSession: Session | null): void => {
       switch (event) {
@@ -251,6 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        signUpWithPassword,
        resendConfirmationEmail,
        signOut,
+       reloadProfile,
      }),
      [
        user,
@@ -261,8 +268,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        signUpWithPassword,
        resendConfirmationEmail,
        signOut,
+       reloadProfile,
      ],
-  );
+   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

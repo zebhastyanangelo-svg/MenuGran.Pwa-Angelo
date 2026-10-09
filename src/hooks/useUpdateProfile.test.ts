@@ -4,6 +4,11 @@ import { useUpdateProfile } from './useUpdateProfile';
 
 const mockSelectSingle = vi.fn();
 const mockUpdateSingle = vi.fn();
+const authMocks = vi.hoisted(() => ({ reloadProfile: vi.fn() }));
+
+vi.mock('./useAuth', () => ({
+  useAuth: () => ({ reloadProfile: authMocks.reloadProfile }),
+}));
 
 vi.mock('../services/supabase', () => ({
   supabase: {
@@ -65,5 +70,23 @@ describe('useUpdateProfile', () => {
       expect(result.current.error).toBe('fail');
       expect(result.current.isSaving).toBe(false);
     });
+    expect(authMocks.reloadProfile).not.toHaveBeenCalled();
+  });
+
+  it('refresca el perfil del contexto tras guardar exitosamente', async () => {
+    mockSelectSingle.mockResolvedValue({ data: null, error: null });
+    mockUpdateSingle.mockResolvedValue({ data: { id: 'user-1', full_name: 'Nuevo' }, error: null });
+
+    const { result } = renderHook(() => useUpdateProfile());
+
+    let updatedProfile: unknown = null;
+    await act(async () => {
+      updatedProfile = await result.current.updateProfile('user-1', { ci: 'V-12345' });
+    });
+
+    expect(updatedProfile).toEqual({ id: 'user-1', full_name: 'Nuevo' });
+    expect(authMocks.reloadProfile).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toBeNull();
+    expect(result.current.isSaving).toBe(false);
   });
 });

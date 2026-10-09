@@ -103,18 +103,31 @@ export function LocationSettingsForm({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const isMountedRef = useRef(true);
   const [isLocating, setIsLocating] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
+
+  // Flag de vida del componente: las promesas de geolocalización / geocoding
+  // pueden resolverse tras el desmontaje y jamás deben tocar estado ni refs.
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const handleMapClick = useCallback(
     async (e: L.LeafletMouseEvent) => {
       const latlng = e.latlng;
       const point: GeoPoint = { x: latlng.lng, y: latlng.lat };
       onLocationChange(point);
-      syncMarker(point, mapInstanceRef.current!, markerRef);
+      if (mapInstanceRef.current !== null) {
+        syncMarker(point, mapInstanceRef.current, markerRef);
+      }
 
       // Reverse geocoding for map click
       const fullAddress = await reverseGeocode(point.y, point.x);
+      if (!isMountedRef.current) return;
       if (fullAddress) {
         onAddressChange(fullAddress);
         const response = await fetch(
@@ -181,12 +194,16 @@ export function LocationSettingsForm({
         throw new Error(GEOLOCATION_UNSUPPORTED_MESSAGE);
       }
       const point = await getCurrentGeoPoint();
+      if (!isMountedRef.current) return;
       onLocationChange(point);
-      syncMarker(point, mapInstanceRef.current!, markerRef);
-      mapInstanceRef.current?.flyTo([point.y, point.x], CAPTURED_ZOOM);
+      if (mapInstanceRef.current !== null) {
+        syncMarker(point, mapInstanceRef.current, markerRef);
+        mapInstanceRef.current.flyTo([point.y, point.x], CAPTURED_ZOOM);
+      }
 
       // Reverse geocoding to auto-fill address and zone
       const fullAddress = await reverseGeocode(point.y, point.x);
+      if (!isMountedRef.current) return;
       if (fullAddress) {
         onAddressChange(fullAddress);
         // Extract zone from address components (city, suburb, neighbourhood)
@@ -207,9 +224,13 @@ export function LocationSettingsForm({
         }
       }
     } catch (error) {
-      setGpsError(resolveGeolocationErrorMessage(error));
+      if (isMountedRef.current) {
+        setGpsError(resolveGeolocationErrorMessage(error));
+      }
     } finally {
-      setIsLocating(false);
+      if (isMountedRef.current) {
+        setIsLocating(false);
+      }
     }
   };
 

@@ -20,6 +20,7 @@ export interface AuthContextValue {
   ) => Promise<SignUpResult>;
   resendConfirmationEmail: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  reloadProfile: () => Promise<void>;
 }
 
 export interface ProfileQueryResult {

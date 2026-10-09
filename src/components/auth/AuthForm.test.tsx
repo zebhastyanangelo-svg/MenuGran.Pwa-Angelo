@@ -42,6 +42,7 @@ function getMockAuth(): AuthContextValue {
     signUpWithPassword,
     resendConfirmationEmail,
     signOut: vi.fn(),
+    reloadProfile: vi.fn(),
   };
 }
 

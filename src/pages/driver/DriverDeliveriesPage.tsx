@@ -15,6 +15,7 @@ import { useDriverDeliveries } from '../../hooks/useDriverDeliveries'
 import { useNotificationToast } from '../../components/pwa/useNotificationToast'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
+import { CompletedPeriodFilter } from '../../components/driver/CompletedPeriodFilter'
 import { DeliveryTrackingModal } from '../../components/driver/DeliveryTrackingModal'
 import { formatPrice } from '../../types/cart'
 import { getOrderStatusLabel } from '../../utils/orderStatus'
@@ -23,6 +24,10 @@ import {
   NEW_DELIVERY_STATUSES,
   getOrderDeliveryAddress,
 } from '../../utils/delivery'
+import {
+  filterDeliveredOrdersByPeriod,
+  type CompletedPeriod,
+} from '../../utils/completedDeliveries'
 import type { DriverOrder } from '../../hooks/useDriverDeliveries'
 
 function getCustomerName(order: DriverOrder): string {
@@ -96,11 +101,26 @@ export function DriverDeliveriesPage() {
   const [selectedOrder, setSelectedOrder] = useState<DriverOrder | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<TabKey>('assigned')
+  const [completedPeriod, setCompletedPeriod] = useState<CompletedPeriod>('today')
+  const [completedPeriodOffset, setCompletedPeriodOffset] = useState(0)
 
   // Vista en vivo de todas las órdenes rastreadas (se actualiza por Realtime)
   const allOrders = useMemo(
     () => [...assigned, ...inTransit, ...delivered],
     [assigned, inTransit, delivered],
+  )
+
+  // Por defecto la pestaña "Completadas" solo muestra las entregas de hoy;
+  // el repartidor puede consultar historial por semana o mes.
+  const deliveredForPeriod = useMemo(
+    () =>
+      filterDeliveredOrdersByPeriod(
+        delivered,
+        completedPeriod,
+        completedPeriodOffset,
+        new Date(),
+      ),
+    [delivered, completedPeriod, completedPeriodOffset],
   )
 
   // Cuando el cliente confirma la recepción (status -> 'delivered') con el
@@ -164,6 +184,11 @@ export function DriverDeliveriesPage() {
     [takeOrder],
   )
 
+  const handleCompletedPeriodChange = useCallback((nextPeriod: CompletedPeriod) => {
+    setCompletedPeriod(nextPeriod)
+    setCompletedPeriodOffset(0)
+  }, [])
+
   const getOrdersForTab = (tab: TabKey): DriverOrder[] => {
     switch (tab) {
       case 'assigned':
@@ -171,7 +196,7 @@ export function DriverDeliveriesPage() {
       case 'inTransit':
         return inTransit
       case 'delivered':
-        return delivered
+        return deliveredForPeriod
     }
   }
 
@@ -280,6 +305,15 @@ export function DriverDeliveriesPage() {
           </div>
         )}
 
+        {activeTab === 'delivered' && (
+          <CompletedPeriodFilter
+            period={completedPeriod}
+            offset={completedPeriodOffset}
+            onPeriodChange={handleCompletedPeriodChange}
+            onOffsetChange={setCompletedPeriodOffset}
+          />
+        )}
+
         {/* Orders List */}
         <section
           id={`panel-${activeTab}`}
@@ -309,7 +343,7 @@ export function DriverDeliveriesPage() {
                   ? 'Cuando el comercio te asigne un pedido de delivery, aparecerá aquí automáticamente.'
                   : activeTab === 'inTransit'
                   ? 'No tienes entregas en curso actualmente.'
-                  : 'Tu historial de entregas completadas aparecerá aquí.'}
+                  : 'No tienes entregas completadas en el período seleccionado.'}
               </p>
             </div>
           )}

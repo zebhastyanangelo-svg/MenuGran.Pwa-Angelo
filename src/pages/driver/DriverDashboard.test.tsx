@@ -237,4 +237,38 @@ describe('DriverDashboard', () => {
     expect(screen.queryByTestId('driver-pending-banner')).not.toBeInTheDocument()
     expect(screen.getByTestId('driver-no-orders')).toBeInTheDocument()
   })
+
+  it('muestra solo las entregas completadas de hoy por defecto con filtro de período', async () => {
+    const oldDate = new Date(Date.now() - 400 * 24 * 60 * 60 * 1000).toISOString()
+    ;(useDriverDashboard as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      merchantId: 'm-1',
+      merchantName: 'La Pizza',
+      orders: [
+        createOrder({ id: 'order-today', status: 'delivered' }),
+        createOrder({ id: 'order-old', status: 'delivered', created_at: oldDate }),
+      ],
+      loading: false,
+      error: null,
+      actionLoading: false,
+      actionError: null,
+      takeOrder: vi.fn(),
+      startDelivery: vi.fn(),
+      markDelivered: vi.fn(),
+      refresh: vi.fn(),
+    })
+
+    renderPage()
+
+    expect(screen.getByTestId('completed-deliveries')).toBeInTheDocument()
+    expect(screen.getByTestId('completed-period-filter')).toBeInTheDocument()
+    expect(screen.getByText('Completadas (1)')).toBeInTheDocument()
+    expect(screen.getAllByTestId('completed-delivery-card')).toHaveLength(1)
+
+    screen.getByTestId('completed-period-month').click()
+
+    await waitFor(() => {
+      expect(screen.getByText('Completadas (1)')).toBeInTheDocument()
+    })
+    expect(screen.getAllByTestId('completed-delivery-card')).toHaveLength(1)
+  })
 })

@@ -18,6 +18,7 @@ vi.mock('../../components/driver/DeliveryTrackingModal', () => ({
 
 import { useAuth } from '../../hooks/useAuth'
 import { useDriverDeliveries } from '../../hooks/useDriverDeliveries'
+import { getCompletedPeriodRange } from '../../utils/completedDeliveries'
 import { DriverDeliveriesPage } from './DriverDeliveriesPage'
 
 function renderPage() {
@@ -268,6 +269,85 @@ describe('DriverDeliveriesPage', () => {
     await waitFor(() => {
       expect(screen.getByText(/Entrega completada/i)).toBeInTheDocument()
     })
+  })
+
+  it('muestra solo las entregas completadas de hoy por defecto', async () => {
+    const oldDate = new Date(Date.now() - 400 * 24 * 60 * 60 * 1000).toISOString()
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      delivered: [
+        createOrder({ id: 'order-today', status: 'delivered' }),
+        createOrder({ id: 'order-old', status: 'delivered', created_at: oldDate }),
+      ],
+    })
+
+    renderPage()
+
+    screen.getByTestId('tab-delivered').click()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('orders-panel-delivered')).toBeInTheDocument()
+    })
+    expect(screen.getAllByTestId('delivery-card')).toHaveLength(1)
+    expect(screen.getByTestId('tab-delivered')).toHaveTextContent('1')
+  })
+
+  it('muestra el filtro de período en la pestaña Completadas', async () => {
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      delivered: [createOrder({ id: 'order-2', status: 'delivered' })],
+    })
+
+    renderPage()
+
+    screen.getByTestId('tab-delivered').click()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('completed-period-filter')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('completed-period-today')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('completed-period-week')).toBeInTheDocument()
+    expect(screen.getByTestId('completed-period-month')).toBeInTheDocument()
+  })
+
+  it('filtra completadas por semana y navega hacia semanas anteriores', async () => {
+    const now = new Date()
+    const thisWeek = getCompletedPeriodRange('week', 0, now)
+    const lastWeek = getCompletedPeriodRange('week', 1, now)
+    const inThisWeek = new Date(thisWeek.start.getTime() + 3 * 60 * 60 * 1000).toISOString()
+    const alsoThisWeek = new Date(thisWeek.start.getTime() + 4 * 60 * 60 * 1000).toISOString()
+    const inLastWeek = new Date(lastWeek.start.getTime() + 3 * 60 * 60 * 1000).toISOString()
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      delivered: [
+        createOrder({ id: 'order-a', status: 'delivered', created_at: inThisWeek }),
+        createOrder({ id: 'order-b', status: 'delivered', created_at: alsoThisWeek }),
+        createOrder({ id: 'order-c', status: 'delivered', created_at: inLastWeek }),
+      ],
+    })
+
+    renderPage()
+
+    screen.getByTestId('tab-delivered').click()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('orders-panel-delivered')).toBeInTheDocument()
+    })
+
+    // La semana actual contiene dos entregas; la de la semana pasada queda fuera.
+    screen.getByTestId('completed-period-week').click()
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId('delivery-card')).toHaveLength(2)
+    })
+
+    // Al navegar hacia la semana anterior solo queda la entrega de esa semana.
+    screen.getByTestId('completed-period-prev').click()
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId('delivery-card')).toHaveLength(1)
+    })
+    expect(screen.getByTestId('completed-period-next')).not.toBeDisabled()
   })
 
   it('muestra el botón "Actualizar" y llama a refresh', async () => {

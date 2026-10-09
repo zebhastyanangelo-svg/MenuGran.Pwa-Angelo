@@ -146,6 +146,7 @@ describe('Checkout', () => {
       signUpWithPassword: vi.fn(),
       resendConfirmationEmail: vi.fn(),
       signOut: vi.fn(),
+      reloadProfile: vi.fn(),
     });
     setPagoMovilMock(validPagoMovil);
   });
@@ -521,6 +522,7 @@ describe('Checkout', () => {
       signUpWithPassword: vi.fn(),
       resendConfirmationEmail: vi.fn(),
       signOut: vi.fn(),
+      reloadProfile: vi.fn(),
     });
 
     renderCheckout();
@@ -560,6 +562,7 @@ describe('Checkout', () => {
       signUpWithPassword: vi.fn(),
       resendConfirmationEmail: vi.fn(),
       signOut: vi.fn(),
+      reloadProfile: vi.fn(),
     });
 
     renderCheckout();
