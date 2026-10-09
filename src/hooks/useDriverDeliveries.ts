@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { User, RealtimeChannel } from '@supabase/supabase-js'
 import { supabase, TABLE_NAMES } from '../services/supabase'
 import { NEW_DELIVERY_STATUSES, TRACKED_DELIVERY_STATUSES } from '../utils/delivery'
+import { dispatchOrderStatusPushToCustomer } from '../services/orderStatusPushService'
 import type { OrderRow, OrderStatus, UserRole } from '../types/database'
 import type { DriverOrder } from './useDriverDashboard'
 import posthog, { isPostHogEnabled } from '../posthog'
@@ -112,6 +113,9 @@ async function updateOrderStatus(
     .update(update)
     .eq('id', orderId)
   if (result.error) throw result.error
+  // Aviso push al cliente (fire-and-forget): el repartidor marcó una novedad
+  // y el cliente la recibe por Web Push aunque tenga la app cerrada.
+  void dispatchOrderStatusPushToCustomer(orderId, status)
 }
 
 export function useDriverDeliveries(

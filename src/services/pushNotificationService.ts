@@ -313,17 +313,25 @@ interface PushPayloadBase {
   url?: string;
   /** Agrupa notificaciones con el mismo tag en el dispositivo. */
   tag?: string;
+  /**
+   * Marca el envío como recordatorio activo: el service worker lo muestra
+   * persistente en la pantalla de bloqueo, con vibración y re-alerta.
+   */
+  reminder?: boolean;
 }
 
 /**
  * Cuerpo que acepta la Edge Function `send-push-notification`.
  *
  * Una masiva exige título y cuerpo (no hay copy automático); un envío a un
- * usuario puede omitirlos y la función pone los valores por defecto.
+ * usuario puede omitirlos y la función pone los valores por defecto; el envío
+ * al cliente de un pedido exige el `orderId` (la función deriva el destinatario
+ * y verifica que el llamante trabaje ese pedido).
  */
 type InvokePushPayload =
   | ({ target: 'user' } & PushPayloadBase)
-  | ({ target: 'all'; title: string; body: string } & PushPayloadBase);
+  | ({ target: 'all'; title: string; body: string } & PushPayloadBase)
+  | ({ target: 'order-customer'; orderId: string; title: string; body: string } & PushPayloadBase);
 
 /**
  * Extrae el mensaje de error que devuelve la Edge Function.
@@ -408,9 +416,11 @@ export function sendNearbyMerchantNotification(merchantName: string): Promise<Se
 /**
  * Envía una notificación de seguimiento de pedido al cliente.
  *
- * El `url` apunta al tracker para que el clic abra el pedido concreto: sin él
- * el service worker aterrizaría en la raíz de la app y el cliente tendría que
- * buscar su pedido a mano.
+ * Se envía como recordatorio activo (`reminder: true`) para que el aviso
+ * llegue y permanezca visible aunque la app esté cerrada o el dispositivo
+ * bloqueado. El `url` apunta al tracker para que el clic abra el pedido
+ * concreto: sin él el service worker aterrizaría en la raíz de la app y el
+ * cliente tendría que buscar su pedido a mano.
  */
 export function sendOrderUpdatePushNotification(
   orderId: string,
@@ -423,6 +433,53 @@ export function sendOrderUpdatePushNotification(
     body,
     url: `/orders/${encodeURIComponent(orderId)}`,
     tag: `order-${orderId}`,
+    reminder: true,
+  });
+}
+
+/**
+ * Envía un recordatorio temporizado de pedido al usuario autenticado.
+ *
+ * Difiere de `sendOrderUpdatePushNotification` en el tag: usa uno propio de
+ * recordatorio para que el `renotify` del service worker no reemplace la
+ * notificación del cambio de estado que le dio origen.
+ */
+export function sendOrderReminderPushNotification(
+  orderId: string,
+  title: string,
+  body: string,
+): Promise<SendPushResult> {
+  return invokeSendPushNotification({
+    target: 'user',
+    title,
+    body,
+    url: `/orders/${encodeURIComponent(orderId)}`,
+    tag: `order-reminder-${orderId}`,
+    reminder: true,
+  });
+}
+
+/**
+ * Push de un cambio de estado al cliente de un pedido concreto.
+ *
+ * Lo invoca el comercio, el staff o el repartidor mientras trabajan el
+ * pedido: la Edge Function verifica que el llamante pertenezca al pedido y
+ * entrega el aviso a los dispositivos del cliente, que no necesita la app
+ * abierta. Se envía como recordatorio activo para que permanezca en la
+ * pantalla de bloqueo.
+ */
+export function sendOrderCustomerStatusPush(
+  orderId: string,
+  title: string,
+  body: string,
+): Promise<SendPushResult> {
+  return invokeSendPushNotification({
+    target: 'order-customer',
+    orderId,
+    title,
+    body,
+    url: `/orders/${encodeURIComponent(orderId)}`,
+    reminder: true,
   });
 }
 

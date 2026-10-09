@@ -501,6 +501,45 @@ describe('Checkout', () => {
     expect(params).not.toHaveProperty('customerTaxId');
   }, 10000);
 
+  it('bloquea el pedido cuando el perfil tiene campos obligatorios pendientes', async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 'user-123' } as any,
+      profile: {
+        id: 'user-123',
+        email: 'cli@test.com',
+        full_name: 'Cliente',
+        role: 'customer',
+        phone: '0412-1234567',
+        ci: null,
+        avatar_url: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      } as any,
+      isLoading: false,
+      signInWithGoogle: vi.fn(),
+      signInWithPassword: vi.fn(),
+      signUpWithPassword: vi.fn(),
+      resendConfirmationEmail: vi.fn(),
+      signOut: vi.fn(),
+    });
+
+    renderCheckout();
+
+    // El bloqueo salta apenas montar la página de pago.
+    expect(await screen.findByText('Completa tu perfil para pedir')).toBeInTheDocument();
+    expect(screen.getByText(/Falta: Cédula de Identidad/i)).toBeInTheDocument();
+
+    // Y el envío del formulario queda bloqueado por completo.
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(screen.getByText('Completa tu perfil para pedir')).toBeInTheDocument();
+    });
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+  }, 15000);
+
   afterEach(() => {
     vi.useRealTimers();
   });

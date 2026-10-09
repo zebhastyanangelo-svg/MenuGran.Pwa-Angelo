@@ -8,6 +8,13 @@ export interface NotificationPayload {
   body: string;
   tag?: string;
   data?: Record<string, unknown>;
+  /** Ruta interna a la que abre el clic cuando la notificación sale del SW. */
+  url?: string;
+  /**
+   * Muestra el aviso como recordatorio activo: persistente en pantalla,
+   * con vibración y re-alerta sobre la notificación previa del mismo tag.
+   */
+  reminder?: boolean;
 }
 
 export interface UseNotificationsResult {
@@ -37,6 +44,23 @@ const ORDER_STATUS_BODIES: Record<OrderStatus, string> = {
   cancelled: 'Tu pedido ha sido cancelado.',
 };
 
+/** Vibración de los recordatorios activos (patrón doble, tipo alarma). */
+const REMINDER_VIBRATION_PATTERN: readonly number[] = [300, 150, 300];
+
+/**
+ * Opciones de notificación extendidas.
+ *
+ * `renotify`, `vibrate` o `silent` no están en el `NotificationOptions` de
+ * lib.dom (pertenecen a las notificaciones del Service Worker), pero los
+ * navegadores las aceptan tanto en `registration.showNotification` como en el
+ * constructor. Se declara el contrato propio y se amolda al llamar.
+ */
+export interface ReminderNotificationOptions extends NotificationOptions {
+  renotify?: boolean;
+  vibrate?: number[];
+  silent?: boolean;
+}
+
 function getBrowserPermission(): PermissionState {
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return 'default';
@@ -57,6 +81,37 @@ export function buildOrderNotification(status: OrderStatus): NotificationPayload
     tag: 'order-status-update',
     data: { status },
   };
+}
+
+/**
+ * Traduce el payload del hook a las opciones que espera
+ * `showNotification` (del SW o del constructor `Notification`).
+ *
+ * Los recordatorios se muestran persistentes y vibrando; el resto mantiene el
+ * comportamiento discreto de siempre.
+ */
+export function buildDisplayOptions(payload: NotificationPayload): ReminderNotificationOptions {
+  const data: Record<string, unknown> = { ...payload.data };
+  if (payload.url !== undefined) {
+    data.url = payload.url;
+  }
+
+  const options: ReminderNotificationOptions = {
+    body: payload.body,
+    tag: payload.tag,
+    renotify: false,
+    requireInteraction: false,
+    data,
+  };
+
+  if (payload.reminder === true) {
+    options.renotify = true;
+    options.requireInteraction = true;
+    options.silent = false;
+    options.vibrate = [...REMINDER_VIBRATION_PATTERN];
+  }
+
+  return options;
 }
 
 export function useNotifications(): UseNotificationsResult {
@@ -82,6 +137,14 @@ export function useNotifications(): UseNotificationsResult {
     }
   }, [isSupported]);
 
+  /**
+   * Muestra la notificación preferentemente a través del Service Worker.
+   *
+   * Las notificaciones del SW son las que aparecen en la pantalla de bloqueo y
+   * sobreviven a que la pestaña pase a segundo plano; el constructor
+   * `new Notification()` queda solo como fallback para navegadores sin SW
+   * (y para entornos de pruebas).
+   */
   const showNotification = useCallback(
     (payload: NotificationPayload): void => {
       if (!isSupported) {
@@ -90,9 +153,26 @@ export function useNotifications(): UseNotificationsResult {
       if (permission !== 'granted') {
         return;
       }
+
+      const options = buildDisplayOptions(payload);
+
+      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+        try {
+          void navigator.serviceWorker.ready
+            .then((registration) =>
+              registration.showNotification(payload.title, options as NotificationOptions),
+            )
+            .catch((err: unknown) => {
+              console.error('Error al mostrar notificación vía Service Worker:', err);
+            });
+          return;
+        } catch (err) {
+          console.error('Error al preparar el Service Worker:', err);
+        }
+      }
+
       try {
-        const { title, body, tag, data } = payload;
-        new Notification(title, { body, tag, data });
+        new Notification(payload.title, options as NotificationOptions);
       } catch (err) {
         console.error('Error al mostrar notificación:', err);
       }

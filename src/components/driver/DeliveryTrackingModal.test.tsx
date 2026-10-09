@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 vi.mock('../../hooks/useGpsTracking', () => ({
   useGpsTracking: vi.fn().mockReturnValue({
@@ -88,10 +89,60 @@ describe('DeliveryTrackingModal', () => {
 
   it('muestra el botón de llamar al cliente', () => {
     renderModal()
-    expect(screen.getByTestId('call-customer')).toHaveAttribute(
+    expect(screen.getByTestId('person-call-button')).toHaveAttribute(
       'href',
       'tel:+584141234567',
     )
+  })
+
+  it('muestra el HUD de navegación: barra de instrucciones y botones laterales', () => {
+    renderModal()
+    expect(screen.getByTestId('navigation-side-controls')).toBeInTheDocument()
+    expect(screen.getByTestId('toggle-mute-button')).toBeInTheDocument()
+    expect(screen.getByTestId('reorient-button')).toBeInTheDocument()
+    expect(screen.getByTestId('center-button')).toBeInTheDocument()
+    expect(screen.getByTestId('center-button')).toHaveTextContent('Centrar')
+  })
+
+  it('muestra la tarjeta inferior con ETA, subtítulo y datos del cliente', () => {
+    renderModal()
+    const card = screen.getByTestId('navigation-person-card')
+    expect(within(card).getByTestId('navigation-eta')).toBeInTheDocument()
+    expect(within(card).getByText('CLIENTE:')).toBeInTheDocument()
+    expect(within(card).getByText('María Pérez')).toBeInTheDocument()
+    expect(within(card).getByTestId('person-verified-badge')).toBeInTheDocument()
+    expect(within(card).getByTestId('person-chat-button')).toBeInTheDocument()
+  })
+
+  it('muestra el chip flotante del pedido con su número', () => {
+    renderModal({ order: createOrder({ id: 'abc12345-def0-1234' }) })
+    expect(screen.getByTestId('delivery-order-chip')).toBeInTheDocument()
+    expect(screen.getByText('#ABC12345')).toBeInTheDocument()
+  })
+
+  it('alterna el silencio de la guía de voz', async () => {
+    const user = userEvent.setup()
+    renderModal()
+
+    const muteButton = screen.getByTestId('toggle-mute-button')
+    expect(muteButton).toHaveAttribute('aria-pressed', 'true')
+    await user.click(muteButton)
+    expect(muteButton).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('abre WhatsApp al pulsar el botón de chat', async () => {
+    const user = userEvent.setup()
+    const openSpy = vi.fn()
+    vi.stubGlobal('open', openSpy)
+    renderModal()
+
+    await user.click(screen.getByTestId('person-chat-button'))
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://wa.me/584141234567',
+      '_blank',
+      'noopener,noreferrer',
+    )
+    vi.unstubAllGlobals()
   })
 
   it('muestra enlace a Google Maps cuando hay dirección pero no coordenadas', () => {

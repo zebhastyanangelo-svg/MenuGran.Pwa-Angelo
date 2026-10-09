@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { User, RealtimeChannel } from '@supabase/supabase-js'
 import { supabase, TABLE_NAMES } from '../services/supabase'
+import { dispatchOrderStatusPushToCustomer } from '../services/orderStatusPushService'
 import type { OrderRow, OrderStatus } from '../types/database'
 
 export interface DriverCustomerProfile {
@@ -82,6 +83,9 @@ async function updateOrderStatus(
     .update(update)
     .eq('id', orderId)
   if (result.error) throw result.error
+  // Aviso push al cliente (fire-and-forget): el repartidor marcó una novedad
+  // y el cliente la recibe por Web Push aunque tenga la app cerrada.
+  void dispatchOrderStatusPushToCustomer(orderId, status)
 }
 
 export function useDriverDashboard(

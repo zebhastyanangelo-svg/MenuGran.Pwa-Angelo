@@ -14,6 +14,9 @@ import {
   useNotifications,
   buildOrderNotification,
 } from '../hooks/useNotifications';
+import { useOrderReminderScheduler } from '../hooks/useOrderReminderScheduler';
+import { sendOrderReminderPushNotification } from '../services/pushNotificationService';
+import type { ScheduledReminder } from '../hooks/useOrderReminderScheduler';
 import { useNotificationToast } from '../components/pwa/useNotificationToast';
 import { statusDisplayMap } from '../utils/statusDisplayMap';
 import { getOrderStatusLabel, getOrderStatusFlow } from '../utils/orderStatus';
@@ -21,9 +24,8 @@ import { parseGeoPoint } from '../utils/geoPoint';
 import { confirmOrderDelivery } from '../services/orderDeliveryService';
 import { OrderStatusStep } from '../components/orders/OrderStatusStep';
 import { getAllowedTransitions, getTransitionLabel, getTransitionButtonClass } from '../utils/orderStatus';
-import { PartyPopper, ArrowLeft, Navigation, PackageCheck, AlertCircle } from 'lucide-react';
-import { MapView } from '../components/map/MapView';
-import type { MapMarker } from '../components/map/MapView';
+import { PartyPopper, ArrowLeft, PackageCheck, AlertCircle } from 'lucide-react';
+import { DriverNavigationPanel } from '../components/orders/DriverNavigationPanel';
 import { MapErrorBoundary } from '../components/map/MapErrorBoundary';
 import { useQueryClient } from '@tanstack/react-query';
 import posthog, { isPostHogEnabled } from '../posthog';
@@ -74,31 +76,6 @@ function isValidGeoPoint(point: GeoPoint | null | undefined): point is GeoPoint 
   );
 }
 
-function buildDeliveryMarkers(
-  driverPos: GeoPoint | null,
-  destination: GeoPoint | null,
-): MapMarker[] {
-  const markers: MapMarker[] = [];
-  
-  if (isValidGeoPoint(driverPos)) {
-    markers.push({
-      id: 'driver',
-      position: [driverPos.y, driverPos.x],
-      title: 'Repartidor',
-      subtitle: 'Ubicación en tiempo real',
-    });
-  }
-  
-  if (isValidGeoPoint(destination)) {
-    markers.push({
-      id: 'destination',
-      position: [destination.y, destination.x],
-      title: 'Destino de entrega',
-    });
-  }
-  
-  return markers;
-}
 
 export function OrderTracker() {
   const { user, profile, isLoading: authLoading } = useAuth();
@@ -116,6 +93,11 @@ export function OrderTracker() {
   const [customerPhone, setCustomerPhone] = useState<string | null>(null);
   const [customerDocumentId, setCustomerDocumentId] = useState<string | null>(null);
   const [driverLocation, setDriverLocation] = useState<GeoPoint | null>(null);
+  const [driverProfile, setDriverProfile] = useState<{
+    full_name: string | null;
+    phone: string | null;
+    avatar_url: string | null;
+  } | null>(null);
 
   const { showToast } = useNotificationToast();
   const bcvRate = useBCVRate();
@@ -131,7 +113,13 @@ export function OrderTracker() {
       const notification = buildOrderNotification(newStatus);
 
       if (permission === 'granted') {
-        showNotification(notification);
+        // Recordatorio activo: persistente en pantalla de bloqueo, con
+        // vibración y deep link al pedido.
+        showNotification({
+          ...notification,
+          reminder: true,
+          url: orderId ? `/orders/${orderId}` : undefined,
+        });
       } else {
         showToast({
           title: notification.title,
@@ -148,8 +136,50 @@ export function OrderTracker() {
         });
       }
     },
+    [permission, showNotification, showToast, orderId],
+  );
+
+  /**
+   * Recordatorio temporizado: el pedido lleva demasiado tiempo en un estado
+   * que requiere acción del cliente. Se muestra por Service Worker y se
+   * replica por Web Push para que llegue al resto de dispositivos.
+   */
+  const handleOrderReminder = useCallback(
+    (reminder: ScheduledReminder): void => {
+      const url = `/orders/${encodeURIComponent(reminder.orderId)}`;
+      const payload = {
+        title: reminder.title,
+        body: reminder.body,
+        tag: `order-reminder-${reminder.orderId}`,
+        url,
+        reminder: true,
+      };
+
+      if (permission === 'granted') {
+        showNotification(payload);
+      } else {
+        showToast({
+          title: reminder.title,
+          message: reminder.body,
+          variant: 'warning',
+          durationMs: 8000,
+        });
+      }
+
+      void sendOrderReminderPushNotification(reminder.orderId, reminder.title, reminder.body);
+    },
     [permission, showNotification, showToast],
   );
+
+  // Los recordatorios son para el cliente del pedido: un comercio o repartidor
+  // que abra el tracker de otra persona no debe recibir los avisos de pago.
+  const isCustomerOwner = order !== null && order.customer_id === user?.id;
+
+  useOrderReminderScheduler({
+    orderId: orderId ?? null,
+    status: isCustomerOwner ? order.status : null,
+    onReminder: handleOrderReminder,
+  });
 
   const confirmDeliveryByClient = useCallback(async () => {
     if (!orderId || !order) return;
@@ -302,6 +332,31 @@ export function OrderTracker() {
       supabase.removeChannel(channel);
     };
   }, [loadOrder, orderId, handleStatusChange]);
+
+  // Perfil del repartidor asignado: alimenta la tarjeta de navegación.
+  useEffect(() => {
+    const driverId = order?.driver_id;
+    if (!driverId || order.status !== 'on_the_way') {
+      setDriverProfile(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    supabase
+      .from('profiles')
+      .select('full_name, phone, avatar_url')
+      .eq('id', driverId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error !== null) return;
+        setDriverProfile(data ?? null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [order?.driver_id, order?.status]);
 
   // Subscribe to driver GPS location broadcast only while order is on the way
   useEffect(() => {
@@ -480,10 +535,13 @@ export function OrderTracker() {
         </p>
       </section>
 
-      {/* Cliente confirma recepción del pedido */}
+      {/* Cliente confirma recepción del pedido. Cuando el panel de navegación
+          está activo, el botón vive en su tarjeta inferior flotante; esta
+          variante queda para el retiro en local y estados sin mapa. */}
       {(!isCompleted &&
         (order.status === 'on_the_way' || order.status === 'ready') &&
-        order.customer_id === user?.id) && (
+        order.customer_id === user?.id &&
+        !(order.status === 'on_the_way' && isValidGeoPoint(deliveryPoint))) && (
         <section className="mb-8 bg-white rounded-lg shadow-md p-6 border border-emerald-200 bg-emerald-50">
           <div className="flex items-center gap-3 mb-4">
             <PackageCheck className="h-8 w-8 text-emerald-600" />
@@ -551,44 +609,22 @@ export function OrderTracker() {
       </div>
 
       {order.status === 'on_the_way' && isValidGeoPoint(deliveryPoint) && (
-        <section className="mb-8 bg-white rounded-lg shadow-md p-4 border border-gray-200">
-          <div className="flex items-center gap-2 mb-3">
-            <Navigation className="h-5 w-5 text-blue-600" />
-            <h2 className="text-lg font-bold text-gray-800">Repartidor en camino</h2>
-          </div>
-          <div className="h-64 rounded-lg overflow-hidden">
-            <MapErrorBoundary fallbackMessage="No se pudo mostrar el mapa.">
-              <MapView
-                markers={
-                  isValidGeoPoint(driverLocation)
-                    ? buildDeliveryMarkers(driverLocation, deliveryPoint)
-                    : buildDeliveryMarkers(null, deliveryPoint)
-                }
-                center={
-                  isValidGeoPoint(driverLocation)
-                    ? [driverLocation.y, driverLocation.x]
-                    : [deliveryPoint.y, deliveryPoint.x]
-                }
-                zoom={15}
-                routeRequest={
-                  isValidGeoPoint(driverLocation)
-                    ? {
-                        from: [driverLocation.y, driverLocation.x],
-                        to: [deliveryPoint.y, deliveryPoint.x],
-                      }
-                    : undefined
-                }
-                className="h-full w-full"
-                showFallback
-                fallbackMessage={
-                  isValidGeoPoint(driverLocation)
-                    ? 'Esperando ubicación del repartidor...'
-                    : 'Mostrando destino de entrega.'
-                }
-              />
-            </MapErrorBoundary>
-          </div>
-        </section>
+        <MapErrorBoundary fallbackMessage="No se pudo mostrar el mapa.">
+          <DriverNavigationPanel
+            driverLocation={driverLocation}
+            destination={deliveryPoint}
+            driverName={driverProfile?.full_name ?? null}
+            driverPhone={driverProfile?.phone ?? null}
+            driverAvatarUrl={driverProfile?.avatar_url ?? null}
+            orderCode={deliveryCode}
+            statusLabel={statusDisplayMap[order.status]}
+            canConfirmDelivery={
+              !isCompleted && order.status === 'on_the_way' && order.customer_id === user?.id
+            }
+            isConfirming={loading}
+            onConfirmDelivery={() => void confirmDeliveryByClient()}
+          />
+        </MapErrorBoundary>
       )}
 
       <div className="grid gap-6">

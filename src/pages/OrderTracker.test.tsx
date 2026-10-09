@@ -9,6 +9,16 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { createTestQueryClient } from '../test/test-query-client';
 import { QueryClientProvider } from '@tanstack/react-query';
 
+const reminderSchedulerSpy = vi.fn();
+
+vi.mock('../hooks/useOrderReminderScheduler', () => ({
+  useOrderReminderScheduler: (options: unknown) => reminderSchedulerSpy(options),
+}));
+
+vi.mock('../services/pushNotificationService', () => ({
+  sendOrderReminderPushNotification: vi.fn().mockResolvedValue({ ok: true, summary: { sent: 0, failed: 0, deleted: 0, total: 0 } }),
+}));
+
 let channelCallbackRef = { current: null as any };
 
 vi.stubEnv('VITE_SUPABASE_URL', 'https://dummy.supabase.co');
@@ -117,6 +127,7 @@ describe('OrderTracker', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    reminderSchedulerSpy.mockClear();
     useAuthMock.user = { id: 'test-user-id', email: 'test@example.com' };
     useAuthMock.profile = null;
     useAuthMock.isLoading = false;
@@ -473,5 +484,97 @@ describe('OrderTracker', () => {
     });
 
     expect(screen.getByText('En Camino')).toBeInTheDocument();
+  });
+
+  it('programa recordatorios para el cliente dueño del pedido', async () => {
+    useAuthMock.user = { id: 'test-customer-id', email: 'test@example.com' };
+    useAuthMock.profile = {
+      id: 'test-customer-id',
+      full_name: 'Cliente',
+      email: 'cli@test.com',
+      role: 'customer',
+      created_at: '',
+    } as any;
+
+    const mockFrom = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
+    };
+    (supabase.from as Mock).mockReturnValue(mockFrom);
+
+    const { wrapper } = createWrapper();
+    render(<OrderTracker />, { wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText(/seguimiento de orden/i)).toBeInTheDocument();
+    });
+
+    const lastCall = reminderSchedulerSpy.mock.calls[reminderSchedulerSpy.mock.calls.length - 1][0];
+    expect(lastCall.orderId).toBe('test-order-id');
+    expect(lastCall.status).toBe('confirmed');
+    expect(typeof lastCall.onReminder).toBe('function');
+  });
+
+  it('no programa recordatorios cuando el pedido no es del usuario que lo ve', async () => {
+    useAuthMock.user = { id: 'otro-usuario', email: 'staff@example.com' };
+    useAuthMock.profile = {
+      id: 'otro-usuario',
+      full_name: 'Empleado',
+      email: 'staff@test.com',
+      role: 'merchant_staff',
+      created_at: '',
+    } as any;
+
+    const mockFrom = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: mockOrder, error: null }),
+    };
+    (supabase.from as Mock).mockReturnValue(mockFrom);
+
+    const { wrapper } = createWrapper();
+    render(<OrderTracker />, { wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText(/seguimiento de orden/i)).toBeInTheDocument();
+    });
+
+    const lastCall = reminderSchedulerSpy.mock.calls[reminderSchedulerSpy.mock.calls.length - 1][0];
+    expect(lastCall.status).toBeNull();
+  });
+
+  it('muestra el panel de navegación GPS cuando el repartidor está en camino', async () => {
+    useAuthMock.user = { id: 'test-customer-id', email: 'test@example.com' };
+    const onTheWayOrder = {
+      ...mockOrder,
+      status: 'on_the_way',
+      driver_id: 'driver-1',
+      delivery_location: '(-66.9,10.5)',
+    };
+    const mockFrom = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: onTheWayOrder, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { full_name: 'Carlos Pérez', phone: '+584121234567', avatar_url: null },
+        error: null,
+      }),
+    };
+    (supabase.from as Mock).mockReturnValue(mockFrom);
+
+    const { wrapper } = createWrapper();
+    render(<OrderTracker />, { wrapper });
+
+    const panel = await screen.findByTestId('driver-navigation-panel');
+    expect(panel).toBeInTheDocument();
+
+    expect(await screen.findByText('Carlos Pérez')).toBeInTheDocument();
+    const card = screen.getByTestId('navigation-person-card');
+    expect(within(card).getByText('REPARTIDOR:')).toBeInTheDocument();
+    expect(screen.getByTestId('confirm-delivery')).toBeInTheDocument();
   });
 });

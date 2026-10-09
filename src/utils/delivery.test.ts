@@ -6,6 +6,7 @@ import {
   getOrderDeliveryCoordinates,
   buildDeliveryMapsUrl,
   buildDeliveryWazeUrl,
+  buildWhatsAppUrl,
 } from './delivery';
 
 const baseOrder = {
@@ -101,6 +102,18 @@ describe('delivery utils', () => {
 
     it('Waze cae en búsqueda por dirección sin coordenadas', () => {
       expect(buildDeliveryWazeUrl(withAddress)).toContain('https://waze.com/ul?q=');
+    });
+  });
+
+  describe('buildWhatsAppUrl', () => {
+    it('construye la URL de chat con solo dígitos', () => {
+      expect(buildWhatsAppUrl('+58 414-1234567')).toBe('https://wa.me/584141234567');
+      expect(buildWhatsAppUrl('04141234567')).toBe('https://wa.me/04141234567');
+    });
+
+    it('devuelve null cuando el teléfono no tiene dígitos', () => {
+      expect(buildWhatsAppUrl('+---')).toBeNull();
+      expect(buildWhatsAppUrl('')).toBeNull();
     });
   });
 });

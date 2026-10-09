@@ -12,6 +12,7 @@ import {
 import { Button } from '../components/ui/Button';
 import { PaymentProofUploader } from '../components/cart/PaymentProofUploader';
 import { OrderTicket } from '../components/cart/OrderTicket';
+import { IncompleteProfileOrderModal } from '../components/cart/IncompleteProfileOrderModal';
 import { LocationPicker } from '../components/map/LocationPicker';
 import { TermsAcceptanceCheckbox } from '../components/legal/TermsAcceptanceCheckbox';
 import { useCart } from '../hooks/useCart';
@@ -40,6 +41,7 @@ import { supabase, TABLE_NAMES } from '../services/supabase';
 import { isMerchantOpenNow } from '../utils/dateUtils';
 import { haversineDistance } from '../utils/distance';
 import { parseGeoPoint } from '../utils/geoPoint';
+import { getMissingProfileFields, isProfileIncomplete } from '../utils/profileUtils';
 import posthog, { isPostHogEnabled } from '../posthog';
 
 type CheckoutPaymentMethod = Extract<PaymentMethod, 'pago_movil' | 'card_pos' | 'cash'>;
@@ -117,7 +119,7 @@ export function Checkout() {
     clearCart,
     merchantId,
   } = useCart();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const { pagoMovil } = useMerchantPagoMovil(merchantId);
@@ -201,6 +203,21 @@ export function Checkout() {
   const [outOfRange, setOutOfRange] = useState(false);
   const [deliveryCoverageError, setDeliveryCoverageError] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+
+  /**
+   * Bloqueo estricto de perfil incompleto: sin teléfono y cédula el pedido no
+   * se envía. El modal se abre apenas se detecta (al montar o al enviar) para
+   * explicar el bloqueo y llevar al usuario a completar sus datos.
+   */
+  const profileMissingFields = useMemo(() => getMissingProfileFields(profile), [profile]);
+  const isProfileBlocked = isProfileIncomplete(profile);
+
+  useEffect(() => {
+    if (isProfileBlocked) {
+      setProfileModalOpen(true);
+    }
+  }, [isProfileBlocked]);
 
   const setOrderType = useCallback(
     (value: OrderType) => {
@@ -229,6 +246,12 @@ export function Checkout() {
     event.preventDefault();
     setError(null);
     setDeliveryCoverageError(null);
+
+    if (isProfileBlocked) {
+      // Bloqueo estricto: ningún pedido sale sin el perfil completo.
+      setProfileModalOpen(true);
+      return;
+    }
 
     if (!canCheckout) {
       setError(validationError ?? 'No se puede continuar con el pedido.');
@@ -538,6 +561,16 @@ export function Checkout() {
             : 'Confirmar pedido'}
         </Button>
       </form>
+
+      <IncompleteProfileOrderModal
+        isOpen={profileModalOpen}
+        missingFields={profileMissingFields}
+        onGoToProfile={() => {
+          setProfileModalOpen(false);
+          navigate('/profile');
+        }}
+        onClose={() => setProfileModalOpen(false)}
+      />
     </div>
   );
 }

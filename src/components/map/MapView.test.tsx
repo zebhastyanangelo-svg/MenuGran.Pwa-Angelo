@@ -5,7 +5,7 @@ import {
   MapView,
   MerchantMapView,
 } from './MapView';
-import { fetchOsrmRoute } from '../../utils/osrmRoute';
+import { fetchOsrmRoute, fetchOsrmRouteDetails } from '../../utils/osrmRoute';
 import { merchantsByDistance } from '../../utils/distance';
 
 // Mock ResizeObserver for tests
@@ -133,6 +133,58 @@ describe('MapView', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
   });
+
+  it('entrega la instancia de Leaflet a onMapReady al crear el mapa', () => {
+    const onMapReady = vi.fn();
+
+    render(
+      <MapView
+        markers={[]}
+        center={[19.43, -99.13]}
+        zoom={10}
+        onMapReady={onMapReady}
+      />,
+    );
+
+    expect(onMapReady).toHaveBeenCalledTimes(1);
+    const mapInstance = onMapReady.mock.calls[0][0];
+    expect(mapInstance).toBeDefined();
+    expect(typeof mapInstance.setView).toBe('function');
+  });
+
+  it('en modo seguir, la vista sigue la ubicación del usuario en vez del centro fijo', () => {
+    let mapInstance: { setView: ReturnType<typeof vi.fn> } | null = null;
+
+    const view = render(
+      <MapView
+        markers={[]}
+        center={[19.43, -99.13]}
+        zoom={16}
+        userLocation={[10.5, -66.9]}
+        followUserLocation
+        onMapReady={(map) => {
+          mapInstance = map as unknown as { setView: ReturnType<typeof vi.fn> };
+        }}
+      />,
+    );
+
+    expect(mapInstance).not.toBeNull();
+    mapInstance!.setView.mockClear();
+
+    // Nueva posición GPS: en modo seguir la vista se recoloca sobre el usuario.
+    view.rerender(
+      <MapView
+        markers={[]}
+        center={[19.43, -99.13]}
+        zoom={16}
+        userLocation={[10.5002, -66.9003]}
+        followUserLocation
+        onMapReady={vi.fn()}
+      />,
+    );
+
+    expect(mapInstance!.setView).toHaveBeenCalledWith([10.5002, -66.9003], 16);
+  });
 });
 
 describe('fetchOsrmRoute', () => {
@@ -215,6 +267,103 @@ describe('fetchOsrmRoute', () => {
     const result = await promise;
 
     expect(result).toEqual([[19.43, -99.13], [19.44, -99.14]]);
+  });
+});
+
+describe('fetchOsrmRouteDetails', () => {
+  const realFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+    vi.useRealTimers();
+  });
+
+  function osrmStepsPayload() {
+    return {
+      code: 'Ok',
+      routes: [
+        {
+          geometry: {
+            type: 'LineString',
+            coordinates: [[-99.13, 19.43], [-99.135, 19.435], [-99.14, 19.44]] as Array<[number, number]>,
+          },
+          duration: 842.4,
+          distance: 6632.5,
+          legs: [
+            {
+              steps: [
+                {
+                  maneuver: { type: 'depart' },
+                  name: 'Av. Principal',
+                  distance: 290.1,
+                },
+                {
+                  maneuver: { type: 'turn', modifier: 'right' },
+                  name: 'Calle 8',
+                  distance: 1200,
+                },
+                {
+                  maneuver: { type: 'arrive' },
+                  name: '',
+                  distance: 0,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  it('devuelve coordenadas, duración, distancia y pasos de navegación', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(osrmStepsPayload()),
+    });
+
+    const details = await fetchOsrmRouteDetails([19.43, -99.13], [19.44, -99.14]);
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('steps=true'),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(details.coordinates).toEqual([
+      [19.43, -99.13],
+      [19.435, -99.135],
+      [19.44, -99.14],
+    ]);
+    expect(details.durationSeconds).toBeCloseTo(842.4);
+    expect(details.distanceMeters).toBeCloseTo(6632.5);
+    expect(details.steps).toHaveLength(3);
+    expect(details.steps[1]?.maneuver).toEqual({ type: 'turn', modifier: 'right' });
+    expect(details.steps[1]?.name).toBe('Calle 8');
+  });
+
+  it('degrada a línea recta sin pasos cuando OSRM falla', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+
+    const details = await fetchOsrmRouteDetails([19.43, -99.13], [19.44, -99.14]);
+
+    expect(details.coordinates).toEqual([[19.43, -99.13], [19.44, -99.14]]);
+    expect(details.durationSeconds).toBe(0);
+    expect(details.distanceMeters).toBe(0);
+    expect(details.steps).toEqual([]);
+  });
+
+  it('degrada a línea recta cuando OSRM responde sin rutas', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ code: 'NoRoute', routes: [] }),
+    });
+
+    const details = await fetchOsrmRouteDetails([19.43, -99.13], [19.44, -99.14]);
+
+    expect(details.steps).toEqual([]);
+    expect(details.coordinates).toHaveLength(2);
   });
 });
 

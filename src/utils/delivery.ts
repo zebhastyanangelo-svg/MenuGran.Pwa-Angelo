@@ -60,3 +60,16 @@ export function buildDeliveryWazeUrl(order: OrderDeliveryFields): string {
   }
   return `https://waze.com/ul?q=${encodeURIComponent(getOrderDeliveryAddress(order))}`;
 }
+
+/**
+ * URL de chat por WhatsApp con un teléfono.
+ *
+ * WhatsApp solo acepta dígitos en `wa.me`, así que se limpia cualquier
+ * formato visual (+, espacios, guiones). Sin dígitos devuelve `null` para que
+ * el botón de chat no se renderice.
+ */
+export function buildWhatsAppUrl(phone: string): string | null {
+  const digits = phone.replace(/\D/g, '');
+  if (digits === '') return null;
+  return `https://wa.me/${digits}`;
+}

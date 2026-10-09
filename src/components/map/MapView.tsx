@@ -32,6 +32,8 @@ export interface MapMarker {
   position: [number, number];
   title: string;
   subtitle?: string;
+  /** Icono Leaflet propio; sin él se usa el logo por defecto. */
+  icon?: L.Icon | L.DivIcon;
   onClick?: () => void;
 }
 
@@ -47,6 +49,18 @@ export interface MapViewProps {
   showFallback?: boolean;
   /** Custom fallback message */
   fallbackMessage?: string;
+  /**
+   * Entrega la instancia cruda de Leaflet al componente que monta el mapa,
+   * para controles imperativos de navegación (reorientar, centrar).
+   * Se invoca una sola vez, cuando el mapa se crea.
+   */
+  onMapReady?: (map: L.Map) => void;
+  /**
+   * Modo "seguir": con la ubicación del usuario válida, la vista sigue cada
+   * actualización GPS en lugar de respetar `center`. Es el comportamiento de
+   * los GPS de navegación.
+   */
+  followUserLocation?: boolean;
 }
 
 function isValidLatLng(coords: [number, number] | null | undefined): coords is [number, number] {
@@ -82,10 +96,16 @@ export function MapView({
   className = 'h-64 w-full',
   showFallback = true,
   fallbackMessage = 'No hay coordenadas disponibles para mostrar el mapa.',
+  onMapReady,
+  followUserLocation = false,
 }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const [resolvedRoute, setResolvedRoute] = useState<readonly [number, number][] | null>(null);
+  // El callback se guarda en un ref: la creación del mapa ocurre una sola
+  // vez y no debe re-dispararse cuando el padre re-crea la función.
+  const onMapReadyRef = useRef(onMapReady);
+  onMapReadyRef.current = onMapReady;
 
   const routeFrom = routeRequest?.from;
   const routeTo = routeRequest?.to;
@@ -109,7 +129,9 @@ export function MapView({
 
   // Determine a center for the map if not explicitly provided
   const validMarkers = filterValidMarkers(markers);
-  const effectiveCenter = center ??
+  const followsUser = followUserLocation && isValidLatLng(userLocation);
+  const effectiveCenter = (followsUser ? userLocation : null) ??
+    center ??
     (validMarkers[0]?.position) ??
     (isValidLatLng(userLocation) ? userLocation : null) ??
     (activeRoute && activeRoute.length > 0 && isValidLatLng(activeRoute[0]) ? activeRoute[0] : null) ??
@@ -133,6 +155,7 @@ export function MapView({
         }).addTo(map);
       }
       mapInstanceRef.current = map;
+      onMapReadyRef.current?.(map);
     } else {
       const map = mapInstanceRef.current;
       map.setView(effectiveCenter, zoom);
@@ -149,7 +172,7 @@ export function MapView({
 
     const bounds = L.latLngBounds([]);
     validMarkers.forEach((marker) => {
-      const markerIcon = (marker as any).icon ?? DEFAULT_ICON;
+      const markerIcon = marker.icon ?? DEFAULT_ICON;
       const markerInstance = L.marker(marker.position, {
         icon: markerIcon,
         title: marker.title,
@@ -204,6 +227,13 @@ export function MapView({
     if (!map) return;
 
     map.invalidateSize();
+
+    // Entornos sin ResizeObserver (jsdom, navegadores antiguados): se cae al
+    // temporizador, que ya cubre el caso típico de ajuste tras montar.
+    if (typeof ResizeObserver === 'undefined') {
+      const fallbackTimer = setTimeout(() => map.invalidateSize(), 200);
+      return () => clearTimeout(fallbackTimer);
+    }
 
     const ro = new ResizeObserver(() => {
       map.invalidateSize();

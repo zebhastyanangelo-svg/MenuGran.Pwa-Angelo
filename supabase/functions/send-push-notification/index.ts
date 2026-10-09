@@ -238,6 +238,84 @@ async function assertSuperadmin(authorizationHeader: string | null): Promise<{ o
 }
 
 /**
+ * Autoriza al personal que trabaja un pedido (comercio, repartidor o el
+ * propio cliente) para enviar push al cliente del pedido.
+ *
+ * El llamante debe estar autenticado y pertenecer a una de estas figuras del
+ * pedido concreto: el cliente, el dueño o el staff del comercio, el
+ * repartidor asignado, o un superadmin. Cualquier otro usuario recibe 403: la
+ * relación con el pedido es la única credición válida.
+ */
+async function assertOrderStaffForCustomer(
+  authorizationHeader: string | null,
+  orderId: string,
+): Promise<{ ok: true; customerId: string } | { ok: false; response: Response }> {
+  const authenticated = await assertAuthenticated(authorizationHeader);
+  if (!authenticated.ok) return authenticated;
+  const callerId = authenticated.userId;
+
+  try {
+    const client = buildServiceRoleClient();
+    const { data: order, error: orderError } = await client
+      .from('orders')
+      .select('id, customer_id, merchant_id, driver_id')
+      .eq('id', orderId)
+      .maybeSingle();
+
+    if (orderError !== null || order === null || order.customer_id === null) {
+      return { ok: false, response: jsonResponse({ error: 'Pedido no encontrado.' }, 404) };
+    }
+
+    if (order.customer_id === callerId) {
+      return { ok: true, customerId: order.customer_id };
+    }
+
+    const { data: profile, error: profileError } = await client
+      .from('profiles')
+      .select('role')
+      .eq('id', callerId)
+      .maybeSingle();
+
+    if (profileError === null && profile?.role === 'superadmin') {
+      return { ok: true, customerId: order.customer_id };
+    }
+
+    if (order.driver_id !== null && order.driver_id === callerId) {
+      return { ok: true, customerId: order.customer_id };
+    }
+
+    if (order.merchant_id !== null) {
+      const { data: owner, error: ownerError } = await client
+        .from('merchants')
+        .select('id')
+        .eq('id', order.merchant_id)
+        .eq('owner_id', callerId)
+        .maybeSingle();
+
+      if (ownerError === null && owner !== null) {
+        return { ok: true, customerId: order.customer_id };
+      }
+
+      const { data: staff, error: staffError } = await client
+        .from('merchant_staff')
+        .select('id')
+        .eq('merchant_id', order.merchant_id)
+        .eq('user_id', callerId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (staffError === null && staff !== null) {
+        return { ok: true, customerId: order.customer_id };
+      }
+    }
+
+    return { ok: false, response: jsonResponse({ error: 'No tienes acceso a este pedido.' }, 403) };
+  } catch {
+    return { ok: false, response: jsonResponse({ error: 'Error al verificar el pedido.' }, 500) };
+  }
+}
+
+/**
  * Compara dos secretos en tiempo constante.
  *
  * Un `!==` normal filtra information por tiempos: un atacante que sondea el
@@ -483,6 +561,11 @@ interface PushMessage {
   url: string;
   /** Agrupa/reemplaza notificaciones con el mismo tag en el dispositivo. */
   tag: string;
+  /**
+   * Marca el envío como recordatorio activo: el service worker lo muestra
+   * persistente (`requireInteraction`), con vibración y re-alerta.
+   */
+  reminder: boolean;
 }
 
 /**
@@ -529,6 +612,7 @@ async function sendPushNotification(
     url: message.url,
   };
   if (message.tag !== '') payload.tag = message.tag;
+  if (message.reminder) payload.reminder = 'true';
 
   const response = await fetch(subscription.endpoint, {
     method: 'POST',
@@ -536,7 +620,9 @@ async function sendPushNotification(
       'Content-Type': 'application/json',
       'Authorization': `vapid t=${token}, k=${vapidKeys.publicKey}`,
       TTL: '86400',
-      Urgency: 'normal',
+      // Los recordatorios despiertan la radio del dispositivo incluso en Doze;
+      // el resto de envíos viaja con urgencia normal.
+      Urgency: message.reminder ? 'high' : 'normal',
     },
     body: JSON.stringify(payload),
     signal: AbortSignal.timeout(10000),
@@ -796,7 +882,7 @@ async function deliverToSubscriptions(
     sub: PushSubscription & { full_name?: string | null },
   ) => { title: string; body: string },
   vapidKeys: VapidKeyPair,
-  routing?: { url: string; tag: string },
+  routing?: { url: string; tag: string; reminder?: boolean },
 ): Promise<DeliveryReport> {
   const report: DeliveryReport = { sent: 0, deleted: 0, failed: 0, authErrors: 0 };
 
@@ -813,6 +899,7 @@ async function deliverToSubscriptions(
           body,
           url: routing?.url ?? '/marketplace',
           tag: routing?.tag ?? '',
+          reminder: routing?.reminder === true,
         },
         vapidKeys,
       );
@@ -883,6 +970,9 @@ Deno.serve(async (req: Request) => {
       slot?: string;
       tag?: string;
       url?: string;
+      reminder?: boolean;
+      /** Pedido cuyo cliente recibirá el aviso (target 'order-customer'). */
+      orderId?: string;
     };
 
     const client = buildServiceRoleClient();
@@ -932,6 +1022,57 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    /**
+     * Avisos al cliente de un pedido concreto: cambian el comercio, el staff o
+     * el repartidor mientras trabaja el pedido. El cliente no necesita la app
+     * abierta: el push llega por Web Push a todos sus dispositivos y el
+     * service worker lo muestra como recordatorio activo.
+     */
+    if (body.target === 'order-customer') {
+      if (typeof body.orderId !== 'string' || body.orderId.trim() === '') {
+        return jsonResponse({ error: 'Falta el identificador del pedido.' }, 400);
+      }
+
+      const staff = await assertOrderStaffForCustomer(authHeader, body.orderId);
+      if (!staff.ok) return staff.response;
+
+      const vapidKeys = await resolveVapidKeys(client);
+
+      const subscriptions = await getSubscriptionsForUser(client, staff.customerId);
+      if (subscriptions.length === 0) {
+        return jsonResponse({
+          sent: 0,
+          failed: 0,
+          deleted: 0,
+          deactivated: 0,
+          total: 0,
+          vapidSource: vapidKeys.source,
+        });
+      }
+
+      const title = body.title ?? 'Actualización de tu pedido';
+      const bodyText = body.body ?? 'Tu pedido tuvo una novedad. Ábrela en la app.';
+
+      const report = await deliverToSubscriptions(
+        client,
+        subscriptions,
+        () => ({ title, body: bodyText }),
+        vapidKeys,
+        {
+          url: resolveTargetUrl(body.url, `/orders/${body.orderId}`),
+          tag: resolveMessageTag(body.tag) || `order-${body.orderId}`,
+          reminder: body.reminder === true,
+        },
+      );
+
+      return jsonResponse({
+        ...report,
+        deactivated: report.deleted,
+        total: subscriptions.length,
+        vapidSource: vapidKeys.source,
+      });
+    }
+
     if (body.target === 'user') {
       const auth = await assertAuthenticated(authHeader);
       if (!auth.ok) return auth.response;
@@ -958,7 +1099,11 @@ Deno.serve(async (req: Request) => {
         subscriptions,
         () => ({ title, body: bodyText }),
         vapidKeys,
-        { url: resolveTargetUrl(body.url, '/marketplace'), tag: resolveMessageTag(body.tag) },
+        {
+          url: resolveTargetUrl(body.url, '/marketplace'),
+          tag: resolveMessageTag(body.tag),
+          reminder: body.reminder === true,
+        },
       );
 
       return jsonResponse({ ...report, deactivated: report.deleted, total: subscriptions.length });

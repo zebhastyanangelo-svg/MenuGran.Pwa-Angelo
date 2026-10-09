@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import type { User, RealtimeChannel } from '@supabase/supabase-js'
 import { supabase, TABLE_NAMES } from '../services/supabase'
 import { fetchMerchantDrivers } from '../services/merchantStaffService'
+import { dispatchOrderStatusPushToCustomer } from '../services/orderStatusPushService'
 import {
   useQuery,
   useMutation,
@@ -194,6 +195,9 @@ export function useMerchantDashboard(
         .update({ status })
         .eq('id', orderId)
       if (result.error) throw result.error
+      // Aviso push al cliente (fire-and-forget): llega por Web Push con la
+      // app cerrada y no debe romper el flujo del panel si falla.
+      void dispatchOrderStatusPushToCustomer(orderId, status)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

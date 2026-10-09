@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useNotifications, buildOrderNotification } from '../hooks/useNotifications';
+import {
+  useNotifications,
+  buildOrderNotification,
+  buildDisplayOptions,
+} from '../hooks/useNotifications';
 import type { OrderStatus } from '../types/database';
 
 const mockNotificationInstance = {
@@ -276,5 +280,118 @@ describe('useNotifications', () => {
         });
       });
     }).not.toThrow();
+  });
+});
+
+describe('buildDisplayOptions', () => {
+  it('incluye las opciones de recordatorio cuando reminder es true', () => {
+    const options = buildDisplayOptions({
+      title: 'Recordatorio',
+      body: 'Sigue pendiente',
+      tag: 'order-reminder-1',
+      reminder: true,
+      url: '/orders/1',
+    });
+
+    expect(options.renotify).toBe(true);
+    expect(options.requireInteraction).toBe(true);
+    expect(options.silent).toBe(false);
+    expect(options.vibrate).toEqual([300, 150, 300]);
+    expect((options.data as { url: string }).url).toBe('/orders/1');
+  });
+
+  it('mantiene el aviso discreto cuando no es recordatorio', () => {
+    const options = buildDisplayOptions({
+      title: 'Actualización',
+      body: 'Listo',
+      tag: 'order-1',
+    });
+
+    expect(options.renotify).toBe(false);
+    expect(options.requireInteraction).toBe(false);
+    expect(options.vibrate).toBeUndefined();
+  });
+});
+
+describe('useNotifications vía Service Worker', () => {
+  const mockShowNotification = vi.fn().mockResolvedValue(undefined);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockShowNotification.mockClear().mockResolvedValue(undefined);
+    const MockNotification = vi.fn(() => ({ close: vi.fn() })) as any;
+    MockNotification.permission = 'granted';
+    MockNotification.requestPermission = vi.fn().mockResolvedValue('granted');
+    (globalThis as any).Notification = MockNotification;
+    Object.defineProperty(window.navigator, 'serviceWorker', {
+      value: {
+        ready: Promise.resolve({ showNotification: mockShowNotification }),
+      },
+      configurable: true,
+      writable: true,
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window.navigator, 'serviceWorker', {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    });
+  });
+
+  it('muestra la notificación a través del Service Worker, no del constructor', async () => {
+    const { result } = renderHook(() => useNotifications());
+
+    await act(async () => {
+      await result.current.requestPermission();
+    });
+
+    act(() => {
+      result.current.showNotification({
+        title: 'Pedido en camino',
+        body: 'Tu pedido está en camino.',
+        tag: 'order-status-update',
+        reminder: true,
+      });
+    });
+
+    await vi.waitFor(() => {
+      expect(mockShowNotification).toHaveBeenCalledTimes(1);
+    });
+    expect((globalThis as any).Notification).not.toHaveBeenCalled();
+    const [title, options] = mockShowNotification.mock.calls[0] as [
+      string,
+      { renotify?: boolean; requireInteraction?: boolean },
+    ];
+    expect(title).toBe('Pedido en camino');
+    expect(options.renotify).toBe(true);
+    expect(options.requireInteraction).toBe(true);
+  });
+
+  it('cae al constructor Notification si el SW no está disponible', async () => {
+    Object.defineProperty(window.navigator, 'serviceWorker', {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    });
+    (globalThis as any).Notification.mockClear();
+
+    const { result } = renderHook(() => useNotifications());
+
+    await act(async () => {
+      await result.current.requestPermission();
+    });
+
+    act(() => {
+      result.current.showNotification({
+        title: 'Pedido listo',
+        body: 'Puedes retirarlo.',
+        reminder: true,
+      });
+    });
+
+    expect(mockShowNotification).not.toHaveBeenCalled();
+    expect((globalThis as any).Notification).toHaveBeenCalledTimes(1);
   });
 });

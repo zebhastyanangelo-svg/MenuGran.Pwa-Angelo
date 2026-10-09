@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   X,
   ShoppingCart,
@@ -11,10 +11,13 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
+import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { formatPrice } from '../../types/cart';
 import { formatVES } from '../../utils/format';
 import { useBCVRate } from '../../hooks/useExchangeRate';
+import { getMissingProfileFields, isProfileIncomplete } from '../../utils/profileUtils';
+import { IncompleteProfileOrderModal } from './IncompleteProfileOrderModal';
 
 export interface CartDrawerProps {
   isOpen: boolean;
@@ -43,6 +46,7 @@ const SUMMARY_ROWS: readonly {
 
 export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const bcvRate = useBCVRate();
+  const { profile } = useAuth();
   const {
     items,
     totalAmount,
@@ -55,6 +59,21 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   } = useCart();
   const navigate = useNavigate();
   const panelRef = useRef<HTMLDivElement>(null);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+
+  /**
+   * Intento de pedido: con el perfil incompleto la acción se bloquea por
+   * completo y el modal explica qué falta antes de llevar al usuario a su
+   * perfil.
+   */
+  const handleCheckoutClick = () => {
+    if (isProfileIncomplete(profile)) {
+      setProfileModalOpen(true);
+      return;
+    }
+    navigate('/checkout');
+    onClose();
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -257,10 +276,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           <button
             type="button"
             disabled={!canCheckout}
-            onClick={() => {
-              navigate('/checkout');
-              onClose();
-            }}
+            onClick={handleCheckoutClick}
             className={`mt-3 flex w-full items-center justify-center rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#c80024] disabled:cursor-not-allowed disabled:opacity-50`}
           >
             Proceder al pago
@@ -268,6 +284,17 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           </button>
         </footer>
       </aside>
+
+      <IncompleteProfileOrderModal
+        isOpen={profileModalOpen}
+        missingFields={getMissingProfileFields(profile)}
+        onGoToProfile={() => {
+          setProfileModalOpen(false);
+          onClose();
+          navigate('/profile');
+        }}
+        onClose={() => setProfileModalOpen(false)}
+      />
     </div>
   );
 }

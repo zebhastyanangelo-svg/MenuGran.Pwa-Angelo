@@ -22,6 +22,8 @@ interface PushHandlerScope {
     normalizePathname: (rawPath: unknown) => string;
     isShowingTarget: (clientUrl: string, targetPath: string) => boolean;
     readPushPayload: (event: { data: { json?: () => unknown; text?: () => string } | null }) => Record<string, unknown>;
+    isReminderPayload: (payload: unknown) => boolean;
+    buildNotificationOptions: (payload: Record<string, unknown>, targetUrl: string) => Record<string, unknown>;
   };
 }
 
@@ -191,6 +193,94 @@ const [title, options] = mockShowNotificationArgs(scope);
       const second = mockShowNotificationArgs(scope)[1] as { tag: string };
       expect(first.tag).toMatch(/^menugram-\d+$/);
       expect(second.tag).toMatch(/^menugram-\d+$/);
+    });
+
+    it('muestra los recordatorios como alertas activas persistentes', () => {
+      const scope = loadPushHandler({ matchAll: async () => [], openWindow: async () => null });
+
+      scope.__listeners.push(
+        jsonEvent({
+          title: 'Recordatorio de tu pedido',
+          body: 'Tu pedido sigue pendiente de pago',
+          url: '/orders/abc',
+          tag: 'order-reminder-abc',
+          reminder: true,
+          timestamp: 1770000000000,
+        }),
+      );
+
+      const [, options] = mockShowNotificationArgs(scope);
+      expect(options).toMatchObject({
+        tag: 'order-reminder-abc',
+        renotify: true,
+        requireInteraction: true,
+        silent: false,
+        vibrate: [300, 150, 300],
+        timestamp: 1770000000000,
+      });
+      expect((options as { data: { url: string } }).data.url).toBe('/orders/abc');
+    });
+
+    it('las actualizaciones normales no son persistentes ni vibran', () => {
+      const scope = loadPushHandler({ matchAll: async () => [], openWindow: async () => null });
+
+      scope.__listeners.push(
+        jsonEvent({ title: 'Pedido confirmado', body: 'Ok', tag: 'order-abc', reminder: false }),
+      );
+
+      const [, options] = mockShowNotificationArgs(scope);
+      expect(options).toMatchObject({ renotify: false, requireInteraction: false });
+      expect(options).not.toHaveProperty('vibrate');
+    });
+  });
+
+  describe('isReminderPayload / buildNotificationOptions', () => {
+    it('reconoce reminder explícito y por kind', () => {
+      const { __pushHandlerTest } = loadPushHandler({
+        matchAll: async () => [],
+        openWindow: async () => null,
+      });
+
+      expect(__pushHandlerTest.isReminderPayload({ reminder: true })).toBe(true);
+      expect(__pushHandlerTest.isReminderPayload({ kind: 'reminder' })).toBe(true);
+      expect(__pushHandlerTest.isReminderPayload({ reminder: false, kind: 'update' })).toBe(false);
+      expect(__pushHandlerTest.isReminderPayload(null)).toBe(false);
+    });
+
+    it('construye opciones de recordatorio completas', () => {
+      const { __pushHandlerTest } = loadPushHandler({
+        matchAll: async () => [],
+        openWindow: async () => null,
+      });
+
+      const options = __pushHandlerTest.buildNotificationOptions(
+        { body: 'Texto', tag: 't-1', reminder: true },
+        '/orders/1',
+      );
+
+      expect(options).toMatchObject({
+        body: 'Texto',
+        tag: 't-1',
+        renotify: true,
+        requireInteraction: true,
+        silent: false,
+        vibrate: [300, 150, 300],
+        data: { url: '/orders/1' },
+      });
+    });
+
+    it('sin timestamp el recordatorio no inventa la propiedad', () => {
+      const { __pushHandlerTest } = loadPushHandler({
+        matchAll: async () => [],
+        openWindow: async () => null,
+      });
+
+      const options = __pushHandlerTest.buildNotificationOptions(
+        { body: 'Texto', reminder: true, timestamp: 'no-numerico' },
+        '/orders/1',
+      );
+
+      expect(options).not.toHaveProperty('timestamp');
     });
   });
 

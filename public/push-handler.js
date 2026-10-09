@@ -12,7 +12,10 @@
  *     enfocar la app en la URL indicada por el payload.
  *
  * Payload esperado (JSON enviado por la Edge Function send-push-notification):
- *  { title, body, url?, tag?, icon?, badge? }
+ *  { title, body, url?, tag?, icon?, badge?, reminder?, kind?, timestamp? }
+ *
+ * Los payloads marcados como recordatorio (`reminder: true`) se muestran como
+ * alertas activas persistentes: no se descartan solas, vibran y re-alertan.
  *
  * Script clásico (no ESM) porque `importScripts` lo carga así. Para poder
  * probarlo desde vitest, las funciones se cuelgan de `self.__pushHandlerTest`.
@@ -92,21 +95,52 @@
     }
   }
 
-  scope.addEventListener('push', function (event) {
-    var payload = readPushPayload(event);
-    var targetUrl = resolveTargetUrl(payload.url);
+  /**
+   * Opciones de la notificación a partir del payload.
+   *
+   * Payloads con `reminder: true` (o `kind: 'reminder'`) se muestran como
+   * recordatorios activos: permanecen en pantalla hasta que el usuario
+   * interactúa (`requireInteraction`), vibran y vuelven a alertar sobre la
+   * notificación previa del mismo tag (`renotify`). Así el aviso sigue visible
+   * con la pantalla bloqueada y no desaparece solo.
+   */
+  function isReminderPayload(payload) {
+    if (!payload) return false;
+    if (payload.reminder === true) return true;
+    return payload.kind === 'reminder';
+  }
 
+  function buildNotificationOptions(payload, targetUrl) {
     var options = {
-      body: payload.body || '',
-      icon: payload.icon || '/pwa-192x192.png',
-      badge: payload.badge || '/pwa-192x192.png',
+      body: (payload && payload.body) || '',
+      icon: (payload && payload.icon) || '/pwa-192x192.png',
+      badge: (payload && payload.badge) || '/pwa-192x192.png',
       // Sin `tag` propio cada mensaje necesita uno único: con una constante,
       // dos notificaciones simultáneas se reemplazaban y solo se veía la última.
-      tag: payload.tag || TAG_PREFIX + Date.now(),
+      tag: (payload && payload.tag) || TAG_PREFIX + Date.now(),
       renotify: false,
       requireInteraction: false,
       data: { url: targetUrl },
     };
+
+    if (isReminderPayload(payload)) {
+      options.renotify = true;
+      options.requireInteraction = true;
+      options.silent = false;
+      options.vibrate = [300, 150, 300];
+      if (payload.timestamp && typeof payload.timestamp === 'number') {
+        options.timestamp = payload.timestamp;
+      }
+    }
+
+    return options;
+  }
+
+  scope.addEventListener('push', function (event) {
+    var payload = readPushPayload(event);
+    var targetUrl = resolveTargetUrl(payload.url);
+
+    var options = buildNotificationOptions(payload, targetUrl);
 
     event.waitUntil(scope.registration.showNotification(payload.title || 'MenuGran', options));
   });
@@ -155,5 +189,7 @@
     normalizePathname: normalizePathname,
     isShowingTarget: isShowingTarget,
     readPushPayload: readPushPayload,
+    isReminderPayload: isReminderPayload,
+    buildNotificationOptions: buildNotificationOptions,
   };
 })(typeof self !== 'undefined' ? self : this);
