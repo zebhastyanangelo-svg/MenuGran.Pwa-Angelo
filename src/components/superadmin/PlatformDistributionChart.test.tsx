@@ -8,6 +8,7 @@ const metrics: SuperAdminMetrics = {
   totalMerchants: 7,
   totalCustomers: 42,
   totalOrders: 120,
+  platformSatisfaction: { average: 4.5, count: 12 },
 };
 
 describe('PlatformDistributionChart', () => {

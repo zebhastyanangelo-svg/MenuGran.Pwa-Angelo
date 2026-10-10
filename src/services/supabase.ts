@@ -4,6 +4,7 @@ import type {
   DeliveryRow,
   MerchantRow,
   MerchantStaffRow,
+  OrderRatingRow,
   OrderRow,
   ProductRow,
   ProfileRow,
@@ -33,6 +34,7 @@ const TABLE_NAMES = {
   products: 'products',
   orders: 'orders',
   deliveries: 'deliveries',
+  orderRatings: 'order_ratings',
   userPushSubscriptions: 'user_push_subscriptions',
 } as const;
 
@@ -47,6 +49,7 @@ export interface DatabaseTables {
   products: ProductRow;
   orders: OrderRow;
   deliveries: DeliveryRow;
+  order_ratings: OrderRatingRow;
   user_push_subscriptions: UserPushSubscriptionRow;
 }
 

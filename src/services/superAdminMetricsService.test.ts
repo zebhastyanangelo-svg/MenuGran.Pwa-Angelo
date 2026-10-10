@@ -9,6 +9,14 @@ const supabaseMocks = vi.hoisted(() => ({
   updateUser: vi.fn(),
 }));
 
+const ratingSummaryMock = vi.hoisted(() => ({
+  fetchPlatformRatingSummary: vi.fn(),
+}));
+
+vi.mock('./orderRatingService', () => ({
+  fetchPlatformRatingSummary: ratingSummaryMock.fetchPlatformRatingSummary,
+}));
+
 vi.mock('./supabase', () => ({
   supabase: {
     auth: { updateUser: supabaseMocks.updateUser },
@@ -46,17 +54,33 @@ describe('fetchSuperAdminMetrics', () => {
     supabaseMocks.from.mockImplementation((table: string) =>
       mockCount(counts[table] ?? 0),
     );
+    ratingSummaryMock.fetchPlatformRatingSummary.mockResolvedValue({
+      average: 4.5,
+      count: 12,
+    });
   });
 
-  it('devuelve los totales de comercios, clientes y pedidos', async () => {
+  it('devuelve los totales de comercios, clientes, pedidos y satisfacción', async () => {
     await expect(fetchSuperAdminMetrics()).resolves.toEqual({
       totalMerchants: 7,
       totalCustomers: 42,
       totalOrders: 120,
+      platformSatisfaction: { average: 4.5, count: 12 },
     });
     expect(supabaseMocks.from).toHaveBeenCalledWith('merchants');
     expect(supabaseMocks.from).toHaveBeenCalledWith('profiles');
     expect(supabaseMocks.from).toHaveBeenCalledWith('orders');
+  });
+
+  it('degrade a "sin valoraciones" si la tabla de encuestas falla', async () => {
+    ratingSummaryMock.fetchPlatformRatingSummary.mockRejectedValue(
+      new Error('relation does not exist'),
+    );
+
+    await expect(fetchSuperAdminMetrics()).resolves.toMatchObject({
+      totalOrders: 120,
+      platformSatisfaction: { average: 0, count: 0 },
+    });
   });
 
   it('filtra los perfiles por rol customer', async () => {

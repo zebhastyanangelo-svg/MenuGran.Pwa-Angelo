@@ -3,6 +3,7 @@ import type { User, RealtimeChannel } from '@supabase/supabase-js'
 import { supabase, TABLE_NAMES } from '../services/supabase'
 import { fetchMerchantDrivers } from '../services/merchantStaffService'
 import { dispatchOrderStatusPushToCustomer } from '../services/orderStatusPushService'
+import { sendDriverAssignmentPushNotification } from '../services/pushNotificationService'
 import {
   useQuery,
   useMutation,
@@ -319,6 +320,11 @@ export function useMerchantDashboardPage(
             .insert({ order_id: orderId, driver_id: driverId, status: 'assigned' })
           if (insertResult.error) throw insertResult.error
         }
+
+        // Aviso push al repartidor (fire-and-forget): es el único canal por
+        // el que recibe pedidos, y no debe romper el flujo del panel si
+        // falla la entrega del push.
+        void sendDriverAssignmentPushNotification(orderId).catch(() => undefined)
       } else {
         const { data: existing } = await supabase
           .from(TABLE_NAMES.deliveries)

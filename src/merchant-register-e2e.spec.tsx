@@ -7,6 +7,7 @@ import { AuthProvider } from './context/AuthContext';
 import { AuthForm } from './components/auth/AuthForm';
 import { MerchantDashboardPage } from './pages/merchant/MerchantDashboardPage';
 import { NotificationToastProvider } from './components/pwa/NotificationToast';
+import { QueryClientTestProvider } from './test/test-utils';
 import { useMerchantDashboardPage } from './hooks/useMerchantDashboardPage';
 
 const authMocks = vi.hoisted(() => ({
@@ -78,7 +79,11 @@ function mockDashboardData(overrides: Record<string, unknown> = {}) {
 
 async function renderWithAuth(ui: ReactNode) {
   await act(async () => {
-    render(<MemoryRouter>{ui}</MemoryRouter>);
+    render(
+      <QueryClientTestProvider>
+        <MemoryRouter>{ui}</MemoryRouter>
+      </QueryClientTestProvider>,
+    );
   });
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   getBCVRate,
   getCachedExchangeRate,
+  EXCHANGE_RATE_REFRESH_INTERVAL_MS,
 } from '../services/exchangeRate';
 
 export interface UseExchangeRateReturn {
@@ -17,9 +18,10 @@ export interface UseExchangeRateReturn {
  * Hook para obtener y mantener actualizada la tasa de cambio BCV desde
  * DolarVZLA (https://rates.dolarvzla.com/bcv/current.json).
  * Es la fuente central de la tasa para toda la app (Checkout, carrito,
- * paneles de comercio y admin). Usa caché en memoria/localStorage con TTL
- * de 1 hora y deduplica peticiones concurrentes a la API; `main.tsx`
- * mantiene además un refresco automático cada hora y al recuperar el foco.
+ * paneles de comercio y admin). Usa caché efímera en memoria/localStorage
+ * con TTL de 5 minutos, deduplica peticiones concurrentes a la API y
+ * re-lee la tasa cada 5 minutos (polling) para que la UI refleje el valor
+ * oficial exacto en tiempo real sin guardarlo en la base de datos.
  */
 export function useExchangeRate(): UseExchangeRateReturn {
   const [rate, setRate] = useState<number | null>(null);
@@ -69,8 +71,19 @@ export function useExchangeRate(): UseExchangeRateReturn {
   useEffect(() => {
     isMountedRef.current = true;
     void loadRate();
+
+    // Polling cada 5 minutos: re-lee la tasa (la caché la refresca el
+    // poller global de main.tsx) para que los precios en vivo se actualicen
+    // sin recargar la página.
+    const intervalId = setInterval(() => {
+      if (isMountedRef.current) {
+        void loadRate();
+      }
+    }, EXCHANGE_RATE_REFRESH_INTERVAL_MS);
+
     return () => {
       isMountedRef.current = false;
+      clearInterval(intervalId);
     };
   }, [loadRate]);
 

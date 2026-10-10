@@ -2,12 +2,16 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useMerchantDashboardPage } from '../../hooks/useMerchantDashboardPage';
+import { useMerchantPopularity } from '../../hooks/useMerchantPopularity';
+import { MerchantPopularityCard } from '../../components/merchant/MerchantPopularityCard';
 import { useToast } from '../../hooks/useToast';
 import { supabase } from '../../services/supabase';
 import { PaymentProofLightbox } from '../../components/merchant/PaymentProofLightbox';
 import { Modal } from '../../components/ui/Modal';
 import { Store, Loader2, Package, ClipboardList, TrendingUp, LogOut, Image as ImageIcon, Truck, User } from 'lucide-react';
 import type { OrderStatus, OrderType } from '../../types/database';
+import { shouldNotifyNewOrder } from '../../utils/orderNotificationRules';
+import { useStaffPermissions } from '../../hooks/useStaffPermissions';
 import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
 import { getOrderDeliveryCoordinates } from '../../utils/delivery';
 import type { OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
@@ -79,8 +83,14 @@ export function MerchantDashboardPage() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { permissions: staffPermissions } = useStaffPermissions();
   const audioCtxRef = useRef<AudioContext | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Notificaciones de nuevos pedidos filtradas por rol: el dueño y el
+  // superadmin ven todo; el staff solo si gestiona pedidos; el repartidor
+  // nunca (solo recibe el push de entrega asignada).
+  const notifyNewOrders = shouldNotifyNewOrder(profile?.role, staffPermissions);
 
   const playNotificationSound = useCallback(() => {
     if (!soundEnabled) return;
@@ -105,6 +115,7 @@ export function MerchantDashboardPage() {
 
   const handleNewOrder = useCallback(
     (order: OrderWithCustomer) => {
+      if (!notifyNewOrders) return;
       playNotificationSound();
       showToast({
         variant: 'success',
@@ -121,7 +132,7 @@ export function MerchantDashboardPage() {
         }
       }
     },
-    [playNotificationSound, showToast],
+    [playNotificationSound, showToast, notifyNewOrders],
   );
 
   const dashboardOptions = useMemo(
@@ -130,6 +141,7 @@ export function MerchantDashboardPage() {
   );
 
   const {
+    merchantId,
     merchantName,
     isOpen,
     activeProducts,
@@ -141,6 +153,15 @@ export function MerchantDashboardPage() {
     updateOrderStatus,
     assignDriver,
   } = useMerchantDashboardPage(user, dashboardOptions);
+
+  // Popularidad: valoraciones de clientes que impactan la visibilidad del
+  // comercio en el marketplace.
+  const {
+    summary: popularitySummary,
+    isLoading: popularityLoading,
+    error: popularityError,
+  } = useMerchantPopularity(merchantId);
+
   const [activeTab, setActiveTab] = useState<TabKey>('pending');
   const greetingName = merchantName ?? profile?.full_name ?? 'Comercio';
   const isStaff = profile?.role === 'merchant_staff';
@@ -403,7 +424,7 @@ return (
           )}
 
           <section
-            className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
             aria-label="Métricas del día"
           >
             <MetricCard
@@ -420,6 +441,11 @@ return (
               icon={<Package className="h-5 w-5 text-amber-600" />}
               label="Productos activos"
               value={String(activeProducts)}
+            />
+            <MerchantPopularityCard
+              summary={popularitySummary}
+              isLoading={popularityLoading}
+              error={popularityError}
             />
           </section>
 

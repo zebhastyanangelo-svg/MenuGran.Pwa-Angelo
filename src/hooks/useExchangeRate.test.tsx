@@ -9,6 +9,7 @@ const getCachedExchangeRateMock = vi.fn<() => ExchangeRateData | null>();
 vi.mock('../services/exchangeRate', () => ({
   getBCVRate: () => getBCVRateMock(),
   getCachedExchangeRate: () => getCachedExchangeRateMock(),
+  EXCHANGE_RATE_REFRESH_INTERVAL_MS: 5 * 60 * 1000,
 }));
 
 interface Deferred<T> {

@@ -19,6 +19,7 @@ const loadedMetrics = {
   totalMerchants: 7,
   totalCustomers: 42,
   totalOrders: 120,
+  platformSatisfaction: { average: 4.5, count: 12 },
 };
 const loadedTrends = {
   revenueTrend: [{ date: '2026-08-28', dayOffset: 0, revenue: 1000 }],
@@ -54,6 +55,30 @@ describe('SuperAdminDashboardPage', () => {
     expect(screen.getByTestId('metric-Comercios registrados')).toHaveTextContent('7');
     expect(screen.getByTestId('metric-Usuarios clientes')).toHaveTextContent('42');
     expect(screen.getByTestId('metric-Pedidos globales')).toHaveTextContent('120');
+    // Métricas de satisfacción de la plataforma (encuestas post-pedido).
+    expect(
+      screen.getByTestId('metric-Satisfacción de la plataforma'),
+    ).toHaveTextContent('4,5');
+    expect(
+      screen.getByTestId('metric-Satisfacción de la plataforma'),
+    ).toHaveTextContent('12');
+  });
+
+  it('muestra "Sin encuestas" cuando no hay valoraciones registradas', () => {
+    mockMetricsHook.mockReturnValue({
+      metrics: {
+        ...loadedMetrics,
+        platformSatisfaction: { average: 0, count: 0 },
+      },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<SuperAdminDashboardPage />);
+
+    expect(
+      screen.getByTestId('metric-Satisfacción de la plataforma'),
+    ).toHaveTextContent('Sin encuestas');
   });
 
   it('renderiza las tres gráficas al cargar métricas y tendencias', () => {

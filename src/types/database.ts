@@ -50,6 +50,21 @@ export type DeliveryStatus =
   | 'delivered'
   | 'failed';
 
+/** Velocidad percibida en la encuesta post-pedido (negocio o delivery). */
+export type SurveySpeedOption = 'normal' | 'rapido' | 'muy_rapido';
+
+/** Calidad percibida del servicio en la encuesta post-pedido. */
+export type SurveyQualityOption = 'normal' | 'bueno' | 'muy_bueno';
+
+/** Opciones de mejora de la plataforma en la encuesta post-pedido. */
+export type SurveyImprovementOption =
+  | 'interfaz'
+  | 'velocidad'
+  | 'variedad_comercios'
+  | 'precios'
+  | 'atencion_cliente'
+  | 'otro';
+
 export type MerchantCategory =
   | 'Comida rápida'
   | 'Restaurante'
@@ -305,6 +320,31 @@ export interface UserPushSubscriptionRow {
   updated_at: IsoTimestamp;
 }
 
+/**
+ * Encuesta de satisfacción post-pedido (una por pedido).
+ *
+ * Negocio y plataforma siempre se califican; el repartidor solo cuando el
+ * pedido fue de delivery y tenía repartidor asignado.
+ */
+export interface OrderRatingRow {
+  id: string;
+  order_id: string;
+  merchant_id: string;
+  customer_id: string;
+  driver_id: string | null;
+  merchant_stars: number;
+  merchant_speed: SurveySpeedOption;
+  merchant_service_quality: SurveyQualityOption;
+  driver_stars: number | null;
+  driver_speed: SurveySpeedOption | null;
+  driver_treatment: SurveyQualityOption | null;
+  platform_stars: number;
+  /** Claves de mejora seleccionadas (JSONB array). */
+  platform_improvements: SurveyImprovementOption[];
+  platform_comment: string | null;
+  created_at: IsoTimestamp;
+}
+
 /* ---------- INSERT (tipos de escritura parciales) ---------- */
 
 export type ProfileInsert = Pick<ProfileRow, 'id' | 'email'> &
@@ -392,3 +432,26 @@ export type UserPushSubscriptionInsert = Pick<
 > & {
   is_active?: boolean;
 };
+
+/** Payload de la encuesta que envía el cliente tras la entrega. */
+export type OrderRatingInsert = Pick<
+  OrderRatingRow,
+  | 'order_id'
+  | 'merchant_id'
+  | 'customer_id'
+  | 'merchant_stars'
+  | 'merchant_speed'
+  | 'merchant_service_quality'
+  | 'platform_stars'
+> &
+  Partial<
+    Pick<
+      OrderRatingRow,
+      | 'driver_id'
+      | 'driver_stars'
+      | 'driver_speed'
+      | 'driver_treatment'
+      | 'platform_improvements'
+      | 'platform_comment'
+    >
+  >;

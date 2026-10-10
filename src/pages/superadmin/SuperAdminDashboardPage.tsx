@@ -1,4 +1,4 @@
-import { BarChart3, ClipboardList, Store, Users, DollarSign, MapPin, Megaphone } from 'lucide-react';
+import { BarChart3, ClipboardList, Store, Users, DollarSign, MapPin, Megaphone, Star } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { PlatformDistributionChart } from '../../components/superadmin/PlatformDistributionChart';
 import { RevenueTrendChart } from '../../components/superadmin/RevenueTrendChart';
@@ -7,6 +7,7 @@ import { BulkNotificationModal } from '../../components/superadmin/BulkNotificat
 import { useSuperAdminMetrics } from '../../hooks/useSuperAdminMetrics';
 import { useSuperAdminOrderTrends } from '../../hooks/useSuperAdminOrderTrends';
 import { useBCVRate } from '../../hooks/useExchangeRate';
+import { formatBCVRate } from '../../services/exchangeRate';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../services/supabase';
 import { parseGeoPoint } from '../../utils/geoPoint';
@@ -17,6 +18,14 @@ interface MetricCardProps {
   icon: React.ReactNode;
   label: string;
   value: string;
+}
+
+/** Formatea el promedio de satisfacción con un decimal venezolano (4,5). */
+function formatSatisfactionAverage(average: number): string {
+  return new Intl.NumberFormat('es-VE', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(average);
 }
 
 function MetricCard({ icon, label, value }: MetricCardProps) {
@@ -206,7 +215,7 @@ export function SuperAdminDashboardPage() {
           <div className="flex items-center gap-2 rounded-xl bg-white border border-gray-200 px-4 py-2 shadow-sm">
             <DollarSign className="h-5 w-5 text-emerald-600" aria-hidden="true" />
             <span className="font-semibold text-gray-900">
-              Tasa BCV: Bs. {bcvRate > 0 ? bcvRate.toFixed(2) : '—'}
+              Tasa BCV: Bs. {bcvRate > 0 ? formatBCVRate(bcvRate) : '—'}
             </span>
           </div>
         </header>
@@ -250,7 +259,7 @@ export function SuperAdminDashboardPage() {
           </p>
         ) : (
           <section
-            className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
             aria-label="Métricas de la plataforma"
           >
             <MetricCard
@@ -267,6 +276,15 @@ export function SuperAdminDashboardPage() {
               icon={<ClipboardList className="h-6 w-6" aria-hidden="true" />}
               label="Pedidos globales"
               value={String(metrics?.totalOrders ?? 0)}
+            />
+            <MetricCard
+              icon={<Star className="h-6 w-6" aria-hidden="true" />}
+              label="Satisfacción de la plataforma"
+              value={
+                metrics !== null && metrics.platformSatisfaction.count > 0
+                  ? `${formatSatisfactionAverage(metrics.platformSatisfaction.average)} ★ (${metrics.platformSatisfaction.count})`
+                  : 'Sin encuestas'
+              }
             />
           </section>
         )}

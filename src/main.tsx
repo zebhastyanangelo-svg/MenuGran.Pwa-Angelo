@@ -7,7 +7,7 @@ import 'animate.css'
 import './index.css'
 import App from './App.tsx'
 import posthog, { isPostHogEnabled } from './posthog'
-import { refreshBCVRateIfStale, startHourlyBCVRefresh } from './services/exchangeRate'
+import { refreshBCVRateIfStale, startPeriodicBCVRefresh } from './services/exchangeRate'
 
 let swRegistration: ServiceWorkerRegistration | undefined
 
@@ -71,9 +71,10 @@ document.addEventListener('visibilitychange', () => {
   }
 })
 
-// Tasa BCV siempre fresca: consulta a DolarVZLA cada 1 hora mientras la app
-// esté abierta (la caché también vence a la 1 hora).
-startHourlyBCVRefresh()
+// Tasa BCV en tiempo real: polling a DolarVZLA cada 5 minutos mientras la
+// app esté abierta (la caché efímera también vence a los 5 minutos). La tasa
+// se mantiene solo en memoria/localStorage, nunca en la base de datos.
+startPeriodicBCVRefresh()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

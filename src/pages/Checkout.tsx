@@ -20,6 +20,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { useMerchantPagoMovil } from '../hooks/useMerchantPagoMovil';
 import { useBCVRate } from '../hooks/useExchangeRate';
+import { formatBCVRate } from '../services/exchangeRate';
 import { compressImage } from '../utils/imageCompressor';
 import { formatVES } from '../utils/format';
 import {
@@ -678,7 +679,7 @@ function PagoMovilSection({
 
       {bcvRate > 0 && totalVES > 0 && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 font-medium">
-          Monto exacto a transferir: {formatVES(totalVES)} (Tasa BCV: Bs. {bcvRate.toFixed(2)})
+          Monto exacto a transferir: {formatVES(totalVES)} (Tasa BCV: Bs. {formatBCVRate(bcvRate)})
         </div>
       )}
 

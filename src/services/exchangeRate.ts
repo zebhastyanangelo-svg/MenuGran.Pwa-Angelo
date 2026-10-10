@@ -6,11 +6,16 @@
  * Endpoint estático, público y sin API key. La tasa se lee de `current.usd`
  * y la fecha de la tasa de `current.date`.
  *
- * Estrategia para mantener la tasa siempre fresca:
- * 1. Caché en memoria + localStorage con TTL de 1 hora: nunca se sirve una
- *    tasa con más de 1 hora de antigüedad sin reintentar la consulta.
- * 2. `startHourlyBCVRefresh` (invocado en `main.tsx`): consulta la API cada
- *    1 hora mientras la app esté abierta.
+ * La tasa se usa con su valor EXACTO (p. ej. 876,7976): ningún punto de la
+ * app debe redondearla ni truncarla antes de convertir montos, para que el
+ * equivalente en bolívares sea exacto al céntimo.
+ *
+ * Estrategia para mantener la tasa siempre fresca (tiempo real):
+ * 1. Caché efímera en memoria + localStorage con TTL de 5 minutos: nunca se
+ *    sirve una tasa con más de 5 minutos de antigüedad sin reintentar la
+ *    consulta. La tasa NO se persiste en la base de datos.
+ * 2. `startPeriodicBCVRefresh` (invocado en `main.tsx`): consulta la API
+ *    cada 5 minutos (polling) mientras la app esté abierta.
  * 3. `refreshBCVRateIfStale`: consulta al recuperar el foco (al volver de
  *    segundo plano), solo si la caché ya expiró.
  * 4. Deduplicación de peticiones concurrentes (un solo fetch compartido).
@@ -19,10 +24,10 @@
  */
 
 export const EXCHANGE_RATE_STORAGE_KEY = 'menugram_bcv_exchange_rate';
-/** Vigencia de la caché: la tasa nunca se sirve con más de 1 hora. */
-export const EXCHANGE_RATE_TTL_MS = 60 * 60 * 1000; // 1 hora en milisegundos
-/** Intervalo de la actualización automática en segundo plano (1 hora). */
-export const EXCHANGE_RATE_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
+/** Vigencia de la caché: la tasa nunca se sirve con más de 5 minutos. */
+export const EXCHANGE_RATE_TTL_MS = 5 * 60 * 1000; // 5 minutos en milisegundos
+/** Intervalo del polling en segundo plano (5 minutos, tiempo real). */
+export const EXCHANGE_RATE_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 /** Última tasa conocida; se usa solo cuando la API y la caché fallan. */
 export const DEFAULT_FALLBACK_RATE = 857.0;
 
@@ -226,7 +231,7 @@ function readStoredCache(): ExchangeRateData | null {
 }
 
 /**
- * Obtiene la tasa BCV desde caché (memoria o localStorage) si es válida (menos de 1 hora).
+ * Obtiene la tasa BCV desde caché (memoria o localStorage) si es válida (menos de 5 minutos).
  */
 export function getCachedExchangeRate(): ExchangeRateData | null {
   if (isValidCacheEntry(memoryCache)) {
@@ -430,8 +435,8 @@ export function formatUSD(amount: number): string {
   }).format(amount);
 }
 
-/** Interval ID para la actualización automática cada hora. */
-let hourlyRefreshInterval: ReturnType<typeof setInterval> | null = null;
+/** Interval ID para el polling automático cada 5 minutos. */
+let periodicRefreshInterval: ReturnType<typeof setInterval> | null = null;
 
 /**
  * Consulta la tasa BCV desde las APIs y actualiza la caché.
@@ -447,27 +452,27 @@ async function refreshExchangeRateCache(): Promise<void> {
 }
 
 /**
- * Inicia la actualización automática de la tasa BCV cada hora.
+ * Inicia el polling automático de la tasa BCV cada 5 minutos.
  * Ejecuta una consulta inmediata y repite con `setInterval` mientras la app
- * esté abierta, para que la tasa nunca quede estancada con el valor del día
- * anterior.
+ * esté abierta, para que la tasa refleje el valor oficial en tiempo real y
+ * los montos en bolívares se calculen siempre con la tasa vigente.
  */
-export function startHourlyBCVRefresh(): void {
-  if (typeof window === 'undefined' || hourlyRefreshInterval !== null) return;
+export function startPeriodicBCVRefresh(): void {
+  if (typeof window === 'undefined' || periodicRefreshInterval !== null) return;
 
   void refreshExchangeRateCache();
-  hourlyRefreshInterval = setInterval(() => {
+  periodicRefreshInterval = setInterval(() => {
     void refreshExchangeRateCache();
   }, EXCHANGE_RATE_REFRESH_INTERVAL_MS);
 }
 
 /**
- * Detiene la actualización automática (útil en tests o cleanup).
+ * Detiene el polling automático (útil en tests o cleanup).
  */
-export function stopHourlyBCVRefresh(): void {
-  if (hourlyRefreshInterval !== null) {
-    clearInterval(hourlyRefreshInterval);
-    hourlyRefreshInterval = null;
+export function stopPeriodicBCVRefresh(): void {
+  if (periodicRefreshInterval !== null) {
+    clearInterval(periodicRefreshInterval);
+    periodicRefreshInterval = null;
   }
 }
 
@@ -481,4 +486,19 @@ export function stopHourlyBCVRefresh(): void {
 export async function refreshBCVRateIfStale(): Promise<void> {
   if (getCachedExchangeRate() !== null) return;
   await refreshExchangeRateCache();
+}
+
+/**
+ * Formatea la tasa BCV con su valor EXACTO, sin redondeos ni truncamientos.
+ *
+ * El BCV publica la tasa con 4 decimales (p. ej. 876,7976): mostrarla
+ * redondeada a 2 (876,80) genera discrepancias entre el monto transferido y
+ * el calculado por la app. Se muestran hasta 4 decimales con separador
+ * venezolano (coma decimal).
+ */
+export function formatBCVRate(rate: number): string {
+  return new Intl.NumberFormat('es-VE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  }).format(rate);
 }

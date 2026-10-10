@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 
 const toastMocks = vi.hoisted(() => ({ showToast: vi.fn() }))
@@ -154,7 +154,7 @@ describe('DriverDeliveriesPage', () => {
     renderPage()
 
     // Click on "En camino" tab
-    screen.getByTestId('tab-inTransit').click()
+    fireEvent.click(screen.getByTestId('tab-inTransit'))
 
     await waitFor(() => {
       expect(screen.getByTestId('orders-panel-inTransit')).toBeInTheDocument()
@@ -170,7 +170,7 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    screen.getByTestId('tab-delivered').click()
+    fireEvent.click(screen.getByTestId('tab-delivered'))
 
     await waitFor(() => {
       expect(screen.getByTestId('orders-panel-delivered')).toBeInTheDocument()
@@ -247,7 +247,7 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    screen.getByTestId('tab-inTransit').click()
+    fireEvent.click(screen.getByTestId('tab-inTransit'))
 
     await waitFor(() => {
       expect(screen.getByTestId('start-route-order-2')).toBeInTheDocument()
@@ -264,7 +264,7 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    screen.getByTestId('tab-delivered').click()
+    fireEvent.click(screen.getByTestId('tab-delivered'))
 
     await waitFor(() => {
       expect(screen.getByText(/Entrega completada/i)).toBeInTheDocument()
@@ -283,7 +283,7 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    screen.getByTestId('tab-delivered').click()
+    fireEvent.click(screen.getByTestId('tab-delivered'))
 
     await waitFor(() => {
       expect(screen.getByTestId('orders-panel-delivered')).toBeInTheDocument()
@@ -300,7 +300,7 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    screen.getByTestId('tab-delivered').click()
+    fireEvent.click(screen.getByTestId('tab-delivered'))
 
     await waitFor(() => {
       expect(screen.getByTestId('completed-period-filter')).toBeInTheDocument()
@@ -328,21 +328,21 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    screen.getByTestId('tab-delivered').click()
+    fireEvent.click(screen.getByTestId('tab-delivered'))
 
     await waitFor(() => {
       expect(screen.getByTestId('orders-panel-delivered')).toBeInTheDocument()
     })
 
     // La semana actual contiene dos entregas; la de la semana pasada queda fuera.
-    screen.getByTestId('completed-period-week').click()
+    fireEvent.click(screen.getByTestId('completed-period-week'))
 
     await waitFor(() => {
       expect(screen.getAllByTestId('delivery-card')).toHaveLength(2)
     })
 
     // Al navegar hacia la semana anterior solo queda la entrega de esa semana.
-    screen.getByTestId('completed-period-prev').click()
+    fireEvent.click(screen.getByTestId('completed-period-prev'))
 
     await waitFor(() => {
       expect(screen.getAllByTestId('delivery-card')).toHaveLength(1)
@@ -359,7 +359,7 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    screen.getByTestId('refresh-btn').click()
+    fireEvent.click(screen.getByTestId('refresh-btn'))
 
     await waitFor(() => {
       expect(refresh).toHaveBeenCalled()
@@ -422,7 +422,7 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    screen.getByTestId('start-route-order-1').click()
+    fireEvent.click(screen.getByTestId('start-route-order-1'))
 
     await waitFor(() => {
       expect(takeOrder).toHaveBeenCalledWith('order-1')
@@ -444,13 +444,13 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    screen.getByTestId('tab-inTransit').click()
+    fireEvent.click(screen.getByTestId('tab-inTransit'))
 
     await waitFor(() => {
       expect(screen.getByTestId('start-route-order-2')).toBeInTheDocument()
     })
 
-    screen.getByTestId('start-route-order-2').click()
+    fireEvent.click(screen.getByTestId('start-route-order-2'))
 
     await waitFor(() => {
       expect(screen.getByTestId('delivery-tracking-modal')).toBeInTheDocument()
@@ -471,11 +471,11 @@ describe('DriverDeliveriesPage', () => {
 
     const { rerender } = renderPage()
 
-    screen.getByTestId('tab-inTransit').click()
+    fireEvent.click(screen.getByTestId('tab-inTransit'))
     await waitFor(() => {
       expect(screen.getByTestId('start-route-order-2')).toBeInTheDocument()
     })
-    screen.getByTestId('start-route-order-2').click()
+    fireEvent.click(screen.getByTestId('start-route-order-2'))
 
     await waitFor(() => {
       expect(screen.getByTestId('delivery-tracking-modal')).toBeInTheDocument()
@@ -513,7 +513,7 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    screen.getByTestId('tab-inTransit').click()
+    fireEvent.click(screen.getByTestId('tab-inTransit'))
 
     await waitFor(() => {
       expect(screen.queryByTestId('confirm-delivery-order-2')).not.toBeInTheDocument()

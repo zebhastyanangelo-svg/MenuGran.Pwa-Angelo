@@ -9,6 +9,7 @@ import type { AuthContextValue } from './context/auth-context-core';
 vi.mock('./services/exchangeRate', () => ({
   getBCVRate: vi.fn().mockResolvedValue(857.0),
   getCachedExchangeRate: vi.fn().mockReturnValue(null),
+  EXCHANGE_RATE_REFRESH_INTERVAL_MS: 5 * 60 * 1000,
 }));
 
 const createQuery = () => {

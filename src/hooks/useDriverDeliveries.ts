@@ -27,6 +27,12 @@ export interface UseDriverDeliveriesResult {
 export interface UseDriverDeliveriesOptions {
   onNewReadyOrder?: (order: DriverOrder) => void
   /**
+   * Aviso cuando el comercio asigna una nueva entrega a este repartidor.
+   * Solo se dispara para el repartidor destinatario (no para el comercio):
+   * es su única notificación de pedidos.
+   */
+  onOrderAssigned?: (order: DriverOrder) => void
+  /**
    * Rol del usuario. Con rol 'driver' (o sin rol) solo ve sus entregas
    * asignadas; con roles de comercio (merchant_owner/merchant_staff/
    * superadmin) ve todas las entregas de su comercio.
@@ -134,6 +140,20 @@ export function useDriverDeliveries(
   const role = options?.role
   const merchantScope = role !== undefined && role !== 'driver'
   const onNewReadyOrder = options?.onNewReadyOrder
+  const onOrderAssigned = options?.onOrderAssigned
+
+  /**
+   * IDs de pedidos ya conocidos por el hook. Permite distinguir un UPDATE
+   * sobre un pedido nuevo (asignación de entrega al repartidor) sin depender
+   * del estado de React dentro de los handlers de realtime.
+   */
+  const knownOrderIdsRef = useRef<Set<string>>(new Set<string>())
+
+  /** Reemplaza la lista de pedidos y sincroniza el índice de IDs conocidos. */
+  const applyOrders = useCallback((next: DriverOrder[]) => {
+    knownOrderIdsRef.current = new Set(next.map((order) => order.id))
+    setOrders(next)
+  }, [])
 
   const loadOrders = useCallback(async () => {
     if (!user) return
@@ -146,7 +166,7 @@ export function useDriverDeliveries(
       if (!merchant) {
         setMerchantId(null)
         setMerchantName(null)
-        setOrders([])
+        applyOrders([])
         return
       }
 
@@ -154,7 +174,7 @@ export function useDriverDeliveries(
       setMerchantName(merchant.name)
 
       const data = await fetchDriverDeliveries(merchant.id, user.id, merchantScope)
-      setOrders(data)
+      applyOrders(data)
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Error al cargar las entregas',
@@ -163,7 +183,7 @@ export function useDriverDeliveries(
     } finally {
       setLoading(false)
     }
-  }, [user, merchantScope])
+  }, [user, merchantScope, applyOrders])
 
   useEffect(() => {
     void loadOrders()
@@ -193,6 +213,7 @@ export function useDriverDeliveries(
               if (prev.find((o) => o.id === newOrder.id)) return prev
               return [newOrder as DriverOrder, ...prev]
             })
+            knownOrderIdsRef.current.add(newOrder.id)
             onNewReadyOrder?.(newOrder as DriverOrder)
           }
         },
@@ -207,8 +228,31 @@ export function useDriverDeliveries(
         },
         (payload) => {
           const updated = payload.new as Partial<DriverOrder>
+          const updatedId = typeof updated.id === 'string' ? updated.id : null
+          if (updatedId === null) return
+
+          const isKnown = knownOrderIdsRef.current.has(updatedId)
+
+          // Asignación de una nueva entrega: el pedido no era conocido por
+          // este repartidor y acaba de quedar a su nombre. Es el único aviso
+          // de pedidos que recibe el rol driver.
+          const isNewAssignment =
+            !isKnown &&
+            !merchantScope &&
+            updated.driver_id === user?.id &&
+            updated.type === 'delivery' &&
+            updated.status != null &&
+            (TRACKED_DELIVERY_STATUSES as readonly string[]).includes(updated.status)
+
+          if (isNewAssignment) {
+            knownOrderIdsRef.current.add(updatedId)
+            onOrderAssigned?.(updated as DriverOrder)
+            void loadOrders()
+            return
+          }
+
           setOrders((prev) => {
-            const exists = prev.some((o) => o.id === updated.id)
+            const exists = prev.some((o) => o.id === updatedId)
             if (!exists) {
               if (
                 (merchantScope || updated.driver_id === user?.id) &&
@@ -228,10 +272,11 @@ export function useDriverDeliveries(
                 updated.status,
               )
             ) {
-              return prev.filter((o) => o.id !== updated.id)
+              knownOrderIdsRef.current.delete(updatedId)
+              return prev.filter((o) => o.id !== updatedId)
             }
             return prev.map((o) =>
-              o.id === updated.id ? { ...o, ...updated } : o,
+              o.id === updatedId ? { ...o, ...updated } : o,
             )
           })
         },
@@ -255,7 +300,7 @@ export function useDriverDeliveries(
       supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [merchantId, merchantScope, onNewReadyOrder, loadOrders, user?.id])
+  }, [merchantId, merchantScope, onNewReadyOrder, onOrderAssigned, loadOrders, user?.id])
 
   const takeOrder = useCallback(
     async (orderId: string): Promise<void> => {

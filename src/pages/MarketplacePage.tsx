@@ -4,6 +4,7 @@ import { MapPin, Navigation, X, CheckCircle, Map as MapIcon, Navigation2, Bike }
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { GeoPoint, MerchantCategory, MerchantRow } from '../types/database';
 import { useAuth } from '../hooks/useAuth';
+import { useMarketplaceMerchantRatings } from '../hooks/useMerchantPopularity';
 import { SearchBar } from '../components/marketplace/SearchBar';
 import { MerchantCard } from '../components/marketplace/MerchantCard';
 import { MarketplaceSkeleton } from '../components/marketplace/MarketplaceSkeleton';
@@ -80,6 +81,10 @@ export function MarketplacePage() {
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [permissionState, setPermissionState] = useState<PermissionState>('prompt');
+
+  // Valoraciones de los comercios (encuesta post-pedido): alimentan los
+  // badges de reputación de las tarjetas del marketplace.
+  const merchantRatings = useMarketplaceMerchantRatings();
 
   /**
    * `true` mientras la sesión todavía debe pasar por `ServiceModeGate`.
@@ -450,6 +455,7 @@ const fetchData = useCallback(async () => {
                     key={merchant.id}
                     merchant={merchant}
                     distance={distance ?? undefined}
+                    rating={merchantRatings[merchant.id] ?? null}
                     onClick={handleMerchantClick}
                   />
                 ))

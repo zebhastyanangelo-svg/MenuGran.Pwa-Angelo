@@ -326,12 +326,16 @@ interface PushPayloadBase {
  * Una masiva exige título y cuerpo (no hay copy automático); un envío a un
  * usuario puede omitirlos y la función pone los valores por defecto; el envío
  * al cliente de un pedido exige el `orderId` (la función deriva el destinatario
- * y verifica que el llamante trabaje ese pedido).
+ * y verifica que el llamador trabaje ese pedido); el aviso al repartidor de un
+ * pedido y la alerta de calificación negativa también derivan el destinatario
+ * a partir del `orderId` con verificación de rol en el servidor.
  */
 type InvokePushPayload =
   | ({ target: 'user' } & PushPayloadBase)
   | ({ target: 'all'; title: string; body: string } & PushPayloadBase)
-  | ({ target: 'order-customer'; orderId: string; title: string; body: string } & PushPayloadBase);
+  | ({ target: 'order-customer'; orderId: string; title: string; body: string } & PushPayloadBase)
+  | ({ target: 'order-driver'; orderId: string } & PushPayloadBase)
+  | ({ target: 'rating-alert'; orderId: string; driverStars: number } & PushPayloadBase);
 
 /**
  * Extrae el mensaje de error que devuelve la Edge Function.
@@ -479,6 +483,49 @@ export function sendOrderCustomerStatusPush(
     title,
     body,
     url: `/orders/${encodeURIComponent(orderId)}`,
+    reminder: true,
+  });
+}
+
+/**
+ * Avisa al repartidor asignado que tiene una nueva entrega.
+ *
+ * Lo invoca el comercio al asignar el repartidor desde su panel: la Edge
+ * Function verifica que el llamador gestione el pedido y entrega el push a
+ * los dispositivos del repartidor, que no necesita la app abierta. Es el
+ * único aviso de pedidos que recibe el repartidor: no le llegan los
+ * movimientos del comercio que no le corresponden.
+ */
+export function sendDriverAssignmentPushNotification(
+  orderId: string,
+): Promise<SendPushResult> {
+  return invokeSendPushNotification({
+    target: 'order-driver',
+    orderId,
+    url: '/driver/deliveries',
+    tag: `driver-assignment-${orderId}`,
+    reminder: true,
+  });
+}
+
+/**
+ * Alerta de calificación negativa del repartidor.
+ *
+ * La dispara la encuesta post-pedido cuando el cliente califica al repartidor
+ * con <= 2 estrellas: la Edge Function entrega el push inmediato (recordatorio
+ * activo) a todos los superadmins y al dueño del comercio involucrado para su
+ * gestión.
+ */
+export function sendNegativeDriverRatingAlert(
+  orderId: string,
+  driverStars: number,
+): Promise<SendPushResult> {
+  return invokeSendPushNotification({
+    target: 'rating-alert',
+    orderId,
+    driverStars,
+    url: `/orders/${encodeURIComponent(orderId)}`,
+    tag: `rating-alert-${orderId}`,
     reminder: true,
   });
 }

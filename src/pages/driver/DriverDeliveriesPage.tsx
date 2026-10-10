@@ -82,6 +82,23 @@ const TABS: TabConfig[] = [
 
 export function DriverDeliveriesPage() {
   const { user, profile, signOut } = useAuth()
+
+  const { showToast } = useNotificationToast()
+
+  // Notificación exclusiva del repartidor: solo cuando el comercio le
+  // asigna una nueva entrega (nunca los demás pedidos del local).
+  const handleOrderAssigned = useCallback(
+    (order: DriverOrder) => {
+      showToast({
+        title: 'Nueva entrega asignada',
+        message: `Te asignaron el pedido ${getOrderNumber(order.id)}. Revísalo en la pestaña Nuevas.`,
+        variant: 'info',
+        durationMs: 6000,
+      })
+    },
+    [showToast],
+  )
+
   const {
     merchantName,
     assigned,
@@ -93,9 +110,10 @@ export function DriverDeliveriesPage() {
     actionError,
     takeOrder,
     refresh,
-  } = useDriverDeliveries(user, { role: profile?.role })
-
-  const { showToast } = useNotificationToast()
+  } = useDriverDeliveries(user, {
+    role: profile?.role,
+    onOrderAssigned: handleOrderAssigned,
+  })
 
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<DriverOrder | null>(null)

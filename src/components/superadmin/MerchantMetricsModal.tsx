@@ -1,9 +1,10 @@
-import { ClipboardList, X } from 'lucide-react';
+import { ClipboardList, Star, X } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { Skeleton } from '../ui/Skeleton';
 import { useMerchantMetrics } from '../../hooks/useMerchantMetrics';
+import { useMerchantPopularity } from '../../hooks/useMerchantPopularity';
 import { formatCurrency } from '../../utils/format';
 import type { MerchantMetrics } from '../../services/merchantMetricsService';
 
@@ -58,7 +59,26 @@ function activityColor(level: MerchantMetrics['activityLevel']): string {
   }
 }
 
-function MetricsGrid({ metrics }: { metrics: MerchantMetrics }) {
+/** Formatea el promedio de satisfacción con un decimal venezolano (4,5). */
+function formatSatisfactionAverage(average: number): string {
+  return new Intl.NumberFormat('es-VE', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(average);
+}
+
+function MetricsGrid({
+  metrics,
+  popularity,
+}: {
+  metrics: MerchantMetrics;
+  popularity: ReturnType<typeof useMerchantPopularity>;
+}) {
+  const satisfaction =
+    popularity.summary !== null && popularity.summary.count > 0
+      ? `${formatSatisfactionAverage(popularity.summary.average)} ★ (${popularity.summary.count} valoraciones)`
+      : 'Sin valoraciones';
+
   return (
     <div className="space-y-1">
       <MetricRow
@@ -89,6 +109,21 @@ function MetricsGrid({ metrics }: { metrics: MerchantMetrics }) {
           {metrics.activityLevel} ({metrics.ordersLast30Days} en 30 días)
         </span>
       </div>
+      <div
+        className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2"
+        data-testid="merchant-satisfaction-row"
+      >
+        <span className="min-w-0 text-sm text-slate-600">
+          Satisfacción del cliente
+        </span>
+        <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-slate-900">
+          <Star
+            className="h-4 w-4 fill-amber-400 text-amber-400"
+            aria-hidden="true"
+          />
+          {satisfaction}
+        </span>
+      </div>
     </div>
   );
 }
@@ -105,6 +140,8 @@ export function MerchantMetricsModal({
   onClose,
 }: MerchantMetricsModalProps) {
   const { metrics, isLoading, error } = useMerchantMetrics(merchantId, isOpen);
+  // Popularidad del comercio: valoraciones de la encuesta post-pedido.
+  const popularity = useMerchantPopularity(isOpen ? merchantId : null, isOpen);
 
   const body = (() => {
     if (!isOpen) return null;
@@ -120,7 +157,7 @@ export function MerchantMetricsModal({
       );
     }
     if (metrics === null) return null;
-    return <MetricsGrid metrics={metrics} />;
+    return <MetricsGrid metrics={metrics} popularity={popularity} />;
   })();
 
   return (

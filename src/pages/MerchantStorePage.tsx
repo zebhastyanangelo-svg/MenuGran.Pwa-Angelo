@@ -10,6 +10,7 @@ import { Badge } from '../components/ui/Badge';
 import { useCart } from '../hooks/useCart';
 import { useToast } from '../hooks/useToast';
 import { useBCVRate } from '../hooks/useExchangeRate';
+import { formatBCVRate } from '../services/exchangeRate';
 import { formatEstimatedDeliveryRange, resolveMerchantPromoChips } from '../utils/promos';
 
 const SKELETON_COUNT = 4;
@@ -316,7 +317,7 @@ export function MerchantStorePage() {
             {bcvRate > 0 && (
               <span className="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
                 <DollarSign className="h-3 w-3" />
-                Tasa BCV: Bs. {bcvRate.toFixed(2)} / USD
+                Tasa BCV: Bs. {formatBCVRate(bcvRate)} / USD
               </span>
             )}
           </div>

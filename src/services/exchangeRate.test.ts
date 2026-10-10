@@ -6,9 +6,10 @@ import {
   clearExchangeRateCache,
   fetchBCVRateFromAPI,
   getBCVRate,
-  startHourlyBCVRefresh,
-  stopHourlyBCVRefresh,
+  startPeriodicBCVRefresh,
+  stopPeriodicBCVRefresh,
   refreshBCVRateIfStale,
+  formatBCVRate,
   EXCHANGE_RATE_TTL_MS,
   EXCHANGE_RATE_REFRESH_INTERVAL_MS,
   DEFAULT_FALLBACK_RATE,
@@ -80,7 +81,7 @@ describe('exchangeRate service', () => {
     });
     localStorageMock.clear();
     clearExchangeRateCache();
-    stopHourlyBCVRefresh();
+    stopPeriodicBCVRefresh();
     vi.useFakeTimers();
   });
 
@@ -349,9 +350,9 @@ describe('exchangeRate service', () => {
       expect(rate).toBe(777.77);
     });
 
-    it('retorna la tasa en caché si tiene menos de 1 hora de antigüedad', async () => {
+    it('retorna la tasa en caché si tiene menos de 5 minutos de antigüedad', async () => {
       setCachedExchangeRate(500.0, 'test');
-      vi.advanceTimersByTime(EXCHANGE_RATE_TTL_MS - 5 * 60 * 1000); // 55 minutos
+      vi.advanceTimersByTime(EXCHANGE_RATE_TTL_MS - 60 * 1000); // 4 minutos
       const fetchMock = vi.fn();
       vi.stubGlobal('fetch', fetchMock);
 
@@ -361,7 +362,7 @@ describe('exchangeRate service', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
-    it('vuelve a consultar la API cuando la caché supera la hora', async () => {
+    it('vuelve a consultar la API cuando la caché supera los 5 minutos', async () => {
       setCachedExchangeRate(500.0, 'test');
       vi.advanceTimersByTime(EXCHANGE_RATE_TTL_MS + 1000);
       const fetchMock = vi.fn().mockResolvedValue(jsonResponse(dolarVzlaPayload(871.36)));
@@ -383,12 +384,12 @@ describe('exchangeRate service', () => {
     });
   });
 
-  describe('startHourlyBCVRefresh', () => {
-    it('consulta la API al iniciar y repite cada hora', async () => {
+  describe('startPeriodicBCVRefresh', () => {
+    it('consulta la API al iniciar y repite cada 5 minutos (polling)', async () => {
       const fetchMock = vi.fn().mockResolvedValue(jsonResponse(dolarVzlaPayload(871)));
       vi.stubGlobal('fetch', fetchMock);
 
-      startHourlyBCVRefresh();
+      startPeriodicBCVRefresh();
       await vi.advanceTimersByTimeAsync(0);
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(getCachedExchangeRate()?.rate).toBe(871);
@@ -399,12 +400,17 @@ describe('exchangeRate service', () => {
       expect(getCachedExchangeRate()?.rate).toBe(872);
     });
 
+    it('el intervalo de polling es de 5 minutos exactos', () => {
+      expect(EXCHANGE_RATE_REFRESH_INTERVAL_MS).toBe(5 * 60 * 1000);
+      expect(EXCHANGE_RATE_TTL_MS).toBe(5 * 60 * 1000);
+    });
+
     it('no registra un segundo intervalo si ya está activo', async () => {
       const fetchMock = vi.fn().mockResolvedValue(jsonResponse(dolarVzlaPayload(871)));
       vi.stubGlobal('fetch', fetchMock);
 
-      startHourlyBCVRefresh();
-      startHourlyBCVRefresh();
+      startPeriodicBCVRefresh();
+      startPeriodicBCVRefresh();
       await vi.advanceTimersByTimeAsync(0);
       await vi.advanceTimersByTimeAsync(EXCHANGE_RATE_REFRESH_INTERVAL_MS);
 
@@ -417,19 +423,19 @@ describe('exchangeRate service', () => {
       const fetchMock = vi.fn().mockRejectedValue(new Error('Sin conexión'));
       vi.stubGlobal('fetch', fetchMock);
 
-      startHourlyBCVRefresh();
+      startPeriodicBCVRefresh();
       await vi.advanceTimersByTimeAsync(EXCHANGE_RATE_REFRESH_INTERVAL_MS);
 
       expect(getCachedExchangeRateIgnoringTTL()?.rate).toBe(870.5);
     });
 
-    it('stopHourlyBCVRefresh detiene el intervalo', async () => {
+    it('stopPeriodicBCVRefresh detiene el intervalo', async () => {
       const fetchMock = vi.fn().mockResolvedValue(jsonResponse(dolarVzlaPayload(871)));
       vi.stubGlobal('fetch', fetchMock);
 
-      startHourlyBCVRefresh();
+      startPeriodicBCVRefresh();
       await vi.advanceTimersByTimeAsync(0);
-      stopHourlyBCVRefresh();
+      stopPeriodicBCVRefresh();
       await vi.advanceTimersByTimeAsync(EXCHANGE_RATE_REFRESH_INTERVAL_MS);
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -464,6 +470,26 @@ describe('exchangeRate service', () => {
       vi.stubGlobal('fetch', fetchMock);
 
       await expect(refreshBCVRateIfStale()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('formatBCVRate', () => {
+    it('muestra la tasa exacta con 4 decimales, sin redondear a 2', () => {
+      expect(formatBCVRate(876.7976)).toBe('876,7976');
+    });
+
+    it('conserva la tasa exacta que publica el BCV byte a byte', () => {
+      // La fuente publica 871.3689: mostrar 871,37 sería un redondeo que
+      // rompe el monto exacto al céntimo.
+      expect(formatBCVRate(871.3689)).toBe('871,3689');
+    });
+
+    it('completa con 2 decimales cuando la tasa es redonda', () => {
+      expect(formatBCVRate(857)).toBe('857,00');
+    });
+
+    it('usa el separador decimal venezolano (coma)', () => {
+      expect(formatBCVRate(905.25)).toBe('905,25');
     });
   });
 

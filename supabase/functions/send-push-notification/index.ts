@@ -316,6 +316,70 @@ async function assertOrderStaffForCustomer(
 }
 
 /**
+ * Autoriza al personal del comercio de un pedido (dueño o staff activo) o a
+ * un superadmin, para acciones de gestión como avisar al repartidor de una
+ * nueva entrega asignada.
+ */
+async function assertOrderMerchantStaff(
+  authorizationHeader: string | null,
+  orderId: string,
+): Promise<{ ok: true; merchantId: string; driverId: string | null } | { ok: false; response: Response }> {
+  const authenticated = await assertAuthenticated(authorizationHeader);
+  if (!authenticated.ok) return authenticated;
+  const callerId = authenticated.userId;
+
+  try {
+    const client = buildServiceRoleClient();
+    const { data: order, error: orderError } = await client
+      .from('orders')
+      .select('id, merchant_id, driver_id')
+      .eq('id', orderId)
+      .maybeSingle();
+
+    if (orderError !== null || order === null || order.merchant_id === null) {
+      return { ok: false, response: jsonResponse({ error: 'Pedido no encontrado.' }, 404) };
+    }
+
+    const { data: profile, error: profileError } = await client
+      .from('profiles')
+      .select('role')
+      .eq('id', callerId)
+      .maybeSingle();
+
+    if (profileError === null && profile?.role === 'superadmin') {
+      return { ok: true, merchantId: order.merchant_id, driverId: order.driver_id ?? null };
+    }
+
+    const { data: owner, error: ownerError } = await client
+      .from('merchants')
+      .select('id')
+      .eq('id', order.merchant_id)
+      .eq('owner_id', callerId)
+      .maybeSingle();
+
+    if (ownerError === null && owner !== null) {
+      return { ok: true, merchantId: order.merchant_id, driverId: order.driver_id ?? null };
+    }
+
+    const { data: staff, error: staffError } = await client
+      .from('merchant_staff')
+      .select('id')
+      .eq('merchant_id', order.merchant_id)
+      .eq('user_id', callerId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (staffError === null && staff !== null) {
+      return { ok: true, merchantId: order.merchant_id, driverId: order.driver_id ?? null };
+    }
+
+    return { ok: false, response: jsonResponse({ error: 'No tienes acceso a este pedido.' }, 403) };
+  } catch {
+    return { ok: false, response: jsonResponse({ error: 'Error al verificar el pedido.' }, 500) };
+  }
+}
+
+/**
  * Compara dos secretos en tiempo constante.
  *
  * Un `!==` normal filtra information por tiempos: un atacante que sondea el
@@ -486,6 +550,69 @@ async function getSubscriptionsForUser(client: SupabaseClient, userId: string): 
     endpoint: row.endpoint,
     keys: { p256dh: row.p256dh, auth: row.auth },
   }));
+}
+
+/** Suscripciones activas de varios usuarios (alertas a superadmins y dueños). */
+async function getSubscriptionsForUsers(
+  client: SupabaseClient,
+  userIds: readonly string[],
+): Promise<Array<PushSubscription & { userId: string }>> {
+  const uniqueIds = [...new Set(userIds)];
+  if (uniqueIds.length === 0) return [];
+
+  const { data, error } = await client
+    .from('user_push_subscriptions')
+    .select('user_id, endpoint, p256dh, auth')
+    .in('user_id', uniqueIds)
+    .eq('is_active', true);
+
+  if (error !== null || data === null) return [];
+
+  return data.map((row: { user_id: string; endpoint: string; p256dh: string; auth: string }) => ({
+    userId: row.user_id,
+    endpoint: row.endpoint,
+    keys: { p256dh: row.p256dh, auth: row.auth },
+  }));
+}
+
+/** IDs de todos los superadmins de la plataforma. */
+async function getSuperadminUserIds(client: SupabaseClient): Promise<string[]> {
+  const { data, error } = await client
+    .from('profiles')
+    .select('id')
+    .eq('role', 'superadmin');
+
+  if (error !== null || data === null) return [];
+  return data.map((row: { id: string }) => row.id);
+}
+
+/** Dueño del comercio indicado. */
+async function getMerchantOwnerId(client: SupabaseClient, merchantId: string): Promise<string | null> {
+  const { data, error } = await client
+    .from('merchants')
+    .select('owner_id')
+    .eq('id', merchantId)
+    .maybeSingle();
+
+  if (error !== null || data === null) return null;
+  return data.owner_id;
+}
+
+/** Nombre público del perfil indicado (para redactar alertas legibles). */
+async function getProfileFullName(client: SupabaseClient, userId: string): Promise<string | null> {
+  const { data, error } = await client
+    .from('profiles')
+    .select('full_name')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error !== null || data === null) return null;
+  return data.full_name;
+}
+
+/** Código corto con el que el personal identifica un pedido. */
+function shortOrderCode(orderId: string): string {
+  return `#${orderId.slice(0, 8).toUpperCase()}`;
 }
 
 async function getAllSubscriptions(client: SupabaseClient): Promise<Array<PushSubscription & { user_id: string; full_name: string | null }>> {
@@ -973,6 +1100,8 @@ Deno.serve(async (req: Request) => {
       reminder?: boolean;
       /** Pedido cuyo cliente recibirá el aviso (target 'order-customer'). */
       orderId?: string;
+      /** Estrellas que el cliente dio al repartidor (target 'rating-alert'). */
+      driverStars?: number;
     };
 
     const client = buildServiceRoleClient();
@@ -1062,6 +1191,145 @@ Deno.serve(async (req: Request) => {
           url: resolveTargetUrl(body.url, `/orders/${body.orderId}`),
           tag: resolveMessageTag(body.tag) || `order-${body.orderId}`,
           reminder: body.reminder === true,
+        },
+      );
+
+      return jsonResponse({
+        ...report,
+        deactivated: report.deleted,
+        total: subscriptions.length,
+        vapidSource: vapidKeys.source,
+      });
+    }
+
+    /**
+     * Aviso de nueva entrega asignada: el comercio (dueño o staff) o un
+     * superadmin asignan un repartidor y este recibe el push en todos sus
+     * dispositivos, aunque la app esté cerrada. Es el único canal por el que
+     * el repartidor recibe avisos de pedidos: no le llegan los movimientos
+     * del comercio que no le corresponden.
+     */
+    if (body.target === 'order-driver') {
+      if (typeof body.orderId !== 'string' || body.orderId.trim() === '') {
+        return jsonResponse({ error: 'Falta el identificador del pedido.' }, 400);
+      }
+
+      const staff = await assertOrderMerchantStaff(authHeader, body.orderId);
+      if (!staff.ok) return staff.response;
+
+      if (staff.driverId === null) {
+        return jsonResponse({ error: 'El pedido no tiene repartidor asignado.' }, 409);
+      }
+
+      const vapidKeys = await resolveVapidKeys(client);
+
+      const subscriptions = await getSubscriptionsForUser(client, staff.driverId);
+      if (subscriptions.length === 0) {
+        return jsonResponse({
+          sent: 0,
+          failed: 0,
+          deleted: 0,
+          deactivated: 0,
+          total: 0,
+          vapidSource: vapidKeys.source,
+        });
+      }
+
+      const title = body.title ?? '🛵 Nueva entrega asignada';
+      const bodyText = body.body ??
+        `Te asignaron el pedido ${shortOrderCode(body.orderId)}. Revísalo en tus entregas.`;
+
+      const report = await deliverToSubscriptions(
+        client,
+        subscriptions,
+        () => ({ title, body: bodyText }),
+        vapidKeys,
+        {
+          url: resolveTargetUrl(body.url, '/driver/deliveries'),
+          tag: resolveMessageTag(body.tag) || `driver-assignment-${body.orderId}`,
+          reminder: body.reminder ?? true,
+        },
+      );
+
+      return jsonResponse({
+        ...report,
+        deactivated: report.deleted,
+        total: subscriptions.length,
+        vapidSource: vapidKeys.source,
+      });
+    }
+
+    /**
+     * Alerta de calificación negativa del repartidor: la dispara el cliente al
+     * enviar la encuesta post-pedido con una nota baja (<= 2 estrellas). Llega
+     * como push inmediato (recordatorio activo) a todos los superadmins y al
+     * dueño del comercio involucrado, para su gestión oportuna.
+     */
+    if (body.target === 'rating-alert') {
+      if (typeof body.orderId !== 'string' || body.orderId.trim() === '') {
+        return jsonResponse({ error: 'Falta el identificador del pedido.' }, 400);
+      }
+
+      const stars = Number(body.driverStars);
+      if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
+        return jsonResponse({ error: 'Calificación del repartidor inválida.' }, 400);
+      }
+
+      // Solo el cliente del pedido calificado (o un superadmin) puede
+      // disparar la alerta, evitando envíos a nombre de terceros.
+      const staff = await assertOrderStaffForCustomer(authHeader, body.orderId);
+      if (!staff.ok) return staff.response;
+
+      const serviceClient = client;
+      const { data: order, error: orderError } = await serviceClient
+        .from('orders')
+        .select('merchant_id, driver_id')
+        .eq('id', body.orderId)
+        .maybeSingle();
+
+      if (orderError !== null || order === null) {
+        return jsonResponse({ error: 'Pedido no encontrado.' }, 404);
+      }
+
+      const vapidKeys = await resolveVapidKeys(client);
+
+      const [superadminIds, ownerId, driverName] = await Promise.all([
+        getSuperadminUserIds(serviceClient),
+        order.merchant_id === null
+          ? Promise.resolve(null)
+          : getMerchantOwnerId(serviceClient, order.merchant_id),
+        order.driver_id === null
+          ? Promise.resolve(null)
+          : getProfileFullName(serviceClient, order.driver_id),
+      ]);
+
+      const recipientIds = ownerId === null ? superadminIds : [...superadminIds, ownerId];
+      const subscriptions = await getSubscriptionsForUsers(serviceClient, recipientIds);
+      if (subscriptions.length === 0) {
+        return jsonResponse({
+          sent: 0,
+          failed: 0,
+          deleted: 0,
+          deactivated: 0,
+          total: 0,
+          vapidSource: vapidKeys.source,
+        });
+      }
+
+      const driverLabel = driverName ?? 'El repartidor';
+      const title = body.title ?? '⚠️ Alerta de calificación negativa';
+      const bodyText = body.body ??
+        `${driverLabel} recibió ${stars} estrellas en el pedido ${shortOrderCode(body.orderId)}. Requiere tu gestión.`;
+
+      const report = await deliverToSubscriptions(
+        serviceClient,
+        subscriptions,
+        () => ({ title, body: bodyText }),
+        vapidKeys,
+        {
+          url: resolveTargetUrl(body.url, `/orders/${body.orderId}`),
+          tag: resolveMessageTag(body.tag) || `rating-alert-${body.orderId}`,
+          reminder: true,
         },
       );
 

@@ -24,7 +24,7 @@ import { parseGeoPoint } from '../utils/geoPoint';
 import { confirmOrderDelivery } from '../services/orderDeliveryService';
 import { OrderStatusStep } from '../components/orders/OrderStatusStep';
 import { getAllowedTransitions, getTransitionLabel, getTransitionButtonClass } from '../utils/orderStatus';
-import { PartyPopper, ArrowLeft, PackageCheck, AlertCircle, Navigation } from 'lucide-react';
+import { PartyPopper, ArrowLeft, PackageCheck, AlertCircle, Navigation, Star } from 'lucide-react';
 import { OrderTrackingPanel } from '../components/orders/OrderTrackingPanel';
 import { MapErrorBoundary } from '../components/map/MapErrorBoundary';
 import { useQueryClient } from '@tanstack/react-query';
@@ -32,6 +32,9 @@ import posthog, { isPostHogEnabled } from '../posthog';
 import { formatUSD, formatVES } from '../utils/format';
 import { getPaymentMethodLabel } from '../utils/paymentMethod';
 import { useBCVRate } from '../hooks/useExchangeRate';
+import { hasCustomerRatedOrder } from '../services/orderRatingService';
+import { shouldAutoShowSurvey } from '../utils/surveyStorage';
+import { PostOrderSurveyModal } from '../components/survey/PostOrderSurveyModal';
 import type { OrderType } from '../types/database';
 
 interface ProductNameMap {
@@ -176,6 +179,39 @@ export function OrderTracker() {
   // Los recordatorios son para el cliente del pedido: un comercio o repartidor
   // que abra el tracker de otra persona no debe recibir los avisos de pago.
   const isCustomerOwner = order !== null && order.customer_id === user?.id;
+
+  // Encuesta post-pedido: se muestra al cliente tras la entrega.
+  const [surveyOpen, setSurveyOpen] = useState(false);
+  const [alreadyRated, setAlreadyRated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!order || order.status !== 'delivered' || !isCustomerOwner) return undefined;
+
+    let cancelled = false;
+    let surveyTimer: ReturnType<typeof setTimeout> | undefined;
+
+    void (async () => {
+      try {
+        const rated = await hasCustomerRatedOrder(order.id);
+        if (cancelled) return;
+        setAlreadyRated(rated);
+        if (rated || !shouldAutoShowSurvey(order.id)) return;
+        // Pequeño delay para que la celebración de entrega se disfrute antes
+        // de invitar a calificar.
+        surveyTimer = setTimeout(() => {
+          if (!cancelled) setSurveyOpen(true);
+        }, 1500);
+      } catch {
+        // Si la tabla de encuestas aún no está disponible, no interrumpimos
+        // la vista de entrega.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (surveyTimer !== undefined) clearTimeout(surveyTimer);
+    };
+  }, [order, isCustomerOwner]);
 
   useOrderReminderScheduler({
     orderId: orderId ?? null,
@@ -586,19 +622,39 @@ export function OrderTracker() {
           <p className="text-emerald-700 mb-6 text-lg">
             ¡Gracias por tu compra!
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              removeOrder(order.id);
-              navigate('/');
-            }}
-            className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow hover:bg-emerald-700 transition-colors"
-            data-testid="back-to-marketplace"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Volver al catálogo
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {alreadyRated === false && isCustomerOwner && (
+              <button
+                type="button"
+                onClick={() => setSurveyOpen(true)}
+                className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-6 py-3 text-sm font-semibold text-amber-900 shadow hover:bg-amber-200 transition-colors"
+                data-testid="open-survey"
+              >
+                <Star className="h-4 w-4 fill-amber-500 text-amber-500" aria-hidden="true" />
+                Calificar tu experiencia
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                removeOrder(order.id);
+                navigate('/');
+              }}
+              className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow hover:bg-emerald-700 transition-colors"
+              data-testid="back-to-marketplace"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              Volver al catálogo
+            </button>
+          </div>
         </div>
+      )}
+
+      {surveyOpen && order.status === 'delivered' && (
+        <PostOrderSurveyModal
+          order={order}
+          onClose={() => setSurveyOpen(false)}
+        />
       )}
 
       <div className="mb-8 overflow-x-auto">

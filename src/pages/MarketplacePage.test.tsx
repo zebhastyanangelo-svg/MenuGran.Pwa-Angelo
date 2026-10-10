@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { screen, fireEvent, act } from '@testing-library/react';
+import { render } from '../test/test-utils';
 import { MemoryRouter } from 'react-router-dom';
 import type { GeoPoint, MerchantRow } from '../types/database';
 import { MarketplacePage } from './MarketplacePage';
@@ -16,6 +17,10 @@ Object.defineProperty(navigator, 'permissions', {
 
 vi.mock('../hooks/useAuth', () => ({
   useAuth: vi.fn(),
+}));
+
+vi.mock('../hooks/useMerchantPopularity', () => ({
+  useMarketplaceMerchantRatings: () => ({}),
 }));
 
 function setAuth(user: unknown, profile: unknown, isLoading = false): void {

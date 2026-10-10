@@ -9,8 +9,16 @@ const mockHook = vi.hoisted(() => ({
   useMerchantMetrics: vi.fn(),
 }));
 
+const mockPopularityHook = vi.hoisted(() => ({
+  useMerchantPopularity: vi.fn(),
+}));
+
 vi.mock('../../hooks/useMerchantMetrics', () => ({
   useMerchantMetrics: mockHook.useMerchantMetrics,
+}));
+
+vi.mock('../../hooks/useMerchantPopularity', () => ({
+  useMerchantPopularity: mockPopularityHook.useMerchantPopularity,
 }));
 
 const sampleMetrics: MerchantMetrics = {
@@ -26,6 +34,11 @@ const sampleMetrics: MerchantMetrics = {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  mockPopularityHook.useMerchantPopularity.mockReturnValue({
+    summary: { average: 4.5, count: 12 },
+    isLoading: false,
+    error: null,
+  });
 });
 
 describe('MerchantMetricsModal', () => {

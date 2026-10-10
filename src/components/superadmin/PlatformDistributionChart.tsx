@@ -51,7 +51,10 @@ function describeDonutSegment(
 }
 
 function buildSegments(
-  metrics: SuperAdminMetrics,
+  metrics: Pick<
+    SuperAdminMetrics,
+    'totalMerchants' | 'totalCustomers' | 'totalOrders'
+  >,
 ): ChartSegment[] {
   return [
     {

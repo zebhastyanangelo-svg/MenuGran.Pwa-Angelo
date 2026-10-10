@@ -1,4 +1,4 @@
-import { Bike, Clock, MapPin, ShoppingBag } from 'lucide-react';
+import { Bike, Clock, MapPin, ShoppingBag, Star } from 'lucide-react';
 import type { MerchantRow } from '../../types/database';
 import { formatUSD } from '../../utils/format';
 import { getMerchantAvailability } from '../../utils/merchantAvailability';
@@ -7,12 +7,19 @@ import {
   parseDeliveryFee,
 } from '../../utils/deliveryPolicy';
 import { formatEstimatedDeliveryRange, resolveMerchantPromoChips } from '../../utils/promos';
+import type { RatingSummary } from '../../services/orderRatingService';
 
 export interface MerchantCardProps {
   merchant: MerchantRow;
   onClick?: (merchant: MerchantRow) => void;
   /** Distancia en km desde la ubicación del usuario. Opcional. */
   distance?: number;
+  /**
+   * Resumen de valoraciones del comercio (estrellas de la encuesta
+   * post-pedido). `null`/`undefined` oculta el badge; con 0 valoraciones no
+   * se muestra para no penalizar a los comercios nuevos.
+   */
+  rating?: RatingSummary | null;
 }
 
 const CHIP_BASE =
@@ -71,7 +78,34 @@ function DeliveryPolicyChip({ merchant }: { merchant: MerchantRow }) {
   );
 }
 
-export function MerchantCard({ merchant, onClick, distance }: MerchantCardProps) {
+/** Formatea el promedio con un decimal venezolano (4,5). */
+function formatRatingAverage(average: number): string {
+  return new Intl.NumberFormat('es-VE', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(average);
+}
+
+/**
+ * Badge de reputación: la valoración promedio que los clientes dieron al
+ * negocio en la encuesta post-pedido. Impacta la percepción de visibilidad en
+ * el marketplace; con menos de 1 valoración no se muestra todavía.
+ */
+function RatingBadge({ rating }: { rating: RatingSummary }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800"
+      data-testid="merchant-rating-badge"
+      aria-label={`Valoración ${formatRatingAverage(rating.average)} de 5 estrellas con ${rating.count} valoraciones`}
+    >
+      <Star className="h-3 w-3 fill-amber-500 text-amber-500" aria-hidden="true" />
+      {formatRatingAverage(rating.average)}
+      <span className="font-medium text-amber-700">({rating.count})</span>
+    </span>
+  );
+}
+
+export function MerchantCard({ merchant, onClick, distance, rating }: MerchantCardProps) {
   const handleClick = () => {
     if (onClick !== undefined) {
       onClick(merchant);
@@ -185,6 +219,9 @@ export function MerchantCard({ merchant, onClick, distance }: MerchantCardProps)
           <span className="truncate rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
             {merchant.category}
           </span>
+          {rating !== undefined && rating !== null && rating.count > 0 ? (
+            <RatingBadge rating={rating} />
+          ) : null}
           <DeliveryPolicyChip merchant={merchant} />
         </div>
 
