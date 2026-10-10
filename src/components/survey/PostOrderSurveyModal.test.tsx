@@ -168,14 +168,24 @@ describe('PostOrderSurveyModal', () => {
     expect(submitMock.submitOrderRating).not.toHaveBeenCalled();
   });
 
-  it('aplazar la encuesta queda registrado y no vuelve a mostrarse sola', async () => {
+  it('la encuesta es obligatoria: sin "Ahora no", sin "X", sin cierre por backdrop ni Escape', async () => {
     const onClose = vi.fn();
     render(<PostOrderSurveyModal order={buildOrder()} onClose={onClose} />);
 
-    await userEventInstance.click(screen.getByTestId('survey-dismiss'));
+    // Sin botón de aplazar/cancelar ni "X" de cerrar en el encabezado.
+    expect(screen.queryByTestId('survey-dismiss')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Cerrar/i })).not.toBeInTheDocument();
 
-    expect(onClose).toHaveBeenCalled();
-    expect(getSurveyCompletionState('order-1234')).toBe('dismissed');
+    // Clic en el backdrop (el propio <dialog>) no cierra el modal.
+    const dialog = screen.getByRole('dialog');
+    await userEventInstance.click(dialog);
+    expect(onClose).not.toHaveBeenCalled();
+
+    // Escape tampoco cierra el modal.
+    await userEventInstance.keyboard('{Escape}');
+    expect(onClose).not.toHaveBeenCalled();
+
+    expect(getSurveyCompletionState('order-1234')).toBeNull();
     expect(submitMock.submitOrderRating).not.toHaveBeenCalled();
   });
 

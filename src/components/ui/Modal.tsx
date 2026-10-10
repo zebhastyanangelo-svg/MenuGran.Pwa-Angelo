@@ -9,9 +9,14 @@ interface ModalProps {
   title?: string;
   children: ReactNode;
   footer?: ReactNode;
+  /**
+   * `false` convierte el modal en obligatorio: sin botón "X", sin cierre por
+   * backdrop ni por Escape. El usuario solo puede salir completando la acción.
+   */
+  dismissible?: boolean;
 }
 
-export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, dismissible = true }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -22,16 +27,16 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !dismissible) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, dismissible]);
 
   const handleBackdropClick = (event: MouseEvent<HTMLDialogElement>) => {
-    if (event.target === dialogRef.current) onClose();
+    if (dismissible && event.target === dialogRef.current) onClose();
   };
 
   return createPortal(
@@ -44,14 +49,16 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
       {title && (
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
           <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar"
-            className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
+          {dismissible && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Cerrar"
+              className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
+          )}
         </div>
       )}
       <div className="px-4 py-4">{children}</div>

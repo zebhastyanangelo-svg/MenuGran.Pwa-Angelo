@@ -3,7 +3,7 @@ import { Bike, Loader2, Send, Store as StoreIcon, Utensils } from 'lucide-react'
 import { Modal } from '../ui/Modal';
 import { StarRating } from './StarRating';
 import { useNotificationToast } from '../pwa/useNotificationToast';
-import { markSurveyAnswered, markSurveyDismissed } from '../../utils/surveyStorage';
+import { markSurveyAnswered } from '../../utils/surveyStorage';
 import {
   buildSurveySteps,
   PLATFORM_IMPROVEMENT_OPTIONS,
@@ -158,11 +158,6 @@ export function PostOrderSurveyModal({ order, onClose }: PostOrderSurveyModalPro
   const currentStep = steps[stepIndex];
   const isLastStep = stepIndex === steps.length - 1;
 
-  const handleDismiss = () => {
-    markSurveyDismissed(order.id);
-    onClose();
-  };
-
   const handleContinue = () => {
     setError(null);
     setStepIndex((prev) => Math.min(prev + 1, steps.length - 1));
@@ -258,19 +253,11 @@ export function PostOrderSurveyModal({ order, onClose }: PostOrderSurveyModalPro
   return (
     <Modal
       isOpen
-      onClose={handleDismiss}
+      onClose={onClose}
+      dismissible={false}
       title="Califica tu experiencia"
       footer={
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={handleDismiss}
-            disabled={submitting}
-            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition hover:text-slate-700 disabled:opacity-50"
-            data-testid="survey-dismiss"
-          >
-            {stepIndex === 0 ? 'Ahora no' : 'Cancelar'}
-          </button>
+        <div className="flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={handlePrimaryAction}
