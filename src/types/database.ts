@@ -315,6 +315,8 @@ export interface UserPushSubscriptionRow {
   endpoint: string;
   p256dh: string;
   auth: string;
+  /** Rol del usuario (`profiles.role`), denormalizado para envíos por rol. */
+  user_role: string | null;
   is_active: boolean;
   created_at: IsoTimestamp;
   updated_at: IsoTimestamp;
@@ -431,6 +433,11 @@ export type UserPushSubscriptionInsert = Pick<
   'user_id' | 'endpoint' | 'p256dh' | 'auth'
 > & {
   is_active?: boolean;
+  /**
+   * Rol del usuario; opcional porque la base de datos lo completa desde
+   * `profiles` cuando llega vacío (trigger `set_push_subscription_user_role`).
+   */
+  user_role?: string | null;
 };
 
 /** Payload de la encuesta que envía el cliente tras la entrega. */

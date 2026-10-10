@@ -13,8 +13,24 @@ vi.mock('../../hooks/useGpsTracking', () => ({
 }))
 
 vi.mock('../../components/map/MapView', () => ({
-  MapView: ({ markers, className }: { markers: Array<{ id: string; title: string }>; className?: string }) => (
-    <div data-testid="map-view" className={className} data-markers={JSON.stringify(markers.map((m) => m.id))} />
+  MapView: ({
+    markers,
+    userLocation,
+    followUserLocation,
+    className,
+  }: {
+    markers: Array<{ id: string; title: string }>;
+    userLocation?: [number, number] | null;
+    followUserLocation?: boolean;
+    className?: string;
+  }) => (
+    <div
+      data-testid="map-view"
+      className={className}
+      data-markers={JSON.stringify(markers.map((m) => m.id))}
+      data-follow={String(followUserLocation ?? false)}
+      data-rider={userLocation ? JSON.stringify(userLocation) : ''}
+    />
   ),
 }))
 
@@ -222,7 +238,9 @@ describe('DeliveryTrackingModal', () => {
     const map = screen.getByTestId('map-view')
     const markers = map.getAttribute('data-markers') ?? ''
     expect(markers).toContain('destination')
-    expect(markers).toContain('driver')
+    // El repartidor viaja como userLocation (marcador de moto con rumbo).
+    expect(map.getAttribute('data-rider')).toBe('[10.4806,-66.9036]')
+    expect(map.getAttribute('data-follow')).toBe('true')
   })
 
   it('muestra la posición GPS cuando está disponible', () => {

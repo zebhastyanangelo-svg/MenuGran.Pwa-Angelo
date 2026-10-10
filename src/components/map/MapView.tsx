@@ -61,6 +61,10 @@ export interface MapViewProps {
    * los GPS de navegación.
    */
   followUserLocation?: boolean;
+  /** Icono del marcador de ubicación rastreada; por defecto el genérico. */
+  userLocationIcon?: L.Icon | L.DivIcon;
+  /** Título del marcador de ubicación rastreada (p. ej. "Repartidor"). */
+  userLocationTitle?: string;
 }
 
 function isValidLatLng(coords: [number, number] | null | undefined): coords is [number, number] {
@@ -98,6 +102,8 @@ export function MapView({
   fallbackMessage = 'No hay coordenadas disponibles para mostrar el mapa.',
   onMapReady,
   followUserLocation = false,
+  userLocationIcon,
+  userLocationTitle = 'Tu ubicación',
 }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -194,17 +200,21 @@ export function MapView({
       });
     });
 
-    // Fit bounds to show all markers if we have any
-    if (validMarkers.length > 0) {
+    // Fit bounds to show all markers if we have any. En modo "seguir" no se
+    // ajusta: el encuadre automático pelea con la cámara centrada en el
+    // usuario y anula el seguimiento en cada tick del GPS.
+    if (validMarkers.length > 0 && !followsUser) {
       map.fitBounds(bounds, { padding: [50, 50] });
     }
 
     if (isValidLatLng(userLocation)) {
       const riderMarker = L.marker(userLocation, {
-        icon: RIDER_ICON,
-        title: 'Tu ubicación',
+        icon: userLocationIcon ?? RIDER_ICON,
+        title: userLocationTitle,
       });
-      riderMarker.bindPopup('<div class="p-1 text-sm"><div class="font-semibold">Tu ubicación</div></div>');
+      riderMarker.bindPopup(
+        `<div class="p-1 text-sm"><div class="font-semibold">${userLocationTitle}</div></div>`,
+      );
       riderMarker.addTo(map);
     }
 
@@ -219,7 +229,7 @@ export function MapView({
         }).addTo(map);
       }
     }
-  }, [validMarkers, center, zoom, userLocation, activeRoute, effectiveCenter]);
+  }, [validMarkers, center, zoom, userLocation, userLocationIcon, userLocationTitle, activeRoute, effectiveCenter, followsUser]);
 
   // Invalidate size on mount and when container resizes (modal, tabs, etc.)
   useEffect(() => {

@@ -14,7 +14,7 @@ import { useAuth } from './useAuth';
 import { reconcilePushSubscription } from '../services/pushNotificationService';
 
 export function usePushSubscriptionSync(): void {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const syncedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -27,6 +27,6 @@ export function usePushSubscriptionSync(): void {
     if (syncedUserIdRef.current === user.id) return;
     syncedUserIdRef.current = user.id;
 
-    void reconcilePushSubscription(user.id);
-  }, [user]);
+    void reconcilePushSubscription(user.id, profile?.role ?? undefined);
+  }, [user, profile?.role]);
 }

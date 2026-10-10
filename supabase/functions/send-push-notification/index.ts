@@ -598,6 +598,69 @@ async function getMerchantOwnerId(client: SupabaseClient, merchantId: string): P
   return data.owner_id;
 }
 
+/**
+ * Destinatarios del aviso de pedido nuevo: el dueño del comercio y el staff
+ * activo con permiso de gestión de pedidos (`can_manage_orders`).
+ */
+async function getMerchantOrderManagerIds(
+  client: SupabaseClient,
+  merchantId: string,
+): Promise<string[]> {
+  const [ownerId, staffResult] = await Promise.all([
+    getMerchantOwnerId(client, merchantId),
+    client
+      .from('merchant_staff')
+      .select('user_id')
+      .eq('merchant_id', merchantId)
+      .eq('is_active', true)
+      .contains('permissions', { can_manage_orders: true }),
+  ]);
+
+  const staffIds = staffResult.error === null && staffResult.data !== null
+    ? staffResult.data.map((row: { user_id: string }) => row.user_id)
+    : [];
+
+  return [...new Set([ownerId, ...staffIds].filter((id): id is string => id !== null))];
+}
+
+/** Rol de usuario válido para el envío por `user_role`. */
+const PUSH_TARGET_ROLES: ReadonlySet<string> = new Set([
+  'customer',
+  'merchant_owner',
+  'merchant_staff',
+  'driver',
+  'superadmin',
+]);
+
+interface LowRatedMerchant {
+  id: string;
+  name: string;
+  average: number;
+  count: number;
+}
+
+/**
+ * Sanea la lista de comercios con valoración baja enviada por el cron.
+ *
+ * El cron arma el payload en SQL, pero esta función es la última barrera:
+ * sin nombre o con promedio/conteo no numéricos el aviso sería ilegible.
+ */
+function parseLowRatedMerchants(raw: unknown): LowRatedMerchant[] {
+  if (!Array.isArray(raw)) return [];
+  const merchants: LowRatedMerchant[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== 'object' || entry === null) continue;
+    const record = entry as Record<string, unknown>;
+    if (typeof record.id !== 'string' || record.id === '') continue;
+    if (typeof record.name !== 'string' || record.name.trim() === '') continue;
+    const average = Number(record.average);
+    const count = Number(record.count);
+    if (!Number.isFinite(average) || !Number.isFinite(count)) continue;
+    merchants.push({ id: record.id, name: record.name, average, count });
+  }
+  return merchants;
+}
+
 /** Nombre público del perfil indicado (para redactar alertas legibles). */
 async function getProfileFullName(client: SupabaseClient, userId: string): Promise<string | null> {
   const { data, error } = await client
@@ -693,6 +756,11 @@ interface PushMessage {
    * persistente (`requireInteraction`), con vibración y re-alerta.
    */
   reminder: boolean;
+  /**
+   * Tipo de aviso (`new-order`, `rating-alert`, `menu-reminder`, …): permite
+   * al service worker elegir título por defecto y acciones según la carga.
+   */
+  kind?: string;
 }
 
 /**
@@ -740,6 +808,7 @@ async function sendPushNotification(
   };
   if (message.tag !== '') payload.tag = message.tag;
   if (message.reminder) payload.reminder = 'true';
+  if (message.kind !== undefined) payload.kind = message.kind;
 
   const response = await fetch(subscription.endpoint, {
     method: 'POST',
@@ -1009,7 +1078,7 @@ async function deliverToSubscriptions(
     sub: PushSubscription & { full_name?: string | null },
   ) => { title: string; body: string },
   vapidKeys: VapidKeyPair,
-  routing?: { url: string; tag: string; reminder?: boolean },
+  routing?: { url: string; tag: string; reminder?: boolean; kind?: string },
 ): Promise<DeliveryReport> {
   const report: DeliveryReport = { sent: 0, deleted: 0, failed: 0, authErrors: 0 };
 
@@ -1027,6 +1096,7 @@ async function deliverToSubscriptions(
           url: routing?.url ?? '/marketplace',
           tag: routing?.tag ?? '',
           reminder: routing?.reminder === true,
+          kind: routing?.kind,
         },
         vapidKeys,
       );
@@ -1102,6 +1172,10 @@ Deno.serve(async (req: Request) => {
       orderId?: string;
       /** Estrellas que el cliente dio al repartidor (target 'rating-alert'). */
       driverStars?: number;
+      /** Rol destino (target 'role'): customer, merchant_owner, … */
+      role?: string;
+      /** Comercios con valoración baja (target 'merchant-rating-alerts'). */
+      merchants?: unknown;
     };
 
     const client = buildServiceRoleClient();
@@ -1330,6 +1404,199 @@ Deno.serve(async (req: Request) => {
           url: resolveTargetUrl(body.url, `/orders/${body.orderId}`),
           tag: resolveMessageTag(body.tag) || `rating-alert-${body.orderId}`,
           reminder: true,
+        },
+      );
+
+      return jsonResponse({
+        ...report,
+        deactivated: report.deleted,
+        total: subscriptions.length,
+        vapidSource: vapidKeys.source,
+      });
+    }
+
+    /**
+     * Aviso de pedido nuevo al comercio: lo dispara el trigger
+     * `on_new_order_push` de la base de datos (por eso se autoriza con el
+     * secreto del cron) al insertarse un pedido. Llega al dueño y al staff
+     * con permiso de gestión de pedidos en todos sus dispositivos, aunque la
+     * app esté cerrada.
+     */
+    if (body.target === 'merchant-new-order') {
+      if (typeof body.orderId !== 'string' || body.orderId.trim() === '') {
+        return jsonResponse({ error: 'Falta el identificador del pedido.' }, 400);
+      }
+
+      const auth = await assertCronAuthorized(req, client);
+      if (!auth.ok) return auth.response;
+
+      const { data: order, error: orderError } = await client
+        .from('orders')
+        .select('id, merchant_id')
+        .eq('id', body.orderId)
+        .maybeSingle();
+
+      if (orderError !== null || order === null || order.merchant_id === null) {
+        return jsonResponse({ error: 'Pedido no encontrado.' }, 404);
+      }
+
+      const vapidKeys = await resolveVapidKeys(client);
+
+      const managerIds = await getMerchantOrderManagerIds(client, order.merchant_id);
+      const subscriptions = await getSubscriptionsForUsers(client, managerIds);
+      if (subscriptions.length === 0) {
+        return jsonResponse({
+          sent: 0,
+          failed: 0,
+          deleted: 0,
+          deactivated: 0,
+          total: 0,
+          vapidSource: vapidKeys.source,
+        });
+      }
+
+      const title = body.title ?? '🛒 Nuevo pedido';
+      const bodyText = body.body ??
+        `Tienes un nuevo pedido ${shortOrderCode(body.orderId)} esperando gestión.`;
+
+      const report = await deliverToSubscriptions(
+        client,
+        subscriptions,
+        () => ({ title, body: bodyText }),
+        vapidKeys,
+        {
+          url: resolveTargetUrl(body.url, '/admin/dashboard'),
+          tag: resolveMessageTag(body.tag) || `new-order-${body.orderId}`,
+          reminder: true,
+          kind: 'new-order',
+        },
+      );
+
+      return jsonResponse({
+        ...report,
+        deactivated: report.deleted,
+        total: subscriptions.length,
+        vapidSource: vapidKeys.source,
+      });
+    }
+
+    /**
+     * Alerta diaria de comercios con valoración baja: el cron
+     * `low-rated-merchants-alert` calcula los comercios con promedio < 3,5
+     * estrellas y esta función avisa a todos los superadmins para su gestión.
+     */
+    if (body.target === 'merchant-rating-alerts') {
+      const auth = await assertCronAuthorized(req, client);
+      if (!auth.ok) return auth.response;
+
+      const merchants = parseLowRatedMerchants(body.merchants);
+      if (merchants.length === 0) {
+        return jsonResponse({
+          sent: 0,
+          failed: 0,
+          deleted: 0,
+          deactivated: 0,
+          total: 0,
+        });
+      }
+
+      const vapidKeys = await resolveVapidKeys(client);
+
+      const superadminIds = await getSuperadminUserIds(client);
+      const subscriptions = await getSubscriptionsForUsers(client, superadminIds);
+      if (subscriptions.length === 0) {
+        return jsonResponse({
+          sent: 0,
+          failed: 0,
+          deleted: 0,
+          deactivated: 0,
+          total: 0,
+          vapidSource: vapidKeys.source,
+        });
+      }
+
+      const summary = merchants
+        .map((merchant) =>
+          `${merchant.name} (${merchant.average.toFixed(1)} ★ · ${merchant.count} valoraciones)`,
+        )
+        .join('; ');
+      const title = body.title ?? '⚠️ Comercios con baja valoración';
+      const bodyText = body.body ??
+        `Requieren tu revisión: ${summary}. Entra al panel para ver el detalle.`;
+
+      const report = await deliverToSubscriptions(
+        client,
+        subscriptions,
+        () => ({ title, body: bodyText }),
+        vapidKeys,
+        {
+          url: resolveTargetUrl(body.url, '/superadmin'),
+          tag: resolveMessageTag(body.tag) || 'merchant-rating-alerts',
+          reminder: true,
+          kind: 'rating-alert',
+        },
+      );
+
+      return jsonResponse({
+        ...report,
+        deactivated: report.deleted,
+        total: subscriptions.length,
+        merchants: merchants.length,
+        vapidSource: vapidKeys.source,
+      });
+    }
+
+    /**
+     * Envío por rol (`user_role`): notifica a todos los usuarios con el rol
+     * indicado. Solo un superadmin (o el cron con su secreto) puede usarlo,
+     * para que ningún usuario autenticado dispare envíos masivos a un rol.
+     */
+    if (body.target === 'role') {
+      const sessionAuth = await assertSuperadmin(authHeader);
+      if (!sessionAuth.ok) {
+        const cronAuth = await assertCronAuthorized(req, client);
+        if (!cronAuth.ok) return sessionAuth.response;
+      }
+
+      const role = typeof body.role === 'string' ? body.role.trim() : '';
+      if (!PUSH_TARGET_ROLES.has(role)) {
+        return jsonResponse({ error: 'Rol inválido.' }, 400);
+      }
+
+      const vapidKeys = await resolveVapidKeys(client);
+
+      const { data: profiles, error: profilesError } = await client
+        .from('profiles')
+        .select('id')
+        .eq('role', role);
+
+      const userIds = profilesError === null && profiles !== null
+        ? profiles.map((row: { id: string }) => row.id)
+        : [];
+      const subscriptions = await getSubscriptionsForUsers(client, userIds);
+      if (subscriptions.length === 0) {
+        return jsonResponse({
+          sent: 0,
+          failed: 0,
+          deleted: 0,
+          deactivated: 0,
+          total: 0,
+          vapidSource: vapidKeys.source,
+        });
+      }
+
+      const title = body.title ?? 'MenuGran';
+      const bodyText = body.body ?? 'Tienes una nueva notificación.';
+
+      const report = await deliverToSubscriptions(
+        client,
+        subscriptions,
+        () => ({ title, body: bodyText }),
+        vapidKeys,
+        {
+          url: resolveTargetUrl(body.url, '/marketplace'),
+          tag: resolveMessageTag(body.tag) || `role-${role}`,
+          reminder: body.reminder === true,
         },
       );
 

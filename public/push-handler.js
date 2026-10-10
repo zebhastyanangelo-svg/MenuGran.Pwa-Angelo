@@ -32,6 +32,55 @@
   var TAG_PREFIX = 'menugram-';
 
   /**
+   * Títulos por defecto según el tipo de aviso (`kind` del payload).
+   *
+   * Comercio → nuevo pedido; SuperAdmin → alerta de valoración; Cliente →
+   * recordatorio de menú. Solo aplican cuando el payload no trae título: el
+   * remitente (Edge Function) normalmente ya envía uno redactado.
+   */
+  var DEFAULT_TITLES_BY_KIND = {
+    'new-order': '🛒 Nuevo pedido',
+    'rating-alert': '⚠️ Alerta de valoración',
+    'menu-reminder': '🍽️ ¿Qué se te antoja?',
+  };
+
+  /** Título legible del payload: el suyo, el de su kind o el genérico. */
+  function resolveTitle(payload) {
+    if (payload && typeof payload.title === 'string' && payload.title.trim() !== '') {
+      return payload.title;
+    }
+    if (payload && typeof payload.kind === 'string' && DEFAULT_TITLES_BY_KIND[payload.kind]) {
+      return DEFAULT_TITLES_BY_KIND[payload.kind];
+    }
+    return 'MenuGran';
+  }
+
+  /**
+   * Sanea las acciones de la notificación que vienen en el payload.
+   *
+   * Chrome/Android muestra como máximo 2 botones; cada acción necesita un
+   * `action` (id) y un `title` visibles. La URL de cada acción se guarda
+   * aparte (en `data.actionUrls`) porque `NotificationAction` solo admite
+   * action/title/icon.
+   */
+  function sanitizeActions(rawActions) {
+    if (!Array.isArray(rawActions)) return [];
+    var actions = [];
+    for (var i = 0; i < rawActions.length && actions.length < 2; i += 1) {
+      var entry = rawActions[i];
+      if (!entry || typeof entry !== 'object') continue;
+      if (typeof entry.action !== 'string' || entry.action === '') continue;
+      if (typeof entry.title !== 'string' || entry.title.trim() === '') continue;
+      actions.push({
+        action: entry.action,
+        title: entry.title,
+        url: resolveTargetUrl(entry.url),
+      });
+    }
+    return actions;
+  }
+
+  /**
    * Sanea la URL de destino.
    *
    * Solo se aceptan rutas internas: un payload con esquema propio (`https:`) o
@@ -111,6 +160,16 @@
   }
 
   function buildNotificationOptions(payload, targetUrl) {
+    var actions = sanitizeActions(payload && payload.actions);
+    var actionUrls = {};
+    var visibleActions = [];
+    var i;
+
+    for (i = 0; i < actions.length; i += 1) {
+      actionUrls[actions[i].action] = actions[i].url;
+      visibleActions.push({ action: actions[i].action, title: actions[i].title });
+    }
+
     var options = {
       body: (payload && payload.body) || '',
       icon: (payload && payload.icon) || '/pwa-192x192.png',
@@ -120,8 +179,12 @@
       tag: (payload && payload.tag) || TAG_PREFIX + Date.now(),
       renotify: false,
       requireInteraction: false,
-      data: { url: targetUrl },
+      data: { url: targetUrl, actionUrls: actionUrls },
     };
+
+    if (visibleActions.length > 0) {
+      options.actions = visibleActions;
+    }
 
     if (isReminderPayload(payload)) {
       options.renotify = true;
@@ -142,14 +205,22 @@
 
     var options = buildNotificationOptions(payload, targetUrl);
 
-    event.waitUntil(scope.registration.showNotification(payload.title || 'MenuGran', options));
+    event.waitUntil(
+      scope.registration.showNotification(resolveTitle(payload), options)
+    );
   });
 
   scope.addEventListener('notificationclick', function (event) {
     event.notification.close();
 
+    var data = (event.notification && event.notification.data) || {};
+    var actionUrls = data.actionUrls || {};
+    var clickedAction = typeof event.action === 'string' ? event.action : '';
+
+    // Clic en un botón de acción: abre la URL de esa acción; el cuerpo de la
+    // notificación mantiene el deep link general del payload.
     var targetUrl = resolveTargetUrl(
-      event.notification && event.notification.data && event.notification.data.url
+      (clickedAction !== '' && actionUrls[clickedAction]) || data.url
     );
 
     event.waitUntil(
@@ -182,14 +253,67 @@
     );
   });
 
+  /**
+   * Copy del recordatorio de menú según la hora local del dispositivo.
+   *
+   * Las franjas coinciden con los cron jobs del backend (9:00 a.m., 12:00
+   * p.m. y 7:00 p.m. hora de Venezuela); PeriodicSync dispara cuando el
+   * navegador lo decida, así que el copy se elige con el reloj real.
+   */
+  function buildReminderCopy(hour) {
+    if (hour >= 5 && hour < 11) {
+      return {
+        title: '☕ Buenos días',
+        body: '¿Qué se te antoja desayunar? Hay comercios abiertos cerca de ti.',
+      };
+    }
+    if (hour >= 11 && hour < 15) {
+      return {
+        title: '🍽️ Hora de almorzar',
+        body: 'Mira los menús disponibles cerca de ti y pide antes de que se llene.',
+      };
+    }
+    return {
+      title: '🌙 Hora de cenar',
+      body: 'Termina el día con tu plato favorito, a la puerta de tu casa.',
+    };
+  }
+
+  /**
+   * Recordatorios programados vía Background Periodic Sync.
+   *
+   * El registro del tag `menugram-reminders` lo hace `usePushNotifications`
+   * cuando el usuario concede el permiso; los horarios exactos los garantiza
+   * el Web Push del backend (cron jobs), esto es el refuerzo local.
+   */
+  scope.addEventListener('periodicsync', function (event) {
+    if (!event || event.tag !== 'menugram-reminders') return;
+
+    var copy = buildReminderCopy(new Date().getHours());
+
+    event.waitUntil(
+      scope.registration.showNotification(copy.title, {
+        body: copy.body,
+        icon: '/pwa-192x192.png',
+        badge: '/pwa-192x192.png',
+        tag: 'menugram-menu-reminder',
+        data: { url: '/marketplace' },
+      })
+    );
+  });
+
   // Superficie de pruebas: el resto del archivo no depende del DOM.
   scope.__pushHandlerTest = {
     FALLBACK_URL: FALLBACK_URL,
+    DEFAULT_TITLES_BY_KIND: DEFAULT_TITLES_BY_KIND,
     resolveTargetUrl: resolveTargetUrl,
     normalizePathname: normalizePathname,
     isShowingTarget: isShowingTarget,
     readPushPayload: readPushPayload,
     isReminderPayload: isReminderPayload,
     buildNotificationOptions: buildNotificationOptions,
+    resolveTitle: resolveTitle,
+    sanitizeActions: sanitizeActions,
+    buildReminderCopy: buildReminderCopy,
   };
 })(typeof self !== 'undefined' ? self : this);

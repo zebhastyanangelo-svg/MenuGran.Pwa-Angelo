@@ -3,7 +3,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MerchantResumenPage } from './MerchantResumenPage';
+import {
+  buildPopularityCardModel,
+  formatRatingAverage,
+  MerchantResumenPage,
+  satisfactionPercentage,
+} from './MerchantResumenPage';
 import type { MerchantContext, StaffListItem } from '../../services/merchantStaffService';
 import type { MerchantAnalytics } from '../../services/merchantAnalyticsService';
 
@@ -33,6 +38,14 @@ const analyticsMocks = vi.hoisted(() => ({
 
 vi.mock('../../services/merchantAnalyticsService', () => ({
   fetchMerchantAnalytics: analyticsMocks.fetchMerchantAnalytics,
+}));
+
+const popularityMocks = vi.hoisted(() => ({
+  useMerchantPopularity: vi.fn(),
+}));
+
+vi.mock('../../hooks/useMerchantPopularity', () => ({
+  useMerchantPopularity: popularityMocks.useMerchantPopularity,
 }));
 
 const authMocks = vi.hoisted(() => ({
@@ -115,6 +128,11 @@ describe('MerchantResumenPage', () => {
     serviceMocks.setStaffActive.mockResolvedValue(undefined);
     serviceMocks.deleteStaff.mockResolvedValue(undefined);
     serviceMocks.updateStaffPermissions.mockResolvedValue(undefined);
+    popularityMocks.useMerchantPopularity.mockReturnValue({
+      summary: { average: 4.8, count: 25 },
+      isLoading: false,
+      error: null,
+    });
   });
 
   it('muestra las tarjetas de métricas del comercio', async () => {
@@ -126,6 +144,83 @@ describe('MerchantResumenPage', () => {
     expect(screen.getByTestId('metric-total-sales')).toHaveTextContent('$350,5');
     expect(screen.getByTestId('metric-orders-today')).toHaveTextContent('3');
     expect(screen.getByTestId('metric-active-products')).toHaveTextContent('7');
+    expect(screen.getByTestId('metric-popularity')).toHaveTextContent('4,8 ★');
+  });
+
+  it('consume el resumen de valoraciones del comercio para la tarjeta de popularidad', async () => {
+    renderPage();
+
+    await screen.findByTestId('metric-popularity', undefined, { timeout: 5000 });
+    expect(popularityMocks.useMerchantPopularity).toHaveBeenCalledWith('m-1', true);
+  });
+
+  it('muestra el promedio y el porcentaje de satisfacción en la tarjeta de popularidad', async () => {
+    renderPage();
+
+    expect(
+      await screen.findByTestId('metric-popularity', undefined, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('metric-popularity')).toHaveTextContent('4,8 ★');
+    expect(screen.getByTestId('metric-popularity-helper')).toHaveTextContent(
+      '96% de valoración positiva',
+    );
+    expect(screen.getByTestId('metric-popularity-helper')).toHaveTextContent(
+      '25 valoraciones de clientes',
+    );
+  });
+
+  it('muestra el estado vacío de popularidad cuando no hay valoraciones', async () => {
+    popularityMocks.useMerchantPopularity.mockReturnValue({
+      summary: { average: 0, count: 0 },
+      isLoading: false,
+      error: null,
+    });
+
+    renderPage();
+
+    expect(
+      await screen.findByTestId('metric-popularity', undefined, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('metric-popularity')).toHaveTextContent('—');
+    expect(screen.getByTestId('metric-popularity-helper')).toHaveTextContent(
+      'Aún sin valoraciones de clientes',
+    );
+  });
+
+  it('muestra el estado de carga mientras llegan las valoraciones', async () => {
+    popularityMocks.useMerchantPopularity.mockReturnValue({
+      summary: null,
+      isLoading: true,
+      error: null,
+    });
+
+    renderPage();
+
+    expect(
+      await screen.findByTestId('metric-popularity', undefined, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('metric-popularity')).toHaveTextContent('…');
+    expect(screen.getByTestId('metric-popularity-helper')).toHaveTextContent(
+      'Cargando valoraciones',
+    );
+  });
+
+  it('muestra el estado de error cuando fallan las valoraciones', async () => {
+    popularityMocks.useMerchantPopularity.mockReturnValue({
+      summary: null,
+      isLoading: false,
+      error: 'No se pudieron obtener las valoraciones del comercio: rls denied',
+    });
+
+    renderPage();
+
+    expect(
+      await screen.findByTestId('metric-popularity', undefined, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('metric-popularity')).toHaveTextContent('—');
+    expect(screen.getByTestId('metric-popularity-helper')).toHaveTextContent(
+      'No se pudieron cargar las valoraciones.',
+    );
   });
 
   it('muestra las gráficas de analíticas con los datos cargados', async () => {
@@ -521,5 +616,57 @@ permissions: {
     expect(screen.queryByTestId('revoke-staff-s-1')).not.toBeInTheDocument();
     expect(screen.queryByTestId('modify-staff-s-1')).not.toBeInTheDocument();
     expect(screen.queryByTestId('delete-staff-s-1')).not.toBeInTheDocument();
+  });
+});
+
+describe('formatRatingAverage', () => {
+  it('formatea el promedio con un decimal venezolano', () => {
+    expect(formatRatingAverage(4.8)).toBe('4,8');
+    expect(formatRatingAverage(5)).toBe('5,0');
+    expect(formatRatingAverage(0)).toBe('0,0');
+  });
+});
+
+describe('satisfactionPercentage', () => {
+  it('convierte el promedio de estrellas a porcentaje de satisfacción', () => {
+    expect(satisfactionPercentage(4.8)).toBe(96);
+    expect(satisfactionPercentage(5)).toBe(100);
+    expect(satisfactionPercentage(0)).toBe(0);
+  });
+
+  it('limita promedios fuera del rango de estrellas', () => {
+    expect(satisfactionPercentage(7)).toBe(100);
+    expect(satisfactionPercentage(-2)).toBe(0);
+  });
+});
+
+describe('buildPopularityCardModel', () => {
+  it('traduce el resumen de valoraciones a valor y subtexto', () => {
+    expect(buildPopularityCardModel({ average: 4.8, count: 25 }, false, null)).toEqual({
+      value: '4,8 ★',
+      helperText: '96% de valoración positiva · 25 valoraciones de clientes',
+    });
+  });
+
+  it('usa singular cuando solo hay una valoración', () => {
+    expect(buildPopularityCardModel({ average: 5, count: 1 }, false, null)).toEqual({
+      value: '5,0 ★',
+      helperText: '100% de valoración positiva · 1 valoración de clientes',
+    });
+  });
+
+  it('devuelve placeholders para carga, error y vacío', () => {
+    expect(buildPopularityCardModel(null, true, null)).toEqual({
+      value: '…',
+      helperText: 'Cargando valoraciones…',
+    });
+    expect(buildPopularityCardModel(null, false, 'boom')).toEqual({
+      value: '—',
+      helperText: 'No se pudieron cargar las valoraciones.',
+    });
+    expect(buildPopularityCardModel({ average: 0, count: 0 }, false, null)).toEqual({
+      value: '—',
+      helperText: 'Aún sin valoraciones de clientes',
+    });
   });
 });

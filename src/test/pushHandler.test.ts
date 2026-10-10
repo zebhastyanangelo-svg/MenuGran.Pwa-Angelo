@@ -18,12 +18,16 @@ interface PushHandlerScope {
   __listeners: Record<string, (event: unknown) => void>;
   __pushHandlerTest: {
     FALLBACK_URL: string;
+    DEFAULT_TITLES_BY_KIND: Record<string, string>;
     resolveTargetUrl: (rawUrl: unknown) => string;
     normalizePathname: (rawPath: unknown) => string;
     isShowingTarget: (clientUrl: string, targetPath: string) => boolean;
     readPushPayload: (event: { data: { json?: () => unknown; text?: () => string } | null }) => Record<string, unknown>;
     isReminderPayload: (payload: unknown) => boolean;
     buildNotificationOptions: (payload: Record<string, unknown>, targetUrl: string) => Record<string, unknown>;
+    resolveTitle: (payload: Record<string, unknown> | null) => string;
+    sanitizeActions: (rawActions: unknown) => Array<{ action: string; title: string; url: string }>;
+    buildReminderCopy: (hour: number) => { title: string; body: string };
   };
 }
 
@@ -332,6 +336,138 @@ const [title, options] = mockShowNotificationArgs(scope);
 
       await waitUntil.mock.calls[0][0];
       expect(openWindow).toHaveBeenCalledWith('/orders/abc');
+    });
+
+    it('abre la URL de la acción pulsada en vez del deep link general', async () => {
+      const openWindow = vi.fn().mockResolvedValue(null);
+      const scope = loadPushHandler({ matchAll: async () => [], openWindow });
+
+      const waitUntil = vi.fn((p: Promise<unknown>) => p);
+      scope.__listeners.notificationclick({
+        notification: {
+          close: vi.fn(),
+          data: { url: '/orders/abc', actionUrls: { ver: '/orders/abc?tab=detalle' } },
+        },
+        action: 'ver',
+        waitUntil,
+      });
+
+      await waitUntil.mock.calls[0][0];
+      expect(openWindow).toHaveBeenCalledWith('/orders/abc?tab=detalle');
+    });
+  });
+
+  describe('títulos y acciones según la carga útil', () => {
+    it('prefiere el título del payload y cae al del kind', () => {
+      const { __pushHandlerTest } = loadPushHandler({
+        matchAll: async () => [],
+        openWindow: async () => null,
+      });
+
+      expect(__pushHandlerTest.resolveTitle({ title: 'Pedido #12' })).toBe('Pedido #12');
+      expect(__pushHandlerTest.resolveTitle({ kind: 'new-order' })).toBe('🛒 Nuevo pedido');
+      expect(__pushHandlerTest.resolveTitle({ kind: 'rating-alert' })).toBe('⚠️ Alerta de valoración');
+      expect(__pushHandlerTest.resolveTitle({ kind: 'menu-reminder' })).toBe('🍽️ ¿Qué se te antoja?');
+      expect(__pushHandlerTest.resolveTitle({})).toBe('MenuGran');
+      expect(__pushHandlerTest.resolveTitle(null)).toBe('MenuGran');
+    });
+
+    it('sanea las acciones: máximo 2, con action y title visibles', () => {
+      const { __pushHandlerTest } = loadPushHandler({
+        matchAll: async () => [],
+        openWindow: async () => null,
+      });
+
+      const actions = __pushHandlerTest.sanitizeActions([
+        { action: 'ver', title: 'Ver pedido', url: '/orders/1' },
+        { action: 'llamar', title: 'Llamar', url: 'tel:+58' },
+        { action: 'extra', title: 'Sobran', url: '/x' },
+        { action: '', title: 'Sin id' },
+        'no-objeto',
+      ]);
+
+      expect(actions).toHaveLength(2);
+      expect(actions[0]).toEqual({ action: 'ver', title: 'Ver pedido', url: '/orders/1' });
+      // Las URLs externas caan al marketplace igual que el deep link general.
+      expect(actions[1].url).toBe('/marketplace');
+      expect(__pushHandlerTest.sanitizeActions(undefined)).toEqual([]);
+    });
+
+    it('expone las acciones visibles y guarda sus URLs en data.actionUrls', () => {
+      const { __pushHandlerTest } = loadPushHandler({
+        matchAll: async () => [],
+        openWindow: async () => null,
+      });
+
+      const options = __pushHandlerTest.buildNotificationOptions(
+        {
+          body: 'Tienes un nuevo pedido',
+          tag: 'new-order-1',
+          actions: [{ action: 'ver', title: 'Ver pedido', url: '/orders/1' }],
+        },
+        '/admin/dashboard',
+      ) as {
+        actions?: Array<{ action: string; title: string }>;
+        data: { url: string; actionUrls: Record<string, string> };
+      };
+
+      expect(options.actions).toEqual([{ action: 'ver', title: 'Ver pedido' }]);
+      expect(options.data.url).toBe('/admin/dashboard');
+      expect(options.data.actionUrls.ver).toBe('/orders/1');
+    });
+
+    it('el evento push usa el título resuelto por kind cuando falta', async () => {
+      const scope = loadPushHandler({
+        matchAll: async () => [],
+        openWindow: async () => null,
+      });
+
+      scope.__listeners.push(jsonEvent({ kind: 'new-order', body: 'Nuevo pedido #12', url: '/admin/dashboard' }));
+
+      const [title] = mockShowNotificationArgs(scope);
+      expect(title).toBe('🛒 Nuevo pedido');
+    });
+  });
+
+  describe('evento periodicsync (recordatorios de menú)', () => {
+    it('ignora tags ajenos al recordatorio de menú', () => {
+      const scope = loadPushHandler({
+        matchAll: async () => [],
+        openWindow: async () => null,
+      });
+
+      scope.__listeners.periodicsync({ tag: 'otro-tag', waitUntil: vi.fn() });
+
+      expect(scope.registration.showNotification).not.toHaveBeenCalled();
+    });
+
+    it('muestra el recordatorio según la franja horaria local', () => {
+      const scope = loadPushHandler({
+        matchAll: async () => [],
+        openWindow: async () => null,
+      });
+
+      scope.__listeners.periodicsync({ tag: 'menugram-reminders', waitUntil: vi.fn() });
+
+      const [title, options] = mockShowNotificationArgs(scope) as [
+        string,
+        { tag: string; data: { url: string } },
+      ];
+      expect(typeof title).toBe('string');
+      expect(title).not.toBe('');
+      expect(options.tag).toBe('menugram-menu-reminder');
+      expect(options.data.url).toBe('/marketplace');
+    });
+
+    it('elige el copy de desayuno, almuerzo y cena por hora', () => {
+      const { __pushHandlerTest } = loadPushHandler({
+        matchAll: async () => [],
+        openWindow: async () => null,
+      });
+
+      expect(__pushHandlerTest.buildReminderCopy(9).title).toContain('Buenos días');
+      expect(__pushHandlerTest.buildReminderCopy(12).title).toContain('almorzar');
+      expect(__pushHandlerTest.buildReminderCopy(20).title).toContain('cenar');
     });
   });
 });

@@ -7,9 +7,8 @@ import {
   Loader2,
   Navigation,
 } from 'lucide-react'
-import { MapView } from '../map/MapView'
-import type { MapMarker } from '../map/MapView'
-import { useGpsTracking } from '../../hooks/useGpsTracking'
+import { DeliveryMap } from '../map/DeliveryMap'
+import { useGpsTracking, type GpsPosition } from '../../hooks/useGpsTracking'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { formatPrice } from '../../types/cart'
@@ -46,19 +45,6 @@ const DESTINATION_ICON = L.divIcon({
   iconSize: [30, 30],
   iconAnchor: [15, 30],
   popupAnchor: [0, -30],
-})
-
-const DRIVER_ICON = L.divIcon({
-  className: 'custom-marker',
-  html: `
-    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" stroke="#10b981" stroke-width="2" fill="#10b981"/>
-      <path d="M12 8V12L15 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  `,
-  iconSize: [30, 30],
-  iconAnchor: [15, 15],
-  popupAnchor: [0, -15],
 })
 
 function getCustomerName(order: DriverOrder): string {
@@ -129,6 +115,16 @@ export function DeliveryTrackingModal({
   const lastFetchOriginRef = useRef<[number, number] | null>(null)
   const lastSpokenInstructionRef = useRef('')
 
+  /**
+   * Posición GPS anterior: DeliveryMap calcula con ella el rumbo del
+   * movimiento y rota la moto hacia la dirección real de avance.
+   */
+  const previousPositionRef = useRef<GpsPosition | null>(null)
+  const previousPosition = previousPositionRef.current
+  useEffect(() => {
+    previousPositionRef.current = position
+  }, [position])
+
   useEffect(() => {
     if (isOpen && isActive && !tracking && !gpsError) {
       startTracking()
@@ -183,42 +179,20 @@ export function DeliveryTrackingModal({
     if (muted) stopNavigationSpeech()
   }, [muted])
 
-  const markers = useMemo(() => {
-    const result: MapMarker[] = []
-
-    if (destination) {
-      result.push({
+  const destinationMarkers = useMemo(() => {
+    if (!destination) return []
+    return [
+      {
         id: 'destination',
         position: destination,
         title: 'Destino',
         subtitle: address,
         icon: DESTINATION_ICON,
-      })
-    }
+      },
+    ]
+  }, [destination, address])
 
-    if (position) {
-      result.push({
-        id: 'driver',
-        position: [position.lat, position.lng],
-        title: 'Mi posición',
-        icon: DRIVER_ICON,
-      })
-    }
-
-    return result
-  }, [destination, position, address])
-
-  const mapCenter = useMemo(() => {
-    if (position && destination) {
-      return [
-        (position.lat + destination[0]) / 2,
-        (position.lng + destination[1]) / 2,
-      ] as [number, number]
-    }
-    if (destination) return destination as [number, number]
-    if (position) return [position.lat, position.lng] as [number, number]
-    return undefined
-  }, [position, destination])
+  const hasMapData = position !== null || destination !== null
 
   const handleReorient = () => {
     if (position === null || mapRef.current === null) return
@@ -280,18 +254,21 @@ export function DeliveryTrackingModal({
       data-testid="delivery-tracking-modal"
     >
       <div className="relative flex-1 overflow-hidden">
-        {markers.length > 0 ? (
-          <MapView
-            markers={markers}
-            center={mapCenter}
+        {hasMapData ? (
+          <DeliveryMap
+            riderPosition={position ? [position.lat, position.lng] : null}
+            previousRiderPosition={
+              previousPosition ? [previousPosition.lat, previousPosition.lng] : null
+            }
+            markers={destinationMarkers}
+            followRider={isActive}
             zoom={isActive ? NAVIGATION_ZOOM : 13}
-            userLocation={position ? [position.lat, position.lng] : null}
-            followUserLocation={isActive}
             route={routeDetails?.coordinates}
             onMapReady={(map) => {
               mapRef.current = map
             }}
             className="absolute inset-0"
+            riderTitle="Mi posición"
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full bg-gray-100 text-gray-500 text-sm p-4">

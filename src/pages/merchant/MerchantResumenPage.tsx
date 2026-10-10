@@ -6,11 +6,14 @@ import {
   Loader2,
   Plus,
   Settings,
+  Star,
   Store,
   Users,
   UserCircle2,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useMerchantPopularity } from '../../hooks/useMerchantPopularity';
+import type { RatingSummary } from '../../services/orderRatingService';
 import type { MerchantStaffPermissions } from '../../types/database';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -67,6 +70,50 @@ function formatCurrency(value: number): string {
   return `$${value.toLocaleString('es-VE', { maximumFractionDigits: 2 })}`;
 }
 
+/** Formatea el promedio de estrellas con un decimal venezolano (4,8). */
+export function formatRatingAverage(average: number): string {
+  return new Intl.NumberFormat('es-VE', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(average);
+}
+
+/** Convierte el promedio de estrellas (0-5) a porcentaje de satisfacción. */
+export function satisfactionPercentage(average: number): number {
+  const clamped = Math.max(0, Math.min(5, average));
+  return Math.round((clamped / 5) * 100);
+}
+
+export interface PopularityCardModel {
+  value: string;
+  helperText: string;
+}
+
+/** Traduce el resumen de valoraciones al texto de la tarjeta KPI de popularidad. */
+export function buildPopularityCardModel(
+  summary: RatingSummary | null,
+  isLoading: boolean,
+  error: string | null,
+): PopularityCardModel {
+  if (isLoading) {
+    return { value: '…', helperText: 'Cargando valoraciones…' };
+  }
+  if (error !== null) {
+    return { value: '—', helperText: 'No se pudieron cargar las valoraciones.' };
+  }
+  if (summary === null || summary.count === 0) {
+    return { value: '—', helperText: 'Aún sin valoraciones de clientes' };
+  }
+  const countLabel =
+    summary.count === 1
+      ? '1 valoración de clientes'
+      : `${summary.count} valoraciones de clientes`;
+  return {
+    value: `${formatRatingAverage(summary.average)} ★`,
+    helperText: `${satisfactionPercentage(summary.average)}% de valoración positiva · ${countLabel}`,
+  };
+}
+
 export function MerchantResumenPage() {
   const { user } = useAuth();
   const [context, setContext] = useState<MerchantContext | null>(null);
@@ -78,6 +125,17 @@ export function MerchantResumenPage() {
   const [error, setError] = useState<string | null>(null);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState(() => getDefaultDateRange());
+
+  // Popularidad: promedio de estrellas que los clientes dan al comercio en
+  // la encuesta post-pedido. Solo se consulta para el dueño del comercio.
+  const {
+    summary: popularitySummary,
+    isLoading: popularityLoading,
+    error: popularityError,
+  } = useMerchantPopularity(
+    context?.merchantId ?? null,
+    context?.isOwner ?? false,
+  );
 
   const refetchMetrics = useCallback(
     async (merchantId: string) => {
@@ -194,6 +252,12 @@ export function MerchantResumenPage() {
     return <NoMerchantWarning />;
   }
 
+  const popularityCard = buildPopularityCardModel(
+    popularitySummary,
+    popularityLoading,
+    popularityError,
+  );
+
   return (
     <div className="space-y-6">
       {error !== null && (
@@ -220,7 +284,7 @@ export function MerchantResumenPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard
               testId="metric-total-sales"
               icon={<DollarSign className="h-5 w-5 text-green-600" />}
@@ -238,6 +302,15 @@ export function MerchantResumenPage() {
               icon={<Store className="h-5 w-5 text-brand-red" />}
               label="Platos activos"
               value={String(metrics?.activeProducts ?? 0)}
+            />
+            <MetricCard
+              testId="metric-popularity"
+              icon={
+                <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+              }
+              label="Popularidad"
+              value={popularityCard.value}
+              helperText={popularityCard.helperText}
             />
           </div>
         </section>
@@ -287,9 +360,10 @@ interface MetricCardProps {
   label: string;
   value: string;
   testId: string;
+  helperText?: string;
 }
 
-function MetricCard({ icon, label, value, testId }: MetricCardProps) {
+function MetricCard({ icon, label, value, testId, helperText }: MetricCardProps) {
   return (
     <div className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
       <div className="flex items-center gap-2">
@@ -304,6 +378,14 @@ function MetricCard({ icon, label, value, testId }: MetricCardProps) {
       >
         {value}
       </p>
+      {helperText !== undefined && (
+        <p
+          className="mt-1 text-xs text-gray-500"
+          data-testid={`${testId}-helper`}
+        >
+          {helperText}
+        </p>
+      )}
     </div>
   );
 }

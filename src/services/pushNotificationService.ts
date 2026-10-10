@@ -89,8 +89,18 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuf
   return outputArray;
 }
 
-/** Guarda (o reactiva) la suscripción del dispositivo en Supabase. */
-async function persistSubscription(userId: string, subscription: PushSubscriptionPayload): Promise<void> {
+/**
+ * Guarda (o reactiva) la suscripción del dispositivo en Supabase.
+ *
+ * `userRole` es opcional: se envía cuando el rol ya se conoce para que los
+ * envíos por `user_role` no dependan del join con `profiles`; la base de
+ * datos lo completa desde el perfil cuando llega vacío.
+ */
+async function persistSubscription(
+  userId: string,
+  subscription: PushSubscriptionPayload,
+  userRole?: string,
+): Promise<void> {
   const row: UserPushSubscriptionInsert = {
     user_id: userId,
     endpoint: subscription.endpoint,
@@ -98,6 +108,9 @@ async function persistSubscription(userId: string, subscription: PushSubscriptio
     auth: subscription.keys.auth,
     is_active: true,
   };
+  if (userRole !== undefined) {
+    row.user_role = userRole;
+  }
 
   // El conflicto se resuelve por (user_id, endpoint), no solo por endpoint: el
   // endpoint push pertenece al navegador, así que el mismo dispositivo puede
@@ -117,7 +130,10 @@ async function persistSubscription(userId: string, subscription: PushSubscriptio
  * Suscribe el dispositivo actual del usuario a las notificaciones push.
  * Reutiliza la suscripción existente del navegador si ya existe.
  */
-export async function subscribeCurrentUserToPush(userId: string): Promise<SubscribePushResult> {
+export async function subscribeCurrentUserToPush(
+  userId: string,
+  userRole?: string,
+): Promise<SubscribePushResult> {
   if (!isPushSupported()) {
     return { status: 'unsupported' };
   }
@@ -136,7 +152,7 @@ export async function subscribeCurrentUserToPush(userId: string): Promise<Subscr
       return { status: 'error', message: 'La suscripción push devuelta por el navegador es inválida.' };
     }
 
-    await persistSubscription(userId, payload);
+    await persistSubscription(userId, payload, userRole);
 
     return { status: 'subscribed', alreadySubscribed: reused };
   } catch (err) {
@@ -238,7 +254,10 @@ export type ReconcilePushResult =
  * No solicita permiso si el usuario lo ha denegado: el onboarding sigue
  * siendo el único punto que llama a `Notification.requestPermission()`.
  */
-export async function reconcilePushSubscription(userId: string): Promise<ReconcilePushResult> {
+export async function reconcilePushSubscription(
+  userId: string,
+  userRole?: string,
+): Promise<ReconcilePushResult> {
   if (!isPushSupported()) return { status: 'unsupported' };
   if (Notification.permission !== 'granted') return { status: 'permission_denied' };
 
@@ -289,11 +308,11 @@ export async function reconcilePushSubscription(userId: string): Promise<Reconci
         if (freshPayload === null) {
           return { status: 'error', message: 'La nueva suscripción push es inválida.' };
         }
-        await persistSubscription(userId, freshPayload);
+        await persistSubscription(userId, freshPayload, userRole);
         return { status: 'synced' };
       }
 
-      await persistSubscription(userId, payload);
+      await persistSubscription(userId, payload, userRole);
     }
 
     return { status: 'synced' };

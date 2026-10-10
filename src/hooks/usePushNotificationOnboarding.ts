@@ -25,7 +25,7 @@ interface UsePushNotificationOnboardingResult {
  * worker, obtiene la suscripción VAPID y la guarda en Supabase.
  */
 export function usePushNotificationOnboarding(): UsePushNotificationOnboardingResult {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [status, setStatus] = useState<OnboardingStatus>('pending');
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -37,6 +37,15 @@ export function usePushNotificationOnboarding(): UsePushNotificationOnboardingRe
     }
 
     if (user === null) {
+      setShowOnboarding(false);
+      return;
+    }
+
+    // Si el permiso ya se concedió (onboarding automático de
+    // `usePushNotifications`) o se denegó, no hay nada que preguntar: el
+    // navegador no vuelve a mostrar el prompt tras una respuesta.
+    if (Notification.permission !== 'default') {
+      setStatus(Notification.permission === 'granted' ? 'accepted' : 'dismissed');
       setShowOnboarding(false);
       return;
     }
@@ -60,7 +69,7 @@ export function usePushNotificationOnboarding(): UsePushNotificationOnboardingRe
       return { status: 'error', message: 'Debes iniciar sesión para recibir notificaciones.' };
     }
 
-    const result = await subscribeCurrentUserToPush(user.id);
+    const result = await subscribeCurrentUserToPush(user.id, profile?.role ?? undefined);
 
     if (result.status === 'subscribed') {
       setStatus('accepted');
@@ -69,7 +78,7 @@ export function usePushNotificationOnboarding(): UsePushNotificationOnboardingRe
 
     setShowOnboarding(false);
     return result;
-  }, [user]);
+  }, [user, profile?.role]);
 
   const dismissOnboarding = useCallback(() => {
     setStatus('dismissed');
