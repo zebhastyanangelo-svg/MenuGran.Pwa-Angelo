@@ -7,6 +7,12 @@ import {
   parseDeliveryFee,
 } from '../../utils/deliveryPolicy';
 import { formatEstimatedDeliveryRange, resolveMerchantPromoChips } from '../../utils/promos';
+import {
+  fullStarsForRating,
+  hasVisibleRating,
+  ratingToPercent,
+  RATING_MAX_STARS,
+} from '../../utils/rating';
 import type { RatingSummary } from '../../services/orderRatingService';
 
 export interface MerchantCardProps {
@@ -78,29 +84,37 @@ function DeliveryPolicyChip({ merchant }: { merchant: MerchantRow }) {
   );
 }
 
-/** Formatea el promedio con un decimal venezolano (4,5). */
-function formatRatingAverage(average: number): string {
-  return new Intl.NumberFormat('es-VE', {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  }).format(average);
-}
-
 /**
- * Badge de reputación: la valoración promedio que los clientes dieron al
- * negocio en la encuesta post-pedido. Impacta la percepción de visibilidad en
- * el marketplace; con menos de 1 valoración no se muestra todavía.
+ * Badge de reputación sobre el banner (esquina inferior derecha): estrellas
+ * visuales estilo hotel según la puntuación, acompañadas del porcentaje de
+ * valoración equivalente. La cantidad de reseñas ya no se muestra entre
+ * paréntesis: eso saturaba el centro de la tarjeta.
  */
 function RatingBadge({ rating }: { rating: RatingSummary }) {
+  const fullStars = fullStarsForRating(rating.average);
+  const percent = ratingToPercent(rating.average);
+
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800"
+      className="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 shadow-sm"
       data-testid="merchant-rating-badge"
-      aria-label={`Valoración ${formatRatingAverage(rating.average)} de 5 estrellas con ${rating.count} valoraciones`}
+      aria-label={`Valoración: ${fullStars} de ${RATING_MAX_STARS} estrellas (${percent} por ciento)`}
     >
-      <Star className="h-3 w-3 fill-amber-500 text-amber-500" aria-hidden="true" />
-      {formatRatingAverage(rating.average)}
-      <span className="font-medium text-amber-700">({rating.count})</span>
+      <span className="flex items-center gap-0.5" aria-hidden="true">
+        {Array.from({ length: RATING_MAX_STARS }, (_, index) => (
+          <Star
+            key={index}
+            className={`h-3 w-3 ${
+              index < fullStars
+                ? 'fill-amber-400 text-amber-400'
+                : 'fill-transparent text-slate-300'
+            }`}
+          />
+        ))}
+      </span>
+      <span className="text-[11px] font-bold leading-none text-slate-800">
+        {percent}%
+      </span>
     </span>
   );
 }
@@ -159,6 +173,10 @@ export function MerchantCard({ merchant, onClick, distance, rating }: MerchantCa
           ) : null}
         </div>
 
+        {/* Badge de valoración en la esquina inferior derecha del banner:
+            estrellas estilo hotel + porcentaje de valoración. */}
+        {hasVisibleRating(rating) ? <RatingBadge rating={rating} /> : null}
+
         {/*
           Avatar anclado al borde inferior del banner: `bottom-0` +
           `translate-y-1/2` dejan exactamente la mitad del círculo sobre la
@@ -194,35 +212,43 @@ export function MerchantCard({ merchant, onClick, distance, rating }: MerchantCa
           <p className="truncate text-xs text-slate-500">@{merchant.slug}</p>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-xs">
-          <span
-            className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 font-semibold ${
-              availability.isOpen ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
-            }`}
-          >
-            {availability.badgeLabel}
-          </span>
-          {etaLabel !== null ? (
+        {/*
+          Chips informativos en dos niveles alineados a la izquierda para no
+          saturar el centro de la tarjeta: primero el estado operativo
+          (abierto/cerrado y tiempo de entrega), luego la categoría y la
+          política de envío. El botón "Pedir menú" queda fijo abajo a la
+          derecha, sin competencia visual.
+        */}
+        <div className="mt-3 flex flex-col items-start gap-1.5 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5">
             <span
-              className="inline-flex items-center gap-1 rounded-full bg-brand-red/10 px-2 py-0.5 font-semibold text-brand-red"
-              data-testid="merchant-eta"
+              className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 font-semibold ${
+                availability.isOpen ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+              }`}
             >
-              <Clock className="h-3 w-3" aria-hidden="true" />
-              {etaLabel}
+              {availability.badgeLabel}
             </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
-              <Clock className="h-3 w-3" aria-hidden="true" />
-              {availability.todayLabel}
+            {etaLabel !== null ? (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-brand-red/10 px-2 py-0.5 font-semibold text-brand-red"
+                data-testid="merchant-eta"
+              >
+                <Clock className="h-3 w-3" aria-hidden="true" />
+                {etaLabel}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+                <Clock className="h-3 w-3" aria-hidden="true" />
+                {availability.todayLabel}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="max-w-full truncate rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+              {merchant.category}
             </span>
-          )}
-          <span className="truncate rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
-            {merchant.category}
-          </span>
-          {rating !== undefined && rating !== null && rating.count > 0 ? (
-            <RatingBadge rating={rating} />
-          ) : null}
-          <DeliveryPolicyChip merchant={merchant} />
+            <DeliveryPolicyChip merchant={merchant} />
+          </div>
         </div>
 
         <div className="mt-auto flex items-center justify-end gap-2 pt-4">

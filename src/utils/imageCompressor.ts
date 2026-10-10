@@ -33,6 +33,28 @@ export interface CompressedImage {
 }
 
 /**
+ * Extensiones de imagen admitidas por la compresión de comprobantes.
+ * Se usan como respaldo cuando el navegador no informa el MIME type
+ * (habitual en archivos elegidos desde Google Drive vía gestor de archivos).
+ */
+const IMAGE_EXTENSION_PATTERN = /\.(jpe?g|png|webp|heic|heif)$/i;
+
+/**
+ * Detecta si un archivo debe comprimirse como imagen. No basta con
+ * `file.type.startsWith('image/')`: los selectores de Android pueden entregar
+ * fotos con MIME vacío o genérico (`application/octet-stream`). En esos casos
+ * la extensión del archivo es la pista fiable; comprimir esos archivos evita
+ * subir megas sin comprimir y que la subida muera en conexiones lentas.
+ */
+export function looksLikeImageFile(file: Blob & { name?: string }): boolean {
+  if (file.type.startsWith('image/')) return true;
+  // MIME vacío o genérico: decide la extensión del archivo.
+  if (file.type !== '' && file.type !== 'application/octet-stream') return false;
+  const name = file.name ?? '';
+  return IMAGE_EXTENSION_PATTERN.test(name);
+}
+
+/**
  * Lee un `File`/`Blob` de imagen y devuelve un `HTMLImageElement` descargado.
  * Falla explícitamente (reject) si el archivo no es una imagen decodificable.
  */

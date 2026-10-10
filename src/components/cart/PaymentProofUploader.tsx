@@ -2,11 +2,18 @@ import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'r
 import { UploadCloud, X, Loader2, FileText, ImageIcon, Camera } from 'lucide-react';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-/** MIME explícitos para que el móvil ofrezca cámara/galería nativa y no el explorador genérico. */
-const ACCEPT_ATTRIBUTE = 'image/jpeg,image/png,image/webp,application/pdf';
+/**
+ * `accept="image/*"` hace que Android/iOS abran la galería de fotos del
+ * dispositivo (picker nativo de medios) en lugar del explorador de archivos
+ * o Google Drive. El PDF tiene su propio selector explícito: mezclarlo aquí
+ * volvería a abrir el gestor de archivos genérico.
+ */
+const GALLERY_ACCEPT_ATTRIBUTE = 'image/*';
 /** Solo imágenes: la cámara del dispositivo no genera PDF. */
-const CAPTURE_ACCEPT_ATTRIBUTE = 'image/jpeg,image/png,image/webp';
-const MAX_BYTES = 5 * 1024 * 1024;
+const CAPTURE_ACCEPT_ATTRIBUTE = 'image/*';
+const PDF_ACCEPT_ATTRIBUTE = 'application/pdf';
+const TYPE_ERROR_MESSAGE =
+  'Formato no permitido. Adjunta una foto (JPG, PNG, WebP) o un PDF.';
 
 export interface PaymentProofUploaderProps {
   file: File | null;
@@ -23,8 +30,10 @@ export function PaymentProofUploader({
 }: PaymentProofUploaderProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [typeError, setTypeError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (file && file.type.startsWith('image/') && typeof URL.createObjectURL === 'function') {
@@ -37,17 +46,15 @@ export function PaymentProofUploader({
 
   const validateAndSelect = (selected: File | null) => {
     if (selected === null) {
+      setTypeError(null);
       onFileSelect(null);
       return;
     }
     if (!ACCEPTED_TYPES.includes(selected.type)) {
-      onFileSelect(selected);
+      setTypeError(TYPE_ERROR_MESSAGE);
       return;
     }
-    if (selected.size > MAX_BYTES) {
-      onFileSelect(selected);
-      return;
-    }
+    setTypeError(null);
     onFileSelect(selected);
   };
 
@@ -85,7 +92,7 @@ export function PaymentProofUploader({
         ref={inputRef}
         id="payment-proof-input"
         type="file"
-        accept={ACCEPT_ATTRIBUTE}
+        accept={GALLERY_ACCEPT_ATTRIBUTE}
         className="sr-only"
         disabled={isProcessing}
         onChange={handleInputChange}
@@ -97,6 +104,16 @@ export function PaymentProofUploader({
         accept={CAPTURE_ACCEPT_ATTRIBUTE}
         capture="environment"
         aria-label="Capturar comprobante con la cámara"
+        className="sr-only"
+        disabled={isProcessing}
+        onChange={handleInputChange}
+      />
+
+      <input
+        ref={pdfInputRef}
+        type="file"
+        accept={PDF_ACCEPT_ATTRIBUTE}
+        aria-label="Seleccionar comprobante en PDF"
         className="sr-only"
         disabled={isProcessing}
         onChange={handleInputChange}
@@ -127,20 +144,34 @@ export function PaymentProofUploader({
           <UploadCloud className="h-8 w-8 text-brand-red" aria-hidden="true" />
           <p className="text-sm text-slate-600">
             Arrastra tu comprobante aquí o{' '}
-            <span className="font-semibold text-brand-red">haz clic para seleccionar</span>
+            <span className="font-semibold text-brand-red">elige una foto de tu galería</span>
           </p>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              cameraInputRef.current?.click();
-            }}
-            disabled={isProcessing}
-            className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-brand-red hover:text-brand-red focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
-          >
-            <Camera className="h-4 w-4" aria-hidden="true" />
-            Tomar foto
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                cameraInputRef.current?.click();
+              }}
+              disabled={isProcessing}
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-brand-red hover:text-brand-red focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
+            >
+              <Camera className="h-4 w-4" aria-hidden="true" />
+              Tomar foto
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                pdfInputRef.current?.click();
+              }}
+              disabled={isProcessing}
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-brand-red hover:text-brand-red focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
+            >
+              <FileText className="h-4 w-4" aria-hidden="true" />
+              Subir PDF
+            </button>
+          </div>
           <p className="text-xs text-gray-400">JPG, PNG, WebP o PDF · máx. 5 MB</p>
         </div>
       ) : (
@@ -189,6 +220,11 @@ export function PaymentProofUploader({
         </div>
       )}
 
+      {typeError && (
+        <p className="mt-1 text-sm text-red-600" role="alert" data-testid="payment-proof-type-error">
+          {typeError}
+        </p>
+      )}
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
   );

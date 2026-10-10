@@ -4,6 +4,89 @@ import type { OrderInsert, PaymentMethod, OrderType, OrderItem, GeoPoint } from 
 
 const PAYMENT_PROOF_BUCKET = 'payment-proofs';
 
+/**
+ * Intentos de subida del comprobante ante errores de red transitorios.
+ * El "Failed to fetch" típico de conexiones móviles inestables se resuelve
+ * solo en parte con reintentos; los errores del servidor (RLS, 4xx) no se
+ * reintentan porque volverían a fallar igual.
+ */
+const UPLOAD_MAX_ATTEMPTS = 3;
+const UPLOAD_RETRY_BASE_DELAY_MS = 600;
+
+/**
+ * Patrones de los mensajes que emite `fetch` cuando la petición muere a
+ * nivel de red: Chrome ("Failed to fetch"), Safari ("Load failed") y Firefox
+ * ("NetworkError when attempting to fetch resource"). supabase-js puede
+ * envolverlos en StorageUnknownError, pero el mensaje original se conserva.
+ */
+const NETWORK_ERROR_PATTERN =
+  /(failed to fetch|load failed|fetch failed|networkerror|network request failed)/i;
+
+/** `true` si el error de subida es un fallo de red (transitorio) y conviene reintentar. */
+export function isNetworkUploadError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (NETWORK_ERROR_PATTERN.test(error.message) || error.name === 'TypeError')
+  );
+}
+
+/**
+ * `true` si el servidor respondió que el objeto ya existe. Como el nombre del
+ * comprobante es aleatorio en cada subida, un "ya existe" en un reintento
+ * solo puede venir de un intento anterior que sí llegó a Storage pero cuya
+ * respuesta se perdió en la red: la subida ya completó.
+ */
+function isAlreadyUploadedError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    /(already exists|duplicate|conflict)/i.test(error.message)
+  );
+}
+
+/** Pausa entre reintentos; crece linealmente con el número de intento. */
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+/**
+ * Envuelve el blob comprimido en un `File` con nombre y tipo: los archivos
+ * elegidos desde Google Drive llegan con el MIME vacío y suben sin cabecera
+ * de contenido correcta en la parte multipart.
+ */
+function toUploadFile(file: Blob): Blob | File {
+  if (typeof File === 'undefined' || file instanceof File) return file;
+  try {
+    return new File([file], 'comprobante.jpg', { type: file.type || 'image/jpeg' });
+  } catch {
+    return file;
+  }
+}
+
+/** Ejecuta una subida reintentando solo los fallos de red. */
+async function uploadProofWithRetry(
+  fileName: string,
+  body: Blob | File,
+): Promise<string> {
+  for (let attempt = 1; attempt <= UPLOAD_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const { error } = await supabase.storage
+        .from(PAYMENT_PROOF_BUCKET)
+        .upload(fileName, body);
+      if (error) throw error;
+      return fileName;
+    } catch (error) {
+      if (attempt > 1 && isAlreadyUploadedError(error)) return fileName;
+      if (!isNetworkUploadError(error) || attempt === UPLOAD_MAX_ATTEMPTS) {
+        throw error;
+      }
+      await wait(UPLOAD_RETRY_BASE_DELAY_MS * attempt);
+    }
+  }
+  throw new Error('No se pudo subir el comprobante.');
+}
+
 interface CreateOrderParams {
   merchantId: string;
   customerId: string;
@@ -77,13 +160,7 @@ export async function uploadPaymentProof(
   orderId: string,
 ): Promise<string> {
   const fileName = buildProofFileName(orderId);
-
-  const { error } = await supabase.storage
-    .from(PAYMENT_PROOF_BUCKET)
-    .upload(fileName, file);
-
-  if (error) throw error;
-  return fileName;
+  return uploadProofWithRetry(fileName, toUploadFile(file));
 }
 
 /**
@@ -106,15 +183,9 @@ export async function savePaymentProofUrl(
  * Uploads a payment-proof blob to Supabase Storage using a temporary filename
  * (no orderId dependency). Returns the storage path. This allows uploading
  * the proof BEFORE the order is created, so the URL can be included in the
- * initial INSERT.
+ * initial INSERT. Los fallos de red (p. ej. `Failed to fetch` en móvil) se
+ * reintentan hasta 3 veces antes de rendirse.
  */
 export async function uploadPaymentProofTemp(file: Blob): Promise<string> {
-  const fileName = buildTempProofFileName();
-
-  const { error } = await supabase.storage
-    .from(PAYMENT_PROOF_BUCKET)
-    .upload(fileName, file);
-
-  if (error) throw error;
-  return fileName;
+  return uploadProofWithRetry(buildTempProofFileName(), toUploadFile(file));
 }

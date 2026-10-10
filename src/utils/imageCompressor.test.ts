@@ -3,6 +3,7 @@ import {
   PAYMENT_PROOF_MAX_BYTES,
   buildProofFileName,
   compressImage,
+  looksLikeImageFile,
 } from './imageCompressor';
 
 /**
@@ -121,6 +122,34 @@ describe('buildProofFileName', () => {
     const a = buildProofFileName('o1');
     const b = buildProofFileName('o1');
     expect(a).not.toBe(b);
+  });
+});
+
+describe('looksLikeImageFile', () => {
+  it('detecta imágenes por su MIME type', () => {
+    expect(looksLikeImageFile(new File(['x'], 'a.jpg', { type: 'image/jpeg' }))).toBe(true);
+    expect(looksLikeImageFile(new File(['x'], 'a.png', { type: 'image/png' }))).toBe(true);
+  });
+
+  it('detecta imágenes por extensión cuando el MIME viene vacío (Google Drive)', () => {
+    expect(looksLikeImageFile(new File(['x'], 'foto.jpg', { type: '' }))).toBe(true);
+    expect(looksLikeImageFile(new File(['x'], 'foto.PNG', { type: '' }))).toBe(true);
+    expect(looksLikeImageFile(new File(['x'], 'foto.webp', { type: '' }))).toBe(true);
+  });
+
+  it('detecta imágenes por extensión cuando el MIME es octet-stream', () => {
+    const file = new File(['x'], 'comprobante.jpeg', { type: 'application/octet-stream' });
+    expect(looksLikeImageFile(file)).toBe(true);
+  });
+
+  it('no trata como imagen un PDF ni otro tipo declarado', () => {
+    expect(looksLikeImageFile(new File(['x'], 'a.pdf', { type: 'application/pdf' }))).toBe(false);
+    expect(looksLikeImageFile(new File(['x'], 'a.mp4', { type: 'video/mp4' }))).toBe(false);
+  });
+
+  it('no trata como imagen un archivo sin extensión de imagen', () => {
+    expect(looksLikeImageFile(new File(['x'], 'documento.pdf', { type: '' }))).toBe(false);
+    expect(looksLikeImageFile(new File(['x'], 'comprobante.txt', { type: '' }))).toBe(false);
   });
 });
 

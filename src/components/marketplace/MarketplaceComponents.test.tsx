@@ -288,6 +288,42 @@ describe('MerchantCard promociones', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
     expect(onClick).toHaveBeenCalledWith(merchant);
   });
+});
+
+describe('MerchantCard valoración en el banner', () => {
+  it('muestra el badge de estrellas y el porcentaje sobre el banner', () => {
+    const merchant = buildMerchant('m1', 'La Esquina', 'la-esquina');
+    render(<MerchantCard merchant={merchant} rating={{ average: 4.5, count: 12 }} />);
+
+    const badge = screen.getByTestId('merchant-rating-badge');
+    expect(badge).toHaveTextContent('90%');
+    // Estrellas visuales: 5 en total (llenas y vacías) según la puntuación.
+    expect(badge.querySelectorAll('svg').length).toBe(5);
+  });
+
+  it('no muestra la cantidad de reseñas entre paréntesis', () => {
+    const merchant = buildMerchant('m1', 'La Esquina', 'la-esquina');
+    render(<MerchantCard merchant={merchant} rating={{ average: 4.5, count: 12 }} />);
+
+    const badge = screen.getByTestId('merchant-rating-badge');
+    expect(badge).not.toHaveTextContent('(12)');
+    expect(badge).not.toHaveTextContent('12');
+  });
+
+  it('oculta el badge cuando el comercio no tiene valoraciones', () => {
+    const merchant = buildMerchant('m1', 'La Esquina', 'la-esquina');
+    render(<MerchantCard merchant={merchant} rating={{ average: 0, count: 0 }} />);
+
+    expect(screen.queryByTestId('merchant-rating-badge')).not.toBeInTheDocument();
+  });
+
+  it('oculta el badge cuando no hay resumen de valoraciones', () => {
+    const merchant = buildMerchant('m1', 'La Esquina', 'la-esquina');
+    render(<MerchantCard merchant={merchant} rating={null} />);
+
+    expect(screen.queryByTestId('merchant-rating-badge')).not.toBeInTheDocument();
+  });
+});
 describe('ProductCard promociones', () => {
   it('renderiza el descuento y el distintivo configurados', () => {
     const product = {
@@ -339,5 +375,4 @@ describe('ProductCard promociones', () => {
       screen.queryByRole('button', { name: /Agregar Hamburguesa al carrito/i }),
     ).not.toBeInTheDocument();
   });
-});
 });

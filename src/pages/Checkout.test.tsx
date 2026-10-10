@@ -25,11 +25,15 @@ vi.mock('../hooks/useExchangeRate', () => ({
   useBCVRate: vi.fn(() => 36.5),
 }));
 
-vi.mock('../utils/imageCompressor', () => ({
-  compressImage: vi.fn().mockResolvedValue({ blob: new Blob(['fake']), size: 50_000, width: 1, height: 1, type: 'image/jpeg' }),
-  PAYMENT_PROOF_MAX_BYTES: 150 * 1024,
-  buildProofFileName: vi.fn().mockImplementation((orderId: string) => `${orderId}/proof.jpg`),
-}));
+vi.mock('../utils/imageCompressor', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../utils/imageCompressor')>();
+  return {
+    ...actual,
+    compressImage: vi.fn().mockResolvedValue({ blob: new Blob(['fake']), size: 50_000, width: 1, height: 1, type: 'image/jpeg' }),
+    PAYMENT_PROOF_MAX_BYTES: 150 * 1024,
+    buildProofFileName: vi.fn().mockImplementation((orderId: string) => `${orderId}/proof.jpg`),
+  };
+});
 
 vi.mock('../components/map/LocationPicker', () => {
   return {
@@ -46,10 +50,14 @@ vi.mock('../components/map/LocationPicker', () => {
 const mockCreateOrder = vi.fn().mockResolvedValue('order-abc-123');
 const mockUploadPaymentProofTemp = vi.fn().mockResolvedValue('tmp/abc123.jpg');
 
-vi.mock('../services/checkoutService', () => ({
-  createOrder: (...args: unknown[]) => mockCreateOrder(...args),
-  uploadPaymentProofTemp: (...args: unknown[]) => mockUploadPaymentProofTemp(...args),
-}));
+vi.mock('../services/checkoutService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../services/checkoutService')>();
+  return {
+    ...actual,
+    createOrder: (...args: unknown[]) => mockCreateOrder(...args),
+    uploadPaymentProofTemp: (...args: unknown[]) => mockUploadPaymentProofTemp(...args),
+  };
+});
 
 vi.mock('../hooks/useAuth', () => ({
   useAuth: vi.fn(),

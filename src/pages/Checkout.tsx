@@ -21,7 +21,7 @@ import { useToast } from '../hooks/useToast';
 import { useMerchantPagoMovil } from '../hooks/useMerchantPagoMovil';
 import { useBCVRate } from '../hooks/useExchangeRate';
 import { formatBCVRate } from '../services/exchangeRate';
-import { compressImage } from '../utils/imageCompressor';
+import { compressImage, looksLikeImageFile } from '../utils/imageCompressor';
 import { formatVES } from '../utils/format';
 import {
   calculateOrderTotal,
@@ -37,7 +37,7 @@ import {
 } from '../utils/serviceMode';
 import type { GeoPoint, OrderType, PaymentMethod } from '../types/database';
 import type { MerchantPagoMovilInfo } from '../services/merchantPaymentService';
-import { createOrder, uploadPaymentProofTemp } from '../services/checkoutService';
+import { createOrder, isNetworkUploadError, uploadPaymentProofTemp } from '../services/checkoutService';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import { isMerchantOpenNow } from '../utils/dateUtils';
 import { haversineDistance } from '../utils/distance';
@@ -83,6 +83,17 @@ function validateCheckoutForm(params: ValidateParams): string | null {
   return null;
 }
 
+/** Traduce los mensajes de error de Supabase Storage a textos accionables. */
+function toFriendlyUploadError(message: string): string {
+  if (message.includes('row-level security') || message.includes('policy') || message.includes('permission')) {
+    return 'No se pudo subir el comprobante: permisos de almacenamiento insuficientes. Contacta al administrador.';
+  }
+  if (message.includes('size') || message.includes('payload') || message.includes('413')) {
+    return 'El archivo es demasiado grande para subir. Máximo 5 MB.';
+  }
+  return `Error al subir el comprobante: ${message}`;
+}
+
 async function uploadProofIfNeeded(
   paymentMethod: CheckoutPaymentMethod,
   file: File | null,
@@ -90,23 +101,24 @@ async function uploadProofIfNeeded(
   if (paymentMethod !== 'pago_movil' || !file) return null;
 
   try {
-    const proofToUpload = file.type.startsWith('image/')
+    // Los archivos elegidos desde la galería nativa traen MIME correcto, pero
+    // los que provienen de gestores tipo Google Drive pueden llegar con el
+    // MIME vacío: se detectan por extensión para que también se compriman y
+    // la subida no muera con archivos de varios MB ("Failed to fetch").
+    const proofToUpload = looksLikeImageFile(file)
       ? (await compressImage(file)).blob
       : file;
     const url = await uploadPaymentProofTemp(proofToUpload);
     if (!url) throw new Error('No se recibió URL de almacenamiento');
     return url;
   } catch (uploadError) {
+    if (isNetworkUploadError(uploadError)) {
+      throw new Error(
+        'No se pudo conectar con el servidor para subir el comprobante. Revisa tu conexión a internet e inténtalo de nuevo.',
+      );
+    }
     const message = uploadError instanceof Error ? uploadError.message : String(uploadError);
-    // Detectar errores comunes de Supabase Storage
-    if (message.includes('row-level security') || message.includes('policy') || message.includes('permission')) {
-      throw new Error('No se pudo subir el comprobante: permisos de almacenamiento insuficientes. Contacta al administrador.');
-    }
-    if (message.includes('size') || message.includes('payload') || message.includes('413')) {
-      throw new Error('El archivo es demasiado grande para subir. Máximo 5 MB.');
-    }
-    // Otros errores de red
-    throw new Error(`Error al subir el comprobante: ${message}`);
+    throw new Error(toFriendlyUploadError(message));
   }
 }
 
