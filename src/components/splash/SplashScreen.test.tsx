@@ -36,6 +36,19 @@ describe('SplashScreen', () => {
       expect(onFinish).toHaveBeenCalledTimes(1);
     });
 
+    it('cubre todo el viewport con object-cover (sin franjas)', () => {
+      render(<SplashScreen onFinish={() => {}} />);
+      const video = document.querySelector('video');
+      const className = video?.className ?? '';
+
+      expect(className).toContain('object-cover');
+      expect(className).not.toContain('object-contain');
+      expect(className).toContain('absolute');
+      expect(className).toContain('inset-0');
+      expect(className).toContain('h-full');
+      expect(className).toContain('w-full');
+    });
+
     it('muestra el video aunque haya un intento previo en la sesión', () => {
       render(<SplashScreen onFinish={() => {}} />);
       expect(document.querySelector('video')).not.toBeNull();

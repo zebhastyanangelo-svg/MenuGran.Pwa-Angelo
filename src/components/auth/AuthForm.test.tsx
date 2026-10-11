@@ -2,12 +2,14 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useSearchParams } from 'react-router-dom';
+import type { User } from '@supabase/supabase-js';
 import type { AuthContextValue } from '../../context/auth-context-core';
 import { AuthForm } from './AuthForm';
 import { useAuth } from '../../hooks/useAuth';
 
 const signInWithPassword = vi.fn();
 const signUpWithPassword = vi.fn();
+const completeRegistration = vi.fn();
 const resendConfirmationEmail = vi.fn();
 const signInWithGoogle = vi.fn();
 const navigate = vi.fn();
@@ -40,10 +42,19 @@ function getMockAuth(): AuthContextValue {
     signInWithGoogle,
     signInWithPassword,
     signUpWithPassword,
+    completeRegistration,
     resendConfirmationEmail,
     signOut: vi.fn(),
     reloadProfile: vi.fn(),
   };
+}
+
+function buildGoogleUser(): User {
+  return {
+    id: 'google-1',
+    email: 'nuevo@gmail.com',
+    user_metadata: { full_name: 'Nuevo Usuario' },
+  } as unknown as User;
 }
 
 function renderWithRouter(defaultTab: 'login' | 'register' = 'login', from: string | null = '/marketplace') {
@@ -358,6 +369,7 @@ describe('AuthForm', () => {
       'password123',
       'Usuario Test',
       'customer',
+      { ci: 'V-12345678', phone: '+58 412-123-4567' },
     );
     await waitFor(() => {
       expect(navigate).toHaveBeenCalledWith('/', { replace: true });
@@ -382,6 +394,7 @@ describe('AuthForm', () => {
       'password123',
       'Impostor',
       'customer',
+      { ci: 'V-00000000', phone: '+58 412-000-0000' },
     );
   });
 
@@ -416,5 +429,111 @@ describe('AuthForm', () => {
     const registerButtons = screen.getAllByRole('button', { name: /Registrarse/i });
     expect(registerButtons.length).toBe(2);
     expect(screen.getByRole('button', { name: /Iniciar Sesión/i })).toBeInTheDocument();
+  });
+
+  describe('modo completar registro (usuario autenticado)', () => {
+    function renderCompletionMode() {
+      vi.mocked(useAuth).mockReturnValue({
+        ...getMockAuth(),
+        user: buildGoogleUser(),
+      });
+      mockUseSearchParams.mockReturnValue([
+        { get: () => null },
+        vi.fn(),
+      ] as unknown as ReturnType<typeof useSearchParams>);
+
+      render(
+        <MemoryRouter initialEntries={['/register?complete=1']}>
+          <Routes>
+            <Route path="/register" element={<AuthForm defaultTab="register" />} />
+            <Route path="/" element={<div data-testid="home">Home</div>} />
+          </Routes>
+        </MemoryRouter>,
+      );
+    }
+
+    it('prefill email y nombre desde la sesión', () => {
+      renderCompletionMode();
+
+      expect(screen.getByLabelText(/Correo electrónico/i)).toHaveValue('nuevo@gmail.com');
+      expect(screen.getByLabelText(/Nombre completo/i)).toHaveValue('Nuevo Usuario');
+    });
+
+    it('oculta la contraseña y el botón de Google', () => {
+      renderCompletionMode();
+
+      expect(screen.queryByLabelText('Contraseña')).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Continuar con Google/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Completa tu registro/i })).toBeInTheDocument();
+    });
+
+    it('llama a completeRegistration y redirige al home del cliente', async () => {
+      const user = userEvent.setup();
+      completeRegistration.mockResolvedValueOnce(undefined);
+      fetchCurrentSessionRole.mockResolvedValue('customer');
+      renderCompletionMode();
+
+      await user.clear(screen.getByLabelText(/Nombre completo/i));
+      await user.type(screen.getByLabelText(/Nombre completo/i), 'Nuevo Usuario');
+      await user.type(screen.getByLabelText(/C.I./i), 'V-99999999');
+      await user.type(screen.getByLabelText(/Teléfono/i), '+58 414-000-0000');
+      await user.click(screen.getByLabelText(/Acepto los/i));
+      await user.click(screen.getByTestId('register-submit'));
+
+      expect(completeRegistration).toHaveBeenCalledWith({
+        fullName: 'Nuevo Usuario',
+        ci: 'V-99999999',
+        phone: '+58 414-000-0000',
+      });
+      await waitFor(() => {
+        expect(navigate).toHaveBeenCalledWith('/', { replace: true });
+      });
+    });
+
+    it('no invoca signUpWithPassword porque la cuenta ya existe en Supabase', async () => {
+      const user = userEvent.setup();
+      completeRegistration.mockResolvedValueOnce(undefined);
+      fetchCurrentSessionRole.mockResolvedValue('customer');
+      renderCompletionMode();
+
+      await user.type(screen.getByLabelText(/C.I./i), 'V-99999999');
+      await user.type(screen.getByLabelText(/Teléfono/i), '+58 414-000-0000');
+      await user.click(screen.getByLabelText(/Acepto los/i));
+      await user.click(screen.getByTestId('register-submit'));
+
+      expect(signUpWithPassword).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(navigate).toHaveBeenCalled();
+      });
+    });
+
+    it('muestra error cuando completeRegistration falla', async () => {
+      const user = userEvent.setup();
+      completeRegistration.mockRejectedValueOnce(new Error('row level security'));
+      renderCompletionMode();
+
+      await user.type(screen.getByLabelText(/C.I./i), 'V-99999999');
+      await user.type(screen.getByLabelText(/Teléfono/i), '+58 414-000-0000');
+      await user.click(screen.getByLabelText(/Acepto los/i));
+      await user.click(screen.getByTestId('register-submit'));
+
+      expect(await screen.findByText(/row level security/i)).toBeInTheDocument();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('bloquea el envío mientras no se acepten los términos en modo completar', async () => {
+      const user = userEvent.setup();
+      renderCompletionMode();
+
+      await user.type(screen.getByLabelText(/C.I./i), 'V-99999999');
+      await user.type(screen.getByLabelText(/Teléfono/i), '+58 414-000-0000');
+
+      expect(screen.getByTestId('register-submit')).toBeDisabled();
+      await user.click(screen.getByTestId('register-submit'));
+
+      expect(completeRegistration).not.toHaveBeenCalled();
+    });
   });
 });

@@ -100,12 +100,32 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signInWithPassword, signUpWithPassword, resendConfirmationEmail, signInWithGoogle } =
-    useAuth();
+  const {
+    user,
+    isLoading,
+    signInWithPassword,
+    signUpWithPassword,
+    completeRegistration,
+    resendConfirmationEmail,
+    signInWithGoogle,
+  } = useAuth();
 
   const requestedFrom = searchParams.get('from');
 
+  // Modo "completar registro": el usuario ya tiene sesión (p. ej. entró por
+  // Google por primera vez) y debe terminar de registrar sus datos. El correo
+  // queda fijo (viene de la sesión) y no se pide contraseña.
+  const isCompletionMode = user !== null && !isLoading && activeTab === 'register';
+  const prefillEmail = isCompletionMode ? (user?.email ?? searchParams.get('email') ?? '') : '';
+  const prefillName =
+    isCompletionMode
+      ? (user?.user_metadata?.full_name ?? searchParams.get('name') ?? '')
+      : '';
+
   const handleTabChange = (tab: AuthTab) => {
+    // En modo completar registro no hay cambio de pestaña: el usuario ya
+    // está autenticado y solo debe finalizar sus datos.
+    if (isCompletionMode) return;
     setActiveTab(tab);
     setError(null);
     setShowConfirmationBanner(false);
@@ -163,11 +183,35 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     const form = e.currentTarget;
     const fullName = (form.elements.namedItem('full_name') as HTMLInputElement).value.trim();
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
-    const password = (form.elements.namedItem('password') as HTMLInputElement).value;
+    const ci = (form.elements.namedItem('ci') as HTMLInputElement).value.trim();
+    const phone = (form.elements.namedItem('phone') as HTMLInputElement).value.trim();
+    // En modo completar registro no existe campo contraseña (la cuenta ya
+    // existe en Supabase vía Google).
+    const password = isCompletionMode
+      ? ''
+      : (form.elements.namedItem('password') as HTMLInputElement).value;
 
     if (!termsAccepted) {
       setError('Debes aceptar los Términos y Condiciones y la Política de Privacidad.');
       setIsEmailLoading(false);
+      return;
+    }
+
+    if (isCompletionMode) {
+      try {
+        await completeRegistration({ fullName, ci, phone });
+        if (isPostHogEnabled) {
+          posthog.capture('user_registration_completed', { authentication_method: 'google' });
+        }
+        const completedRole = await fetchCurrentSessionRole();
+        navigate(getPostLoginPath(requestedFrom, completedRole ?? 'customer'), {
+          replace: true,
+        });
+      } catch (err) {
+        setError(resolveAuthErrorMessage(err));
+      } finally {
+        setIsEmailLoading(false);
+      }
       return;
     }
 
@@ -183,7 +227,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     }
 
     try {
-      const result = await signUpWithPassword(email, password, fullName, role);
+      const result = await signUpWithPassword(email, password, fullName, role, { ci, phone });
       if (result.needsEmailConfirmation) {
         setPendingEmail(email);
         setShowConfirmationBanner(true);
@@ -223,32 +267,37 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         </p>
       </div>
 
-      <button
-        type="button"
-        data-testid="google-signin"
-        onClick={() => void handleGoogleSignIn()}
-        disabled={isGoogleLoading}
-        className={GOOGLE_BUTTON_CLASS}
-      >
-        {isGoogleLoading ? (
-          <span className="flex items-center justify-center gap-2">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Conectando con Google...
-          </span>
-        ) : (
-          <>
-            <GoogleLogo />
-            Continuar con Google
-          </>
-        )}
-      </button>
+      {!isCompletionMode && (
+        <button
+          type="button"
+          data-testid="google-signin"
+          onClick={() => void handleGoogleSignIn()}
+          disabled={isGoogleLoading}
+          className={GOOGLE_BUTTON_CLASS}
+        >
+          {isGoogleLoading ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Conectando con Google...
+            </span>
+          ) : (
+            <>
+              <GoogleLogo />
+              Continuar con Google
+            </>
+          )}
+        </button>
+      )}
 
-      <div className="my-6 flex items-center gap-3">
-        <span className="h-px flex-1 bg-gray-300" />
-        <span className="text-sm text-gray-500">o ingresa con tu correo</span>
-        <span className="h-px flex-1 bg-gray-300" />
-      </div>
+      {!isCompletionMode && (
+        <div className="my-6 flex items-center gap-3">
+          <span className="h-px flex-1 bg-gray-300" />
+          <span className="text-sm text-gray-500">o ingresa con tu correo</span>
+          <span className="h-px flex-1 bg-gray-300" />
+        </div>
+      )}
 
+      {!isCompletionMode && (
       <div className="mb-6 flex overflow-hidden rounded-full border border-slate-200 bg-slate-100 p-1">
         <button
           type="button"
@@ -275,6 +324,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
           Registrarse
         </button>
       </div>
+      )}
 
       {showConfirmationBanner && (
         <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
@@ -354,10 +404,15 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
       )}
 
       {activeTab === 'register' && (
-        <form onSubmit={handleRegister} className="animate-slide-up space-y-4">
+        <form onSubmit={handleRegister} className="animate-slide-up space-y-4" key={isCompletionMode ? 'completion' : 'standard'}>
           <h2 className="mb-2 text-center text-xl font-bold text-slate-900">
-            Registrarse
+            {isCompletionMode ? 'Completa tu registro' : 'Registrarse'}
           </h2>
+          {isCompletionMode && (
+            <p className="mb-2 text-center text-sm text-slate-500">
+              Ya iniciaste sesión con Google. Solo necesitamos algunos datos finales.
+            </p>
+          )}
 
           <div>
             <div>
@@ -370,6 +425,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                 type="text"
                 required
                 autoComplete="name"
+                defaultValue={prefillName}
                 className={INPUT_BASE_CLASS}
               />
             </div>
@@ -383,23 +439,27 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                 type="email"
                 required
                 autoComplete="email"
+                defaultValue={prefillEmail}
+                readOnly={isCompletionMode}
                 className={INPUT_BASE_CLASS}
               />
             </div>
-            <div>
-              <label htmlFor="register-password" className="block text-sm font-medium text-slate-700">
-                Contraseña
-              </label>
-              <input
-                id="register-password"
-                name="password"
-                type="password"
-                required
-                minLength={6}
-                autoComplete="new-password"
-                className={INPUT_BASE_CLASS}
-              />
-            </div>
+            {!isCompletionMode && (
+              <div>
+                <label htmlFor="register-password" className="block text-sm font-medium text-slate-700">
+                  Contraseña
+                </label>
+                <input
+                  id="register-password"
+                  name="password"
+                  type="password"
+                  required
+                  minLength={6}
+                  autoComplete="new-password"
+                  className={INPUT_BASE_CLASS}
+                />
+              </div>
+            )}
           </div>
 
           <div>

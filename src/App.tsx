@@ -14,6 +14,7 @@ import { OfflineBanner } from './components/pwa/OfflineBanner';
 import { ReloadPrompt } from './components/pwa/ReloadPrompt';
 import { PushNotificationOnboarding } from './components/pwa/PushNotificationOnboarding';
 import { NotificationToastProvider, NotificationToastList } from './components/pwa/NotificationToast';
+import { IncompleteRegistrationGate } from './components/auth/IncompleteRegistrationGate';
 import { CustomerOnboardingGate } from './components/onboarding/CustomerOnboardingGate';
 import { ServiceModeGate } from './components/onboarding/ServiceModeGate';
 import { CookieConsentBanner } from './components/cookies/CookieConsentBanner';
@@ -223,6 +224,7 @@ function AppRoutes() {
             </Routes>
           </Suspense>
         </ErrorBoundary>
+        <IncompleteRegistrationGate />
         <CustomerOnboardingGate />
         <ServiceModeGate />
         <ReloadPrompt />

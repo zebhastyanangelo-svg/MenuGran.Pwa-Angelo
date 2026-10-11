@@ -11,14 +11,14 @@ const DEFAULT_ZOOM = 13;
 export const BRAND_RED = '#C71523';
 
 /**
- * Teselas de estilo "navegación limpia": base clara y neutra (Carto Positron
- * sobre datos de OpenStreetMap) para que la ruta roja y los marcadores de
- * MenuGran dominen el contraste visual, como en los GPS modernos.
+ * Teselas de OpenStreetMap estándar: base clara y neutra, sin API key ni
+ * restricciones de uso. La ruta roja y los marcadores de MenuGran dominan
+ * el contraste visual, como en los GPS modernos.
  */
 const NAVIGATION_TILE_URL =
-  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const NAVIGATION_TILE_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 const DEFAULT_ICON = L.icon({
   iconUrl: '/pwa-192x192.png',

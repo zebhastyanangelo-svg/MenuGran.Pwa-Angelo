@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
@@ -17,6 +17,7 @@ const authMocks = vi.hoisted(() => ({
   resend: vi.fn(),
   signOut: vi.fn(),
   from: vi.fn(),
+  update: vi.fn(),
 }));
 
 vi.mock('../services/supabase', () => ({
@@ -32,6 +33,7 @@ vi.mock('../services/supabase', () => ({
       signOut: authMocks.signOut,
     },
     from: authMocks.from,
+    update: authMocks.update,
   },
   TABLE_NAMES: { profiles: 'profiles' },
 }));
@@ -66,7 +68,7 @@ function mockProfileQuery(result: {
   const single = vi.fn().mockResolvedValue(result);
   const eq = vi.fn(() => ({ single }));
   const select = vi.fn(() => ({ eq }));
-  authMocks.from.mockReturnValue({ select });
+  authMocks.from.mockReturnValue({ select, update: authMocks.update });
 }
 
 function AuthProbe() {
@@ -77,14 +79,14 @@ function AuthProbe() {
       <span data-testid="auth-role">{auth.profile?.role ?? 'sin-perfil'}</span>
       <span data-testid="auth-loading">{String(auth.isLoading)}</span>
       <button onClick={() => void auth.signOut()}>Cerrar sesión</button>
-        <button
-          onClick={() => void auth.signInWithPassword('a@b.com', 'secret')}
-        >
-          Entrar
-        </button>
+      <button
+        onClick={() => void auth.signInWithPassword('a@b.com', 'secret')}
+      >
+        Entrar
+      </button>
       <button onClick={() => void auth.signInWithGoogle().catch(() => undefined)}>
-          Continuar con Google
-        </button>
+        Continuar con Google
+      </button>
       <button
         onClick={() =>
           void auth.signInWithGoogle('/orders/o-1').catch(() => undefined)
@@ -93,11 +95,27 @@ function AuthProbe() {
         Continuar con Google con origen
       </button>
       <button
-        onClick={() =>
-          void auth.signUpWithPassword('a@b.com', 'secret', 'Test User', 'customer')
-        }
+        onClick={() => void auth.signUpWithPassword('a@b.com', 'secret', 'Test User', 'customer')}
       >
         Registrar
+      </button>
+      <button
+        onClick={() =>
+          void auth
+            .completeRegistration({ fullName: 'Test User', ci: 'V-123', phone: '+584121234567' })
+            .catch(() => undefined)
+        }
+      >
+        Completar registro
+      </button>
+      <button
+        onClick={() =>
+          void auth
+            .completeRegistration({ fullName: 'Test User', ci: '  ', phone: '+584121234567' })
+            .catch(() => undefined)
+        }
+      >
+        Completar registro incompleto
       </button>
       <button
         onClick={() => void auth.resendConfirmationEmail('a@b.com')}
@@ -394,7 +412,7 @@ describe('AuthProvider', () => {
     consoleError.mockRestore();
   });
 
-  it('llama a supabase.auth.signUp con full_name y role en options.data', async () => {
+  it('llama a supabase.auth.signUp con full_name, role y registro completado en options.data', async () => {
     authMocks.signUp.mockResolvedValue({
       data: {
         user: {
@@ -422,9 +440,76 @@ describe('AuthProvider', () => {
         data: {
           full_name: 'Test User',
           role: 'customer',
+          ci: '',
+          phone: '',
+          registration_completed: 'true',
         },
       },
     });
+  });
+
+  it('completeRegistration actualiza el propio perfil y marca registration_completed', async () => {
+    authMocks.getSession.mockResolvedValue({
+      data: { session: buildSession('user-123') },
+      error: null,
+    });
+    authMocks.update.mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    });
+    mockProfileQuery({ data: buildProfile('user-123', 'customer'), error: null });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+    await screen.findByTestId('auth-email');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Completar registro' }));
+
+    expect(authMocks.from).toHaveBeenCalledWith('profiles');
+    expect(authMocks.update).toHaveBeenCalledWith({
+      full_name: 'Test User',
+      ci: 'V-123',
+      phone: '+584121234567',
+      registration_completed: true,
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-role')).toHaveTextContent('customer');
+    });
+  });
+
+  it('completeRegistration lanza error cuando no hay sesión activa', async () => {
+    authMocks.getSession.mockResolvedValue({ data: { session: null }, error: null });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+    await screen.findByText('false');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Completar registro' }));
+
+    expect(authMocks.update).not.toHaveBeenCalled();
+  });
+
+  it('completeRegistration lanza error cuando falta la cédula', async () => {
+    authMocks.getSession.mockResolvedValue({
+      data: { session: buildSession('user-123') },
+      error: null,
+    });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+    await screen.findByText('false');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Completar registro incompleto' }));
+
+    expect(authMocks.update).not.toHaveBeenCalled();
   });
 
   it('retorna needsEmailConfirmation=true cuando el usuario no está verificado', async () => {

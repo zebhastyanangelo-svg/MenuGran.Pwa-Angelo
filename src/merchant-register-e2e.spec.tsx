@@ -138,7 +138,15 @@ describe('Single Registration Flow (AuthForm)', { timeout: 15000 }, () => {
       expect(authMocks.signUp).toHaveBeenCalledWith({
         email: 'test@example.com',
         password: 'password123',
-        options: { data: { full_name: 'Usuario Test', role: 'customer' } },
+        options: {
+          data: {
+            full_name: 'Usuario Test',
+            role: 'customer',
+            ci: 'V-12345678',
+            phone: '+58 412-123-4567',
+            registration_completed: 'true',
+          },
+        },
       });
     });
 

@@ -8,11 +8,17 @@ import {
 } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import posthog, { isPostHogEnabled, syncPostHogConsent } from '../posthog';
-import { supabase } from '../services/supabase';
+import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { ProfileRow, UserRole } from '../types/database';
 import { requiresEmailConfirmation } from '../utils/emailSuggestions';
 import { COOKIE_CONSENT_EVENT, hasAnalyticsConsent } from '../utils/cookieConsent';
-import { AuthContext, type AuthContextValue, type SignUpResult } from './auth-context-core';
+import {
+  AuthContext,
+  type AuthContextValue,
+  type CompleteRegistrationInput,
+  type SignUpDetails,
+  type SignUpResult,
+} from './auth-context-core';
 import { fetchProfile } from './auth-profile';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -195,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: string,
       fullName: string,
       role: UserRole,
+      details?: SignUpDetails,
     ): Promise<SignUpResult> => {
       try {
         const { data, error } = await supabase.auth.signUp({
@@ -204,6 +211,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             data: {
               full_name: fullName,
               role,
+              ci: details?.ci ?? '',
+              phone: details?.phone ?? '',
+              // El registro con contraseña completa el formulario: el trigger
+              // marca registration_completed = true.
+              registration_completed: 'true',
             },
           },
         });
@@ -217,6 +229,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     [],
+  );
+
+  /**
+   * Completa el registro de un usuario que entró por Google con una sesión
+   * activa pero sin registro completado en MenuGran. Actualiza SU perfil
+   * (nunca crea una cuenta nueva) y marca registration_completed = true,
+   * sincronizando proveedor de Google y perfil de MenuGran.
+   */
+  const completeRegistration = useCallback(
+    async (input: CompleteRegistrationInput): Promise<void> => {
+      const currentSession = sessionRef.current;
+      const currentUserId = currentSession?.user?.id;
+      if (currentUserId === undefined) {
+        throw new Error('No hay una sesión activa. Vuelve a iniciar sesión con Google.');
+      }
+      const sessionEmail = currentSession?.user?.email ?? null;
+      const fullName = input.fullName.trim();
+      if (fullName === '') {
+        throw new Error('El nombre completo es obligatorio.');
+      }
+      if (input.ci.trim() === '') {
+        throw new Error('La cédula de identidad es obligatoria.');
+      }
+      if (input.phone.trim() === '') {
+        throw new Error('El teléfono es obligatorio.');
+      }
+      const { error } = await supabase
+        .from(TABLE_NAMES.profiles)
+        .update({
+          full_name: fullName,
+          ci: input.ci.trim(),
+          phone: input.phone.trim(),
+          registration_completed: true,
+        })
+        .eq('id', currentUserId);
+      if (error !== null) throw error;
+      await refreshProfile(currentUserId, sessionEmail);
+    },
+    [refreshProfile],
   );
 
   const resendConfirmationEmail = useCallback(
@@ -253,23 +304,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       isLoading,
        signInWithGoogle,
-       signInWithPassword,
-       signUpWithPassword,
-       resendConfirmationEmail,
-       signOut,
-       reloadProfile,
-     }),
-     [
-       user,
-       profile,
-       isLoading,
-       signInWithGoogle,
-       signInWithPassword,
-       signUpWithPassword,
-       resendConfirmationEmail,
-       signOut,
-       reloadProfile,
-     ],
+        signInWithPassword,
+        signUpWithPassword,
+        completeRegistration,
+        resendConfirmationEmail,
+        signOut,
+        reloadProfile,
+      }),
+      [
+        user,
+        profile,
+        isLoading,
+        signInWithGoogle,
+        signInWithPassword,
+        signUpWithPassword,
+        completeRegistration,
+        resendConfirmationEmail,
+        signOut,
+        reloadProfile,
+      ],
    );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

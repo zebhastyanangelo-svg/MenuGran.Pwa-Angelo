@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import {
   isPushSupported,
+  isValidVapidPublicKey,
   urlBase64ToUint8Array,
   subscribeCurrentUserToPush,
   reconcilePushSubscription,
@@ -78,6 +79,7 @@ function createPushSubscriptionMock(
   applicationServerKey: string | null,
 ) {
   return {
+    endpoint: json.endpoint,
     toJSON: () => json,
     unsubscribe: vi.fn().mockResolvedValue(true),
     options:
@@ -115,6 +117,26 @@ function installPushMocksWith(options: {
   });
 }
 
+/**
+ * Builder de consulta encadenable, auto-referente, para cubrir los filtros
+ * `user_id` + `endpoint` del select y el `update().eq()` de retirada.
+ */
+function buildQueryBuilder(): Record<string, unknown> {
+  const chain: Record<string, unknown> = {};
+  chain.select = vi.fn(() => chain);
+  chain.upsert = (...args: unknown[]) => upsertMock(...args);
+  chain.update = vi.fn(() => chain);
+  chain.eq = vi.fn(() => chain);
+  chain.maybeSingle = (...args: unknown[]) => selectMaybeSingleMock(...args);
+  // Supabase devuelve una promesa al final de la cadena: sin esto, el `await`
+  // del update de limpieza recibiría el builder y no un `{ error }`.
+  chain.then = (
+    onOk: (value: { data: null; error: null }) => unknown,
+    onErr: (reason: unknown) => unknown,
+  ) => Promise.resolve({ data: null, error: null }).then(onOk, onErr);
+  return chain;
+}
+
 describe('isPushSupported', () => {
   beforeEach(() => {
     removePushMocks();
@@ -148,11 +170,28 @@ describe('urlBase64ToUint8Array', () => {
   });
 });
 
+describe('isValidVapidPublicKey', () => {
+  it('acepta la clave pública configurada en la app', () => {
+    expect(isValidVapidPublicKey(VAPID_PUBLIC_KEY)).toBe(true);
+  });
+
+  it('rechaza una clave truncada', () => {
+    expect(isValidVapidPublicKey(VAPID_PUBLIC_KEY.slice(0, 40))).toBe(false);
+  });
+
+  it('rechaza una cadena que no es base64url', () => {
+    expect(isValidVapidPublicKey('no-es-una-clave-@@@')).toBe(false);
+  });
+});
+
 describe('subscribeCurrentUserToPush', () => {
+  let query: Record<string, unknown>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     removePushMocks();
-    fromMock.mockReturnValue({ upsert: (...args: unknown[]) => upsertMock(...args) });
+    query = buildQueryBuilder();
+    fromMock.mockReturnValue(query);
     upsertMock.mockResolvedValue({ error: null });
   });
 
@@ -183,6 +222,24 @@ describe('subscribeCurrentUserToPush', () => {
       }),
       { onConflict: 'user_id,endpoint' },
     );
+  });
+
+  it('re-suscribe y retira el endpoint sustituido cuando la clave VAPID rotó', async () => {
+    const stale = createPushSubscriptionMock(
+      { ...subscriptionJson, endpoint: 'https://fcm.googleapis.com/fcm/send/old-key' },
+      'BOTHER-VAPID-KEY-VALUE',
+    );
+    installPushMocksWith({
+      existing: stale,
+      subscribed: createPushSubscriptionMock(subscriptionJson, VAPID_PUBLIC_KEY),
+    });
+
+    const result = await subscribeCurrentUserToPush('user-1');
+
+    expect(result).toEqual({ status: 'subscribed', alreadySubscribed: false });
+    expect(stale.unsubscribe).toHaveBeenCalled();
+    expect(query.update).toHaveBeenCalledWith({ is_active: false });
+    expect(query.eq).toHaveBeenCalledWith('endpoint', stale.toJSON().endpoint);
   });
 
   it('retorna denied cuando el usuario rechaza el permiso', async () => {
@@ -284,13 +341,13 @@ describe('sendTestPushNotification / sendBulkPushNotification', () => {
 });
 
 describe('reconcilePushSubscription', () => {
+  let query: Record<string, unknown>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     removePushMocks();
-    fromMock.mockReturnValue({
-      select: () => ({ eq: () => ({ maybeSingle: selectMaybeSingleMock }) }),
-      upsert: (...args: unknown[]) => upsertMock(...args),
-    });
+    query = buildQueryBuilder();
+    fromMock.mockReturnValue(query);
     selectMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     upsertMock.mockResolvedValue({ error: null });
   });
@@ -321,13 +378,24 @@ describe('reconcilePushSubscription', () => {
     expect(fromMock).not.toHaveBeenCalled();
   });
 
-  it('retorna absent cuando el navegador ya no tiene suscripción', async () => {
+  it('re-suscribe y registra el dispositivo cuando el navegador perdió la suscripción', async () => {
     installPushMocksWith({ existing: null });
 
     const result = await reconcilePushSubscription('user-1');
 
-    expect(result).toEqual({ status: 'absent' });
-    expect(upsertMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ status: 'synced' });
+    expect(upsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'user-1', endpoint: subscriptionJson.endpoint }),
+      { onConflict: 'user_id,endpoint' },
+    );
+  });
+
+  it('no toca otras suscripciones del usuario al recuperar la propia', async () => {
+    installPushMocksWith({ existing: null });
+
+    await reconcilePushSubscription('user-1');
+
+    expect(query.update).not.toHaveBeenCalled();
   });
 
   it('registra la suscripción cuando no existe en Supabase', async () => {
@@ -341,6 +409,15 @@ describe('reconcilePushSubscription', () => {
       expect.objectContaining({ user_id: 'user-1', is_active: true }),
       { onConflict: 'user_id,endpoint' },
     );
+  });
+
+  it('busca el registro por usuario y endpoint (un dispositivo puede tener varias cuentas)', async () => {
+    installPushMocks();
+
+    await reconcilePushSubscription('user-1');
+
+    expect(query.eq).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(query.eq).toHaveBeenCalledWith('endpoint', subscriptionJson.endpoint);
   });
 
   it('reactiva el registro cuando la suscripción fue marcada inactiva', async () => {
@@ -370,6 +447,7 @@ describe('reconcilePushSubscription', () => {
 
     expect(result).toEqual({ status: 'synced' });
     expect(upsertMock).not.toHaveBeenCalled();
+    expect(query.update).not.toHaveBeenCalled();
   });
 
   it('re-suscribe cuando la suscripción del navegador usa una clave VAPID anterior', async () => {
@@ -385,6 +463,22 @@ describe('reconcilePushSubscription', () => {
       expect.objectContaining({ user_id: 'user-1', endpoint: subscriptionJson.endpoint }),
       { onConflict: 'user_id,endpoint' },
     );
+  });
+
+  it('retira solo el endpoint sustituido al re-suscribir por clave VAPID rotada', async () => {
+    const stale = createPushSubscriptionMock(
+      { ...subscriptionJson, endpoint: 'https://fcm.googleapis.com/fcm/send/old-key' },
+      'BOTHER-VAPID-KEY-VALUE',
+    );
+    installPushMocksWith({
+      existing: stale,
+      subscribed: createPushSubscriptionMock(subscriptionJson, VAPID_PUBLIC_KEY),
+    });
+
+    await reconcilePushSubscription('user-1');
+
+    expect(query.update).toHaveBeenCalledWith({ is_active: false });
+    expect(query.eq).toHaveBeenCalledWith('endpoint', stale.toJSON().endpoint);
   });
 
   it('devuelve error cuando la consulta del registro falla', async () => {

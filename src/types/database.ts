@@ -172,6 +172,12 @@ export interface ProfileRow {
   role: UserRole;
   /** Indica si el usuario ya completó el tutorial de onboarding. */
   onboarding_completed?: boolean;
+  /**
+   * false cuando el usuario entró por Google por primera vez y aún no
+   * completa el formulario de registro. Los roles corporativos y el
+   * registro con contraseña lo dejan en true.
+   */
+  registration_completed?: boolean;
   created_at: IsoTimestamp;
   updated_at: IsoTimestamp;
 }

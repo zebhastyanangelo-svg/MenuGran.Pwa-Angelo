@@ -6,6 +6,17 @@ export interface SignUpResult {
   needsEmailConfirmation: boolean;
 }
 
+export interface SignUpDetails {
+  ci: string;
+  phone: string;
+}
+
+export interface CompleteRegistrationInput {
+  fullName: string;
+  ci: string;
+  phone: string;
+}
+
 export interface AuthContextValue {
   user: User | null;
   profile: ProfileRow | null;
@@ -17,7 +28,9 @@ export interface AuthContextValue {
     password: string,
     fullName: string,
     role: UserRole,
+    details?: SignUpDetails,
   ) => Promise<SignUpResult>;
+  completeRegistration: (input: CompleteRegistrationInput) => Promise<void>;
   resendConfirmationEmail: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   reloadProfile: () => Promise<void>;

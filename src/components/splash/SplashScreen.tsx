@@ -26,10 +26,17 @@ export function SplashScreen({
   if (!videoFailed) {
     return (
       <div
-        className="fixed inset-0 z-[100] flex items-center justify-center"
+        className="fixed inset-0 z-[100] overflow-hidden"
         style={{ backgroundColor: BRAND_RED_HEX }}
         aria-hidden="true"
       >
+        {/*
+          `object-cover` + `absolute inset-0` es lo que hace que el intro llene
+          el viewport sin franjas: el video se escala hasta cubrir el ancho y el
+          alto y el sobrante se recorta, en vez de encogerse para caber entero
+          (`object-contain`) y dejar barras negras en pantallas más anchas o
+          altas que el metraje.
+        */}
         <video
           src={introVideo}
           autoPlay
@@ -38,7 +45,7 @@ export function SplashScreen({
           preload="auto"
           onEnded={handleVideoEnded}
           onError={handleVideoError}
-          className="h-full w-full object-contain"
+          className="absolute inset-0 h-full w-full object-cover"
         />
       </div>
     );
