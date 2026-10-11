@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.svg', 'logo.svg'],
+        includeAssets: ['logo.png', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-512x512.png'],
         injectRegister: 'auto',
         manifest: {
           name: 'MenuGran - Menús digitales',

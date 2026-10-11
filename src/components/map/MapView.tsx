@@ -21,7 +21,7 @@ const NAVIGATION_TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 const DEFAULT_ICON = L.icon({
-  iconUrl: '/logo.svg',
+  iconUrl: '/pwa-192x192.png',
   iconSize: [32, 32],
   iconAnchor: [16, 32],
   popupAnchor: [0, -32],

@@ -75,10 +75,8 @@ function FallbackSplash({
       }`}
       aria-hidden="true"
     >
-      <div className="flex h-28 w-28 items-center justify-center rounded-3xl bg-white shadow-2xl">
-        <span className="text-4xl font-black tracking-tight text-[#C71523]">
-          MG
-        </span>
+      <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-3xl bg-white shadow-2xl">
+        <img src="/logo.png" alt="MenuGran" className="h-24 w-24 object-contain" />
       </div>
       <h1 className="mt-6 text-4xl font-black tracking-tight text-white">
         MenuGran
