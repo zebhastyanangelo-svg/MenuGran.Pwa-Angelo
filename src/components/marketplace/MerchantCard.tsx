@@ -260,7 +260,7 @@ export function MerchantCard({ merchant, onClick, distance, rating }: MerchantCa
               event.stopPropagation();
               handleClick();
             }}
-            className="inline-flex items-center gap-1.5 rounded-full bg-brand-red px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-red"
+            className="inline-flex items-center gap-1.5 rounded-full bg-brand-red px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-red-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-red"
             aria-label={`Pedir menú en ${merchant.name}`}
           >
             <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" />

@@ -1,4 +1,3 @@
-import { ClipboardList, Star, X } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -117,10 +116,7 @@ function MetricsGrid({
           Satisfacción del cliente
         </span>
         <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-slate-900">
-          <Star
-            className="h-4 w-4 fill-amber-400 text-amber-400"
-            aria-hidden="true"
-          />
+          <i className="fa-solid fa-star text-base text-amber-400" aria-hidden="true" />
           {satisfaction}
         </span>
       </div>
@@ -170,17 +166,14 @@ export function MerchantMetricsModal({
           data-testid="close-metrics-modal"
           variant="outline"
           onClick={onClose}
-          leftIcon={<X className="h-4 w-4" />}
+          leftIcon={<i className="fa-solid fa-xmark text-base" />}
         >
           Cerrar
         </Button>
       }
     >
       <div className="flex items-start gap-3">
-        <ClipboardList
-          className="mt-0.5 h-5 w-5 shrink-0 text-brand-red"
-          aria-hidden="true"
-        />
+        <i className="fa-solid fa-clipboard-list mt-0.5 text-xl shrink-0 text-brand-red" aria-hidden="true" />
         <div className="min-w-0 flex-1">{body}</div>
       </div>
     </Modal>

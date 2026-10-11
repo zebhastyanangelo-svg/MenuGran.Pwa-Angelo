@@ -6,7 +6,7 @@ interface TermsAcceptanceCheckboxProps {
   onChange: (checked: boolean) => void;
 }
 
-const LINK_CLASS = 'font-medium text-brand-red underline underline-offset-2 hover:text-[#c80024]';
+const LINK_CLASS = 'font-medium text-brand-red underline underline-offset-2 hover:text-brand-red-dark';
 
 /**
  * Checkbox obligatorio de aceptación de Términos y Condiciones y Política de

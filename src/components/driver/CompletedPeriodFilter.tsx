@@ -1,4 +1,3 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   formatCompletedPeriodLabel,
   type CompletedPeriod,
@@ -59,7 +58,7 @@ export function CompletedPeriodFilter({
             data-testid="completed-period-prev"
             className="rounded-lg border border-gray-200 bg-white p-1.5 text-gray-600 hover:bg-gray-50"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <i className="fa-solid fa-chevron-left text-base" />
           </button>
           <span
             className="min-w-[9rem] text-center text-sm font-medium text-gray-600"
@@ -75,7 +74,7 @@ export function CompletedPeriodFilter({
             data-testid="completed-period-next"
             className="rounded-lg border border-gray-200 bg-white p-1.5 text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <ChevronRight className="h-4 w-4" />
+            <i className="fa-solid fa-chevron-right text-base" />
           </button>
         </div>
       )}

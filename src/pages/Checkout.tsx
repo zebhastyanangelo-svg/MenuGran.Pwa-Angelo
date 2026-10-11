@@ -12,6 +12,7 @@ import {
 import { Button } from '../components/ui/Button';
 import { PaymentProofUploader } from '../components/cart/PaymentProofUploader';
 import { OrderTicket } from '../components/cart/OrderTicket';
+import type { MerchantIssuerInfo } from '../components/cart/OrderTicket';
 import { IncompleteProfileOrderModal } from '../components/cart/IncompleteProfileOrderModal';
 import { LocationPicker } from '../components/map/LocationPicker';
 import { TermsAcceptanceCheckbox } from '../components/legal/TermsAcceptanceCheckbox';
@@ -143,6 +144,9 @@ export function Checkout() {
   const [closingTimeStr, setClosingTimeStr] = useState('');
   const [merchantLocation, setMerchantLocation] = useState<GeoPoint | null>(null);
   const [deliveryPolicy, setDeliveryPolicy] = useState<MerchantDeliveryPolicy>({});
+  /** Datos fiscales del emisor que encabezan el ticket del cliente. */
+  const [merchantIssuer, setMerchantIssuer] =
+    useState<MerchantIssuerInfo | null>(null);
 
   /**
    * Modo de servicio elegido en la pantalla de bienvenida. Cuando el cliente
@@ -157,7 +161,9 @@ export function Checkout() {
     let cancelled = false;
     supabase
       .from(TABLE_NAMES.merchants)
-      .select('opening_time, closing_time, location, offers_delivery, delivery_fee')
+      .select(
+        'opening_time, closing_time, location, offers_delivery, delivery_fee, name, rif, address, phone_whatsapp',
+      )
       .eq('id', merchantId)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -173,6 +179,12 @@ export function Checkout() {
           setDeliveryPolicy({
             offers_delivery: data.offers_delivery,
             delivery_fee: data.delivery_fee,
+          });
+          setMerchantIssuer({
+            name: data.name,
+            rif: data.rif ?? null,
+            address: data.address ?? null,
+            phone: data.phone_whatsapp ?? null,
           });
           const parsed = parseGeoPoint(data.location);
           if (parsed !== null) {
@@ -417,6 +429,7 @@ export function Checkout() {
         orderType={orderType}
         bcvRate={bcvRate}
         total={orderTotal}
+        merchant={merchantIssuer}
       />
 
       <form className="space-y-4" onSubmit={handleSubmit} noValidate>

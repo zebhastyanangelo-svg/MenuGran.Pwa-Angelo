@@ -6,7 +6,6 @@
  * muestra un aviso: el horario cruza la medianoche, que es un caso válido.
  */
 
-import { CalendarClock } from 'lucide-react';
 import type { DaySchedule, WeeklyHours } from '../../types/database';
 import {
   describeDaySchedule,
@@ -53,7 +52,7 @@ export function WeeklyHoursEditor({
   return (
     <fieldset className="space-y-3" disabled={disabled}>
       <legend className="mb-1 flex items-center gap-2 text-sm font-semibold text-gray-900">
-        <CalendarClock className="h-4 w-4 text-indigo-600" aria-hidden="true" />
+        <i className="fa-solid fa-calendar-days text-base text-indigo-600" aria-hidden="true" />
         Horario de atención semanal
       </legend>
 

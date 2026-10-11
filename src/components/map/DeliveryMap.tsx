@@ -18,15 +18,19 @@ import L from 'leaflet';
 import { MapView } from './MapView';
 import type { MapMarker, MapViewProps } from './MapView';
 
-/** Moto estilizada vista desde arriba; apunta al norte (0°) por defecto. */
+/** Color corporativo MenuGran para el marcador del repartidor. */
+const BRAND_RED = '#E4002B';
+
+/**
+ * Puck de navegación MenuGran: halo rojo translúcido, disco blanco con borde
+ * corporativo y chevron blanco apuntando al norte (0°). La rotación CSS lo
+ * orienta hacia el rumbo real del movimiento.
+ */
 const RIDER_SVG = `
-  <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="18" cy="18" r="16" fill="rgba(16,185,129,0.18)" stroke="#10b981" stroke-width="1.5"/>
-    <ellipse cx="18" cy="7" rx="4.5" ry="6" fill="#065f46"/>
-    <ellipse cx="18" cy="29" rx="4.5" ry="6" fill="#065f46"/>
-    <rect x="13.5" y="13" width="9" height="10" rx="3" fill="#10b981"/>
-    <path d="M10 10 L18 6.5 L26 10" stroke="#047857" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="18" cy="17.5" r="2.2" fill="#ffffff"/>
+  <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="22" cy="22" r="20" fill="rgba(228,0,43,0.18)"/>
+    <circle cx="22" cy="22" r="14" fill="#ffffff" stroke="${BRAND_RED}" stroke-width="2.5"/>
+    <path d="M22 13 L28.5 26.5 L22 23.6 L15.5 26.5 Z" fill="${BRAND_RED}"/>
   </svg>
 `;
 
@@ -70,9 +74,9 @@ export function buildRiderIcon(headingDegrees: number | null): L.DivIcon {
   return L.divIcon({
     className: 'custom-marker',
     html: `<div class="rider-marker" style="${rotationStyle} ${RIDER_ROTATION_TRANSITION}">${RIDER_SVG}</div>`,
-    iconSize: [36, 36],
-    iconAnchor: [18, 18],
-    popupAnchor: [0, -18],
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+    popupAnchor: [0, -22],
   });
 }
 

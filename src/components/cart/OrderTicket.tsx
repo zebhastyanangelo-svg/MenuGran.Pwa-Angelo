@@ -1,8 +1,20 @@
-import { Bike, Receipt, ShoppingBag, Ticket } from 'lucide-react';
+import { Bike, Building2, MapPin, Phone, Receipt, ShoppingBag, Ticket } from 'lucide-react';
 import { formatUSD, formatVES } from '../../utils/format';
 import { isDeliveryFeeCharged } from '../../utils/deliveryPolicy';
 import type { CartItem } from '../../types/cart';
 import type { OrderType } from '../../types/database';
+
+/** Datos fiscales/públicos del comercio emisor del ticket. */
+export interface MerchantIssuerInfo {
+  /** Nombre legal del negocio. */
+  name: string;
+  /** RIF del negocio (dato fiscal clave para el cliente). */
+  rif?: string | null;
+  /** Dirección física del establecimiento. */
+  address?: string | null;
+  /** Teléfono / WhatsApp de contacto. */
+  phone?: string | null;
+}
 
 export interface OrderTicketProps {
   /** Ítems del carrito, para listar las líneas del ticket. */
@@ -17,6 +29,12 @@ export interface OrderTicketProps {
   bcvRate: number;
   /** Total en USD: subtotal + envío. */
   total: number;
+  /**
+   * Datos del comercio emisor (nombre legal, RIF, dirección). Cuando se
+   * reciben, el ticket abre con la sección formal del emisor para que el
+   * cliente tenga constancia fiscal de dónde está comprando.
+   */
+  merchant?: MerchantIssuerInfo | null;
 }
 
 function SummaryRow({
@@ -60,6 +78,7 @@ export function OrderTicket({
   orderType,
   bcvRate,
   total,
+  merchant = null,
 }: OrderTicketProps) {
   const hasRate = bcvRate > 0;
   const totalVES = hasRate ? total * bcvRate : 0;
@@ -68,6 +87,48 @@ export function OrderTicket({
 
   return (
     <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {merchant !== null && (
+        <section
+          className="border-b border-slate-100 bg-slate-50/70 px-4 py-3"
+          aria-label="Datos del comercio emisor"
+          data-testid="ticket-merchant-info"
+        >
+          <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+            <Building2
+              className="h-3.5 w-3.5 text-brand-red"
+              aria-hidden="true"
+            />
+            Comercio emisor
+          </p>
+          <p className="mt-1 break-words text-sm font-bold text-slate-900">
+            {merchant.name}
+          </p>
+          {merchant.rif && (
+            <p className="mt-0.5 text-sm font-semibold text-slate-700">
+              RIF:{' '}
+              <span
+                className="font-mono tracking-wide text-brand-red"
+                data-testid="ticket-merchant-rif"
+              >
+                {merchant.rif}
+              </span>
+            </p>
+          )}
+          {merchant.address && (
+            <p className="mt-0.5 flex items-start gap-1 break-words text-xs text-slate-600">
+              <MapPin className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+              {merchant.address}
+            </p>
+          )}
+          {merchant.phone && (
+            <p className="mt-0.5 flex items-center gap-1 break-words text-xs text-slate-600">
+              <Phone className="h-3 w-3 shrink-0" aria-hidden="true" />
+              {merchant.phone}
+            </p>
+          )}
+        </section>
+      )}
+
       <h2 className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
         <ShoppingBag
           className="h-4 w-4 shrink-0 text-brand-red"

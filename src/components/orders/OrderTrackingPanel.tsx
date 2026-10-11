@@ -28,12 +28,16 @@ import type { GeoPoint } from '../../types/database';
 
 const TRACKING_ZOOM = 13;
 
+/** Color corporativo MenuGran para los marcadores del seguimiento. */
+const BRAND_RED = '#E4002B';
+
+/** Comercio: pin blanco con borde y glifo rojo (punto de retiro). */
 const MERCHANT_PIN_ICON = L.divIcon({
   className: 'custom-marker',
   html: `
     <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#2563eb"/>
-      <path d="M8.5 8.5h7v1.6h-7zM9 11h6v4.2H9z" fill="white"/>
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#ffffff" stroke="${BRAND_RED}" stroke-width="1.5"/>
+      <path d="M8.5 8.5h7v1.6h-7zM9 11h6v4.2H9z" fill="${BRAND_RED}"/>
     </svg>
   `,
   iconSize: [34, 34],
@@ -41,12 +45,13 @@ const MERCHANT_PIN_ICON = L.divIcon({
   popupAnchor: [0, -34],
 });
 
+/** Repartidor: puck de navegación rojo con chevron blanco (tiempo real). */
 const DRIVER_PIN_ICON = L.divIcon({
   className: 'custom-marker',
   html: `
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" stroke="#10b981" stroke-width="2" fill="#10b981"/>
-      <path d="M12 8V12L15 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="12" r="10" stroke="#E4002B" stroke-width="2" fill="#E4002B"/>
+      <path d="M12 7.2 L16 14.5 L12 12.6 L8 14.5 Z" fill="#ffffff"/>
     </svg>
   `,
   iconSize: [32, 32],
@@ -54,11 +59,12 @@ const DRIVER_PIN_ICON = L.divIcon({
   popupAnchor: [0, -16],
 });
 
+/** Destino de entrega: pin rojo corporativo con casa blanca. */
 const DESTINATION_PIN_ICON = L.divIcon({
   className: 'custom-marker',
   html: `
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2C8.13401 2 5 5.13401 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13401 15.866 2 12 2Z" fill="#ef4444"/>
+      <path d="M12 2C8.13401 2 5 5.13401 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13401 15.866 2 12 2Z" fill="${BRAND_RED}"/>
       <path d="M9 13v-3.2L12 7.5l3 2.3V13h-2v-2h-2v2z" fill="white"/>
     </svg>
   `,

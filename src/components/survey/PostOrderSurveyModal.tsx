@@ -262,7 +262,7 @@ export function PostOrderSurveyModal({ order, onClose }: PostOrderSurveyModalPro
             type="button"
             onClick={handlePrimaryAction}
             disabled={submitting}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-red px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c80024] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-red px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-red-dark disabled:cursor-not-allowed disabled:opacity-60"
             data-testid="survey-primary-action"
           >
             {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}

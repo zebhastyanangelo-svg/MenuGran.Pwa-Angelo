@@ -106,7 +106,7 @@ export function OnboardingModal({ onFinish }: OnboardingModalProps) {
           <button
             type="button"
             onClick={() => (isLastStep ? onFinish() : goToStep(activeStep + 1))}
-            className="flex-1 rounded-xl bg-brand-red px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
+            className="flex-1 rounded-xl bg-brand-red px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-brand-red-dark focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
           >
             {isLastStep ? 'Entendido, ¡Comenzar a pedir!' : 'Siguiente'}
           </button>

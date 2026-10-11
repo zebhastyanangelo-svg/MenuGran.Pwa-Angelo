@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Loader2, Send, Users, X } from 'lucide-react';
 import {
   countPushAudience,
   sendBulkPushNotification,
@@ -77,7 +76,7 @@ export function BulkNotificationModal({ onClose }: BulkNotificationModalProps) {
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 id="bulk-notification-title" className="flex items-center gap-2 text-lg font-bold text-slate-900">
-                <Send className="h-5 w-5 text-brand-red" aria-hidden="true" />
+                <i className="fa-solid fa-paper-plane text-xl text-brand-red" aria-hidden="true" />
                 Enviar Notificación Masiva a Clientes
               </h2>
               <p className="mt-1 text-sm text-slate-500">
@@ -88,7 +87,7 @@ export function BulkNotificationModal({ onClose }: BulkNotificationModalProps) {
                   data-testid="bulk-notification-audience"
                   className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"
                 >
-                  <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                  <i className="fa-solid fa-users text-sm" aria-hidden="true" />
                   Alcanza a {audience.users}{' '}
                   {audience.users === 1 ? 'usuario' : 'usuarios'} en{' '}
                   {audience.devices}{' '}
@@ -108,7 +107,7 @@ export function BulkNotificationModal({ onClose }: BulkNotificationModalProps) {
               aria-label="Cerrar"
               className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             >
-              <X className="h-5 w-5" aria-hidden="true" />
+              <i className="fa-solid fa-xmark text-xl" aria-hidden="true" />
             </button>
           </div>
 
@@ -205,12 +204,12 @@ export function BulkNotificationModal({ onClose }: BulkNotificationModalProps) {
               type="button"
               onClick={() => void handleSend()}
               disabled={!canSend}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-brand-red-dark focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {sending ? (
-                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                <i className="fa-solid fa-spinner text-xl animate-spin" aria-hidden="true" />
               ) : (
-                <Send className="h-5 w-5" aria-hidden="true" />
+                <i className="fa-solid fa-paper-plane text-xl" aria-hidden="true" />
               )}
               {sending ? 'Enviando...' : 'Enviar Notificación a Todos'}
             </button>

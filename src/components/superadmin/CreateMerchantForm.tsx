@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react';
-import { Store } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import {
@@ -63,7 +62,7 @@ export function CreateMerchantForm({
     >
       <fieldset className="space-y-4" disabled={isSubmitting}>
         <legend className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-          <Store className="h-4 w-4 text-brand-red" />
+          <i className="fa-solid fa-store text-base text-brand-red" />
           Datos del propietario
         </legend>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

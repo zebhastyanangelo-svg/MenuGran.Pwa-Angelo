@@ -1,4 +1,3 @@
-import { Search, ShieldCheck, Users } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useSuperAdminUsers } from '../../hooks/useSuperAdminUsers';
@@ -58,7 +57,7 @@ export function SuperAdminUsersPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         <header className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-red/10">
-            <Users className="h-5 w-5 text-brand-red" />
+            <i className="fa-solid fa-users text-xl text-brand-red" />
           </span>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -72,10 +71,7 @@ export function SuperAdminUsersPage() {
 
         <Card className="p-4 space-y-4">
           <div className="relative">
-            <Search
-              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
-              aria-hidden="true"
-            />
+            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 text-base -translate-y-1/2 text-gray-400" aria-hidden="true" />
             <input
               type="search"
               placeholder="Buscar por nombre, correo o cédula..."
@@ -193,7 +189,7 @@ export function SuperAdminUsersPage() {
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant={ROLE_BADGE_VARIANT[user.role]}>
-                            <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+                            <i className="fa-solid fa-shield-halved text-xs" aria-hidden="true" />
                             {ROLE_LABELS[user.role]}
                           </Badge>
                         </td>

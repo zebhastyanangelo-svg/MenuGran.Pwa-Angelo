@@ -78,7 +78,7 @@ export function MerchantQrRedirectPage() {
         </p>
         <Link
           to="/marketplace"
-          className="rounded-xl bg-brand-red px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#c80024]"
+          className="rounded-xl bg-brand-red px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-red-dark"
         >
           Ver comercios disponibles
         </Link>

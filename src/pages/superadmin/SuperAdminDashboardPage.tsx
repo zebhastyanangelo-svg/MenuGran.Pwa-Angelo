@@ -1,4 +1,3 @@
-import { BarChart3, ClipboardList, Store, Users, DollarSign, MapPin, Megaphone, Star } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { PlatformDistributionChart } from '../../components/superadmin/PlatformDistributionChart';
 import { RevenueTrendChart } from '../../components/superadmin/RevenueTrendChart';
@@ -200,7 +199,7 @@ export function SuperAdminDashboardPage() {
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-red/10">
-              <BarChart3 className="h-5 w-5 text-brand-red" />
+              <i className="fa-solid fa-chart-column text-xl text-brand-red" />
             </span>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -213,7 +212,7 @@ export function SuperAdminDashboardPage() {
           </div>
           {/* BCV Rate widget */}
           <div className="flex items-center gap-2 rounded-xl bg-white border border-gray-200 px-4 py-2 shadow-sm">
-            <DollarSign className="h-5 w-5 text-emerald-600" aria-hidden="true" />
+            <i className="fa-solid fa-dollar-sign text-xl text-emerald-600" aria-hidden="true" />
             <span className="font-semibold text-gray-900">
               Tasa BCV: Bs. {bcvRate > 0 ? formatBCVRate(bcvRate) : '—'}
             </span>
@@ -231,7 +230,7 @@ export function SuperAdminDashboardPage() {
           <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900">
-                <Megaphone className="h-5 w-5 text-brand-red" aria-hidden="true" />
+                <i className="fa-solid fa-bullhorn text-xl text-brand-red" aria-hidden="true" />
                 Notificaciones Push a Clientes
               </h2>
               <p className="text-sm text-gray-500">
@@ -241,9 +240,9 @@ export function SuperAdminDashboardPage() {
             <button
               type="button"
               onClick={() => setShowBulkNotificationModal(true)}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-red-dark focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
             >
-              <Megaphone className="h-4 w-4" aria-hidden="true" />
+              <i className="fa-solid fa-bullhorn text-base" aria-hidden="true" />
               Enviar Notificación Masiva a Clientes
             </button>
           </Card>
@@ -263,22 +262,22 @@ export function SuperAdminDashboardPage() {
             aria-label="Métricas de la plataforma"
           >
             <MetricCard
-              icon={<Store className="h-6 w-6" aria-hidden="true" />}
+              icon={<i className="fa-solid fa-store text-2xl" aria-hidden="true" />}
               label="Comercios registrados"
               value={String(metrics?.totalMerchants ?? 0)}
             />
             <MetricCard
-              icon={<Users className="h-6 w-6" aria-hidden="true" />}
+              icon={<i className="fa-solid fa-users text-2xl" aria-hidden="true" />}
               label="Usuarios clientes"
               value={String(metrics?.totalCustomers ?? 0)}
             />
             <MetricCard
-              icon={<ClipboardList className="h-6 w-6" aria-hidden="true" />}
+              icon={<i className="fa-solid fa-clipboard-list text-2xl" aria-hidden="true" />}
               label="Pedidos globales"
               value={String(metrics?.totalOrders ?? 0)}
             />
             <MetricCard
-              icon={<Star className="h-6 w-6" aria-hidden="true" />}
+              icon={<i className="fa-solid fa-star text-2xl" aria-hidden="true" />}
               label="Satisfacción de la plataforma"
               value={
                 metrics !== null && metrics.platformSatisfaction.count > 0
@@ -302,7 +301,7 @@ export function SuperAdminDashboardPage() {
         {/* Mapa global de comercios */}
         <section aria-label="Mapa global de comercios">
           <h2 className="mb-3 text-sm font-semibold text-slate-500 flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-brand-red" aria-hidden="true" />
+            <i className="fa-solid fa-location-dot text-xl text-brand-red" aria-hidden="true" />
             Mapa Global de Comercios
           </h2>
           <Card className="p-0 overflow-hidden">

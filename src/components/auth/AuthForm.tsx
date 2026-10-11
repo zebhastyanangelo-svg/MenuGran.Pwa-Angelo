@@ -20,7 +20,7 @@ interface AuthFormProps {
    removed; only customer registration is available. */
 
 const SUBMIT_BASE_CLASS =
-  'w-full rounded-xl border border-transparent bg-brand-red py-3 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70';
+  'w-full rounded-xl border border-transparent bg-brand-red py-3 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-red-dark focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70';
 
 const GOOGLE_BUTTON_CLASS =
   'flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-brand-red/30 focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70';

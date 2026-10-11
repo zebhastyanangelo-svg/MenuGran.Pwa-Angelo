@@ -1,5 +1,4 @@
 import type { ChangeEvent } from 'react';
-import { Image as ImageIcon, Upload, X } from 'lucide-react';
 
 export interface ImageFieldState {
   url: string | null;
@@ -48,12 +47,12 @@ export function ImageUploadField({
               title={`Quitar ${label.toLowerCase()}`}
               aria-label={`Quitar ${label.toLowerCase()}`}
             >
-              <X className="h-3 w-3" />
+              <i className="fa-solid fa-xmark text-xs" />
             </button>
           </div>
         ) : (
           <div className="w-20 h-20 rounded-xl border border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xs text-center p-1 flex-shrink-0">
-            <ImageIcon className="h-8 w-8" />
+            <i className="fa-solid fa-image text-4xl" />
           </div>
         )}
 
@@ -66,7 +65,7 @@ export function ImageUploadField({
                 : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200'
             }`}
           >
-            <Upload className="h-3 w-3" />
+            <i className="fa-solid fa-upload text-xs" />
             {value.uploading ? 'Subiendo...' : 'Seleccionar foto'}
           </label>
           <input

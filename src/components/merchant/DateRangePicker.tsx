@@ -1,5 +1,4 @@
 import { type ChangeEvent } from 'react';
-import { Calendar, X } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { getDefaultDateRange } from '../../utils/dateUtils';
 
@@ -78,7 +77,7 @@ export function DateRangePicker({
             aria-label="Fecha de fin"
           />
         </div>
-        <Calendar className="h-4 w-4 text-gray-400" aria-hidden="true" />
+        <i className="fa-solid fa-calendar-days text-base text-gray-400" aria-hidden="true" />
       </div>
 
       <div className="flex items-center gap-2">
@@ -97,7 +96,7 @@ export function DateRangePicker({
           onClick={handleClear}
           disabled={isDisabled}
           aria-label="Restablecer rango de fechas"
-          leftIcon={<X className="h-4 w-4" />}
+          leftIcon={<i className="fa-solid fa-xmark text-base" />}
         >
           Restablecer
         </Button>

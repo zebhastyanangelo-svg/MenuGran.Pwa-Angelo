@@ -411,7 +411,7 @@ const fetchData = useCallback(async () => {
             <button
               type="button"
               onClick={() => void fetchData()}
-              className="mt-3 rounded-xl bg-brand-red px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#c80024]"
+              className="mt-3 rounded-xl bg-brand-red px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-red-dark"
             >
               Reintentar
             </button>
@@ -439,7 +439,7 @@ const fetchData = useCallback(async () => {
                       type="button"
                       onClick={() => setUserLocation(null)}
                       disabled={isLocating}
-                      className="mt-3 rounded-xl bg-brand-red px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#c80024] disabled:opacity-50"
+                      className="mt-3 rounded-xl bg-brand-red px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-red-dark disabled:opacity-50"
                     >
                       {isLocating ? 'Reajustando…' : 'Reajustar ubicación en el mapa'}
                     </button>

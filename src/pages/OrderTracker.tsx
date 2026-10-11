@@ -92,6 +92,12 @@ export function OrderTracker() {
   const [expandedStep, setExpandedStep] = useState<string | null>(null);
   const [productNames, setProductNames] = useState<ProductNameMap>({});
   const [merchantName, setMerchantName] = useState<string | null>(null);
+  /** Datos fiscales/públicos del comercio emisor (RIF, dirección, contacto). */
+  const [merchantInfo, setMerchantInfo] = useState<{
+    rif: string | null;
+    address: string | null;
+    phone: string | null;
+  } | null>(null);
   const [customerName, setCustomerName] = useState<string | null>(null);
   const [customerPhone, setCustomerPhone] = useState<string | null>(null);
   const [customerDocumentId, setCustomerDocumentId] = useState<string | null>(null);
@@ -290,7 +296,11 @@ export function OrderTracker() {
         productIds.length > 0
           ? supabase.from('products').select('id, title').in('id', productIds)
           : { data: [], error: null },
-        supabase.from('merchants').select('name, location').eq('id', data.merchant_id).single(),
+        supabase
+          .from('merchants')
+          .select('name, location, rif, address, phone_whatsapp')
+          .eq('id', data.merchant_id)
+          .single(),
         data.customer_id
           ? supabase.from('profiles').select('full_name, phone, ci').eq('id', data.customer_id).single()
           : { data: null, error: null },
@@ -307,6 +317,11 @@ export function OrderTracker() {
       if (merchantResult.data) {
         setMerchantName(merchantResult.data.name);
         setMerchantLocation(parseGeoPoint(merchantResult.data.location));
+        setMerchantInfo({
+          rif: merchantResult.data.rif ?? null,
+          address: merchantResult.data.address ?? null,
+          phone: merchantResult.data.phone_whatsapp ?? null,
+        });
       }
 
       if (customerResult.data) {
@@ -513,7 +528,7 @@ export function OrderTracker() {
                 removeOrder(order.id);
                 navigate('/');
               }}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-red px-6 py-3 text-base font-semibold text-white shadow hover:bg-[#c80024] transition-colors"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-red px-6 py-3 text-base font-semibold text-white shadow hover:bg-brand-red-dark transition-colors"
               data-testid="accept-rejection"
             >
               Aceptar
@@ -820,6 +835,33 @@ export function OrderTracker() {
                 {merchantName ?? `Comercio #${order.merchant_id.slice(0, 8)}`}
               </span>
             </div>
+            {merchantInfo?.rif && (
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <span className="shrink-0 text-gray-600">RIF del negocio:</span>
+                <span
+                  className="min-w-0 break-words text-right font-mono font-semibold text-brand-red"
+                  data-testid="merchant-rif"
+                >
+                  {merchantInfo.rif}
+                </span>
+              </div>
+            )}
+            {merchantInfo?.address && (
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <span className="shrink-0 text-gray-600">Dirección:</span>
+                <span className="min-w-0 break-words text-right text-gray-700">
+                  {merchantInfo.address}
+                </span>
+              </div>
+            )}
+            {merchantInfo?.phone && (
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <span className="shrink-0 text-gray-600">Teléfono / WhatsApp:</span>
+                <span className="min-w-0 break-words text-right font-medium">
+                  {merchantInfo.phone}
+                </span>
+              </div>
+            )}
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <span className="shrink-0 text-gray-600">Cliente:</span>
               <span className="min-w-0 break-words text-right font-medium">

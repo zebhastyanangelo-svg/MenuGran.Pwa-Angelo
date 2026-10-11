@@ -27,7 +27,7 @@ function ConsentBannerView({ onAccept }: ConsentBannerViewProps) {
             para entender cómo se usa MenuGran y mejorarla. Consulta nuestra{' '}
             <Link
               to="/cookies"
-              className="font-medium text-brand-red underline underline-offset-2 hover:text-[#c80024]"
+              className="font-medium text-brand-red underline underline-offset-2 hover:text-brand-red-dark"
             >
               Política de Cookies
             </Link>
@@ -44,7 +44,7 @@ function ConsentBannerView({ onAccept }: ConsentBannerViewProps) {
             <button
               type="button"
               onClick={() => onAccept('all')}
-              className="rounded-xl border border-transparent bg-brand-red px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
+              className="rounded-xl border border-transparent bg-brand-red px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-red-dark focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
             >
               {ACCEPT_ALL_LABEL}
             </button>

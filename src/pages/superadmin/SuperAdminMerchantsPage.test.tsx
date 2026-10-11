@@ -12,6 +12,7 @@ const serviceMocks = vi.hoisted(() => ({
   createMerchantAccount: vi.fn(),
   listMerchantsWithOwners: vi.fn(),
   deleteMerchant: vi.fn(),
+  fetchMerchantDetails: vi.fn(),
 }));
 
 const metricsHookMocks = vi.hoisted(() => ({
@@ -26,6 +27,7 @@ vi.mock('../../services/superAdminService', () => ({
   createMerchantAccount: serviceMocks.createMerchantAccount,
   listMerchantsWithOwners: serviceMocks.listMerchantsWithOwners,
   deleteMerchant: serviceMocks.deleteMerchant,
+  fetchMerchantDetails: serviceMocks.fetchMerchantDetails,
 }));
 
 vi.mock('../../hooks/useMerchantMetrics', () => ({
@@ -284,7 +286,7 @@ describe('SuperAdminMerchantsPage', () => {
     });
   });
 
-  describe('métricas individuales por comercio', () => {
+  describe('ficha detallada y métricas del comercio', () => {
     const sampleMetrics: MerchantMetrics = {
       totalRevenue: 400.5,
       totalOrders: 3,
@@ -295,24 +297,80 @@ describe('SuperAdminMerchantsPage', () => {
       ordersLast30Days: 25,
     };
 
+    const merchantDetailsFixture = {
+      id: 'm-1',
+      name: 'La Pizzería de María',
+      slug: 'la-pizzeria-de-maria',
+      rif: 'J-40123456-7',
+      status: 'active',
+      is_active: true,
+      is_open: true,
+      category: 'Restaurante',
+      description: 'La mejor pizza de la zona',
+      address: 'Av. Principal, C.C. Central, Local 12',
+      zone: 'Zona Norte',
+      phone_whatsapp: '+58 412-123-4567',
+      service_modalities: ['Delivery', 'Retiro en local'],
+      business_hours: { days: 'L-V', open_time: '8:00', close_time: '20:00' },
+      opening_time: '08:00',
+      closing_time: '20:00',
+      created_at: '2026-08-21T00:00:00.000Z',
+    };
+
     beforeEach(() => {
-      metricsHookMocks.useMerchantMetrics.mockReturnValue({
-        metrics: sampleMetrics,
-        isLoading: false,
-        error: null,
-      });
+      serviceMocks.fetchMerchantDetails.mockResolvedValue(merchantDetailsFixture);
     });
 
     function expectedRevenue(): string {
       return formatCurrency(sampleMetrics.totalRevenue);
     }
 
-    it('abre el modal de métricas al hacer clic en una fila de negocio', async () => {
+    it('abre la ficha de detalles al hacer clic en una fila de negocio', async () => {
       const user = userEvent.setup();
       render(<SuperAdminMerchantsPage />);
 
-      const row = await screen.findByTestId('merchant-row');
-      await user.click(row);
+      await user.click(await screen.findByTestId('merchant-row'));
+
+      expect(
+        await screen.findByRole('heading', {
+          name: /Detalles de La Pizzería de María/i,
+        }),
+      ).toBeInTheDocument();
+      expect(await screen.findByTestId('merchant-details-rif')).toHaveTextContent(
+        'J-40123456-7',
+      );
+      expect(screen.getByText('Av. Principal, C.C. Central, Local 12')).toBeInTheDocument();
+      expect(screen.getByText('Restaurante')).toBeInTheDocument();
+      expect(serviceMocks.fetchMerchantDetails).toHaveBeenCalledWith('m-1');
+    });
+
+    it('la ficha de detalles muestra información administrativa, no métricas financieras', async () => {
+      metricsHookMocks.useMerchantMetrics.mockReturnValue({
+        metrics: sampleMetrics,
+        isLoading: false,
+        error: null,
+      });
+      const user = userEvent.setup();
+      render(<SuperAdminMerchantsPage />);
+
+      await user.click(await screen.findByTestId('merchant-row'));
+      await screen.findByTestId('merchant-details-body');
+
+      expect(screen.queryByText('Ingresos procesados')).not.toBeInTheDocument();
+      expect(screen.queryByText(expectedRevenue())).not.toBeInTheDocument();
+    });
+
+    it('abre el modal de métricas desde el botón de la ficha de detalles', async () => {
+      metricsHookMocks.useMerchantMetrics.mockReturnValue({
+        metrics: sampleMetrics,
+        isLoading: false,
+        error: null,
+      });
+      const user = userEvent.setup();
+      render(<SuperAdminMerchantsPage />);
+
+      await user.click(await screen.findByTestId('merchant-row'));
+      await user.click(await screen.findByTestId('view-merchant-metrics'));
 
       expect(
         await screen.findByRole('heading', {
@@ -323,7 +381,12 @@ describe('SuperAdminMerchantsPage', () => {
       expect(screen.getByText('Ingresos procesados')).toBeInTheDocument();
     });
 
-    it('no abre el modal de métricas al pulsar el botón de eliminar', async () => {
+    it('no abre la ficha de detalles ni métricas al pulsar el botón de eliminar', async () => {
+      metricsHookMocks.useMerchantMetrics.mockReturnValue({
+        metrics: sampleMetrics,
+        isLoading: false,
+        error: null,
+      });
       const user = userEvent.setup();
       render(<SuperAdminMerchantsPage />);
 
@@ -333,7 +396,11 @@ describe('SuperAdminMerchantsPage', () => {
       expect(
         screen.getByTestId('delete-confirmation-message'),
       ).toBeInTheDocument();
-      expect(screen.queryByText(expectedRevenue())).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('heading', {
+          name: /Detalles de La Pizzería de María/i,
+        }),
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('heading', {
           name: /Métricas de La Pizzería de María/i,
@@ -341,20 +408,28 @@ describe('SuperAdminMerchantsPage', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('muestra el cargador de métricas mientras la consulta está en curso', async () => {
-      metricsHookMocks.useMerchantMetrics.mockReturnValue({
-        metrics: null,
-        isLoading: true,
-        error: null,
-      });
+    it('muestra el cargador de detalles mientras la consulta está en curso', async () => {
+      serviceMocks.fetchMerchantDetails.mockReturnValue(new Promise(() => {}));
       const user = userEvent.setup();
       render(<SuperAdminMerchantsPage />);
 
       await user.click(await screen.findByTestId('merchant-row'));
 
-      expect(
-        screen.getByRole('status', { hidden: true }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole('status', { hidden: true })).toBeInTheDocument();
+    });
+
+    it('muestra un error dentro de la ficha si la consulta falla', async () => {
+      serviceMocks.fetchMerchantDetails.mockRejectedValue(
+        new Error('Error al obtener el comercio: not found'),
+      );
+      const user = userEvent.setup();
+      render(<SuperAdminMerchantsPage />);
+
+      await user.click(await screen.findByTestId('merchant-row'));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Error al obtener el comercio: not found',
+      );
     });
   });
 });

@@ -7,7 +7,6 @@ import {
 import { supabase, TABLE_NAMES } from '../../services/supabase';
 import { uploadToImgBB } from '../../services/imgbb';
 import type { MerchantRow } from '../../types/database';
-import { Image as ImageIcon, Upload, X } from 'lucide-react';
 import {
   MAX_BADGE_LABEL_LENGTH,
   MAX_DISCOUNT_PERCENTAGE,
@@ -264,12 +263,12 @@ export function MerchantProfileForm({
                 title="Quitar imagen"
                 aria-label={`Quitar ${label.toLowerCase()}`}
               >
-                <X className="h-3 w-3" />
+                <i className="fa-solid fa-xmark text-xs" />
               </button>
             </div>
           ) : (
             <div className="w-24 h-24 sm:w-32 sm:h-24 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xs text-center p-1 flex-shrink-0">
-              <ImageIcon className="h-8 w-8" />
+              <i className="fa-solid fa-image text-4xl" />
             </div>
           )}
 
@@ -282,7 +281,7 @@ export function MerchantProfileForm({
                   : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200'
               }`}
             >
-              <Upload className="h-3 w-3" />
+              <i className="fa-solid fa-upload text-xs" />
               {state.uploading ? 'Subiendo...' : 'Seleccionar foto'}
             </label>
             <input

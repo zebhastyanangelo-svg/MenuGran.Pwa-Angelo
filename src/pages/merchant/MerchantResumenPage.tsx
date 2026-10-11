@@ -1,16 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  ClipboardList,
-  DollarSign,
-  Loader2,
-  Plus,
-  Settings,
-  Star,
-  Store,
-  Users,
-  UserCircle2,
-} from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useMerchantPopularity } from '../../hooks/useMerchantPopularity';
 import type { RatingSummary } from '../../services/orderRatingService';
@@ -112,6 +101,22 @@ export function buildPopularityCardModel(
     value: `${formatRatingAverage(summary.average)} ★`,
     helperText: `${satisfactionPercentage(summary.average)}% de valoración positiva · ${countLabel}`,
   };
+}
+
+/** Texto de apoyo de la tarjeta de recompra: clientes frecuentes vs. totales. */
+export function buildRepurchaseHelperText(
+  analytics: MerchantAnalytics | null,
+): string {
+  if (analytics === null) {
+    return 'Cargando clientes frecuentes…';
+  }
+  const { totalCustomers, returningCustomers } = analytics.loyalty;
+  if (totalCustomers === 0) {
+    return 'Aún sin clientes en el rango';
+  }
+  const customersLabel =
+    totalCustomers === 1 ? '1 cliente' : `${totalCustomers} clientes`;
+  return `${returningCustomers} de ${customersLabel} volvió a pedir`;
 }
 
 export function MerchantResumenPage() {
@@ -284,33 +289,45 @@ export function MerchantResumenPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <MetricCard
               testId="metric-total-sales"
-              icon={<DollarSign className="h-5 w-5 text-green-600" />}
+              icon={<i className="fa-solid fa-dollar-sign text-xl text-green-600" aria-hidden="true" />}
               label="Total de ventas"
               value={formatCurrency(metrics?.totalSales ?? 0)}
             />
             <MetricCard
               testId="metric-orders-today"
-              icon={<ClipboardList className="h-5 w-5 text-indigo-600" />}
+              icon={<i className="fa-solid fa-clipboard-list text-xl text-indigo-600" aria-hidden="true" />}
               label="Pedidos en rango"
               value={String(metrics?.ordersToday ?? 0)}
             />
             <MetricCard
               testId="metric-active-products"
-              icon={<Store className="h-5 w-5 text-brand-red" />}
+              icon={<i className="fa-solid fa-store text-xl text-brand-red" aria-hidden="true" />}
               label="Platos activos"
               value={String(metrics?.activeProducts ?? 0)}
             />
             <MetricCard
               testId="metric-popularity"
-              icon={
-                <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
-              }
+              icon={<i className="fa-solid fa-star text-xl text-amber-400" aria-hidden="true" />}
               label="Popularidad"
               value={popularityCard.value}
               helperText={popularityCard.helperText}
+            />
+            <MetricCard
+              testId="metric-repurchase-rate"
+              icon={<i className="fa-solid fa-user-group text-xl text-brand-red" aria-hidden="true" />}
+              label="Tasa de recompra"
+              value={`${analytics?.loyalty.repurchaseRate ?? 0}%`}
+              helperText={buildRepurchaseHelperText(analytics)}
+            />
+            <MetricCard
+              testId="metric-average-ticket"
+              icon={<i className="fa-solid fa-receipt text-xl text-indigo-600" aria-hidden="true" />}
+              label="Ticket promedio por pedido"
+              value={formatCurrency(analytics?.loyalty.averageTicket ?? 0)}
+              helperText="Valor medio de cada orden válida en el rango"
             />
           </div>
         </section>
@@ -565,7 +582,7 @@ function EmployeeManagementSection({
             size="sm"
             data-testid="open-add-employee"
           >
-            <Plus className="h-4 w-4" />
+            <i className="fa-solid fa-plus text-base" />
             Agregar Empleado
           </Button>
         )}
@@ -628,7 +645,7 @@ function EmployeeManagementSection({
                     data-testid={`modify-staff-${employee.id}`}
                     onClick={() => openUpdateModal(employee)}
                   >
-                    <Settings className="h-4 w-4" />
+                    <i className="fa-solid fa-gear text-base" />
                     Permisos
                   </Button>
                   <Button
@@ -639,7 +656,7 @@ function EmployeeManagementSection({
                     data-testid={`revoke-staff-${employee.id}`}
                   >
                     {busyStaffId === employee.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <i className="fa-solid fa-spinner text-base animate-spin" />
                     ) : employee.isActive ? (
                       'Revocar acceso'
                     ) : (
@@ -655,7 +672,7 @@ function EmployeeManagementSection({
                     data-testid={`delete-staff-${employee.id}`}
                     className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-200 disabled:opacity-50"
                   >
-                    <Users className="h-4 w-4" />
+                    <i className="fa-solid fa-users text-base" />
                   </button>
                 </div>
               )}
@@ -858,7 +875,7 @@ function EmployeeManagementSection({
               isLoading={isCreating}
               data-testid="confirm-add-employee"
             >
-              <UserCircle2 className="h-4 w-4" />
+              <i className="fa-solid fa-circle-user text-base" />
               Crear empleado
             </Button>
           </div>

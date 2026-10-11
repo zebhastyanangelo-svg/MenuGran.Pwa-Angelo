@@ -1,4 +1,3 @@
-import { Trash2 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 
@@ -47,7 +46,7 @@ export function DeleteStaffConfirmModal({
               void onConfirm();
             }}
           >
-            <Trash2 className="h-4 w-4" />
+            <i className="fa-solid fa-trash-can text-base" />
             Eliminar
           </Button>
         </div>

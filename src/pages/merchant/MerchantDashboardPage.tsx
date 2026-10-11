@@ -8,7 +8,6 @@ import { useToast } from '../../hooks/useToast';
 import { supabase } from '../../services/supabase';
 import { PaymentProofLightbox } from '../../components/merchant/PaymentProofLightbox';
 import { Modal } from '../../components/ui/Modal';
-import { Store, Loader2, Package, ClipboardList, TrendingUp, LogOut, Image as ImageIcon, Truck, User } from 'lucide-react';
 import type { OrderStatus, OrderType } from '../../types/database';
 import { shouldNotifyNewOrder } from '../../utils/orderNotificationRules';
 import { useStaffPermissions } from '../../hooks/useStaffPermissions';
@@ -320,7 +319,7 @@ return (
               href="https://wa.me/58414xxxxxxx"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-brand-red text-white px-4 py-2 rounded-xl font-medium text-sm hover:bg-[#c80024] transition-colors"
+              className="bg-brand-red text-white px-4 py-2 rounded-xl font-medium text-sm hover:bg-brand-red-dark transition-colors"
             >
               Contactar por WhatsApp
             </a>
@@ -369,7 +368,7 @@ return (
                 className="inline-flex items-center gap-2 self-start rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-50"
                 data-testid="staff-logout-button"
               >
-                <LogOut className="h-4 w-4" />
+                <i className="fa-solid fa-right-from-bracket text-base" />
                 Cerrar sesión
               </button>
             </div>
@@ -411,7 +410,7 @@ return (
                     : 'bg-gray-200 text-gray-600'
                 }`}
               >
-                <Store className="h-4 w-4" />
+                <i className="fa-solid fa-store text-base" />
                 {isOpen ? 'Tienda Abierta' : 'Tienda Cerrada'}
               </button>
             </div>
@@ -428,17 +427,17 @@ return (
             aria-label="Métricas del día"
           >
             <MetricCard
-              icon={<ClipboardList className="h-5 w-5 text-indigo-600" />}
+              icon={<i className="fa-solid fa-clipboard-list text-xl text-indigo-600" />}
               label="Pedidos hoy"
               value={String(ordersToday)}
             />
             <MetricCard
-              icon={<TrendingUp className="h-5 w-5 text-emerald-600" />}
+              icon={<i className="fa-solid fa-arrow-trend-up text-xl text-emerald-600" />}
               label="Ventas hoy"
               value={formatAmount(salesToday)}
             />
             <MetricCard
-              icon={<Package className="h-5 w-5 text-amber-600" />}
+              icon={<i className="fa-solid fa-box text-xl text-amber-600" />}
               label="Productos activos"
               value={String(activeProducts)}
             />
@@ -473,7 +472,7 @@ return (
 
             {loading ? (
               <p className="flex items-center gap-2 text-gray-600 text-sm" role="status">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <i className="fa-solid fa-spinner text-base animate-spin" />
                 Cargando pedidos...
               </p>
             ) : visibleOrders.length === 0 ? (
@@ -526,7 +525,7 @@ return (
                           className="inline-flex items-center gap-1.5 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded font-medium transition-colors"
                           data-testid={`proof-button-${order.id}`}
                         >
-                          <ImageIcon className="h-3.5 w-3.5" />
+                          <i className="fa-solid fa-image text-sm" />
                           Ver comprobante
                         </button>
                       </div>
@@ -555,7 +554,7 @@ return (
                       <div className="flex items-center gap-2 mt-1">
                         {order.driver_id ? (
                           <span className="inline-flex items-center gap-1.5 text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1.5 rounded-lg font-medium">
-                            <Truck className="h-4 w-4" />
+                            <i className="fa-solid fa-truck text-base" />
                             Asignado a {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
                           </span>
                         ) : order.status !== 'delivered' && order.status !== 'cancelled' ? (
@@ -587,7 +586,7 @@ return (
                               data-testid={`assign-driver-${order.id}`}
                               title="Más opciones"
                             >
-                              <Truck className="h-3.5 w-3.5" />
+                              <i className="fa-solid fa-truck text-sm" />
                             </button>
                           </div>
                         ) : null}
@@ -644,7 +643,7 @@ return (
                 className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-300"
                 data-testid="assign-driver-submit"
               >
-                {assignSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                {assignSubmitting && <i className="fa-solid fa-spinner text-base animate-spin" />}
                 Enviar
               </button>
             </div>
@@ -666,7 +665,7 @@ return (
               className="w-full text-left px-3 py-2.5 rounded-lg border border-indigo-300 bg-indigo-50 text-sm text-indigo-800 flex items-center gap-3"
               data-testid={`assign-driver-option-${drivers[0]?.id ?? 'single'}`}
             >
-              <User className="h-4 w-4 shrink-0 text-indigo-500" />
+              <i className="fa-solid fa-user text-base shrink-0 text-indigo-500" />
               <span className="font-medium">
                 {drivers[0]?.full_name ?? drivers[0]?.email ?? drivers[0]?.id}
               </span>
@@ -688,7 +687,7 @@ return (
                   }`}
                   data-testid={`assign-driver-option-${driver.id}`}
                 >
-                  <User className="h-4 w-4 shrink-0 text-gray-400" />
+                  <i className="fa-solid fa-user text-base shrink-0 text-gray-400" />
                   <span className="font-medium">{driver.full_name ?? driver.email ?? driver.id}</span>
                   {isSelected && (
                     <span className="ml-auto text-xs font-semibold text-indigo-600">Seleccionado</span>

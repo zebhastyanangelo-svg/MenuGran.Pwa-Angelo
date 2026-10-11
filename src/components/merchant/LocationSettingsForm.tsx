@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
-import { Loader2, MapPin } from 'lucide-react';
 import type { GeoPoint } from '../../types/database';
 import {
   GEOLOCATION_UNSUPPORTED_MESSAGE,
@@ -242,16 +241,16 @@ export function LocationSettingsForm({
           data-testid="use-current-location"
           onClick={() => void handleUseCurrentLocation()}
           disabled={isLocating}
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-red px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-red px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-red-dark focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLocating ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <i className="fa-solid fa-spinner text-base animate-spin" />
               Obteniendo ubicación...
             </>
           ) : (
             <>
-              <MapPin className="h-4 w-4" />
+              <i className="fa-solid fa-location-dot text-base" />
               Usar mi ubicación actual
             </>
           )}

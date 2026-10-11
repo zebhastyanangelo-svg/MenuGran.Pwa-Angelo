@@ -16,7 +16,6 @@ import {
 } from '../../utils/orderStatus';
 import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
 import { Modal } from '../ui/Modal';
-import { Truck, Eye } from 'lucide-react';
 
 type PeriodPreset = 'this_month' | 'last_month' | 'today' | 'last_7_days' | 'custom';
 
@@ -328,7 +327,7 @@ export function OrdersBoard({
                             <div className="w-full mb-1 md:w-auto">
                               {order.driver_id ? (
                                 <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded font-medium">
-                                  <Truck className="h-3 w-3" aria-hidden="true" />
+                                  <i className="fa-solid fa-truck text-xs" aria-hidden="true" />
                                   {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
                                 </span>
                               ) : !isTerminalOrderStatus(order.status) && order.status !== 'on_the_way' ? (
@@ -379,7 +378,7 @@ export function OrdersBoard({
                             onClick={() => void openDetailOrder(order)}
                             className="text-xs px-2.5 py-1 rounded font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-colors"
                           >
-                            <Eye className="h-3 w-3 inline mr-1" aria-hidden="true" />
+                            <i className="fa-solid fa-eye text-xs inline mr-1" aria-hidden="true" />
                             Ver detalles
                           </button>
                         </div>
@@ -458,7 +457,7 @@ export function OrdersBoard({
                     onClick={() => void openDetailOrder(order)}
                     className="flex items-center gap-1 text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded text-xs font-medium hover:bg-indigo-100"
                   >
-                    <Eye className="h-3 w-3" aria-hidden="true" />
+                    <i className="fa-solid fa-eye text-xs" aria-hidden="true" />
                     Ver detalles
                   </button>
                 </div>
@@ -469,7 +468,7 @@ export function OrdersBoard({
                     <div className="w-full">
                       {order.driver_id ? (
                         <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded font-medium">
-                          <Truck className="h-3 w-3" aria-hidden="true" />
+                          <i className="fa-solid fa-truck text-xs" aria-hidden="true" />
                           {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
                         </span>
                       ) : !isTerminalOrderStatus(order.status) && order.status !== 'on_the_way' ? (

@@ -1,4 +1,3 @@
-import { Flame, Star } from 'lucide-react';
 import type { RatingSummary } from '../../services/orderRatingService';
 
 export interface MerchantPopularityCardProps {
@@ -59,7 +58,7 @@ export function MerchantPopularityCard({ summary, isLoading, error }: MerchantPo
       data-testid="merchant-popularity-card"
     >
       <div className="flex items-center gap-2">
-        <Flame className="h-5 w-5 text-brand-red" aria-hidden="true" />
+        <i className="fa-solid fa-fire text-xl text-brand-red" aria-hidden="true" />
         <p className="text-sm text-gray-500">Popularidad</p>
       </div>
 
@@ -106,7 +105,7 @@ export function MerchantPopularityCard({ summary, isLoading, error }: MerchantPo
           </svg>
 
           <div className="-mt-4 flex items-center gap-1" data-testid="popularity-average">
-            <Star className="h-5 w-5 fill-amber-400 text-amber-400" aria-hidden="true" />
+            <i className="fa-solid fa-star text-xl text-amber-400" aria-hidden="true" />
             <span className="text-2xl font-bold text-gray-900">
               {summary !== null && summary.count > 0 ? formatAverage(summary.average) : '—'}
             </span>

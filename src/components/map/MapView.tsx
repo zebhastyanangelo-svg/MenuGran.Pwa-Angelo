@@ -7,6 +7,19 @@ import { parseGeoPoint } from '../../utils/geoPoint';
 
 const DEFAULT_ZOOM = 13;
 
+/** Color corporativo MenuGran usado en ruta activa y HUD. */
+export const BRAND_RED = '#E4002B';
+
+/**
+ * Teselas de estilo "navegación limpia": base clara y neutra (Carto Positron
+ * sobre datos de OpenStreetMap) para que la ruta roja y los marcadores de
+ * MenuGran dominen el contraste visual, como en los GPS modernos.
+ */
+const NAVIGATION_TILE_URL =
+  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+const NAVIGATION_TILE_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+
 const DEFAULT_ICON = L.icon({
   iconUrl: '/logo.svg',
   iconSize: [32, 32],
@@ -18,7 +31,7 @@ const RIDER_ICON = L.divIcon({
   className: 'custom-marker',
   html: `
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" stroke="#10b981" stroke-width="2" fill="#10b981"/>
+      <circle cx="12" cy="12" r="10" stroke="#E4002B" stroke-width="2" fill="#E4002B"/>
       <path d="M12 8V12L15 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   `,
@@ -158,10 +171,11 @@ export function MapView({
         zoom,
         zoomControl: true,
       });
-      // Add OpenStreetMap tile layer (guard for environments where L.tileLayer is unavailable)
+      // Add clean/neutral navigation tile layer (guard for environments where L.tileLayer is unavailable)
       if (typeof L.tileLayer === 'function') {
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        L.tileLayer(NAVIGATION_TILE_URL, {
+          attribution: NAVIGATION_TILE_ATTRIBUTION,
+          maxZoom: 19,
         }).addTo(map);
       }
       mapInstanceRef.current = map;
@@ -225,11 +239,25 @@ export function MapView({
     if (activeRoute && activeRoute.length >= 2) {
       const validRouteCoords = activeRoute.filter(isValidLatLng);
       if (validRouteCoords.length >= 2) {
-        L.polyline(validRouteCoords as [number, number][], {
-          color: '#3b82f6',
-          weight: 4,
-          opacity: 0.8,
-          dashArray: '8, 6',
+        const routeCoords = validRouteCoords as [number, number][];
+        // Ruta activa estilo navegación: la línea roja corporativa viaja
+        // sobre un borde blanco que la despega del mapa neutro y suaviza
+        // cada giro; `lineCap/lineJoin` redondos la hacen fluida.
+        L.polyline(routeCoords, {
+          color: '#ffffff',
+          weight: 10,
+          opacity: 0.95,
+          lineCap: 'round',
+          lineJoin: 'round',
+          smoothFactor: 1,
+        }).addTo(map);
+        L.polyline(routeCoords, {
+          color: BRAND_RED,
+          weight: 6,
+          opacity: 1,
+          lineCap: 'round',
+          lineJoin: 'round',
+          smoothFactor: 1,
         }).addTo(map);
       }
     }

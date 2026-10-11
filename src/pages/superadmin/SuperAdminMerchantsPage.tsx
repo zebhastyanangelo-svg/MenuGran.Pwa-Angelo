@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
-import { Loader2, ShieldCheck, Store, Trash2 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { MerchantDetailsModal } from '../../components/superadmin/MerchantDetailsModal';
 import { MerchantMetricsModal } from '../../components/superadmin/MerchantMetricsModal';
 import { CreateMerchantForm } from '../../components/superadmin/CreateMerchantForm';
 import { useSuperAdminMerchants } from '../../hooks/useSuperAdminMerchants';
@@ -32,8 +32,11 @@ export function SuperAdminMerchantsPage() {
     useState<MerchantAccountListItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  /** Comercio cuya ficha detallada está abierta (clic en la fila). */
   const [selectedMerchant, setSelectedMerchant] =
     useState<MerchantAccountListItem | null>(null);
+  /** Modal de métricas financieras, accesible desde la ficha del comercio. */
+  const [metricsMerchant, setMetricsMerchant] = useState<string | null>(null);
 
   const handleCreate = useCallback(
     async (input: CreateMerchantAccountInput) => {
@@ -73,7 +76,7 @@ export function SuperAdminMerchantsPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         <header className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-red/10">
-            <ShieldCheck className="h-5 w-5 text-brand-red" />
+            <i className="fa-solid fa-shield-halved text-xl text-brand-red" />
           </span>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -87,7 +90,7 @@ export function SuperAdminMerchantsPage() {
 
         <Card className="p-6">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
-            <Store className="h-5 w-5 text-brand-red" />
+            <i className="fa-solid fa-store text-xl text-brand-red" />
             Crear nuevo negocio
           </h2>
           <CreateMerchantForm onSubmit={handleCreate} />
@@ -130,7 +133,7 @@ export function SuperAdminMerchantsPage() {
                   data-testid="merchant-row"
                   role="button"
                   tabIndex={0}
-                  aria-label={`Ver métricas de ${merchant.name}`}
+                  aria-label={`Ver detalles de ${merchant.name}`}
                   onClick={() => setSelectedMerchant(merchant)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
@@ -164,7 +167,7 @@ export function SuperAdminMerchantsPage() {
                       }}
                       className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-200"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <i className="fa-solid fa-trash-can text-base" />
                     </button>
                   </div>
                 </li>
@@ -206,7 +209,7 @@ export function SuperAdminMerchantsPage() {
               >
                 {isDeleting ? (
                   <span className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <i className="fa-solid fa-spinner text-base animate-spin" />
                     Eliminando...
                   </span>
                 ) : (
@@ -218,11 +221,34 @@ export function SuperAdminMerchantsPage() {
         )}
        </Modal>
 
-       <MerchantMetricsModal
+       <MerchantDetailsModal
          merchantId={selectedMerchant?.id ?? ''}
          merchantName={selectedMerchant?.name ?? ''}
+         ownerEmail={selectedMerchant?.owner_email ?? null}
+         ownerFullName={selectedMerchant?.owner_full_name ?? null}
+         createdAt={selectedMerchant?.created_at ?? null}
          isOpen={selectedMerchant !== null}
          onClose={() => setSelectedMerchant(null)}
+         onViewMetrics={
+           selectedMerchant !== null
+             ? () => {
+                 setMetricsMerchant(selectedMerchant.id);
+                 setSelectedMerchant(null);
+               }
+             : undefined
+         }
+       />
+
+       <MerchantMetricsModal
+         merchantId={metricsMerchant ?? ''}
+         merchantName={
+           selectedMerchant?.name ??
+           (metricsMerchant !== null
+             ? (merchants.find((m) => m.id === metricsMerchant)?.name ?? 'Comercio')
+             : '')
+         }
+         isOpen={metricsMerchant !== null}
+         onClose={() => setMetricsMerchant(null)}
        />
      </div>
    );

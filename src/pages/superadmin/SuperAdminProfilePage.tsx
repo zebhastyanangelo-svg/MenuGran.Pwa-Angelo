@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react';
-import { KeyRound, LogOut, Mail, ShieldCheck, UserCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { updateAuthPassword } from '../../services/superAdminMetricsService';
@@ -65,11 +64,11 @@ export function SuperAdminProfilePage() {
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
         <div className="mb-6 flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-brand-red">
-            <UserCircle2 className="h-9 w-9" aria-hidden="true" />
+            <i className="fa-solid fa-circle-user text-[36px]" aria-hidden="true" />
           </div>
           <div>
             <p className="flex items-center gap-1.5 text-sm font-medium uppercase tracking-[0.12em] text-slate-500">
-              <ShieldCheck className="h-4 w-4 text-brand-red" aria-hidden="true" />
+              <i className="fa-solid fa-shield-halved text-base text-brand-red" aria-hidden="true" />
               Super Admin
             </p>
             <h1 className="text-2xl font-bold text-slate-900" data-testid="profile-name">
@@ -81,7 +80,7 @@ export function SuperAdminProfilePage() {
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
-              <UserCircle2 className="h-4 w-4" aria-hidden="true" />
+              <i className="fa-solid fa-circle-user text-base" aria-hidden="true" />
               Nombre
             </div>
             <p className="text-base font-semibold text-slate-900">{displayName}</p>
@@ -89,7 +88,7 @@ export function SuperAdminProfilePage() {
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
-              <Mail className="h-4 w-4" aria-hidden="true" />
+              <i className="fa-solid fa-envelope text-base" aria-hidden="true" />
               Correo
             </div>
             <p className="text-base font-semibold text-slate-900" data-testid="profile-email">
@@ -99,7 +98,7 @@ export function SuperAdminProfilePage() {
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
-              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+              <i className="fa-solid fa-shield-halved text-base" aria-hidden="true" />
               Rol
             </div>
             <p className="text-base font-semibold text-slate-900">Super Admin</p>
@@ -114,7 +113,7 @@ export function SuperAdminProfilePage() {
         onSubmit={(event) => void handlePasswordChange(event)}
       >
         <legend className="mb-1 flex items-center gap-2 text-base font-semibold text-slate-900">
-          <KeyRound className="h-4 w-4 text-brand-red" aria-hidden="true" />
+          <i className="fa-solid fa-key text-base text-brand-red" aria-hidden="true" />
           Cambiar contraseña
         </legend>
         <input
@@ -151,7 +150,7 @@ export function SuperAdminProfilePage() {
         <button
           type="submit"
           disabled={isSavingPassword}
-          className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-red px-4 text-sm font-medium text-white transition hover:bg-[#c80024] disabled:pointer-events-none disabled:opacity-50"
+          className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-red px-4 text-sm font-medium text-white transition hover:bg-brand-red-dark disabled:pointer-events-none disabled:opacity-50"
         >
           {isSavingPassword ? 'Guardando...' : 'Actualizar contraseña'}
         </button>
@@ -164,7 +163,7 @@ export function SuperAdminProfilePage() {
         data-testid="superadmin-logout"
         className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
       >
-        <LogOut className="h-4 w-4" aria-hidden="true" />
+        <i className="fa-solid fa-right-from-bracket text-base" aria-hidden="true" />
         Cerrar Sesión
       </button>
     </section>

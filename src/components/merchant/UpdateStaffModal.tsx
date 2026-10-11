@@ -1,4 +1,3 @@
-import { UserRound } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { PERMISSION_OPTIONS, permissionsToFormInput } from '../../utils/staffPermissions';
@@ -97,7 +96,7 @@ export function UpdateStaffModal({
             isLoading={isSaving}
             data-testid="save-permissions"
           >
-            <UserRound className="h-4 w-4" />
+            <i className="fa-solid fa-circle-user text-base" />
             Guardar cambios
           </Button>
         </div>

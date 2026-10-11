@@ -15,7 +15,7 @@ MenuGran usa una identidad limpia, cálida y de alto contraste con foco en conve
 
 ### Colores principales
 
-- `brand-red`: `#EA002A`
+- `brand-red`: `#E4002B`
   - Uso principal en CTAs, toggle activo, contador del carrito, estados seleccionados, foco principal.
 - `brand-amber`: `#FFBC0B`
   - Uso para ratings, novedades, etiquetas destacadas y avisos de atención.
@@ -32,7 +32,7 @@ MenuGran usa una identidad limpia, cálida y de alto contraste con foco en conve
 
 ```js
 brand: {
-  red: '#EA002A',
+  red: '#E4002B',
   amber: '#FFBC0B',
   50: '#fff1f2',
   100: '#ffe4e6',
@@ -150,7 +150,7 @@ Usar los tokens como base en Tailwind:
 ```js
 colors: {
   brand: {
-    red: '#EA002A',
+    red: '#E4002B',
     amber: '#FFBC0B',
   },
 }

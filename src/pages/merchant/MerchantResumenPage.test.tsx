@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   buildPopularityCardModel,
+  buildRepurchaseHelperText,
   formatRatingAverage,
   MerchantResumenPage,
   satisfactionPercentage,
@@ -90,6 +91,12 @@ const defaultAnalytics: MerchantAnalytics = {
     { status: 'in_process', label: 'En proceso', count: 2, color: '#F59E0B' },
     { status: 'cancelled', label: 'Cancelados', count: 1, color: '#EF4444' },
   ],
+  loyalty: {
+    totalCustomers: 4,
+    returningCustomers: 2,
+    repurchaseRate: 50,
+    averageTicket: 87.5,
+  },
 };
 
 function renderPage() {
@@ -145,6 +152,11 @@ describe('MerchantResumenPage', () => {
     expect(screen.getByTestId('metric-orders-today')).toHaveTextContent('3');
     expect(screen.getByTestId('metric-active-products')).toHaveTextContent('7');
     expect(screen.getByTestId('metric-popularity')).toHaveTextContent('4,8 ★');
+    expect(screen.getByTestId('metric-repurchase-rate')).toHaveTextContent('50%');
+    expect(screen.getByTestId('metric-repurchase-rate-helper')).toHaveTextContent(
+      '2 de 4 clientes volvió a pedir',
+    );
+    expect(screen.getByTestId('metric-average-ticket')).toHaveTextContent('$87,5');
   });
 
   it('consume el resumen de valoraciones del comercio para la tarjeta de popularidad', async () => {
@@ -668,5 +680,31 @@ describe('buildPopularityCardModel', () => {
       value: '—',
       helperText: 'Aún sin valoraciones de clientes',
     });
+  });
+});
+
+describe('buildRepurchaseHelperText', () => {
+  it('indica que está cargando sin analytics', () => {
+    expect(buildRepurchaseHelperText(null)).toBe('Cargando clientes frecuentes…');
+  });
+
+  it('avisa cuando no hay clientes en el rango', () => {
+    expect(
+      buildRepurchaseHelperText({
+        dailyRevenue: [],
+        statusBreakdown: [],
+        loyalty: { totalCustomers: 0, returningCustomers: 0, repurchaseRate: 0, averageTicket: 0 },
+      }),
+    ).toBe('Aún sin clientes en el rango');
+  });
+
+  it('resume clientes frecuentes vs totales con singular', () => {
+    expect(
+      buildRepurchaseHelperText({
+        dailyRevenue: [],
+        statusBreakdown: [],
+        loyalty: { totalCustomers: 1, returningCustomers: 1, repurchaseRate: 100, averageTicket: 10 },
+      }),
+    ).toBe('1 de 1 cliente volvió a pedir');
   });
 });

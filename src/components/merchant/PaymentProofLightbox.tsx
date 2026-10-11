@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { MouseEvent } from 'react';
-import { X, ExternalLink } from 'lucide-react';
 import type { OrderRow } from '../../types/database';
 import { formatPrice } from '../../types/cart';
 import { getPaymentMethodLabel } from '../../utils/paymentMethod';
@@ -63,7 +62,7 @@ export function PaymentProofLightbox({
               className="inline-flex items-center gap-1.5 text-white text-sm bg-white/10 hover:bg-white/20 rounded-md px-3 py-1.5 transition-colors"
               aria-label="Abrir comprobante en nueva pestaña"
             >
-              <ExternalLink className="h-4 w-4" />
+              <i className="fa-solid fa-arrow-up-right-from-square text-base" />
               <span className="hidden sm:inline">Abrir original</span>
             </a>
             <button
@@ -72,7 +71,7 @@ export function PaymentProofLightbox({
               aria-label="Cerrar comprobante"
               className="rounded-full p-2 text-white bg-white/10 hover:bg-white/20 transition-colors"
             >
-              <X className="h-5 w-5" />
+              <i className="fa-solid fa-xmark text-xl" />
             </button>
           </div>
         </div>

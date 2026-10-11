@@ -269,7 +269,7 @@ export function QrScanPage() {
               type="button"
               onClick={() => void startScanning()}
               disabled={isRequesting}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#c80024] disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-red-dark disabled:opacity-60"
             >
               {permissionState === 'denied' ? (
                 <RefreshCw className="h-4 w-4" aria-hidden="true" />

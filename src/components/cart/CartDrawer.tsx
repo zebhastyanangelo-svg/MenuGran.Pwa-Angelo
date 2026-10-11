@@ -277,7 +277,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             type="button"
             disabled={!canCheckout}
             onClick={handleCheckoutClick}
-            className={`mt-3 flex w-full items-center justify-center rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#c80024] disabled:cursor-not-allowed disabled:opacity-50`}
+            className={`mt-3 flex w-full items-center justify-center rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-red-dark disabled:cursor-not-allowed disabled:opacity-50`}
           >
             Proceder al pago
             <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />

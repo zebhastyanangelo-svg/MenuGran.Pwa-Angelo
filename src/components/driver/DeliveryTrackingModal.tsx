@@ -1,12 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
-import {
-  X,
-  MapPin,
-  Package,
-  Loader2,
-  Navigation,
-} from 'lucide-react'
 import { DeliveryMap } from '../map/DeliveryMap'
 import { useGpsTracking, type GpsPosition } from '../../hooks/useGpsTracking'
 import { Button } from '../ui/Button'
@@ -38,8 +31,8 @@ const DESTINATION_ICON = L.divIcon({
   className: 'custom-marker',
   html: `
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2C8.13401 2 5 5.13401 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13401 15.866 2 12 2Z" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="12" cy="9" r="3" fill="#ef4444"/>
+      <path d="M12 2C8.13401 2 5 5.13401 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13401 15.866 2 12 2Z" stroke="#E4002B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="9" r="3" fill="#E4002B"/>
     </svg>
   `,
   iconSize: [30, 30],
@@ -233,7 +226,7 @@ export function DeliveryTrackingModal({
       disabled={actionLoading}
       onClick={() => void handleStartTrip()}
     >
-      <Navigation className="h-5 w-5" aria-hidden="true" />
+      <i className="fa-solid fa-location-arrow text-xl" aria-hidden="true" />
       En camino
     </Button>
   ) : isActive ? (
@@ -272,7 +265,7 @@ export function DeliveryTrackingModal({
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full bg-gray-100 text-gray-500 text-sm p-4">
-            <Loader2 className="h-8 w-8 animate-spin mb-3 text-gray-300" />
+            <i className="fa-solid fa-spinner text-4xl animate-spin mb-3 text-gray-300" />
             <p className="text-center mb-2">
               {isActive ? 'Esperando posición GPS...' : 'Cargando mapa...'}
             </p>
@@ -305,7 +298,7 @@ export function DeliveryTrackingModal({
             className="flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 shadow-lg ring-1 ring-black/5 backdrop-blur-md"
             data-testid="delivery-order-chip"
           >
-            <Package className="h-4 w-4 text-gray-500" aria-hidden="true" />
+            <i className="fa-solid fa-box text-base text-gray-500" aria-hidden="true" />
             <p className="text-sm font-bold text-gray-900">{getOrderNumber(order.id)}</p>
             <Badge variant={getBadgeVariant(order.status)}>
               {getOrderStatusLabel(order.status)}
@@ -318,7 +311,7 @@ export function DeliveryTrackingModal({
             className="rounded-full bg-white/95 p-2.5 text-gray-500 shadow-lg ring-1 ring-black/5 backdrop-blur-md transition-colors hover:bg-gray-100 hover:text-gray-700"
             data-testid="modal-close"
           >
-            <X className="h-5 w-5" />
+            <i className="fa-solid fa-xmark text-xl" />
           </button>
         </div>
 
@@ -328,7 +321,7 @@ export function DeliveryTrackingModal({
             className="absolute left-3 bottom-[264px] z-10 flex items-center gap-2 rounded-full bg-emerald-600/95 px-3 py-1.5 text-xs font-medium text-white shadow-lg"
             data-testid="gps-active"
           >
-            <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+            <i className="fa-solid fa-location-dot text-sm" aria-hidden="true" />
             GPS activo — Lat: {position.lat.toFixed(5)}, Lng: {position.lng.toFixed(5)}
           </div>
         )}
@@ -338,7 +331,7 @@ export function DeliveryTrackingModal({
             className="absolute left-3 bottom-[264px] z-10 flex items-center gap-2 rounded-full bg-amber-500/95 px-3 py-1.5 text-xs font-medium text-white shadow-lg"
             data-testid="gps-error"
           >
-            <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+            <i className="fa-solid fa-location-dot text-sm" aria-hidden="true" />
             {gpsError}
           </div>
         )}

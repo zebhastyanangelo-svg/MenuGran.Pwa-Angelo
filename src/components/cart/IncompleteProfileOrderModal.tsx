@@ -94,7 +94,7 @@ export function IncompleteProfileOrderModal({
           type="button"
           onClick={onGoToProfile}
           data-testid="go-to-profile-button"
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-[#c80024]"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-brand-red-dark"
         >
           <UserCircle2 className="h-5 w-5" aria-hidden="true" />
           Ir a completar mi perfil

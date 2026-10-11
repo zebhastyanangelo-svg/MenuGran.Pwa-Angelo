@@ -64,13 +64,16 @@ export function NavigationInstructionBar({ icon, text, distanceLabel }: Navigati
       data-testid="navigation-instruction-bar"
     >
       <div className="flex items-center gap-3 rounded-2xl bg-white/95 px-4 py-3 shadow-lg ring-1 ring-black/5 backdrop-blur-md">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-red/10 text-brand-red">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-red text-white shadow-md ring-2 ring-white">
           <ManeuverIcon className="h-7 w-7" aria-hidden="true" />
         </span>
         <div className="min-w-0">
           <p className="truncate text-base font-bold leading-tight text-gray-900">{text}</p>
           {distanceLabel !== '' && (
-            <p className="mt-0.5 text-sm font-medium text-gray-500" data-testid="instruction-distance">
+            <p
+              className="mt-0.5 text-sm font-semibold text-brand-red"
+              data-testid="instruction-distance"
+            >
               {distanceLabel}
             </p>
           )}
@@ -135,7 +138,7 @@ export function NavigationSideControls({
         type="button"
         onClick={onCenter}
         data-testid="center-button"
-        className={`absolute z-20 inline-flex h-12 items-center gap-2 rounded-full bg-brand-red px-4 text-sm font-semibold text-white shadow-xl ring-1 ring-black/10 transition hover:bg-[#c80024] active:scale-95 ${centerButtonClass}`}
+        className={`absolute z-20 inline-flex h-12 items-center gap-2 rounded-full bg-brand-red px-4 text-sm font-semibold text-white shadow-xl ring-1 ring-black/10 transition hover:bg-brand-red-dark active:scale-95 ${centerButtonClass}`}
       >
         <ArrowUp className="h-5 w-5" aria-hidden="true" />
         Centrar
@@ -267,7 +270,7 @@ export function NavigationPersonCard({
               onClick={onChat}
               aria-label="Chat"
               data-testid="person-chat-button"
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-red text-white shadow-md ring-1 ring-black/10 transition hover:bg-[#c80024] active:scale-95"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-red text-white shadow-md ring-1 ring-black/10 transition hover:bg-brand-red-dark active:scale-95"
             >
               <MessageCircle className="h-5 w-5" aria-hidden="true" />
             </button>

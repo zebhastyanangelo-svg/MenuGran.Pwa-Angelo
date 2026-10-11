@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCheck, ListChecks, Loader2, Tag, X } from 'lucide-react';
 import {
   applyPromoToProducts,
   fetchMerchantProducts,
@@ -150,7 +149,7 @@ export function ProductPromoPicker({ merchantId }: ProductPromoPickerProps) {
         role="status"
         className="flex items-center gap-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-600"
       >
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        <i className="fa-solid fa-spinner text-base animate-spin" aria-hidden="true" />
         Cargando tu menú...
       </p>
     );
@@ -184,7 +183,7 @@ export function ProductPromoPicker({ merchantId }: ProductPromoPickerProps) {
               onClick={selectAll}
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50"
             >
-              <CheckCheck className="h-3.5 w-3.5" aria-hidden="true" />
+              <i className="fa-solid fa-check-double text-sm" aria-hidden="true" />
               Todos
             </button>
             <button
@@ -193,7 +192,7 @@ export function ProductPromoPicker({ merchantId }: ProductPromoPickerProps) {
               disabled={selectedIds.length === 0}
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 disabled:opacity-40"
             >
-              <X className="h-3.5 w-3.5" aria-hidden="true" />
+              <i className="fa-solid fa-xmark text-sm" aria-hidden="true" />
               Quitar
             </button>
           </div>
@@ -218,9 +217,9 @@ export function ProductPromoPicker({ merchantId }: ProductPromoPickerProps) {
                     {formatUSD(product.price)}
                   </span>
                   {hasPromo(product) && (
-                    <Tag
-                      className="h-3.5 w-3.5 shrink-0 text-brand-red"
-                      aria-label="Tiene promoción aplicada"
+                    <i
+                      className="fa-solid fa-tag text-sm shrink-0 text-brand-red"
+                      aria-hidden="true"
                     />
                   )}
                 </label>
@@ -291,7 +290,7 @@ export function ProductPromoPicker({ merchantId }: ProductPromoPickerProps) {
           disabled={isSaving || selectedIds.length === 0}
           className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:opacity-50"
         >
-          <ListChecks className="h-4 w-4" aria-hidden="true" />
+          <i className="fa-solid fa-list-check text-base" aria-hidden="true" />
           {isSaving ? 'Aplicando...' : 'Aplicar a los seleccionados'}
         </button>
         {promoWithDiscount > 0 && (

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createMerchantAccount,
   deleteMerchant,
+  fetchMerchantDetails,
   listMerchantsWithOwners,
 } from './superAdminService';
 import type { CreateMerchantAccountInput } from '../utils/merchantRegistration';
@@ -287,6 +288,81 @@ describe('deleteMerchant', () => {
 
     await expect(deleteMerchant('merchant-9', 'new-owner')).rejects.toThrow(
       'Error al eliminar el comercio: row level security',
+    );
+  });
+});
+
+describe('fetchMerchantDetails', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    registeredTables.clear();
+  });
+
+  function registerMaybeSingleTable(result: {
+    data: unknown;
+    error: unknown;
+  }): void {
+    const chain = buildTableChain();
+    const maybeSingle = vi.fn().mockResolvedValue(result);
+    chain.select.mockReturnValue({ eq: chain.eq });
+    chain.eq.mockReturnValue({ maybeSingle });
+    registeredTables.set('merchants', chain);
+  }
+
+  it('rechaza sin consultar cuando falta el identificador', async () => {
+    await expect(fetchMerchantDetails('')).rejects.toThrow(
+      'Se requiere el identificador del comercio.',
+    );
+    expect(supabaseMocks.from).not.toHaveBeenCalled();
+  });
+
+  it('devuelve la ficha completa del comercio', async () => {
+    registerMaybeSingleTable({
+      data: {
+        id: 'm-1',
+        name: 'La Pizzería de María',
+        slug: 'la-pizzeria-de-maria',
+        rif: 'J-40123456-7',
+        status: 'active',
+        is_active: true,
+        is_open: true,
+        category: 'Restaurante',
+        description: null,
+        address: 'Av. Principal',
+        zone: null,
+        phone_whatsapp: '+58 412-123-4567',
+        service_modalities: ['Delivery'],
+        business_hours: { days: 'L-V', open_time: '8:00', close_time: '20:00' },
+        opening_time: '08:00',
+        closing_time: '20:00',
+        created_at: '2026-08-21T00:00:00.000Z',
+      },
+      error: null,
+    });
+
+    const details = await fetchMerchantDetails('m-1');
+
+    expect(details.name).toBe('La Pizzería de María');
+    expect(details.rif).toBe('J-40123456-7');
+    expect(details.category).toBe('Restaurante');
+  });
+
+  it('lanza error cuando la consulta falla', async () => {
+    registerMaybeSingleTable({
+      data: null,
+      error: { message: 'row level security' },
+    });
+
+    await expect(fetchMerchantDetails('m-1')).rejects.toThrow(
+      'Error al obtener el comercio: row level security',
+    );
+  });
+
+  it('lanza error cuando el comercio no existe', async () => {
+    registerMaybeSingleTable({ data: null, error: null });
+
+    await expect(fetchMerchantDetails('m-x')).rejects.toThrow(
+      'No se encontró el comercio.',
     );
   });
 });

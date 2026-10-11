@@ -6,7 +6,6 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { Download, Printer, QrCode, RefreshCw } from 'lucide-react';
 import type { MerchantRow } from '../../types/database';
 import {
   buildMerchantQrUrl,
@@ -91,7 +90,7 @@ export function MerchantQrPanel({ merchant, onPersistToken }: MerchantQrPanelPro
     <section className="space-y-4">
       <div>
         <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-          <QrCode className="h-4 w-4 text-indigo-600" aria-hidden="true" />
+          <i className="fa-solid fa-qrcode text-base text-indigo-600" aria-hidden="true" />
           Código QR del comercio
         </h3>
         <p className="mt-1 text-xs text-gray-500">
@@ -137,7 +136,7 @@ export function MerchantQrPanel({ merchant, onPersistToken }: MerchantQrPanelPro
             disabled={dataUrl === null}
             className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
           >
-            <Download className="h-4 w-4" aria-hidden="true" />
+            <i className="fa-solid fa-download text-base" aria-hidden="true" />
             Descargar PNG
           </button>
           <button
@@ -145,7 +144,7 @@ export function MerchantQrPanel({ merchant, onPersistToken }: MerchantQrPanelPro
             onClick={() => window.print()}
             className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
           >
-            <Printer className="h-4 w-4" aria-hidden="true" />
+            <i className="fa-solid fa-print text-base" aria-hidden="true" />
             Imprimir
           </button>
           <button
@@ -154,8 +153,8 @@ export function MerchantQrPanel({ merchant, onPersistToken }: MerchantQrPanelPro
             disabled={isRotating}
             className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
           >
-            <RefreshCw
-              className={`h-4 w-4 ${isRotating ? 'animate-spin' : ''}`}
+            <i
+              className={`fa-solid fa-arrows-rotate text-base ${isRotating ? 'animate-spin' : ''}`}
               aria-hidden="true"
             />
             Regenerar

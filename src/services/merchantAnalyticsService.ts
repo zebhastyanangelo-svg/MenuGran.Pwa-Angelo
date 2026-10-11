@@ -11,6 +11,7 @@ export interface OrderAnalyticsRow {
   created_at: string;
   total_amount: string;
   status: OrderStatus;
+  customer_id: string | null;
 }
 
 export interface RevenueDataPoint {
@@ -25,9 +26,23 @@ export interface StatusBreakdownItem {
   color: string;
 }
 
+/**
+ * Métricas de valor por cliente dentro del rango analizado.
+ * - `repurchaseRate`: porcentaje de clientes que volvieron a pedir (≥ 2 pedidos).
+ * - `averageTicket`: valor monetario medio por pedido válido (no cancelado).
+ */
+export interface LoyaltyMetrics {
+  totalCustomers: number;
+  returningCustomers: number;
+  /** 0-100. */
+  repurchaseRate: number;
+  averageTicket: number;
+}
+
 export interface MerchantAnalytics {
   dailyRevenue: RevenueDataPoint[];
   statusBreakdown: StatusBreakdownItem[];
+  loyalty: LoyaltyMetrics;
 }
 
 export const STATUS_GROUPS: {
@@ -127,6 +142,54 @@ export function computeStatusBreakdown(
 }
 
 /**
+ * Calcula la tasa de recompra y el ticket promedio a partir de pedidos crudos.
+ *
+ * - Solo cuentan pedidos válidos (no cancelados): un pedido cancelado no
+ *   representa una compra del cliente ni ingreso real.
+ * - Cliente frecuente: quien hizo 2 o más pedidos válidos en el rango.
+ * - Ticket promedio: total facturado / número de pedidos válidos.
+ */
+export function computeLoyaltyMetrics(
+  orders: OrderAnalyticsRow[],
+): LoyaltyMetrics {
+  const validOrders = orders.filter((order) => order.status !== 'cancelled');
+
+  const ordersByCustomer = new Map<string, number>();
+  for (const order of validOrders) {
+    if (!order.customer_id) continue;
+    ordersByCustomer.set(
+      order.customer_id,
+      (ordersByCustomer.get(order.customer_id) ?? 0) + 1,
+    );
+  }
+
+  const totalCustomers = ordersByCustomer.size;
+  let returningCustomers = 0;
+  for (const count of ordersByCustomer.values()) {
+    if (count >= 2) returningCustomers += 1;
+  }
+
+  const repurchaseRate =
+    totalCustomers > 0
+      ? Math.round((returningCustomers / totalCustomers) * 100)
+      : 0;
+
+  const totalRevenue = validOrders.reduce(
+    (sum, order) => sum + parseAmount(order.total_amount),
+    0,
+  );
+  const averageTicket =
+    validOrders.length > 0 ? totalRevenue / validOrders.length : 0;
+
+  return {
+    totalCustomers,
+    returningCustomers,
+    repurchaseRate,
+    averageTicket,
+  };
+}
+
+/**
  * Obtiene los pedidos de un comercio dentro de un rango de fechas para
  * construir las gráficas. Sólo lectura: respeta las políticas RLS de Supabase.
  */
@@ -144,7 +207,7 @@ export async function fetchMerchantOrdersForAnalytics(
 
   const { data, error } = await supabase
     .from(TABLE_NAMES.orders)
-    .select('created_at, total_amount, status')
+    .select('created_at, total_amount, status, customer_id')
     .eq('merchant_id', merchantId)
     .gte('created_at', start)
     .lte('created_at', end)
@@ -171,5 +234,6 @@ export async function fetchMerchantAnalytics(
   return {
     dailyRevenue: computeDailyRevenue(orders, startDate, endDate),
     statusBreakdown: computeStatusBreakdown(orders),
+    loyalty: computeLoyaltyMetrics(orders),
   };
 }

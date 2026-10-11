@@ -161,7 +161,7 @@ export function MerchantStorePage() {
             <button
               type="button"
               onClick={() => void fetchData()}
-              className="mt-3 rounded-xl bg-brand-red px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#c80024]"
+              className="mt-3 rounded-xl bg-brand-red px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-red-dark"
             >
               Reintentar
             </button>
@@ -185,7 +185,7 @@ export function MerchantStorePage() {
             <button
               type="button"
               onClick={goBack}
-              className="mt-3 rounded-xl bg-brand-red px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#c80024]"
+              className="mt-3 rounded-xl bg-brand-red px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-red-dark"
             >
               Volver a comercios
             </button>
@@ -207,7 +207,7 @@ export function MerchantStorePage() {
         <button
           type="button"
           onClick={goBack}
-          className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-red hover:text-[#c80024]"
+          className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-red hover:text-brand-red-dark"
           aria-label="Volver a comercios"
         >
           <ArrowLeft className="h-4 w-4" />

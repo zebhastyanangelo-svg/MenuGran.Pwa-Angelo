@@ -250,7 +250,7 @@ export function ProfilePage() {
           <button
             type="submit"
             disabled={isSaving}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-brand-red-dark focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isSaving ? (
               <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
@@ -274,7 +274,7 @@ export function ProfilePage() {
             type="button"
             onClick={() => void handleTestNotification()}
             disabled={pushSending || !pushSupported}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-[#c80024] focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-brand-red-dark focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
           >
             {pushSending ? (
               <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />

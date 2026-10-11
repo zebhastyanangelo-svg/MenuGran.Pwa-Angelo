@@ -1,5 +1,11 @@
 import { supabase, TABLE_NAMES } from './supabase';
-import type { IsoTimestamp, MerchantStatus } from '../types/database';
+import type {
+  BusinessHours,
+  IsoTimestamp,
+  MerchantCategory,
+  MerchantStatus,
+  ServiceModality,
+} from '../types/database';
 import {
   getAuthenticatedFunctionHeaders,
   readFunctionError,
@@ -139,4 +145,56 @@ export async function listMerchantsWithOwners(): Promise<
     owner_email: row.profiles?.email ?? null,
     owner_full_name: row.profiles?.full_name ?? null,
   }));
+}
+
+/** Información pública y administrativa de un comercio (sin métricas financieras). */
+export interface MerchantDetails {
+  id: string;
+  name: string;
+  slug: string;
+  rif: string;
+  status: MerchantStatus;
+  is_active: boolean;
+  is_open: boolean;
+  category: MerchantCategory;
+  description: string | null;
+  address: string;
+  zone: string | null;
+  phone_whatsapp: string;
+  service_modalities: ServiceModality;
+  business_hours: BusinessHours;
+  opening_time: string | null;
+  closing_time: string | null;
+  created_at: IsoTimestamp;
+}
+
+const MERCHANT_DETAILS_COLUMNS =
+  'id, name, slug, rif, status, is_active, is_open, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, opening_time, closing_time, created_at';
+
+/**
+ * Obtiene la ficha completa de un comercio para el panel de Super Admin.
+ *
+ * Solo lectura: respeta las políticas RLS y no consulta datos financieros
+ * (ingresos, pedidos) — esos viven en el modal de métricas.
+ */
+export async function fetchMerchantDetails(
+  merchantId: string,
+): Promise<MerchantDetails> {
+  if (merchantId.trim() === '') {
+    throw new Error('Se requiere el identificador del comercio.');
+  }
+
+  const { data, error } = await supabase
+    .from(TABLE_NAMES.merchants)
+    .select(MERCHANT_DETAILS_COLUMNS)
+    .eq('id', merchantId)
+    .maybeSingle();
+
+  if (error !== null) {
+    throw new Error(`Error al obtener el comercio: ${error.message}`);
+  }
+  if (data === null) {
+    throw new Error('No se encontró el comercio.');
+  }
+  return data as MerchantDetails;
 }

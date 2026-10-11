@@ -1,15 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  Package,
-  LogOut,
-  Loader2,
-  AlertCircle,
-  MapPin,
-  Phone,
-  Navigation,
-  ShoppingBasket,
-  PackageCheck,
-} from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useDriverDeliveries } from '../../hooks/useDriverDeliveries'
 import { useNotificationToast } from '../../components/pwa/useNotificationToast'
@@ -75,9 +64,9 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { key: 'assigned', label: 'Nuevas', icon: <Package className="h-4 w-4" />, color: 'text-green-700 bg-green-100' },
-  { key: 'inTransit', label: 'En camino', icon: <Navigation className="h-4 w-4" />, color: 'text-blue-700 bg-blue-100' },
-  { key: 'delivered', label: 'Completadas', icon: <PackageCheck className="h-4 w-4" />, color: 'text-gray-700 bg-gray-100' },
+  { key: 'assigned', label: 'Nuevas', icon: <i className="fa-solid fa-box text-base" />, color: 'text-green-700 bg-green-100' },
+  { key: 'inTransit', label: 'En camino', icon: <i className="fa-solid fa-location-arrow text-base" />, color: 'text-blue-700 bg-blue-100' },
+  { key: 'delivered', label: 'Completadas', icon: <i className="fa-solid fa-circle-check text-base" />, color: 'text-gray-700 bg-gray-100' },
 ]
 
 export function DriverDeliveriesPage() {
@@ -226,7 +215,7 @@ export function DriverDeliveriesPage() {
       <header className="border-b border-gray-200 bg-white px-4 py-4 shadow-sm sticky top-0 z-10">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <div className="flex items-center gap-3">
-            <Package className="h-6 w-6 text-blue-600" />
+            <i className="fa-solid fa-box text-2xl text-blue-600" />
             <div>
               <h1 className="text-lg font-bold text-gray-900">Entregas</h1>
               {merchantName && (
@@ -253,9 +242,9 @@ export function DriverDeliveriesPage() {
               data-testid="driver-logout"
             >
               {isLoggingOut ? (
-                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                <i className="fa-solid fa-spinner mr-1 text-base animate-spin" />
               ) : (
-                <LogOut className="mr-1 h-4 w-4" />
+                <i className="fa-solid fa-right-from-bracket mr-1 text-base" />
               )}
               Salir
             </Button>
@@ -303,7 +292,7 @@ export function DriverDeliveriesPage() {
         {/* Loading */}
         {loading && (
           <p className="text-center text-gray-600" role="status" data-testid="driver-loading">
-            <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+            <i className="fa-solid fa-spinner text-base animate-spin inline mr-2" />
             Cargando pedidos...
           </p>
         )}
@@ -311,14 +300,14 @@ export function DriverDeliveriesPage() {
         {/* Error */}
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert" data-testid="driver-error">
-            <AlertCircle className="h-4 w-4 inline mr-2" />
+            <i className="fa-solid fa-circle-exclamation text-base inline mr-2" />
             {error}
           </div>
         )}
 
         {actionError && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert" data-testid="driver-action-error">
-            <AlertCircle className="h-4 w-4 inline mr-2" />
+            <i className="fa-solid fa-circle-exclamation text-base inline mr-2" />
             {actionError}
           </div>
         )}
@@ -352,7 +341,7 @@ export function DriverDeliveriesPage() {
             ))
           ) : (
             <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm text-center">
-              <PackageCheck className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <i className="fa-solid fa-circle-check text-[48px] text-gray-300 mx-auto mb-3" />
               <h2 className="text-base font-semibold text-gray-700 mb-1">
                 Sin entregas {activeTab === 'assigned' ? 'asignadas' : activeTab === 'inTransit' ? 'en camino' : 'completadas'}
               </h2>
@@ -431,21 +420,21 @@ function DeliveryCard({
 
       <section className="mb-3 space-y-2">
         <div className="flex items-center gap-2 text-sm">
-          <Phone className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+          <i className="fa-solid fa-phone text-sm text-gray-400 shrink-0" />
           <span className="font-medium text-gray-800 truncate">{customerName}</span>
           {customerPhone && (
             <span className="text-gray-500 text-xs truncate">{customerPhone}</span>
           )}
         </div>
         <div className="flex items-start gap-2 text-sm">
-          <MapPin className="h-3.5 w-3.5 text-gray-400 mt-0.5 shrink-0" />
+          <i className="fa-solid fa-location-dot text-sm text-gray-400 mt-0.5 shrink-0" />
           <span className="text-gray-600 text-xs line-clamp-2">{address}</span>
         </div>
       </section>
 
       <section className="mb-3">
         <div className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-1">
-          <ShoppingBasket className="h-3.5 w-3.5 text-gray-400" />
+          <i className="fa-solid fa-basket-shopping text-sm text-gray-400" />
           {order.items.length} producto{order.items.length !== 1 ? 's' : ''} — Total: {formatPrice(order.total_amount)}
         </div>
       </section>
@@ -471,7 +460,7 @@ function DeliveryCard({
               void onStartRoute(order)
             }}
           >
-            <Navigation className="mr-2 h-4 w-4" />
+            <i className="fa-solid fa-location-arrow mr-2 text-base" />
             {isInTransit ? 'Ver ruta en mapa' : 'En camino'}
           </Button>
         )}
