@@ -4,7 +4,6 @@ import { SplashScreen } from './SplashScreen';
 
 describe('SplashScreen', () => {
   beforeEach(() => {
-    sessionStorage.clear();
     vi.useFakeTimers();
   });
 
@@ -12,37 +11,39 @@ describe('SplashScreen', () => {
     vi.useRealTimers();
   });
 
-  describe('video intro (primera vez en la sesión)', () => {
-    it('renderiza el video con autoPlay, muted y playsInline', () => {
+  describe('video intro (siempre al iniciar la app)', () => {
+    it('renderiza el video con autoPlay, muted, playsInline y preload=auto', () => {
       render(<SplashScreen onFinish={() => {}} />);
       const video = document.querySelector('video');
       expect(video).not.toBeNull();
       expect(video).toHaveAttribute('autoplay');
       expect(video?.muted).toBe(true);
       expect(video).toHaveAttribute('playsinline');
+      expect(video).toHaveAttribute('preload', 'auto');
     });
 
-    it('marca hasSeenIntro en sessionStorage y llama onFinish tras onEnded', async () => {
+    it('llama onFinish inmediatamente al terminar el video (onEnded)', () => {
       const onFinish = vi.fn();
       render(<SplashScreen onFinish={onFinish} />);
 
       const video = document.querySelector('video');
-      expect(video).not.toBeNull();
+      expect(onFinish).not.toHaveBeenCalled();
+
       act(() => {
         video?.dispatchEvent(new Event('ended'));
-      });
-
-      expect(sessionStorage.getItem('hasSeenIntro')).toBe('true');
-      expect(document.querySelector('video')).not.toBeNull();
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
       });
 
       expect(onFinish).toHaveBeenCalledTimes(1);
     });
 
-    it('ante error del video hace fallback al splash estático', async () => {
+    it('muestra el video aunque haya un intento previo en la sesión', () => {
+      render(<SplashScreen onFinish={() => {}} />);
+      expect(document.querySelector('video')).not.toBeNull();
+    });
+  });
+
+  describe('splash estático de respaldo (video fallido)', () => {
+    it('ante error del video hace fallback a un splash estático limpio', async () => {
       const onFinish = vi.fn();
       render(<SplashScreen onFinish={onFinish} duration={600} />);
 
@@ -51,7 +52,7 @@ describe('SplashScreen', () => {
         video?.dispatchEvent(new Event('error'));
       });
 
-      expect(sessionStorage.getItem('hasSeenIntro')).toBe('true');
+      expect(document.querySelector('video')).toBeNull();
       expect(screen.getByText('MenuGran')).toBeInTheDocument();
 
       await act(async () => {
@@ -59,26 +60,19 @@ describe('SplashScreen', () => {
       });
       expect(onFinish).toHaveBeenCalledTimes(1);
     });
-  });
 
-  describe('splash estático (intro ya vista)', () => {
-    it('no renderiza el video si hasSeenIntro es true', () => {
-      sessionStorage.setItem('hasSeenIntro', 'true');
-      render(<SplashScreen onFinish={() => {}} />);
-      expect(document.querySelector('video')).toBeNull();
-      expect(screen.getByText('MenuGran')).toBeInTheDocument();
-    });
-
-    it('llama onFinish tras la duración del splash estático', async () => {
-      sessionStorage.setItem('hasSeenIntro', 'true');
-      const onFinish = vi.fn();
-      render(<SplashScreen onFinish={onFinish} duration={800} />);
-
-      expect(onFinish).not.toHaveBeenCalled();
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(800);
+    it('el splash estático no muestra textos innecesarios', () => {
+      render(<SplashScreen onFinish={() => {}} duration={600} />);
+      const video = document.querySelector('video');
+      act(() => {
+        video?.dispatchEvent(new Event('error'));
       });
-      expect(onFinish).toHaveBeenCalledTimes(1);
+
+      expect(screen.queryByText('Cargando...')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Tu plataforma digital de menús y pedidos'),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText('MenuGran')).toBeInTheDocument();
     });
   });
 });

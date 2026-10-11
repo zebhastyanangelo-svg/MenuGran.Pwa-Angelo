@@ -8,7 +8,7 @@ import { parseGeoPoint } from '../../utils/geoPoint';
 const DEFAULT_ZOOM = 13;
 
 /** Color corporativo MenuGran usado en ruta activa y HUD. */
-export const BRAND_RED = '#E4002B';
+export const BRAND_RED = '#C71523';
 
 /**
  * Teselas de estilo "navegación limpia": base clara y neutra (Carto Positron
@@ -31,7 +31,7 @@ const RIDER_ICON = L.divIcon({
   className: 'custom-marker',
   html: `
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" stroke="#E4002B" stroke-width="2" fill="#E4002B"/>
+      <circle cx="12" cy="12" r="10" stroke="#C71523" stroke-width="2" fill="#C71523"/>
       <path d="M12 8V12L15 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   `,

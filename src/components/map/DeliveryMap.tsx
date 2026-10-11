@@ -19,7 +19,7 @@ import { MapView } from './MapView';
 import type { MapMarker, MapViewProps } from './MapView';
 
 /** Color corporativo MenuGran para el marcador del repartidor. */
-const BRAND_RED = '#E4002B';
+const BRAND_RED = '#C71523';
 
 /**
  * Puck de navegación MenuGran: halo rojo translúcido, disco blanco con borde

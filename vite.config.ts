@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
           start_url: '/',
           scope: '/',
           background_color: '#ffffff',
-          theme_color: '#E4002B',
+          theme_color: '#C71523',
           icons: [
             {
               src: '/pwa-192x192.png',

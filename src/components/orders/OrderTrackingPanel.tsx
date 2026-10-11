@@ -29,7 +29,7 @@ import type { GeoPoint } from '../../types/database';
 const TRACKING_ZOOM = 13;
 
 /** Color corporativo MenuGran para los marcadores del seguimiento. */
-const BRAND_RED = '#E4002B';
+const BRAND_RED = '#C71523';
 
 /** Comercio: pin blanco con borde y glifo rojo (punto de retiro). */
 const MERCHANT_PIN_ICON = L.divIcon({
@@ -50,7 +50,7 @@ const DRIVER_PIN_ICON = L.divIcon({
   className: 'custom-marker',
   html: `
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" stroke="#E4002B" stroke-width="2" fill="#E4002B"/>
+      <circle cx="12" cy="12" r="10" stroke="#C71523" stroke-width="2" fill="#C71523"/>
       <path d="M12 7.2 L16 14.5 L12 12.6 L8 14.5 Z" fill="#ffffff"/>
     </svg>
   `,

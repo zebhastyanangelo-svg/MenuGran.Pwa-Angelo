@@ -31,8 +31,8 @@ const DESTINATION_ICON = L.divIcon({
   className: 'custom-marker',
   html: `
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2C8.13401 2 5 5.13401 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13401 15.866 2 12 2Z" stroke="#E4002B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="12" cy="9" r="3" fill="#E4002B"/>
+      <path d="M12 2C8.13401 2 5 5.13401 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13401 15.866 2 12 2Z" stroke="#C71523" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="9" r="3" fill="#C71523"/>
     </svg>
   `,
   iconSize: [30, 30],

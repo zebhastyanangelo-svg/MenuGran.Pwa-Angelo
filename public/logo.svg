@@ -1,6 +1,6 @@
 <svg viewBox="0 0 512 512" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
   <!-- Fondo Rojo KFC con bordes redondeados para App / RRSS -->
-  <rect width="512" height="512" rx="112" fill="#E4002B" />
+  <rect width="512" height="512" rx="112" fill="#C71523" />
 
   <!-- Monograma MG Corporativo en Blanco -->
   <g fill="none" stroke="#FFFFFF" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" transform="translate(16, 0)">
