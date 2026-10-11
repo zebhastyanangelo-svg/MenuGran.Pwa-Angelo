@@ -134,7 +134,7 @@ export function DeliveryMap({
 
   return (
     <div
-      className="relative"
+      className={className}
       data-testid="delivery-map"
       data-follow={String(followRider)}
       data-heading={heading === null ? '' : String(Math.round(heading))}
@@ -149,7 +149,7 @@ export function DeliveryMap({
         followUserLocation={followRider}
         route={route}
         routeRequest={routeRequest}
-        className={className}
+        className="h-full w-full"
         showFallback={showFallback}
         fallbackMessage={fallbackMessage}
         onMapReady={handleMapReady}

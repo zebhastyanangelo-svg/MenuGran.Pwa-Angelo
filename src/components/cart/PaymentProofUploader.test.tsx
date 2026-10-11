@@ -22,36 +22,37 @@ describe('PaymentProofUploader', () => {
     renderUploader();
     // En Android/iOS, "image/*" abre el selector de fotos/galería nativo en
     // lugar del gestor de archivos (Google Drive).
-    expect(screen.getByLabelText(/Comprobante \(foto o PDF\)/i)).toHaveAttribute(
+    expect(screen.getByLabelText(/Comprobante \(solo imagen\)/i)).toHaveAttribute(
       'accept',
       'image/*',
     );
   });
 
-  it('ofrece captura directa de cámara en móvil con capture="environment"', () => {
+  it('ofrece el botón principal "Elegir de la galería"', () => {
     renderUploader();
-    const cameraInput = screen.getByLabelText(/Capturar comprobante con la cámara/i);
-    expect(cameraInput).toHaveAttribute('capture', 'environment');
-    expect(cameraInput).toHaveAttribute('accept', 'image/*');
+    expect(screen.getByRole('button', { name: /Elegir de la galería/i })).toBeInTheDocument();
   });
 
-  it('ofrece un selector exclusivo de PDF con accept="application/pdf"', () => {
+  it('muestra el título simplificado y el texto guía de la zona de carga', () => {
     renderUploader();
-    const pdfInput = screen.getByLabelText(/Seleccionar comprobante en PDF/i);
-    expect(pdfInput).toHaveAttribute('accept', 'application/pdf');
-    expect(screen.getByRole('button', { name: /Subir PDF/i })).toBeInTheDocument();
+    expect(screen.getByTestId('payment-proof-label')).toHaveTextContent('Comprobante (solo imagen)');
+    expect(screen.getByText('Sube una foto clara de tu comprobante')).toBeInTheDocument();
+    expect(screen.getByText('JPG, PNG o WebP · máx. 5 MB')).toBeInTheDocument();
   });
 
-  it('muestra el botón "Tomar foto" junto a la zona de arrastre', () => {
+  it('no ofrece opciones de cámara ni de PDF', () => {
     renderUploader();
-    expect(screen.getByRole('button', { name: /Tomar foto/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Tomar foto/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Subir PDF/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Capturar comprobante con la cámara/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Seleccionar comprobante en PDF/i)).not.toBeInTheDocument();
   });
 
   it('pasa el archivo seleccionado al padre vía onFileSelect', async () => {
     const { onFileSelect } = renderUploader();
     const user = userEvent.setup();
     const file = new File(['proof'], 'comprobante.jpg', { type: 'image/jpeg' });
-    await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), file);
+    await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
     expect(onFileSelect).toHaveBeenCalledWith(file);
   });
 
@@ -68,12 +69,14 @@ describe('PaymentProofUploader', () => {
     expect(typeError).toHaveTextContent(/Formato no permitido/i);
   });
 
-  it('acepta un PDF cargado desde el selector exclusivo', async () => {
+  it('rechaza un PDF: solo se admiten imágenes', () => {
     const { onFileSelect } = renderUploader();
-    const user = userEvent.setup();
+    const dropZone = screen.getByRole('button', { name: /Zona para adjuntar comprobante/i });
     const pdf = new File(['%PDF-1.4'], 'comprobante.pdf', { type: 'application/pdf' });
-    await user.upload(screen.getByLabelText(/Seleccionar comprobante en PDF/i), pdf);
-    expect(onFileSelect).toHaveBeenCalledWith(pdf);
+    fireEvent.drop(dropZone, { dataTransfer: { files: [pdf] } });
+
+    expect(onFileSelect).not.toHaveBeenCalled();
+    expect(screen.getByTestId('payment-proof-type-error')).toHaveTextContent(/Formato no permitido/i);
   });
 
   it('limpia el error de formato cuando se elige un archivo válido', async () => {
@@ -85,7 +88,7 @@ describe('PaymentProofUploader', () => {
 
     const user = userEvent.setup();
     const photo = new File(['proof'], 'comprobante.jpg', { type: 'image/jpeg' });
-    await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), photo);
+    await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), photo);
 
     expect(onFileSelect).toHaveBeenCalledWith(photo);
     expect(screen.queryByTestId('payment-proof-type-error')).not.toBeInTheDocument();

@@ -142,6 +142,10 @@ export function MapView({
     (isValidLatLng(userLocation) ? userLocation : null) ??
     (activeRoute && activeRoute.length > 0 && isValidLatLng(activeRoute[0]) ? activeRoute[0] : null) ??
     null;
+  // El mapa solo se crea cuando hay un centro válido; este booleano le avisa
+  // al efecto de invalidateSize que debe arrancar (o re-arrancar) su
+  // observador de tamaño una vez que el mapa existe de verdad.
+  const isMapRenderable = effectiveCenter !== null;
 
   useEffect(() => {
     if (mapRef.current === null || L === undefined) return;
@@ -231,10 +235,14 @@ export function MapView({
     }
   }, [validMarkers, center, zoom, userLocation, userLocationIcon, userLocationTitle, activeRoute, effectiveCenter, followsUser]);
 
-  // Invalidate size on mount and when container resizes (modal, tabs, etc.)
+  // Ajusta el tamaño del mapa cuando aparece (el mapa pudo crearse dentro de
+  // un modal oculto o esperando GPS) y cada vez que el contenedor cambia de
+  // tamaño (modal, pestañas, rotación de pantalla). Sin esto Leaflet mide
+  // 0×0 y las teselas quedan en negro o no cargan.
   useEffect(() => {
+    if (!isMapRenderable) return;
     const map = mapInstanceRef.current;
-    if (!map) return;
+    if (!map || !mapRef.current) return;
 
     map.invalidateSize();
 
@@ -248,14 +256,14 @@ export function MapView({
     const ro = new ResizeObserver(() => {
       map.invalidateSize();
     });
-    if (mapRef.current) ro.observe(mapRef.current);
+    ro.observe(mapRef.current);
 
     const timer = setTimeout(() => map.invalidateSize(), 200);
     return () => {
       clearTimeout(timer);
       ro.disconnect();
     };
-  }, []);
+  }, [isMapRenderable]);
 
   useEffect(() => {
     return () => {

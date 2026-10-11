@@ -212,7 +212,7 @@ describe('Checkout', () => {
 
     await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
     const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
-    await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), file);
+    await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
 
     const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
     if (!form) throw new Error('No se encontró el formulario');
@@ -240,7 +240,7 @@ describe('Checkout', () => {
 
     await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
     const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
-    await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), file);
+    await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
 
     const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
     if (!form) throw new Error('No se encontró el formulario');
@@ -255,7 +255,7 @@ describe('Checkout', () => {
 
     await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
     const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
-    await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), file);
+    await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
     await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
 
     const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
@@ -286,7 +286,7 @@ describe('Checkout', () => {
     renderCheckout();
 
     await user.click(screen.getByRole('button', { name: /Tarjeta/i }));
-    expect(screen.queryByLabelText(/Comprobante \(foto o PDF\)/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Comprobante \(solo imagen\)/i)).not.toBeInTheDocument();
     expect(
       screen.getByText(/Pagarás con tarjeta \/ punto de venta/i),
     ).toBeInTheDocument();
@@ -343,7 +343,7 @@ describe('Checkout', () => {
 
     await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
     const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
-    await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), file);
+    await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
     await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
 
     const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
@@ -382,7 +382,7 @@ describe('Checkout', () => {
 
     await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
     const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
-    await user.upload(screen.getByLabelText(/Comprobante \(foto o PDF\)/i), file);
+    await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
     await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
 
     const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
