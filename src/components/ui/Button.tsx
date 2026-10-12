@@ -1,6 +1,5 @@
 import { forwardRef } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { Loader2 } from 'lucide-react';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -43,7 +42,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 
   return (
     <button ref={ref} className={classes} disabled={disabled || isLoading} {...rest}>
-      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : leftIcon}
+      {isLoading ? <i className="fa-solid fa-circle-notch text-base animate-spin" aria-hidden="true" /> : leftIcon}
       {children}
     </button>
   );

@@ -16,6 +16,7 @@ const authMocks = vi.hoisted(() => ({
   signUp: vi.fn(),
   resend: vi.fn(),
   signOut: vi.fn(),
+  linkIdentity: vi.fn(),
   from: vi.fn(),
   update: vi.fn(),
 }));
@@ -31,6 +32,7 @@ vi.mock('../services/supabase', () => ({
       signUp: authMocks.signUp,
       resend: authMocks.resend,
       signOut: authMocks.signOut,
+      linkIdentity: authMocks.linkIdentity,
     },
     from: authMocks.from,
     update: authMocks.update,
@@ -93,6 +95,11 @@ function AuthProbe() {
         }
       >
         Continuar con Google con origen
+      </button>
+      <button
+        onClick={() => void auth.linkGoogleIdentity().catch(() => undefined)}
+      >
+        Vincular Google
       </button>
       <button
         onClick={() => void auth.signUpWithPassword('a@b.com', 'secret', 'Test User', 'customer')}
@@ -545,6 +552,79 @@ describe('AuthProvider', () => {
     });
   });
 
-  it('debería establecer el rol merchant_owner en el perfil después del registro', async () => {
-})
+  it('llama a linkIdentity cuando el usuario ya tiene sesión y vincula Google', async () => {
+    authMocks.linkIdentity.mockResolvedValue({ data: { user: null }, error: null });
+    authMocks.getSession.mockResolvedValue({
+      data: { session: buildSession('user-123') },
+      error: null,
+    });
+    mockProfileQuery({ data: buildProfile('user-123', 'customer'), error: null });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await screen.findByText('false');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Vincular Google' }));
+
+    expect(authMocks.linkIdentity).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+  });
+
+  it('usa linkIdentity en signInWithGoogle cuando hay sesión activa', async () => {
+    authMocks.linkIdentity.mockResolvedValue({ data: { user: null }, error: null });
+    authMocks.getSession.mockResolvedValue({
+      data: { session: buildSession('user-123') },
+      error: null,
+    });
+    mockProfileQuery({ data: buildProfile('user-123', 'customer'), error: null });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await screen.findByText('false');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar con Google' }));
+
+    expect(authMocks.linkIdentity).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    expect(authMocks.signInWithOAuth).not.toHaveBeenCalled();
+  });
+
+  it('usa signInWithOAuth en signInWithGoogle cuando no hay sesión', async () => {
+    authMocks.signInWithOAuth.mockResolvedValue({
+      data: { url: null, provider: 'google' },
+      error: null,
+    });
+    authMocks.getSession.mockResolvedValue({
+      data: { session: null },
+      error: null,
+    });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await screen.findByText('false');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar con Google' }));
+
+    expect(authMocks.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/` },
+    });
+    expect(authMocks.linkIdentity).not.toHaveBeenCalled();
+  });
 });

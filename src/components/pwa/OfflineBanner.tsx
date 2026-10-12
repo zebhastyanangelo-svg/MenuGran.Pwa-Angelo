@@ -1,4 +1,3 @@
-import { WifiOff } from 'lucide-react';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 
 /**
@@ -24,7 +23,7 @@ export function OfflineBanner(): React.ReactElement | null {
     >
       <div className="pointer-events-auto flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-lg ring-1 ring-black/5 max-w-md">
         <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-          <WifiOff className="h-5 w-5" />
+          <i className="fa-solid fa-wifi text-xl opacity-60" aria-hidden="true" />
         </div>
         <p className="flex-1 text-sm text-amber-800">
           <span className="font-semibold">Modo sin conexión</span>

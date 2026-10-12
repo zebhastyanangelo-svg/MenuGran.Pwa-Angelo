@@ -1,16 +1,3 @@
-import {
-  CakeSlice,
-  Coffee,
-  Cookie,
-  LayoutGrid,
-  Martini,
-  Package,
-  Pizza,
-  Soup,
-  Store,
-  Wine,
-  type LucideIcon,
-} from 'lucide-react';
 import type { MerchantCategory } from '../../types/database';
 
 /**
@@ -21,18 +8,18 @@ import type { MerchantCategory } from '../../types/database';
  */
 
 /** Icono asociado a cada categoría de comercio del dominio. */
-const MERCHANT_CATEGORY_ICONS: Record<MerchantCategory, LucideIcon> = {
-  'Comida rápida': Soup,
-  Restaurante: Store,
-  Bebidas: Coffee,
-  Postres: CakeSlice,
-  Repostería: Cookie,
-  Bodegón: Wine,
-  Otro: Package,
+const MERCHANT_CATEGORY_ICONS: Record<MerchantCategory, string> = {
+  'Comida rápida': 'fa-solid fa-bowl-food',
+  Restaurante: 'fa-solid fa-store',
+  Bebidas: 'fa-solid fa-mug-saucer',
+  Postres: 'fa-solid fa-cake-candles',
+  Repostería: 'fa-solid fa-cookie',
+  Bodegón: 'fa-solid fa-wine-glass',
+  Otro: 'fa-solid fa-box',
 };
 
-export function resolveCategoryIcon(category: MerchantCategory): LucideIcon {
-  return MERCHANT_CATEGORY_ICONS[category] ?? LayoutGrid;
+export function resolveCategoryIcon(category: MerchantCategory): string {
+  return MERCHANT_CATEGORY_ICONS[category] ?? 'fa-solid fa-table-cells-large';
 }
 
 /**
@@ -40,16 +27,16 @@ export function resolveCategoryIcon(category: MerchantCategory): LucideIcon {
  * comercio, así que en la ficha del local se resuelve por contenido en lugar de
  * por id; lo desconocido cae en el icono genérico.
  */
-const KEYWORD_ICONS: readonly (readonly [RegExp, LucideIcon])[] = [
-  [/pizza|italian|past[aá]/i, Pizza],
-  [/bebida|refresco|jugo|caf[eé]|coffee|latte/i, Coffee],
-  [/postre|dulce|torta/i, CakeSlice],
-  [/reposter|panad|pasteler/i, Cookie],
-  [/coctel|bar|vino|licor/i, Martini],
-  [/entrada|caldo|sopa|ceviche/i, Soup],
+const KEYWORD_ICONS: readonly (readonly [RegExp, string])[] = [
+  [/pizza|italian|past[aá]/i, 'fa-solid fa-pizza-slice'],
+  [/bebida|refresco|jugo|caf[eé]|coffee|latte/i, 'fa-solid fa-mug-saucer'],
+  [/postre|dulce|torta/i, 'fa-solid fa-cake-candles'],
+  [/reposter|panad|pasteler/i, 'fa-solid fa-cookie'],
+  [/coctel|bar|vino|licor/i, 'fa-solid fa-martini-glass'],
+  [/entrada|caldo|sopa|ceviche/i, 'fa-solid fa-bowl-food'],
 ];
 
-export function resolveCategoryIconByName(name: string): LucideIcon {
+export function resolveCategoryIconByName(name: string): string {
   const match = KEYWORD_ICONS.find(([pattern]) => pattern.test(name));
-  return match ? match[1] : LayoutGrid;
+  return match ? match[1] : 'fa-solid fa-table-cells-large';
 }

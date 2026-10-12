@@ -24,7 +24,6 @@ import { parseGeoPoint } from '../utils/geoPoint';
 import { confirmOrderDelivery } from '../services/orderDeliveryService';
 import { OrderStatusStep } from '../components/orders/OrderStatusStep';
 import { getAllowedTransitions, getTransitionLabel, getTransitionButtonClass } from '../utils/orderStatus';
-import { PartyPopper, ArrowLeft, PackageCheck, AlertCircle, Navigation, Star } from 'lucide-react';
 import { OrderTrackingPanel } from '../components/orders/OrderTrackingPanel';
 import { MapErrorBoundary } from '../components/map/MapErrorBoundary';
 import { useQueryClient } from '@tanstack/react-query';
@@ -516,7 +515,7 @@ export function OrderTracker() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="rejection-title">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <div className="flex items-center gap-3 mb-4">
-              <AlertCircle className="h-8 w-8 text-red-600 flex-shrink-0" aria-hidden="true" />
+              <i className="fa-solid fa-circle-exclamation text-3xl text-red-600 flex-shrink-0" aria-hidden="true" />
               <h2 id="rejection-title" className="text-xl font-bold text-red-700">Solicitud de pedido rechazada</h2>
             </div>
             <p className="text-gray-700 mb-6">
@@ -544,7 +543,7 @@ export function OrderTracker() {
           data-testid="order-cancelled-alert"
         >
           <div className="flex items-start gap-3">
-            <AlertCircle className="mt-0.5 h-6 w-6 flex-shrink-0 text-red-600" aria-hidden="true" />
+            <i className="fa-solid fa-circle-exclamation mt-0.5 text-2xl flex-shrink-0 text-red-600" aria-hidden="true" />
             <div>
               <h2 className="text-lg font-bold text-red-800">Pedido cancelado</h2>
               <p className="mt-1 text-red-700">
@@ -563,7 +562,7 @@ export function OrderTracker() {
           data-testid="pickup-ready-card"
         >
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
-            <PackageCheck className="h-7 w-7 text-emerald-600" aria-hidden="true" />
+            <i className="fa-solid fa-circle-check text-3xl text-emerald-600" aria-hidden="true" />
           </div>
           <h2 className="text-2xl font-bold text-emerald-800">
             ¡Tu pedido está listo!
@@ -603,7 +602,7 @@ export function OrderTracker() {
         !(order.status === 'on_the_way' && isValidGeoPoint(deliveryPoint))) && (
         <section className="mb-8 bg-white rounded-lg shadow-md p-6 border border-emerald-200 bg-emerald-50">
           <div className="flex items-center gap-3 mb-4">
-            <PackageCheck className="h-8 w-8 text-emerald-600" />
+            <i className="fa-solid fa-circle-check text-3xl text-emerald-600" aria-hidden="true" />
             <div>
               <h3 className="text-lg font-bold text-emerald-800">Confirmar recepción del pedido</h3>
               <p className="text-sm text-emerald-700">
@@ -620,7 +619,7 @@ export function OrderTracker() {
             className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-4 text-lg font-semibold text-white shadow hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="confirm-delivery"
           >
-            <PackageCheck className="h-5 w-5" />
+            <i className="fa-solid fa-circle-check text-xl" aria-hidden="true" />
             Confirmar pedido recibido
           </button>
         </section>
@@ -629,7 +628,7 @@ export function OrderTracker() {
       {order.status === 'delivered' && (
         <div className="mb-8 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 p-8 text-center shadow-md">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-            <PartyPopper className="h-8 w-8 text-emerald-600" aria-hidden="true" />
+            <i className="fa-solid fa-champagne-glasses text-3xl text-emerald-600" aria-hidden="true" />
           </div>
           <h2 className="text-2xl font-bold text-emerald-800 mb-2">
             ¡Pedido entregado con éxito!
@@ -645,7 +644,7 @@ export function OrderTracker() {
                 className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-6 py-3 text-sm font-semibold text-amber-900 shadow hover:bg-amber-200 transition-colors"
                 data-testid="open-survey"
               >
-                <Star className="h-4 w-4 fill-amber-500 text-amber-500" aria-hidden="true" />
+                <i className="fa-solid fa-star text-base text-amber-500" aria-hidden="true" />
                 Calificar tu experiencia
               </button>
             )}
@@ -658,7 +657,7 @@ export function OrderTracker() {
               className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow hover:bg-emerald-700 transition-colors"
               data-testid="back-to-marketplace"
             >
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              <i className="fa-solid fa-arrow-left text-base" aria-hidden="true" />
               Volver al catálogo
             </button>
           </div>
@@ -714,7 +713,7 @@ export function OrderTracker() {
             data-testid="open-tracking-map"
             className="mb-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-4 text-base font-semibold text-white shadow-lg transition hover:bg-emerald-700"
           >
-            <Navigation className="h-5 w-5" aria-hidden="true" />
+            <i className="fa-solid fa-location-arrow text-xl" aria-hidden="true" />
             Ver seguimiento en vivo
           </button>
         )

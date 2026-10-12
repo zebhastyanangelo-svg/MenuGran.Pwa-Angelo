@@ -1,11 +1,9 @@
-import type { LucideIcon } from 'lucide-react';
-import { Home, ShoppingCart, LayoutDashboard, Settings, Store, UserRound, Building2, UtensilsCrossed, Bike, ClipboardList, Users } from 'lucide-react';
 import type { MerchantStaffPermissions, UserRole } from '../../types/database';
 
 export interface NavItem {
   to: string;
   label: string;
-  icon: LucideIcon;
+  icon: string;
   /** Permiso requerido (solo aplica a merchant_staff con permisos cargados). */
   requiredPermission?: keyof MerchantStaffPermissions;
   /** Ocultar a empleados sin permisos de administración (solo owner). */
@@ -13,30 +11,30 @@ export interface NavItem {
 }
 
 export const customerNavItems: NavItem[] = [
-  { to: '/marketplace', label: 'Inicio', icon: Home },
-  { to: '/checkout', label: 'Carrito', icon: ShoppingCart },
-  { to: '/profile', label: 'Perfil', icon: UserRound },
+  { to: '/marketplace', label: 'Inicio', icon: 'fa-solid fa-house' },
+  { to: '/checkout', label: 'Carrito', icon: 'fa-solid fa-cart-shopping' },
+  { to: '/profile', label: 'Perfil', icon: 'fa-solid fa-user' },
 ];
 
 export const merchantNavItems: NavItem[] = [
-  { to: '/admin/dashboard', label: 'Resumen', icon: LayoutDashboard, requiredPermission: 'can_view_metrics' },
-  { to: '/admin', label: 'Pedidos', icon: ClipboardList, requiredPermission: 'can_manage_orders' },
-  { to: '/admin/dishes', label: 'Platos', icon: UtensilsCrossed, requiredPermission: 'can_manage_menu' },
-  { to: '/driver/deliveries', label: 'Entregas', icon: Bike, requiredPermission: 'can_view_assigned_deliveries' },
-  { to: '/admin/settings', label: 'Configuración', icon: Settings, ownerOnly: true },
-  { to: '/admin/profile', label: 'Perfil', icon: Store },
+  { to: '/admin/dashboard', label: 'Resumen', icon: 'fa-solid fa-chart-line', requiredPermission: 'can_view_metrics' },
+  { to: '/admin', label: 'Pedidos', icon: 'fa-solid fa-clipboard-list', requiredPermission: 'can_manage_orders' },
+  { to: '/admin/dishes', label: 'Platos', icon: 'fa-solid fa-utensils', requiredPermission: 'can_manage_menu' },
+  { to: '/driver/deliveries', label: 'Entregas', icon: 'fa-solid fa-bicycle', requiredPermission: 'can_view_assigned_deliveries' },
+  { to: '/admin/settings', label: 'Configuración', icon: 'fa-solid fa-gear', ownerOnly: true },
+  { to: '/admin/profile', label: 'Perfil', icon: 'fa-solid fa-store' },
 ];
 
 export const superadminNavItems: NavItem[] = [
-  { to: '/super-admin/dashboard', label: 'Inicio', icon: LayoutDashboard },
-  { to: '/super-admin', label: 'Negocios', icon: Building2 },
-  { to: '/super-admin/users', label: 'Usuarios', icon: Users },
-  { to: '/super-admin/profile', label: 'Perfil', icon: UserRound },
+  { to: '/super-admin/dashboard', label: 'Inicio', icon: 'fa-solid fa-chart-line' },
+  { to: '/super-admin', label: 'Negocios', icon: 'fa-solid fa-building' },
+  { to: '/super-admin/users', label: 'Usuarios', icon: 'fa-solid fa-users' },
+  { to: '/super-admin/profile', label: 'Perfil', icon: 'fa-solid fa-user' },
 ];
 
 export const driverNavItems: NavItem[] = [
-  { to: '/driver/deliveries', label: 'Entregas', icon: Bike },
-  { to: '/profile', label: 'Perfil', icon: UserRound },
+  { to: '/driver/deliveries', label: 'Entregas', icon: 'fa-solid fa-bicycle' },
+  { to: '/profile', label: 'Perfil', icon: 'fa-solid fa-user' },
 ];
 
 const merchantRoles: UserRole[] = ['merchant_owner', 'merchant_staff'];

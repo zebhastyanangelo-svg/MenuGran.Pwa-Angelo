@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { ExternalLink } from 'lucide-react';
 
 const LEGAL_LINKS = [
   { to: '/privacy', label: 'Política de Privacidad' },
@@ -30,7 +29,7 @@ export function Footer() {
                   to={to}
                   className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 transition-colors hover:text-brand-red"
                 >
-                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                  <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden="true" />
                   {label}
                 </Link>
               </li>

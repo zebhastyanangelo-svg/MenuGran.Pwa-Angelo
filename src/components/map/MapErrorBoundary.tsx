@@ -1,5 +1,4 @@
 import { Component, type ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -33,7 +32,7 @@ export class MapErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex h-64 w-full items-center justify-center rounded-lg border border-red-200 bg-red-50 p-4">
           <div className="text-center">
-            <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-2" />
+            <i className="fa-solid fa-triangle-exclamation text-4xl text-red-500 mx-auto mb-2" aria-hidden="true" />
             <p className="text-sm font-medium text-red-800 mb-1">
               No se pudo cargar el mapa
             </p>
@@ -45,7 +44,7 @@ export class MapErrorBoundary extends Component<Props, State> {
               onClick={this.handleReset}
               className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 transition-colors"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
+              <i className="fa-solid fa-rotate-right text-sm" aria-hidden="true" />
               Reintentar
             </button>
           </div>

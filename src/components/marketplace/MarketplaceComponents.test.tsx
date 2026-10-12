@@ -298,7 +298,7 @@ describe('MerchantCard valoración en el banner', () => {
     const badge = screen.getByTestId('merchant-rating-badge');
     expect(badge).toHaveTextContent('90%');
     // Estrellas visuales: 5 en total (llenas y vacías) según la puntuación.
-    expect(badge.querySelectorAll('svg').length).toBe(5);
+    expect(badge.querySelectorAll('i').length).toBe(5);
   });
 
   it('no muestra la cantidad de reseñas entre paréntesis', () => {

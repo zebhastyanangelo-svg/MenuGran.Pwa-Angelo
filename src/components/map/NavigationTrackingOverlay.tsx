@@ -12,38 +12,24 @@
  *    de acción principal a ancho completo.
  */
 
-import type { LucideIcon } from 'lucide-react';
-import {
-  ArrowUp,
-  CornerUpLeft,
-  CornerUpRight,
-  Crosshair,
-  MapPin,
-  MessageCircle,
-  Phone,
-  Star,
-  BadgeCheck,
-  Volume2,
-  VolumeX,
-} from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { ManeuverIconName } from '../../utils/navigationInstruction';
 
-const MANEUVER_ICONS: Record<ManeuverIconName, LucideIcon> = {
-  straight: ArrowUp,
-  'turn-right': CornerUpRight,
-  'turn-left': CornerUpLeft,
-  'slight-right': CornerUpRight,
-  'slight-left': CornerUpLeft,
-  'sharp-right': CornerUpRight,
-  'sharp-left': CornerUpLeft,
-  uturn: CornerUpLeft,
-  roundabout: Crosshair,
-  merge: CornerUpRight,
-  ramp: CornerUpRight,
-  fork: CornerUpRight,
-  depart: ArrowUp,
-  arrive: MapPin,
+const MANEUVER_ICONS: Record<ManeuverIconName, string> = {
+  straight: 'fa-solid fa-arrow-up',
+  'turn-right': 'fa-solid fa-rotate-right',
+  'turn-left': 'fa-solid fa-rotate-left',
+  'slight-right': 'fa-solid fa-rotate-right',
+  'slight-left': 'fa-solid fa-rotate-left',
+  'sharp-right': 'fa-solid fa-rotate-right',
+  'sharp-left': 'fa-solid fa-rotate-left',
+  uturn: 'fa-solid fa-arrow-rotate-left',
+  roundabout: 'fa-solid fa-circle-notch',
+  merge: 'fa-solid fa-arrow-right',
+  ramp: 'fa-solid fa-road',
+  fork: 'fa-solid fa-code-branch',
+  depart: 'fa-solid fa-location-arrow',
+  arrive: 'fa-solid fa-location-dot',
 };
 
 export interface NavigationInstructionBarProps {
@@ -56,7 +42,7 @@ export interface NavigationInstructionBarProps {
 }
 
 export function NavigationInstructionBar({ icon, text, distanceLabel }: NavigationInstructionBarProps) {
-  const ManeuverIcon = MANEUVER_ICONS[icon] ?? ArrowUp;
+  const maneuverIconClass = MANEUVER_ICONS[icon] ?? 'fa-solid fa-arrow-up';
 
   return (
     <div
@@ -65,7 +51,7 @@ export function NavigationInstructionBar({ icon, text, distanceLabel }: Navigati
     >
       <div className="flex items-center gap-3 rounded-2xl bg-white/95 px-4 py-3 shadow-lg ring-1 ring-black/5 backdrop-blur-md">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-red text-white shadow-md ring-2 ring-white">
-          <ManeuverIcon className="h-7 w-7" aria-hidden="true" />
+          <i className={`${maneuverIconClass} text-3xl`} aria-hidden="true" />
         </span>
         <div className="min-w-0">
           <p className="truncate text-base font-bold leading-tight text-gray-900">{text}</p>
@@ -105,7 +91,7 @@ export function NavigationSideControls({
   positionClass = 'right-3 top-24',
   centerButtonClass = 'bottom-56 right-3',
 }: NavigationSideControlsProps) {
-  const MuteIcon = muted ? VolumeX : Volume2;
+  const muteIconClass = muted ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
 
   return (
     <>
@@ -121,7 +107,7 @@ export function NavigationSideControls({
           data-testid="toggle-mute-button"
           className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-gray-700 shadow-lg ring-1 ring-black/5 transition hover:bg-gray-50 active:scale-95"
         >
-          <MuteIcon className="h-5 w-5" aria-hidden="true" />
+          <i className={`${muteIconClass} text-xl`} aria-hidden="true" />
         </button>
         <button
           type="button"
@@ -130,7 +116,7 @@ export function NavigationSideControls({
           data-testid="reorient-button"
           className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-gray-700 shadow-lg ring-1 ring-black/5 transition hover:bg-gray-50 active:scale-95"
         >
-          <Crosshair className="h-5 w-5" aria-hidden="true" />
+          <i className="fa-solid fa-crosshairs text-xl" aria-hidden="true" />
         </button>
       </div>
 
@@ -140,7 +126,7 @@ export function NavigationSideControls({
         data-testid="center-button"
         className={`absolute z-20 inline-flex h-12 items-center gap-2 rounded-full bg-brand-red px-4 text-sm font-semibold text-white shadow-xl ring-1 ring-black/10 transition hover:bg-brand-red-dark active:scale-95 ${centerButtonClass}`}
       >
-        <ArrowUp className="h-5 w-5" aria-hidden="true" />
+        <i className="fa-solid fa-arrow-up text-xl" aria-hidden="true" />
         Centrar
       </button>
     </>
@@ -230,7 +216,7 @@ export function NavigationPersonCard({
                 className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
                 data-testid="person-verified-badge"
               >
-                <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                <i className="fa-solid fa-circle-check text-sm" aria-hidden="true" />
                 Verificado
               </span>
             )}
@@ -241,7 +227,7 @@ export function NavigationPersonCard({
                 className="inline-flex items-center gap-1 text-sm font-semibold text-gray-700"
                 data-testid="person-rating"
               >
-                <Star className="h-4 w-4 fill-amber-400 text-amber-400" aria-hidden="true" />
+                <i className="fa-solid fa-star text-amber-400 text-base" aria-hidden="true" />
                 {rating.toFixed(1)}
               </span>
             )}
@@ -261,7 +247,7 @@ export function NavigationPersonCard({
               data-testid="person-call-button"
               className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md ring-1 ring-emerald-600/30 transition hover:bg-emerald-600 active:scale-95"
             >
-              <Phone className="h-5 w-5" aria-hidden="true" />
+              <i className="fa-solid fa-phone text-xl" aria-hidden="true" />
             </a>
           )}
           {onChat !== undefined && (
@@ -272,7 +258,7 @@ export function NavigationPersonCard({
               data-testid="person-chat-button"
               className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-red text-white shadow-md ring-1 ring-black/10 transition hover:bg-brand-red-dark active:scale-95"
             >
-              <MessageCircle className="h-5 w-5" aria-hidden="true" />
+              <i className="fa-solid fa-comment text-xl" aria-hidden="true" />
             </button>
           )}
         </div>

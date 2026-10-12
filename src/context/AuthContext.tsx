@@ -160,8 +160,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = useCallback(
     async (redirectPath?: string | null): Promise<void> => {
       try {
-        // Se aterriza en '/' para que el router resuelva por rol real del
-        // perfil (owner/staff → /admin, driver → /driver/deliveries, etc.).
+        const currentSession = sessionRef.current;
+        
+        // If user already has an active session, link Google identity instead of creating new account
+        if (currentSession?.user !== undefined) {
+          const { error } = await supabase.auth.linkIdentity({
+            provider: 'google',
+            options: {
+              redirectTo: window.location.origin,
+            },
+          });
+          if (error !== null) throw error;
+          return;
+        }
+
+        // No active session: normal OAuth sign in
         const fromQuery =
           redirectPath !== undefined && redirectPath !== null && redirectPath !== ''
             ? `?from=${encodeURIComponent(redirectPath)}`
@@ -178,6 +191,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+
+  const linkGoogleIdentity = useCallback(async (): Promise<void> => {
+    try {
+      const { error } = await supabase.auth.linkIdentity({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error !== null) throw error;
+    } catch (error) {
+      console.error('Error al vincular identidad de Google', error);
+      throw error;
+    }
+  }, []);
 
   const signInWithPassword = useCallback(
     async (email: string, password: string): Promise<void> => {
@@ -298,32 +326,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const user = session?.user ?? null;
 
-  const value = useMemo<AuthContextValue>(
+const value = useMemo<AuthContextValue>(
     () => ({
       user,
       profile,
       isLoading,
-       signInWithGoogle,
-        signInWithPassword,
-        signUpWithPassword,
-        completeRegistration,
-        resendConfirmationEmail,
-        signOut,
-        reloadProfile,
-      }),
-      [
-        user,
-        profile,
-        isLoading,
-        signInWithGoogle,
-        signInWithPassword,
-        signUpWithPassword,
-        completeRegistration,
-        resendConfirmationEmail,
-        signOut,
-        reloadProfile,
-      ],
-   );
+      signInWithGoogle,
+      linkGoogleIdentity,
+      signInWithPassword,
+      signUpWithPassword,
+      completeRegistration,
+      resendConfirmationEmail,
+      signOut,
+      reloadProfile,
+    }),
+    [
+      user,
+      profile,
+      isLoading,
+      signInWithGoogle,
+      linkGoogleIdentity,
+      signInWithPassword,
+      signUpWithPassword,
+      completeRegistration,
+      resendConfirmationEmail,
+      signOut,
+      reloadProfile,
+    ],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

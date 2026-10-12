@@ -28,14 +28,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  QrCode,
-  ScanLine,
-  Keyboard,
-  CameraOff,
-  RefreshCw,
-  ShieldOff,
-} from 'lucide-react';
 import { MERCHANT_QR_PATH } from '../services/qrCodeService';
 import {
   CAMERA_UNSUPPORTED_MESSAGE,
@@ -191,7 +183,7 @@ export function QrScanPage() {
     <div className="mx-auto max-w-md px-4 py-8">
       <div className="mb-6 text-center">
         <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-brand-red">
-          <QrCode className="h-7 w-7" aria-hidden="true" />
+          <i className="fa-solid fa-qrcode text-3xl" aria-hidden="true" />
         </span>
         <h1 className="text-xl font-bold text-slate-900">Escanea el QR de tu mesa</h1>
         <p className="mt-1 text-sm text-slate-600">
@@ -229,7 +221,7 @@ export function QrScanPage() {
             )}
             {!isScanning && !isRequesting && permissionState === 'denied' && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/85 px-6 text-center">
-                <CameraOff className="h-6 w-6 text-white" aria-hidden="true" />
+                <i className="fa-solid fa-video-slash text-2xl text-white" aria-hidden="true" />
                 <p className="text-xs font-medium text-white">
                   Permiso de cámara denegado
                 </p>
@@ -244,7 +236,7 @@ export function QrScanPage() {
                 className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/85 px-6 text-center"
                 data-testid="camera-unsupported-notice"
               >
-                <ShieldOff className="h-6 w-6 text-white" aria-hidden="true" />
+                <i className="fa-solid fa-shield-halved text-2xl text-white" aria-hidden="true" />
                 <p className="text-xs font-medium text-white">
                   Cámara no disponible
                 </p>
@@ -272,9 +264,9 @@ export function QrScanPage() {
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-red-dark disabled:opacity-60"
             >
               {permissionState === 'denied' ? (
-                <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                <i className="fa-solid fa-rotate-right text-base" aria-hidden="true" />
               ) : (
-                <ScanLine className="h-4 w-4" aria-hidden="true" />
+                <i className="fa-solid fa-expand text-base" aria-hidden="true" />
               )}
               {isRequesting
                 ? 'Abriendo cámara…'
@@ -297,7 +289,7 @@ export function QrScanPage() {
           htmlFor="qr-token"
           className="flex items-center gap-1.5 text-sm font-medium text-slate-700"
         >
-          <Keyboard className="h-4 w-4" aria-hidden="true" />
+          <i className="fa-solid fa-keyboard text-base" aria-hidden="true" />
           ¿Prefieres escribir el código?
         </label>
         <input

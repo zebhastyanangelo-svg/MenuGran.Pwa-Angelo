@@ -1,14 +1,5 @@
 import { useState, type FormEvent, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  MapPin,
-  Store,
-  Bike,
-  Smartphone,
-  CreditCard,
-  Banknote,
-  AlertCircle,
-} from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { PaymentProofUploader } from '../components/cart/PaymentProofUploader';
 import { OrderTicket } from '../components/cart/OrderTicket';
@@ -436,7 +427,7 @@ export function Checkout() {
         {!isDispatchLocked && (
           <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <legend className="flex items-center gap-1.5 px-1 text-sm font-semibold text-slate-700">
-              <Bike className="h-4 w-4 text-brand-red" aria-hidden="true" />
+              <i className="fa-solid fa-bicycle text-base text-brand-red" aria-hidden="true" />
               Opciones de Despacho
             </legend>
             {merchantAcceptsDelivery ? (
@@ -451,7 +442,7 @@ export function Checkout() {
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <Bike className="h-4 w-4" aria-hidden="true" />
+                  <i className="fa-solid fa-bicycle text-base" aria-hidden="true" />
                   Entrega a domicilio
                 </button>
                 <button
@@ -464,7 +455,7 @@ export function Checkout() {
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <Store className="h-4 w-4" aria-hidden="true" />
+                  <i className="fa-solid fa-store text-base" aria-hidden="true" />
                   Retiro en local
                 </button>
               </div>
@@ -483,7 +474,7 @@ export function Checkout() {
         {orderType === 'delivery' && (
           <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <legend className="flex items-center gap-1 px-1 text-sm font-semibold text-slate-700">
-              <MapPin className="h-4 w-4 text-brand-red" aria-hidden="true" />
+              <i className="fa-solid fa-location-dot text-base text-brand-red" aria-hidden="true" />
               Dirección de Entrega
             </legend>
             <div className="space-y-3">
@@ -509,7 +500,7 @@ export function Checkout() {
               />
               {deliveryCoverageError && (
                 <p className="flex items-center gap-2 text-sm text-red-600" role="alert">
-                  <AlertCircle className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                  <i className="fa-solid fa-circle-exclamation text-base flex-shrink-0" aria-hidden="true" />
                   {deliveryCoverageError}
                 </p>
               )}
@@ -524,7 +515,7 @@ export function Checkout() {
 
         <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <legend className="flex items-center gap-1.5 px-1 text-sm font-semibold text-slate-700">
-            <CreditCard className="h-4 w-4 text-brand-red" aria-hidden="true" />
+            <i className="fa-solid fa-credit-card text-base text-brand-red" aria-hidden="true" />
             Métodos de Pago
           </legend>
           <PaymentMethodSelector
@@ -609,17 +600,17 @@ interface PaymentMethodSelectorProps {
 const PAYMENT_METHOD_OPTIONS: {
   id: CheckoutPaymentMethod;
   label: string;
-  icon: typeof Smartphone;
+  icon: string;
 }[] = [
-  { id: 'card_pos', label: 'Tarjeta', icon: CreditCard },
-  { id: 'cash', label: 'Efectivo', icon: Banknote },
-  { id: 'pago_movil', label: 'Pago Móvil', icon: Smartphone },
+  { id: 'card_pos', label: 'Tarjeta', icon: 'fa-solid fa-credit-card text-xl' },
+  { id: 'cash', label: 'Efectivo', icon: 'fa-solid fa-money-bill text-xl' },
+  { id: 'pago_movil', label: 'Pago Móvil', icon: 'fa-solid fa-mobile-screen text-xl' },
 ];
 
 function PaymentMethodSelector({ value, onChange }: PaymentMethodSelectorProps) {
   return (
     <div className="grid grid-cols-3 gap-2" role="group" aria-label="Métodos de pago">
-      {PAYMENT_METHOD_OPTIONS.map(({ id, label, icon: Icon }) => (
+      {PAYMENT_METHOD_OPTIONS.map(({ id, label, icon }) => (
         <button
           key={id}
           type="button"
@@ -631,7 +622,7 @@ function PaymentMethodSelector({ value, onChange }: PaymentMethodSelectorProps) 
               : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'
           }`}
         >
-          <Icon className="h-5 w-5" aria-hidden="true" />
+          <i className={icon} aria-hidden="true" />
           {label}
         </button>
       ))}

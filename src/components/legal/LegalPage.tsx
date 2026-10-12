@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { ShieldCheck } from 'lucide-react';
 
 interface LegalPageLayoutProps {
   title: string;
@@ -23,7 +22,7 @@ export function LegalPageLayout({ title, updatedAt, intro, children }: LegalPage
     <div className="mx-auto w-full max-w-3xl">
       <header className="mb-6">
         <div className="mb-3 flex items-center gap-2 text-brand-red">
-          <ShieldCheck className="h-6 w-6" aria-hidden="true" />
+          <i className="fa-solid fa-shield-halved text-2xl" aria-hidden="true" />
           <span className="text-xs font-semibold uppercase tracking-wider">Información legal</span>
         </div>
         <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">{title}</h1>

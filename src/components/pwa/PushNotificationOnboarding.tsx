@@ -1,4 +1,3 @@
-import { Bell, X } from 'lucide-react';
 import { usePushNotificationOnboarding } from '../../hooks/usePushNotificationOnboarding';
 
 /**
@@ -36,11 +35,11 @@ export function PushNotificationOnboarding() {
           aria-label="Cerrar"
           className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
         >
-          <X className="h-5 w-5" aria-hidden="true" />
+          <i className="fa-solid fa-xmark text-xl" aria-hidden="true" />
         </button>
 
         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-red/10">
-          <Bell className="h-6 w-6 text-brand-red" aria-hidden="true" />
+          <i className="fa-solid fa-bell text-2xl text-brand-red" aria-hidden="true" />
         </div>
 
         <h2

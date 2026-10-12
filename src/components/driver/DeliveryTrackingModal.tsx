@@ -29,12 +29,7 @@ const NAVIGATION_ZOOM = 16
 // Custom icons for map markers
 const DESTINATION_ICON = L.divIcon({
   className: 'custom-marker',
-  html: `
-    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2C8.13401 2 5 5.13401 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13401 15.866 2 12 2Z" stroke="#C71523" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="12" cy="9" r="3" fill="#C71523"/>
-    </svg>
-  `,
+  html: `<div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-location-dot" style="color:#C71523;font-size:28px;-webkit-text-stroke:1.5px #ffffff;"></i></div>`,
   iconSize: [30, 30],
   iconAnchor: [15, 30],
   popupAnchor: [0, -30],

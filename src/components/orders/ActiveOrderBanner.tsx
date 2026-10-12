@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useActiveOrder, isActiveOrder } from '../../hooks/useActiveOrder';
 import { getOrderStatusLabel } from '../../utils/orderStatus';
-import { Bike, Store } from 'lucide-react';
+
 
 export function ActiveOrderBanner() {
   const { isActive, order, status } = useActiveOrder();
@@ -20,9 +20,9 @@ export function ActiveOrderBanner() {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             {order.type === 'delivery' ? (
-              <Bike className="h-4 w-4" aria-hidden="true" />
+              <i className="fa-solid fa-bicycle" aria-hidden="true" />
             ) : (
-              <Store className="h-4 w-4" aria-hidden="true" />
+              <i className="fa-solid fa-store" aria-hidden="true" />
             )}
             <span className="text-sm font-medium">
               Pedido #{order.id.slice(0, 8).toUpperCase()} —{' '}

@@ -14,7 +14,7 @@ export function BottomNav() {
       aria-label="Navegación principal"
     >
       <ul className="flex items-stretch justify-around">
-        {navItems.map(({ to, label, icon: Icon }) => (
+        {navItems.map(({ to, label, icon }) => (
           <li key={to} className="flex-1">
             <NavLink
               to={to}
@@ -24,7 +24,7 @@ export function BottomNav() {
                 }`
               }
             >
-              <Icon className="h-5 w-5" aria-hidden="true" />
+              <i className={icon} aria-hidden="true" />
               {label}
             </NavLink>
           </li>

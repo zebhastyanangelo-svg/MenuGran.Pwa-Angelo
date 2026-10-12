@@ -7,7 +7,6 @@
 
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { QrCode } from 'lucide-react';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 
 type ResolveState = 'loading' | 'redirecting' | 'invalid';
@@ -70,7 +69,7 @@ export function MerchantQrRedirectPage() {
         role="alert"
         className="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-16 text-center"
       >
-        <QrCode className="h-12 w-12 text-slate-300" aria-hidden="true" />
+        <i className="fa-solid fa-qrcode text-5xl text-slate-300" aria-hidden="true" />
         <h1 className="text-xl font-bold text-slate-900">Código QR no válido</h1>
         <p className="text-sm text-slate-600">
           Este código no corresponde a ningún comercio activo. Es posible que el comercio

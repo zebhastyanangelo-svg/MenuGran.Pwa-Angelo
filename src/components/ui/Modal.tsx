@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { MouseEvent, ReactNode } from 'react';
-import { X } from 'lucide-react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -56,7 +55,7 @@ export function Modal({ isOpen, onClose, title, children, footer, dismissible = 
               aria-label="Cerrar"
               className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
             >
-              <X className="h-5 w-5" aria-hidden="true" />
+              <i className="fa-solid fa-xmark text-xl" aria-hidden="true" />
             </button>
           )}
         </div>

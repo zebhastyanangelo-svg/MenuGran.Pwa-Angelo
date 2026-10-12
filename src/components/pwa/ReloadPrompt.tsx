@@ -1,4 +1,3 @@
-import { Download, RefreshCw, WifiOff, X } from 'lucide-react';
 import { usePwaInstall, usePwaUpdate } from '../../hooks/usePwaUpdate';
 
 /**
@@ -29,11 +28,11 @@ export function ReloadPrompt(): React.ReactElement | null {
       <div className="pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-lg ring-1 ring-black/5">
         <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
           {isUpdateAvailable ? (
-            <RefreshCw className="h-5 w-5" />
+            <i className="fa-solid fa-rotate-right text-xl" aria-hidden="true" />
           ) : isOfflineReady ? (
-            <WifiOff className="h-5 w-5" />
+            <i className="fa-solid fa-wifi text-xl opacity-60" aria-hidden="true" />
           ) : (
-            <Download className="h-5 w-5" />
+            <i className="fa-solid fa-download text-xl" aria-hidden="true" />
           )}
         </div>
 
@@ -75,7 +74,7 @@ export function ReloadPrompt(): React.ReactElement | null {
               className="rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
               aria-label="Cerrar aviso"
             >
-              <X className="h-4 w-4" />
+              <i className="fa-solid fa-xmark text-base" aria-hidden="true" />
             </button>
           ) : null}
         </div>

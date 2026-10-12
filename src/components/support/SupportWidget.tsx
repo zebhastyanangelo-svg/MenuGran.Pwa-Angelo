@@ -8,16 +8,6 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import {
-  BookOpen,
-  ChevronLeft,
-  ChevronRight,
-  LifeBuoy,
-  MessageCircleQuestion,
-  Search,
-  Send,
-  X,
-} from 'lucide-react';
-import {
   SUPPORT_ARTICLES,
   SUPPORT_CATEGORIES,
   SUPPORT_FLOW,
@@ -86,7 +76,7 @@ export function SupportWidget() {
         data-testid="support-fab"
         className={`${FLOATING_ACTION_CLASS} inline-flex h-14 w-14 items-center justify-center rounded-full bg-brand-red text-white shadow-lg transition hover:bg-brand-red-dark focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2`}
       >
-        <LifeBuoy className="h-6 w-6" aria-hidden="true" />
+        <i className="fa-solid fa-life-ring text-2xl" aria-hidden="true" />
       </button>
     );
   }
@@ -102,7 +92,7 @@ export function SupportWidget() {
               aria-label="Volver al inicio de la ayuda"
               className="rounded-md p-1 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white"
             >
-              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+              <i className="fa-solid fa-chevron-left text-xl" aria-hidden="true" />
             </button>
           )}
           <h2 className="text-base font-semibold">Ayuda y soporte</h2>
@@ -113,7 +103,7 @@ export function SupportWidget() {
           aria-label="Cerrar ayuda"
           className="rounded-md p-1 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white"
         >
-          <X className="h-5 w-5" aria-hidden="true" />
+          <i className="fa-solid fa-xmark text-xl" aria-hidden="true" />
         </button>
       </header>
 
@@ -174,14 +164,14 @@ function HomeView({
         onClick={onStartFlow}
         className="flex w-full items-center gap-3 rounded-xl border border-brand-red/30 bg-red-50 p-3 text-left transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-brand-red"
       >
-        <MessageCircleQuestion className="h-6 w-6 shrink-0 text-brand-red" aria-hidden="true" />
+        <i className="fa-solid fa-circle-question text-2xl shrink-0 text-brand-red" aria-hidden="true" />
         <span className="flex-1">
           <span className="block text-sm font-semibold text-slate-900">¿Qué necesitas?</span>
           <span className="block text-xs text-slate-600">
             Responde unas preguntas y te llevamos a la solución.
           </span>
         </span>
-        <ChevronRight className="h-5 w-5 shrink-0 text-brand-red" aria-hidden="true" />
+        <i className="fa-solid fa-chevron-right text-xl shrink-0 text-brand-red" aria-hidden="true" />
       </button>
 
       <section>
@@ -196,7 +186,7 @@ function HomeView({
                 onClick={() => onPickCategory(category.id)}
                 className="flex w-full items-start gap-3 rounded-lg p-2 text-left transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-red"
               >
-                <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                <i className="fa-solid fa-book-open mt-0.5 text-base shrink-0 text-slate-400" aria-hidden="true" />
                 <span>
                   <span className="block text-sm font-medium text-slate-900">
                     {category.label}
@@ -233,8 +223,8 @@ function SearchView({
     <div className="space-y-3">
       <label className="relative block">
         <span className="sr-only">Buscar en la ayuda</span>
-        <Search
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+        <i
+          className="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 text-base -translate-y-1/2 text-slate-400"
           aria-hidden="true"
         />
         <input
@@ -273,8 +263,8 @@ function SearchView({
                 onClick={() => onOpenArticle(article)}
                 className="flex w-full items-start gap-2 rounded-lg p-2 text-left transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-red"
               >
-                <ChevronRight
-                  className="mt-0.5 h-4 w-4 shrink-0 text-slate-400"
+                <i
+                  className="fa-solid fa-chevron-right mt-0.5 text-base shrink-0 text-slate-400"
                   aria-hidden="true"
                 />
                 <span className="text-sm text-slate-800">{article.question}</span>
@@ -318,7 +308,7 @@ function FlowView({
               className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-left text-sm text-slate-800 transition hover:border-brand-red hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-brand-red"
             >
               {option.label}
-              <Send className="h-4 w-4 shrink-0 text-brand-red" aria-hidden="true" />
+              <i className="fa-solid fa-paper-plane text-base shrink-0 text-brand-red" aria-hidden="true" />
             </button>
           </li>
         ))}
@@ -371,7 +361,7 @@ function ArticleView({
                   onClick={() => onOpenArticle(related)}
                   className="flex w-full items-start gap-2 rounded-md p-1 text-left text-sm text-slate-700 transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-brand-red"
                 >
-                  <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                  <i className="fa-solid fa-chevron-right mt-0.5 text-base shrink-0 text-slate-400" aria-hidden="true" />
                   {related.question}
                 </button>
               </li>

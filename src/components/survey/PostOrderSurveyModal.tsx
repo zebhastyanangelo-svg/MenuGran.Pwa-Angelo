@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Bike, Loader2, Send, Store as StoreIcon, Utensils } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { StarRating } from './StarRating';
 import { useNotificationToast } from '../pwa/useNotificationToast';
@@ -113,15 +112,15 @@ function StepHeader({
 }) {
   const config = {
     business: {
-      icon: <StoreIcon className="h-5 w-5 text-brand-red" aria-hidden="true" />,
+      icon: <i className="fa-solid fa-store text-xl text-brand-red" aria-hidden="true" />,
       title: '¿Cómo estuvo el negocio?',
     },
     delivery: {
-      icon: <Bike className="h-5 w-5 text-brand-red" aria-hidden="true" />,
+      icon: <i className="fa-solid fa-bicycle text-xl text-brand-red" aria-hidden="true" />,
       title: '¿Cómo estuvo el repartidor?',
     },
     platform: {
-      icon: <Utensils className="h-5 w-5 text-brand-red" aria-hidden="true" />,
+      icon: <i className="fa-solid fa-utensils text-xl text-brand-red" aria-hidden="true" />,
       title: '¿Cómo estuvo MenuGran?',
     },
   }[step];
@@ -265,10 +264,10 @@ export function PostOrderSurveyModal({ order, onClose }: PostOrderSurveyModalPro
             className="inline-flex items-center gap-2 rounded-lg bg-brand-red px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-red-dark disabled:cursor-not-allowed disabled:opacity-60"
             data-testid="survey-primary-action"
           >
-            {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            {submitting && <i className="fa-solid fa-circle-notch text-base animate-spin" aria-hidden="true" />}
             {isLastStep ? (
               <>
-                <Send className="h-4 w-4" aria-hidden="true" />
+                <i className="fa-solid fa-paper-plane text-base" aria-hidden="true" />
                 Enviar calificación
               </>
             ) : (

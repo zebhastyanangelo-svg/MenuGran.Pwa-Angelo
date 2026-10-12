@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react';
-import { LogOut, Mail, UserCircle2, Phone, CreditCard, Save, Loader2, AlertTriangle, Bell, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useUpdateProfile, type ProfileUpdatePayload } from '../hooks/useUpdateProfile';
@@ -166,7 +165,7 @@ export function ProfilePage() {
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
         <div className="mb-6 flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-brand-red">
-            <UserCircle2 className="h-9 w-9" aria-hidden="true" />
+            <i className="fa-solid fa-circle-user text-4xl" aria-hidden="true" />
           </div>
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.12em] text-slate-500">
@@ -180,7 +179,7 @@ export function ProfilePage() {
           {/* Nombre completo */}
           <label className="block">
             <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
-              <UserCircle2 className="h-4 w-4" aria-hidden="true" />
+              <i className="fa-solid fa-circle-user text-base" aria-hidden="true" />
               Nombre completo
             </span>
             <input
@@ -195,7 +194,7 @@ export function ProfilePage() {
           {/* Correo (solo lectura) */}
           <label className="block">
             <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
-              <Mail className="h-4 w-4" aria-hidden="true" />
+              <i className="fa-solid fa-envelope text-base" aria-hidden="true" />
               Correo electrónico
             </span>
             <input
@@ -209,7 +208,7 @@ export function ProfilePage() {
           {/* Cédula de Identidad */}
           <label className="block">
             <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
-              <CreditCard className="h-4 w-4" aria-hidden="true" />
+              <i className="fa-solid fa-credit-card text-base" aria-hidden="true" />
               Cédula de Identidad (C.I.)
             </span>
             <input
@@ -224,7 +223,7 @@ export function ProfilePage() {
           {/* Teléfono */}
           <label className="block">
             <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
-              <Phone className="h-4 w-4" aria-hidden="true" />
+              <i className="fa-solid fa-phone text-base" aria-hidden="true" />
               Teléfono
             </span>
             <input
@@ -253,9 +252,9 @@ export function ProfilePage() {
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-brand-red-dark focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isSaving ? (
-              <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+              <i className="fa-solid fa-circle-notch text-xl animate-spin" aria-hidden="true" />
             ) : (
-              <Save className="h-5 w-5" aria-hidden="true" />
+              <i className="fa-solid fa-floppy-disk text-xl" aria-hidden="true" />
             )}
             {isSaving ? 'Guardando...' : 'Guardar cambios'}
           </button>
@@ -264,7 +263,7 @@ export function ProfilePage() {
         {/* Notificaciones Push */}
         <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
           <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <Bell className="h-5 w-5 text-brand-red" aria-hidden="true" />
+            <i className="fa-solid fa-bell text-xl text-brand-red" aria-hidden="true" />
             Notificaciones Push
           </h3>
           <p className="mb-3 text-sm text-slate-500">
@@ -277,9 +276,9 @@ export function ProfilePage() {
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-brand-red-dark focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
           >
             {pushSending ? (
-              <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+              <i className="fa-solid fa-circle-notch text-xl animate-spin" aria-hidden="true" />
             ) : (
-              <Bell className="h-5 w-5" aria-hidden="true" />
+              <i className="fa-solid fa-bell text-xl" aria-hidden="true" />
             )}
             {pushSending ? 'Enviando...' : 'Probar notificación'}
           </button>
@@ -303,7 +302,7 @@ export function ProfilePage() {
         {/* Modo de servicio — permite cambiar la decisión del onboarding */}
         <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
           <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <Store className="h-5 w-5" aria-hidden="true" />
+            <i className="fa-solid fa-store text-xl" aria-hidden="true" />
             Cómo quieres pedir
           </h3>
           <p className="mb-3 text-sm text-slate-600">
@@ -325,7 +324,7 @@ export function ProfilePage() {
         {/* Zona de peligro */}
         <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-red-700">
-            <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+            <i className="fa-solid fa-triangle-exclamation text-xl" aria-hidden="true" />
             Zona de peligro
           </h3>
           <p className="mb-3 text-sm text-red-600">
@@ -338,7 +337,7 @@ export function ProfilePage() {
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isDeleting ? (
-              <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+              <i className="fa-solid fa-circle-notch text-xl animate-spin" aria-hidden="true" />
             ) : null}
             Eliminar mi cuenta
           </button>
@@ -350,7 +349,7 @@ export function ProfilePage() {
           disabled={isLoggingOut}
           className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-base font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          <LogOut className="h-5 w-5" aria-hidden="true" />
+          <i className="fa-solid fa-right-from-bracket text-xl" aria-hidden="true" />
           {isLoggingOut ? 'Cerrando sesión...' : 'Cerrar sesión'}
         </button>
 
@@ -361,7 +360,7 @@ export function ProfilePage() {
               <div className="fixed inset-0 bg-black/50 transition-opacity" aria-hidden="true" onClick={closeDeleteModal} />
               <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
                 <h2 id="delete-modal-title" className="mb-4 flex items-center gap-2 text-lg font-bold text-red-700">
-                  <AlertTriangle className="h-6 w-6" aria-hidden="true" />
+                  <i className="fa-solid fa-triangle-exclamation text-2xl" aria-hidden="true" />
                   Confirmar eliminación
                 </h2>
                 <p className="mb-4 text-sm text-slate-600">
@@ -392,7 +391,7 @@ export function ProfilePage() {
                     className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {isDeleting ? (
-                      <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                      <i className="fa-solid fa-circle-notch text-xl animate-spin" aria-hidden="true" />
                     ) : null}
                     Eliminar definitivamente
                   </button>

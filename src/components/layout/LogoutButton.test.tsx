@@ -38,7 +38,7 @@ describe('LogoutButton', () => {
 
     const button = screen.getByRole('button', { name: /cerrar sesión/i });
     expect(button).toBeInTheDocument();
-    expect(button.querySelector('svg')).toBeInTheDocument();
+    expect(button.querySelector('i')).toBeInTheDocument();
   });
 
   it('invoca signOut al hacer clic y navega a /login', async () => {

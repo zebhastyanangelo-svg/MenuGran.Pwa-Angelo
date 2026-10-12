@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { CreditCard, MapPin, ShoppingCart } from 'lucide-react';
 
 interface OnboardingStep {
   title: string;
@@ -12,19 +11,19 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
     title: 'Explora los comercios cercanos',
     description:
       'Navega por el catálogo de MenuGran y descubre los comercios abiertos cerca de ti, con sus menús, precios en dólares y su ubicación exacta en el mapa.',
-    icon: <MapPin className="h-10 w-10" aria-hidden="true" />,
+    icon: <i className="fa-solid fa-location-dot text-4xl" aria-hidden="true" />,
   },
   {
     title: 'Arma tu pedido',
     description:
       'Agrega tus platillos favoritos al carrito y elige cómo quieres disfrutarlos: Delivery a tu puerta o Retiro en Local (Pickup). ¡Tú decides!',
-    icon: <ShoppingCart className="h-10 w-10" aria-hidden="true" />,
+    icon: <i className="fa-solid fa-cart-shopping text-4xl" aria-hidden="true" />,
   },
   {
     title: 'Adjunta tu Pago Móvil y Rastrea',
     description:
       'Adjunta el comprobante de Pago Móvil directamente desde la galería de fotos de tu teléfono y sigue tu pedido en tiempo real con el código de entrega.',
-    icon: <CreditCard className="h-10 w-10" aria-hidden="true" />,
+    icon: <i className="fa-solid fa-credit-card text-4xl" aria-hidden="true" />,
   },
 ];
 

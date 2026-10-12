@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchCurrentSessionRole } from '../../context/auth-profile';
@@ -108,6 +107,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     completeRegistration,
     resendConfirmationEmail,
     signInWithGoogle,
+    linkGoogleIdentity,
   } = useAuth();
 
   const requestedFrom = searchParams.get('from');
@@ -139,6 +139,30 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     setShowConfirmationBanner(false);
     try {
       await signInWithGoogle(requestedFrom);
+    } catch (err) {
+      const errorMessage = resolveAuthErrorMessage(err);
+      // If email is already registered, guide user to sign in first then link
+      if (
+        errorMessage.toLowerCase().includes('ya está registrado') ||
+        errorMessage.toLowerCase().includes('already registered') ||
+        errorMessage.toLowerCase().includes('user already exists')
+      ) {
+        setError(
+          'Este correo ya está registrado. Inicia sesión con tu método actual y luego vincula tu cuenta de Google desde tu perfil.',
+        );
+      } else {
+        setError(errorMessage);
+      }
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleLinkGoogle = async () => {
+    setIsGoogleLoading(true);
+    setError(null);
+    try {
+      await linkGoogleIdentity();
     } catch (err) {
       setError(resolveAuthErrorMessage(err));
     } finally {
@@ -277,7 +301,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         >
           {isGoogleLoading ? (
             <span className="flex items-center justify-center gap-2">
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <i className="fa-solid fa-circle-notch text-xl animate-spin" aria-hidden="true" />
               Conectando con Google...
             </span>
           ) : (
@@ -287,6 +311,33 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
             </>
           )}
         </button>
+      )}
+
+      {user !== null && !isLoading && !isCompletionMode && (
+        <div className="mt-4">
+          <p className="mb-2 text-center text-sm text-slate-500">
+            ¿Ya tienes cuenta? Vincula tu identidad de Google para acceder más rápido.
+          </p>
+          <button
+            type="button"
+            data-testid="google-link"
+            onClick={() => void handleLinkGoogle()}
+            disabled={isGoogleLoading}
+            className={GOOGLE_BUTTON_CLASS}
+          >
+            {isGoogleLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <i className="fa-solid fa-circle-notch text-xl animate-spin" aria-hidden="true" />
+                Vinculando...
+              </span>
+            ) : (
+              <>
+                <GoogleLogo />
+                Vincular cuenta de Google
+              </>
+            )}
+          </button>
+        </div>
       )}
 
       {!isCompletionMode && (
@@ -393,7 +444,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
           >
             {isEmailLoading ? (
               <span className="flex items-center justify-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <i className="fa-solid fa-circle-notch text-base animate-spin" aria-hidden="true" />
                 Entrando...
               </span>
             ) : (
@@ -524,7 +575,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
           >
             {isEmailLoading ? (
               <span className="flex items-center justify-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <i className="fa-solid fa-circle-notch text-base animate-spin" aria-hidden="true" />
                 Registrando...
               </span>
             ) : (

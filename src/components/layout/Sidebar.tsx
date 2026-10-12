@@ -15,7 +15,7 @@ export function Sidebar() {
         <span className="text-lg font-bold text-slate-900">MenuGran</span>
       </div>
       <nav className="flex-1 space-y-2 px-3 py-4" aria-label="Navegación principal">
-        {navItems.map(({ to, label, icon: Icon }) => (
+        {navItems.map(({ to, label, icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -25,7 +25,7 @@ export function Sidebar() {
               }`
             }
           >
-            <Icon className="h-5 w-5" aria-hidden="true" />
+            <i className={icon} aria-hidden="true" />
             {label}
           </NavLink>
         ))}

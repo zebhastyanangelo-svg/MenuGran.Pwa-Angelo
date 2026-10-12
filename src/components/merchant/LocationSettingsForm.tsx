@@ -39,14 +39,9 @@ const DEFAULT_ZOOM = 13;
 const NEUTRAL_CENTER: [number, number] = [0, 0];
 const CAPTURED_ZOOM = 16;
 
-const PIN_ICON = L.icon({
-  iconUrl:
-    'data:image/svg+xml;base64,' +
-    btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#e11d48">
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 12 7 12s7-6.75 7-12c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 7 12 7s2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-    </svg>
-  `),
+const PIN_ICON = L.divIcon({
+  className: 'custom-marker',
+  html: '<div style="width:32px;height:32px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#e11d48;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.3);"><i class="fa-solid fa-location-dot" style="color:#ffffff;font-size:14px;transform:rotate(45deg);"></i></div>',
   iconSize: [32, 32],
   iconAnchor: [16, 32],
 });

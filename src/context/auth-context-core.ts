@@ -22,6 +22,7 @@ export interface AuthContextValue {
   profile: ProfileRow | null;
   isLoading: boolean;
   signInWithGoogle: (redirectPath?: string | null) => Promise<void>;
+  linkGoogleIdentity: () => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUpWithPassword: (
     email: string,

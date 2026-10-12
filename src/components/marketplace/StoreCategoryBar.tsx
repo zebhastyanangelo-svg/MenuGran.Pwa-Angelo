@@ -1,4 +1,3 @@
-import { LayoutGrid } from 'lucide-react';
 import type { MerchantCategory } from '../../types/database';
 import { resolveCategoryIcon } from './categoryIcons';
 
@@ -48,12 +47,12 @@ export function StoreCategoryBar({
         aria-pressed={!hasSelection}
         className={tabClass(!hasSelection)}
       >
-        <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+        <i className="fa-solid fa-table-cells-large" aria-hidden="true" />
         Todas
       </button>
 
       {options.map(({ category, count }) => {
-        const Icon = resolveCategoryIcon(category);
+        const icon = resolveCategoryIcon(category);
         const isSelected = selectedCategory === category;
         return (
           <button
@@ -63,7 +62,7 @@ export function StoreCategoryBar({
             aria-pressed={isSelected}
             className={tabClass(isSelected)}
           >
-            <Icon className="h-4 w-4" aria-hidden="true" />
+            <i className={icon} aria-hidden="true" />
             {category}
             <span
               className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${

@@ -1,15 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  X,
-  ShoppingCart,
-  Plus,
-  Minus,
-  Trash2,
-  ArrowRight,
-  Receipt,
-  Ticket,
-  ShoppingBag,
-} from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -38,10 +27,10 @@ const SUMMARY_ROWS: readonly {
   key: string;
   label: string;
   value: string;
-  icon: typeof ShoppingBag;
+  icon: string;
 }[] = [
-  { key: 'fee', label: 'Tarifa de servicio', value: 'Sin cargos', icon: Receipt },
-  { key: 'coupon', label: 'Cupón', value: 'No aplicado', icon: Ticket },
+  { key: 'fee', label: 'Tarifa de servicio', value: 'Sin cargos', icon: 'fa-solid fa-receipt' },
+  { key: 'coupon', label: 'Cupón', value: 'No aplicado', icon: 'fa-solid fa-ticket' },
 ];
 
 export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
@@ -126,7 +115,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-red"
             aria-label="Cerrar"
           >
-            <X className="h-5 w-5" aria-hidden="true" />
+            <i className="fa-solid fa-xmark" aria-hidden="true" />
           </button>
         </header>
 
@@ -144,7 +133,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             </div>
           ) : items.length === 0 ? (
             <div className="flex h-48 flex-col items-center justify-center gap-3 bg-gray-50">
-              <ShoppingCart className="h-12 w-12 text-gray-300" aria-hidden="true" />
+              <i className="fa-solid fa-cart-shopping text-gray-300" aria-hidden="true" />
               <p className="text-sm text-gray-500">Tu carrito está vacío</p>
             </div>
           ) : (
@@ -190,7 +179,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
                         aria-label={`Reducir cantidad de ${item.product.title}`}
                       >
-                        <Minus className="h-4 w-4" aria-hidden="true" />
+                        <i className="fa-solid fa-minus" aria-hidden="true" />
                       </button>
 
                       <span className="text-sm font-medium text-gray-900">
@@ -203,7 +192,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200"
                         aria-label={`Aumentar cantidad de ${item.product.title}`}
                       >
-                        <Plus className="h-4 w-4" aria-hidden="true" />
+                        <i className="fa-solid fa-plus" aria-hidden="true" />
                       </button>
                     </div>
 
@@ -213,7 +202,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                       className="rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500"
                       aria-label={`Eliminar ${item.product.title}`}
                     >
-                      <Trash2 className="h-5 w-5" aria-hidden="true" />
+                      <i className="fa-solid fa-trash-can" aria-hidden="true" />
                     </button>
                   </li>
                 );
@@ -226,16 +215,16 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           <dl className="space-y-2 text-sm">
             <div className="flex items-center justify-between">
               <dt className="inline-flex items-center gap-1.5 text-gray-600">
-                <ShoppingBag className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                <i className="fa-solid fa-bag-shopping text-gray-400" aria-hidden="true" />
                 Subtotal ({totalItems} ítems):
               </dt>
               <dd className="font-semibold text-gray-900">{formatPrice(totalAmount)}</dd>
             </div>
 
-            {SUMMARY_ROWS.map(({ key, label, value, icon: Icon }) => (
+            {SUMMARY_ROWS.map(({ key, label, value, icon }) => (
               <div key={key} className="flex items-center justify-between">
                 <dt className="inline-flex items-center gap-1.5 text-gray-600">
-                  <Icon className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                  <i className={`${icon} text-gray-400`} aria-hidden="true" />
                   {label}
                 </dt>
                 <dd className="text-gray-500">{value}</dd>
@@ -280,7 +269,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             className={`mt-3 flex w-full items-center justify-center rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-red-dark disabled:cursor-not-allowed disabled:opacity-50`}
           >
             Proceder al pago
-            <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />
+            <i className="fa-solid fa-arrow-right ml-2" aria-hidden="true" />
           </button>
         </footer>
       </aside>

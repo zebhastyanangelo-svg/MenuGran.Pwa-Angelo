@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Star } from 'lucide-react';
 
 export interface StarRatingProps {
   /** Valor actual (0 = sin calificar). */
@@ -49,9 +48,9 @@ export function StarRating({ value, onChange, ariaLabel, disabled = false }: Sta
             }`}
             data-testid={`star-${stars}`}
           >
-            <Star
-              className={`h-8 w-8 ${
-                isActive ? 'fill-amber-400 text-amber-400' : 'fill-slate-200 text-slate-200'
+            <i
+              className={`fa-solid fa-star text-3xl ${
+                isActive ? 'text-amber-400' : 'text-slate-200'
               }`}
               aria-hidden="true"
             />

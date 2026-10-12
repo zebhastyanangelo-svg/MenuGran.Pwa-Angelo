@@ -1,4 +1,3 @@
-import { AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { isProfileIncomplete } from '../utils/profileUtils';
@@ -15,7 +14,7 @@ export function IncompleteProfileBanner() {
       role="alert"
       className="mx-4 mt-2 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 shadow-sm"
     >
-      <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-500" aria-hidden="true" />
+      <i className="fa-solid fa-triangle-exclamation mt-0.5 text-xl flex-shrink-0 text-amber-500" aria-hidden="true" />
       <div className="flex-1">
         <p className="font-semibold">Tu perfil está incompleto</p>
         <p className="mt-1">

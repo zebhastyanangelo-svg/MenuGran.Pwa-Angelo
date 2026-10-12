@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
-import { UploadCloud, X, Loader2, ImageIcon } from 'lucide-react';
+
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 /**
@@ -118,7 +118,7 @@ export function PaymentProofUploader({
               : 'border-slate-200 bg-slate-50 hover:border-brand-red hover:bg-red-50'
           } ${isProcessing ? 'pointer-events-none opacity-60' : ''}`}
         >
-          <UploadCloud className="h-8 w-8 text-brand-red" aria-hidden="true" />
+          <i className="fa-solid fa-cloud-arrow-up text-3xl text-brand-red" aria-hidden="true" />
           <p className="text-sm text-slate-600">
             Sube una foto clara de tu comprobante
           </p>
@@ -131,7 +131,7 @@ export function PaymentProofUploader({
             disabled={isProcessing}
             className="inline-flex items-center gap-1.5 rounded-full bg-brand-red px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
           >
-            <ImageIcon className="h-4 w-4" aria-hidden="true" />
+            <i className="fa-solid fa-image" aria-hidden="true" />
             Elegir de la galería
           </button>
           <p className="text-xs text-gray-400">JPG, PNG o WebP · máx. 5 MB</p>
@@ -149,7 +149,7 @@ export function PaymentProofUploader({
               </div>
             ) : (
               <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-400" aria-hidden="true">
-                <ImageIcon className="h-8 w-8" aria-hidden="true" />
+                <i className="fa-solid fa-image text-3xl" aria-hidden="true" />
               </div>
             )}
 
@@ -165,13 +165,13 @@ export function PaymentProofUploader({
               className="rounded-full p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
               aria-label="Quitar comprobante"
             >
-              <X className="h-5 w-5" />
+              <i className="fa-solid fa-xmark" />
             </button>
           </div>
 
           {isProcessing && (
             <div className="absolute inset-0 flex items-center justify-center gap-2 bg-white/80">
-              <Loader2 className="h-5 w-5 animate-spin text-brand-red" aria-hidden="true" />
+              <i className="fa-solid fa-circle-notch animate-spin text-brand-red" aria-hidden="true" />
               <span className="text-sm font-medium text-gray-700">Subiendo comprobante…</span>
             </div>
           )}

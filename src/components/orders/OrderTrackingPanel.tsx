@@ -10,16 +10,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
-import {
-  ArrowLeft,
-  BadgeCheck,
-  ChevronUp,
-  Crosshair,
-  Eye,
-  PackageCheck,
-  Phone,
-  X,
-} from 'lucide-react';
+
 import { MapView } from '../map/MapView';
 import type { MapMarker } from '../map/MapView';
 import { fetchOsrmRouteDetails, type OsrmRouteDetails } from '../../utils/osrmRoute';
@@ -28,32 +19,19 @@ import type { GeoPoint } from '../../types/database';
 
 const TRACKING_ZOOM = 13;
 
-/** Color corporativo MenuGran para los marcadores del seguimiento. */
-const BRAND_RED = '#C71523';
-
-/** Comercio: pin blanco con borde y glifo rojo (punto de retiro). */
+/** Comercio: pin con glifo de ubicación rojo (punto de retiro). */
 const MERCHANT_PIN_ICON = L.divIcon({
   className: 'custom-marker',
-  html: `
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#ffffff" stroke="${BRAND_RED}" stroke-width="1.5"/>
-      <path d="M8.5 8.5h7v1.6h-7zM9 11h6v4.2H9z" fill="${BRAND_RED}"/>
-    </svg>
-  `,
+  html: `<div style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;"><i class="fa-solid fa-location-dot" style="color:#C71523;font-size:30px;-webkit-text-stroke:1.5px #ffffff;"></i></div>`,
   iconSize: [34, 34],
   iconAnchor: [17, 34],
   popupAnchor: [0, -34],
 });
 
-/** Repartidor: puck de navegación rojo con chevron blanco (tiempo real). */
+/** Repartidor: puck de navegación rojo con moto blanca (tiempo real). */
 const DRIVER_PIN_ICON = L.divIcon({
   className: 'custom-marker',
-  html: `
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" stroke="#C71523" stroke-width="2" fill="#C71523"/>
-      <path d="M12 7.2 L16 14.5 L12 12.6 L8 14.5 Z" fill="#ffffff"/>
-    </svg>
-  `,
+  html: `<div style="width:32px;height:32px;border-radius:50%;background:#C71523;border:2px solid #C71523;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-motorcycle" style="color:#ffffff;font-size:14px;"></i></div>`,
   iconSize: [32, 32],
   iconAnchor: [16, 16],
   popupAnchor: [0, -16],
@@ -62,12 +40,7 @@ const DRIVER_PIN_ICON = L.divIcon({
 /** Destino de entrega: pin rojo corporativo con casa blanca. */
 const DESTINATION_PIN_ICON = L.divIcon({
   className: 'custom-marker',
-  html: `
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2C8.13401 2 5 5.13401 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13401 15.866 2 12 2Z" fill="${BRAND_RED}"/>
-      <path d="M9 13v-3.2L12 7.5l3 2.3V13h-2v-2h-2v2z" fill="white"/>
-    </svg>
-  `,
+  html: `<div style="display:flex;flex-direction:column;align-items:center;"><div style="width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#C71523;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.3);"><i class="fa-solid fa-house" style="color:#ffffff;font-size:12px;transform:rotate(45deg);"></i></div></div>`,
   iconSize: [32, 32],
   iconAnchor: [16, 32],
   popupAnchor: [0, -32],
@@ -168,7 +141,7 @@ function TrackingTopBar({
         data-testid="close-tracking-map"
         className={`absolute left-3 top-4 z-30 ${buttonClass}`}
       >
-        <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+        <i className="fa-solid fa-arrow-left" aria-hidden="true" />
       </button>
       <p className="absolute left-1/2 top-5 z-30 -translate-x-1/2 rounded-full bg-white/95 px-4 py-1.5 text-sm font-semibold text-gray-800 shadow-md ring-1 ring-black/5">
         {statusLabel}
@@ -180,7 +153,7 @@ function TrackingTopBar({
         data-testid="recenter-tracking"
         className={`absolute right-3 top-4 z-30 ${buttonClass}`}
       >
-        <Crosshair className="h-5 w-5" aria-hidden="true" />
+        <i className="fa-solid fa-crosshairs" aria-hidden="true" />
       </button>
     </>
   );
@@ -264,8 +237,8 @@ function TrackingCardHeader({
             <span data-testid="tracking-driver-name">{driverName}</span> · {statusLabel}
           </span>
         </span>
-        <ChevronUp
-          className={`h-5 w-5 shrink-0 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+        <i
+          className={`fa-solid fa-chevron-up shrink-0 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
           aria-hidden="true"
         />
       </button>
@@ -276,7 +249,7 @@ function TrackingCardHeader({
         data-testid="minimize-tracking-card"
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 transition hover:bg-gray-200 active:scale-95"
       >
-        <X className="h-5 w-5" aria-hidden="true" />
+        <i className="fa-solid fa-xmark" aria-hidden="true" />
       </button>
     </div>
   );
@@ -303,7 +276,7 @@ function TrackingCardDetails({
           className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
           data-testid="tracking-driver-verified"
         >
-          <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
+          <i className="fa-solid fa-circle-check" aria-hidden="true" />
           Verificado
         </span>
         {driverPhone !== null && driverPhone !== '' && (
@@ -313,7 +286,7 @@ function TrackingCardDetails({
             data-testid="tracking-driver-call"
             className="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md transition hover:bg-emerald-600 active:scale-95"
           >
-            <Phone className="h-5 w-5" aria-hidden="true" />
+            <i className="fa-solid fa-phone" aria-hidden="true" />
           </a>
         )}
       </div>
@@ -326,7 +299,7 @@ function TrackingCardDetails({
           data-testid="confirm-delivery"
           className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-4 text-base font-semibold text-white shadow-lg transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <PackageCheck className="h-5 w-5" aria-hidden="true" />
+          <i className="fa-solid fa-circle-check" aria-hidden="true" />
           Confirmar pedido recibido
         </button>
       ) : (
@@ -350,7 +323,7 @@ function TrackingCard(props: TrackingCardSharedProps) {
         data-testid="restore-tracking-card"
         className="absolute inset-x-0 bottom-4 z-30 mx-auto flex w-max items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-gray-800 shadow-xl ring-1 ring-black/5 transition hover:bg-gray-50 active:scale-95"
       >
-        <Eye className="h-5 w-5" aria-hidden="true" />
+        <i className="fa-solid fa-eye" aria-hidden="true" />
         Ver seguimiento
       </button>
     );

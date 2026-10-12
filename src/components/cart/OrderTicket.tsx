@@ -1,4 +1,3 @@
-import { Bike, Building2, MapPin, Phone, Receipt, ShoppingBag, Ticket } from 'lucide-react';
 import { formatUSD, formatVES } from '../../utils/format';
 import { isDeliveryFeeCharged } from '../../utils/deliveryPolicy';
 import type { CartItem } from '../../types/cart';
@@ -94,10 +93,7 @@ export function OrderTicket({
           data-testid="ticket-merchant-info"
         >
           <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-500">
-            <Building2
-              className="h-3.5 w-3.5 text-brand-red"
-              aria-hidden="true"
-            />
+            <i className="fa-solid fa-building text-brand-red" aria-hidden="true" />
             Comercio emisor
           </p>
           <p className="mt-1 break-words text-sm font-bold text-slate-900">
@@ -116,13 +112,13 @@ export function OrderTicket({
           )}
           {merchant.address && (
             <p className="mt-0.5 flex items-start gap-1 break-words text-xs text-slate-600">
-              <MapPin className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+              <i className="fa-solid fa-location-dot text-xs shrink-0" aria-hidden="true" />
               {merchant.address}
             </p>
           )}
           {merchant.phone && (
             <p className="mt-0.5 flex items-center gap-1 break-words text-xs text-slate-600">
-              <Phone className="h-3 w-3 shrink-0" aria-hidden="true" />
+              <i className="fa-solid fa-phone text-xs shrink-0" aria-hidden="true" />
               {merchant.phone}
             </p>
           )}
@@ -130,10 +126,7 @@ export function OrderTicket({
       )}
 
       <h2 className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
-        <ShoppingBag
-          className="h-4 w-4 shrink-0 text-brand-red"
-          aria-hidden="true"
-        />
+        <i className="fa-solid fa-bag-shopping text-sm shrink-0 text-brand-red" aria-hidden="true" />
         <span className="min-w-0 break-words">
           Resumen ({items.reduce((sum, item) => sum + item.quantity, 0)} ítems)
         </span>
@@ -167,10 +160,7 @@ export function OrderTicket({
         <dl className="mt-3 space-y-1.5 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
           <SummaryRow
             icon={
-              <ShoppingBag
-                className="h-3.5 w-3.5 text-slate-400"
-                aria-hidden="true"
-              />
+              <i className="fa-solid fa-bag-shopping text-slate-400" aria-hidden="true" />
             }
             label="Subtotal"
           >
@@ -179,7 +169,7 @@ export function OrderTicket({
 
           <SummaryRow
             icon={
-              <Bike className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+              <i className="fa-solid fa-bicycle text-slate-400" aria-hidden="true" />
             }
             label="Envío"
           >
@@ -196,10 +186,7 @@ export function OrderTicket({
 
           <SummaryRow
             icon={
-              <Receipt
-                className="h-3.5 w-3.5 text-slate-400"
-                aria-hidden="true"
-              />
+              <i className="fa-solid fa-receipt text-slate-400" aria-hidden="true" />
             }
             label="Tarifa de servicio"
           >
@@ -208,7 +195,7 @@ export function OrderTicket({
 
           <SummaryRow
             icon={
-              <Ticket className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+              <i className="fa-solid fa-ticket text-slate-400" aria-hidden="true" />
             }
             label="Cupón"
           >

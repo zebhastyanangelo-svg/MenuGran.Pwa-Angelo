@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
-import { MapPin } from 'lucide-react';
+
 import { useToast } from '../../hooks/useToast';
 import type { GeoPoint } from '../../types/database';
 import 'leaflet/dist/leaflet.css';
@@ -9,14 +9,9 @@ const DEFAULT_ZOOM = 13;
 const NEUTRAL_CENTER: [number, number] = [0, 0];
 const USER_LOCATION_ZOOM = 16;
 
-const PIN_ICON = L.icon({
-  iconUrl:
-    'data:image/svg+xml;base64,' +
-    btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#10b981">
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 12 7 12s7-6.75 7-12c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 7 12 7s2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-    </svg>
-  `),
+const PIN_ICON = L.divIcon({
+  className: 'custom-marker',
+  html: '<div style="width:32px;height:32px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#C71523;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.3);"><i class="fa-solid fa-location-dot" style="color:#ffffff;font-size:14px;transform:rotate(45deg);"></i></div>',
   iconSize: [32, 32],
   iconAnchor: [16, 32],
   popupAnchor: [0, -32],
@@ -267,32 +262,12 @@ export function LocationPicker({
       >
         {isLocating ? (
           <>
-            <svg
-              className="-ml-0.5 h-3 w-3 animate-spin"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              aria-label="Obteniendo ubicación"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M8 8a4 4 0 018 0v4a4 4 0 11-8 0V8z"
-              />
-            </svg>
+            <i className="fa-solid fa-circle-notch fa-spin -ml-0.5 text-xs" aria-label="Obteniendo ubicación" />
             <span>Obteniendo ubicación...</span>
           </>
         ) : (
           <>
-            <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+            <i className="fa-solid fa-location-dot text-sm" aria-hidden="true" />
             <span>Usar mi ubicación</span>
           </>
         )}

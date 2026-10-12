@@ -18,6 +18,7 @@ vi.mock('leaflet', () => {
       map: vi.fn(() => mockMap),
       marker: vi.fn(() => ({ addTo: vi.fn(), setLatLng: vi.fn(), remove: vi.fn() })),
       icon: vi.fn((options: unknown) => ({ options })),
+      divIcon: vi.fn((options: unknown) => ({ options })),
       tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
     },
   };

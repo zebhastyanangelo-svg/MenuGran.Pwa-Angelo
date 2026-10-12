@@ -25,12 +25,14 @@ vi.mock('leaflet', () => {
   }));
 
   const iconFn = vi.fn((_options: unknown) => ({ _options }));
+  const divIconFn = vi.fn((_options: unknown) => ({ _options }));
 
   return {
     default: {
       map: vi.fn(() => mockMap),
       marker: markerFn,
       icon: iconFn,
+      divIcon: divIconFn,
       tileLayer: tileLayerFn,
     },
   };

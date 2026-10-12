@@ -18,21 +18,12 @@ import L from 'leaflet';
 import { MapView } from './MapView';
 import type { MapMarker, MapViewProps } from './MapView';
 
-/** Color corporativo MenuGran para el marcador del repartidor. */
-const BRAND_RED = '#C71523';
-
 /**
  * Puck de navegación MenuGran: halo rojo translúcido, disco blanco con borde
- * corporativo y chevron blanco apuntando al norte (0°). La rotación CSS lo
+ * corporativo y moto roja apuntando al norte (0°). La rotación CSS lo
  * orienta hacia el rumbo real del movimiento.
  */
-const RIDER_SVG = `
-  <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="22" cy="22" r="20" fill="rgba(228,0,43,0.18)"/>
-    <circle cx="22" cy="22" r="14" fill="#ffffff" stroke="${BRAND_RED}" stroke-width="2.5"/>
-    <path d="M22 13 L28.5 26.5 L22 23.6 L15.5 26.5 Z" fill="${BRAND_RED}"/>
-  </svg>
-`;
+const RIDER_SVG = `<div style="width:40px;height:40px;border-radius:50%;background:rgba(199,21,35,.22);display:flex;align-items:center;justify-content:center;"><div style="width:30px;height:30px;border-radius:50%;background:#ffffff;border:2.5px solid #C71523;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-motorcycle" style="color:#C71523;font-size:13px;"></i></div></div>`;
 
 /** Rotación CSS aplicada al icono: suaviza el giro entre fixes del GPS. */
 const RIDER_ROTATION_TRANSITION = 'transition: transform 0.4s ease-out;';

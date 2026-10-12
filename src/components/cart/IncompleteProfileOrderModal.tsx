@@ -8,7 +8,6 @@
  */
 
 import { useEffect, useState } from 'react';
-import { AlertTriangle, UserCircle2, ArrowRight } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 
 /** Segundos de la cuenta regresiva antes de la redirección automática. */
@@ -60,7 +59,7 @@ export function IncompleteProfileOrderModal({
       <div className="space-y-4">
         <div className="flex items-start gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-100">
-            <AlertTriangle className="h-6 w-6 text-amber-600" aria-hidden="true" />
+            <i className="fa-solid fa-triangle-exclamation text-xl text-amber-600" aria-hidden="true" />
           </span>
           <p className="text-sm leading-relaxed text-gray-700">
             No puedes realizar pedidos hasta completar los datos obligatorios de tu
@@ -96,9 +95,9 @@ export function IncompleteProfileOrderModal({
           data-testid="go-to-profile-button"
           className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-brand-red-dark"
         >
-          <UserCircle2 className="h-5 w-5" aria-hidden="true" />
+          <i className="fa-solid fa-circle-user" aria-hidden="true" />
           Ir a completar mi perfil
-          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          <i className="fa-solid fa-arrow-right text-sm" aria-hidden="true" />
         </button>
 
         <button

@@ -40,6 +40,7 @@ function getMockAuth(): AuthContextValue {
     profile: null,
     isLoading: false,
     signInWithGoogle,
+    linkGoogleIdentity: vi.fn(),
     signInWithPassword,
     signUpWithPassword,
     completeRegistration,

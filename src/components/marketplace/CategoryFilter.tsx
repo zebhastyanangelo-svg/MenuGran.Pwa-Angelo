@@ -1,4 +1,3 @@
-import { LayoutGrid, type LucideIcon } from 'lucide-react';
 import type { CategoryRow } from '../../types/database';
 import { resolveCategoryIconByName } from './categoryIcons';
 
@@ -45,11 +44,10 @@ export function CategoryFilter({
   const renderTab = (
     key: string,
     label: string,
-    icon: LucideIcon,
+    icon: string,
     isSelected: boolean,
     onClick: () => void,
   ) => {
-    const Icon = icon;
     return (
       <button
         key={key}
@@ -61,7 +59,7 @@ export function CategoryFilter({
           isSelected ? activeClass : idleClass
         }`}
       >
-        <Icon className="h-4 w-4" aria-hidden="true" />
+        <i className={icon} aria-hidden="true" />
         {label}
       </button>
     );
@@ -76,7 +74,7 @@ export function CategoryFilter({
       {renderTab(
         'all',
         'Todas',
-        LayoutGrid,
+        'fa-solid fa-table-cells-large',
         selectedCategoryId === null,
         () => onSelectCategory(null),
       )}

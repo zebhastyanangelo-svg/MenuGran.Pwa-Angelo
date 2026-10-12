@@ -72,7 +72,7 @@ describe('buildRiderIcon', () => {
   it('rota la moto hacia el rumbo del movimiento', () => {
     const icon = buildRiderIcon(90) as unknown as { html: string };
     expect(icon.html).toContain('rotate(90.0deg)');
-    expect(icon.html).toContain('svg');
+    expect(icon.html).toContain('fa-motorcycle');
   });
 
   it('sin rumbo la moto queda derecha, sin rotación', () => {

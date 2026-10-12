@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { CategoryRow, MerchantRow, ProductRow } from '../types/database';
-import { ArrowLeft, MapPin, Package, DollarSign, Clock } from 'lucide-react';
 import { CategoryFilter } from '../components/marketplace/CategoryFilter';
 import { ProductCard, ProductCardSkeleton } from '../components/marketplace/ProductCard';
 import { SearchBar } from '../components/marketplace/SearchBar';
@@ -210,7 +209,7 @@ export function MerchantStorePage() {
           className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-red hover:text-brand-red-dark"
           aria-label="Volver a comercios"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <i className="fa-solid fa-arrow-left text-base" aria-hidden="true" />
           Volver a comercios
         </button>
 
@@ -295,13 +294,13 @@ export function MerchantStorePage() {
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-600">
             {merchant.category && (
               <span className="inline-flex items-center gap-1">
-                <Package className="h-3 w-3" />
+                <i className="fa-solid fa-box text-xs" aria-hidden="true" />
                 {merchant.category}
               </span>
             )}
             {merchant.zone && (
               <span className="inline-flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
+                <i className="fa-solid fa-location-dot text-xs" aria-hidden="true" />
                 {merchant.zone}
               </span>
             )}
@@ -310,13 +309,13 @@ export function MerchantStorePage() {
                 className="inline-flex items-center gap-1 rounded-full bg-brand-red/10 px-2 py-0.5 font-semibold text-brand-red"
                 data-testid="store-eta"
               >
-                <Clock className="h-3 w-3" aria-hidden="true" />
+                <i className="fa-solid fa-clock text-xs" aria-hidden="true" />
                 {etaLabel}
               </span>
             )}
             {bcvRate > 0 && (
               <span className="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
-                <DollarSign className="h-3 w-3" />
+                <i className="fa-solid fa-dollar-sign text-xs" aria-hidden="true" />
                 Tasa BCV: Bs. {formatBCVRate(bcvRate)} / USD
               </span>
             )}
@@ -340,7 +339,7 @@ export function MerchantStorePage() {
         <div className="mt-6 flex flex-col gap-4">
           {filteredProducts.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-10 text-center">
-              <Package className="h-10 w-10 text-slate-300" />
+              <i className="fa-solid fa-box text-4xl text-slate-300" aria-hidden="true" />
               <p className="text-sm text-slate-500">
                 Aún no hay platillos disponibles.
               </p>

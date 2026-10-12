@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Navigation, X, CheckCircle, Map as MapIcon, Navigation2, Bike } from 'lucide-react';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { GeoPoint, MerchantCategory, MerchantRow } from '../types/database';
 import { useAuth } from '../hooks/useAuth';
@@ -322,12 +321,12 @@ const fetchData = useCallback(async () => {
         <section className="mb-4" aria-label="Selector de ubicación del cliente">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-              <MapIcon className="h-4 w-4" aria-hidden="true" />
+              <i className="fa-solid fa-map text-base" aria-hidden="true" />
               Tu ubicación de entrega
             </h2>
             {userLocation && (
               <div className="rounded-xl bg-green-50 px-3 py-2 text-xs text-green-800 flex items-center gap-1.5">
-                <CheckCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <i className="fa-solid fa-circle-check text-sm shrink-0" aria-hidden="true" />
                 <span>Ubicación capturada — Lat: {userLocation.y.toFixed(6)}, Long: {userLocation.x.toFixed(6)}</span>
               </div>
             )}
@@ -340,15 +339,15 @@ const fetchData = useCallback(async () => {
           />
           {userLocation && (
             <div className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-xs text-green-800 flex items-center gap-1.5">
-              <CheckCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <span>Hay {nearbyCount} comercio{nearbyCount !== 1 ? 's' : ''} a menos de 1 km de ti</span>
+              <i className="fa-solid fa-circle-check text-sm shrink-0" aria-hidden="true" />
+              <span>Hay {nearbyCount} comercio{nearbyCount !== 1 ? 's' : ''} a menos de 1 km de ti</span>
             </div>
           )}
         </section>
 
         {!userLocation && (
           <div className="mb-3 rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-800 flex items-center gap-1.5">
-            <Navigation2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <i className="fa-solid fa-route text-sm shrink-0" aria-hidden="true" />
             <span>Activa tu ubicación para ver comercios a menos de 1 km</span>
           </div>
         )}
@@ -356,7 +355,7 @@ const fetchData = useCallback(async () => {
         {/* Permission banner */}
         {(permissionState === 'prompt' || permissionState === 'denied') && userLocation === null && (
           <div className="mb-3 flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-800">
-            <Navigation className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <i className="fa-solid fa-location-arrow text-base shrink-0" aria-hidden="true" />
             <span className="flex-1">Activa la ubicación para ver comercios cercanos</span>
             <button
               type="button"
@@ -383,14 +382,14 @@ const fetchData = useCallback(async () => {
 
         {isLocating && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-500">
-            <Navigation className="h-3.5 w-3.5 animate-pulse" aria-hidden="true" />
+            <i className="fa-solid fa-location-arrow text-sm animate-pulse" aria-hidden="true" />
             Buscando comercios cercanos…
           </p>
         )}
 
         {locationError !== null && (
           <div className="mt-2 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <i className="fa-solid fa-location-dot mt-0.5 text-sm shrink-0" aria-hidden="true" />
             <span className="flex-1">{locationError}</span>
             <button
               type="button"
@@ -398,7 +397,7 @@ const fetchData = useCallback(async () => {
               className="ml-1 shrink-0 rounded p-0.5 text-amber-600 hover:bg-amber-100"
               aria-label="Cerrar aviso"
             >
-              <X className="h-3.5 w-3.5" />
+              <i className="fa-solid fa-xmark text-sm" aria-hidden="true" />
             </button>
           </div>
         )}
@@ -420,7 +419,7 @@ const fetchData = useCallback(async () => {
           <>
             {serviceMode === 'delivery' && filteredMerchants.length > 0 && (
               <p className="mb-1 flex items-start gap-2 rounded-xl border border-brand-red/20 bg-red-50 p-3 text-xs text-red-900">
-                <Bike className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                <i className="fa-solid fa-bicycle mt-0.5 text-base flex-shrink-0" aria-hidden="true" />
                 <span>
                   Mostrando solo comercios con delivery a menos de{' '}
                   {COVERAGE_RADIUS_KM} km. Los que no entregan a domicilio

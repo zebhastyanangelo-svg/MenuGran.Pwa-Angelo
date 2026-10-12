@@ -53,7 +53,7 @@ describe('OfflineBanner', () => {
     render(<OfflineBanner />);
 
     const banner = screen.getByRole('status');
-    expect(banner.querySelector('svg')).not.toBeNull();
+    expect(banner.querySelector('i')).not.toBeNull();
   });
 
   it('desaparece al recuperarse la conexión (evento online)', () => {

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -8,7 +7,7 @@ export interface LogoutButtonProps {
   className?: string;
   /** Texto de la etiqueta. Por defecto: "Cerrar sesión". */
   label?: string;
-  /** Clases CSS para el icono LogOut. Por defecto: "h-5 w-5". */
+  /** Clases CSS para el icono LogOut. Por defecto: "text-xl". */
   iconClassName?: string;
 }
 
@@ -21,7 +20,7 @@ export interface LogoutButtonProps {
 export function LogoutButton({
   className = '',
   label = 'Cerrar sesión',
-  iconClassName = 'h-5 w-5',
+  iconClassName = 'text-xl',
 }: LogoutButtonProps) {
   const { signOut } = useAuth();
   const navigate = useNavigate();
@@ -47,7 +46,7 @@ export function LogoutButton({
       aria-label="Cerrar sesión"
       className={className}
     >
-      <LogOut className={iconClassName} aria-hidden="true" />
+      <i className={`fa-solid fa-right-from-bracket ${iconClassName}`} aria-hidden="true" />
       <span>{isLoggingOut ? 'Cerrando sesión...' : label}</span>
     </button>
   );

@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { Bike, Store } from 'lucide-react';
 import { getPostOnboardingPath, type ServiceMode } from '../../utils/serviceMode';
 
 export interface ServiceModeChooserProps {
@@ -11,7 +10,7 @@ interface ModeOption {
   mode: ServiceMode;
   title: string;
   description: string;
-  icon: typeof Bike;
+  icon: string;
   testId: string;
 }
 
@@ -20,14 +19,14 @@ const MODE_OPTIONS: readonly ModeOption[] = [
     mode: 'in_store',
     title: 'Estoy en el negocio',
     description: 'Escanea el código QR de tu mesa para ver el menú y pedir aquí mismo.',
-    icon: Store,
+    icon: 'fa-solid fa-store text-xl',
     testId: 'service-mode-in-store',
   },
   {
     mode: 'delivery',
     title: 'Deseo delivery',
     description: 'Pide a los comercios cercanos y recibe tu pedido en la puerta.',
-    icon: Bike,
+    icon: 'fa-solid fa-bicycle text-xl',
     testId: 'service-mode-delivery',
   },
 ];
@@ -73,7 +72,7 @@ export function ServiceModeChooser({ onSelect }: ServiceModeChooserProps) {
         </p>
 
         <div className="mt-5 space-y-3">
-          {MODE_OPTIONS.map(({ mode, title, description, icon: Icon, testId }) => (
+          {MODE_OPTIONS.map(({ mode, title, description, icon, testId }) => (
             <button
               key={mode}
               type="button"
@@ -82,7 +81,7 @@ export function ServiceModeChooser({ onSelect }: ServiceModeChooserProps) {
               className="flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-brand-red hover:bg-red-50/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-red"
             >
               <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-red-50 text-brand-red">
-                <Icon className="h-5 w-5" aria-hidden="true" />
+                <i className={icon} aria-hidden="true" />
               </span>
               <span className="min-w-0">
                 <span className="block text-sm font-semibold text-slate-900">

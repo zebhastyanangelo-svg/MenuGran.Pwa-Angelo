@@ -1,4 +1,3 @@
-import { Plus } from 'lucide-react';
 import { useBCVRate } from '../../hooks/useExchangeRate';
 import type { ProductRow } from '../../types/database';
 import { Card } from '../ui/Card';
@@ -113,7 +112,7 @@ export function ProductCard({ product, categoryName, onSelect }: ProductCardProp
               aria-label={`Agregar ${product.title} al carrito`}
               className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-red px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-red-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-red"
             >
-              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              <i className="fa-solid fa-plus" aria-hidden="true" />
               Agregar
             </button>
           ) : null}
