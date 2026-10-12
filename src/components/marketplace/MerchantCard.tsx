@@ -1,6 +1,7 @@
 import type { MerchantRow } from '../../types/database';
 import { formatUSD } from '../../utils/format';
 import { getMerchantAvailability } from '../../utils/merchantAvailability';
+import { ExternalImage } from '../ui/ExternalImage';
 import {
   isDeliveryAvailable,
   parseDeliveryFee,
@@ -148,14 +149,12 @@ export function MerchantCard({ merchant, onClick, distance, rating }: MerchantCa
       }`}
     >
       <div className="relative h-32 w-full shrink-0 bg-gradient-to-r from-brand-red via-[#f34a5f] to-brand-amber/80">
-        {merchant.banner_url ? (
-          <img
-            src={merchant.banner_url}
-            alt={merchant.name}
-            loading="lazy"
-            className="h-full w-full object-cover"
-          />
-        ) : null}
+        <ExternalImage
+          src={merchant.banner_url}
+          alt={merchant.name}
+          className="h-full w-full object-cover"
+          fallback={null}
+        />
 
         {/* Los chips flotantes se posicionan sobre la imagen para que el
             descuento sea lo primero que el cliente vea. Van arriba: abajo el
@@ -183,21 +182,19 @@ export function MerchantCard({ merchant, onClick, distance, rating }: MerchantCa
           de modo que ningún nombre o chip queda tapado ni recortado.
         */}
         <div className="absolute bottom-0 left-1/2 z-10 h-16 w-16 -translate-x-1/2 translate-y-1/2 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-md">
-          {merchant.logo_url ? (
-            <img
-              src={merchant.logo_url}
-              alt={`Logo de ${merchant.name}`}
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div
-              className="flex h-full w-full items-center justify-center bg-red-50 text-lg font-bold text-brand-red"
-              aria-hidden="true"
-            >
-              {merchant.name.charAt(0).toUpperCase()}
-            </div>
-          )}
+          <ExternalImage
+            src={merchant.logo_url}
+            alt={`Logo de ${merchant.name}`}
+            className="h-full w-full object-cover"
+            fallback={
+              <div
+                className="flex h-full w-full items-center justify-center bg-red-50 text-lg font-bold text-brand-red"
+                aria-hidden="true"
+              >
+                {merchant.name.charAt(0).toUpperCase()}
+              </div>
+            }
+          />
         </div>
       </div>
 

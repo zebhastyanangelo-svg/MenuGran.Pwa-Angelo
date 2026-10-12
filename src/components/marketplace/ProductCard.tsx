@@ -2,6 +2,7 @@ import { useBCVRate } from '../../hooks/useExchangeRate';
 import type { ProductRow } from '../../types/database';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
+import { ExternalImage } from '../ui/ExternalImage';
 import { Skeleton } from '../ui/Skeleton';
 import { formatUSD, formatVES } from '../../utils/format';
 import { resolveProductBadges } from '../../utils/promos';
@@ -123,18 +124,16 @@ export function ProductCard({ product, categoryName, onSelect }: ProductCardProp
         className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200/70"
         aria-hidden="true"
       >
-        {product.image_url ? (
-          <img
-            src={product.image_url}
-            alt={product.title}
-            loading="lazy"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
-            Sin foto
-          </div>
-        )}
+        <ExternalImage
+          src={product.image_url}
+          alt={product.title}
+          className="h-full w-full object-cover"
+          fallback={
+            <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
+              Sin foto
+            </div>
+          }
+        />
       </div>
     </Card>
   );

@@ -93,7 +93,14 @@ export default defineConfig(({ mode }) => {
               },
             },
             {
-              urlPattern: ({ url }) => url.pathname.match(/\.(png|jpg|jpeg|svg|webp|ico)$/),
+              // Solo se cachean imágenes del PROPIO origen (assets del bundle).
+              // Las imágenes externas de ImgBB (i.ibb.co / ibb.co) NO deben
+              // pasar por el Service Worker: las respuestas opacas cacheadas
+              // por Workbox se corrompen o caducan mal en navegadores móviles,
+              // dejando logos, banners y platos rotos. Al no haber regla que
+              // las coincida, esas peticiones van directo a la red.
+              urlPattern: ({ url, sameOrigin }) =>
+                sameOrigin && url.pathname.match(/\.(png|jpg|jpeg|svg|webp|ico)$/) !== null,
               handler: 'StaleWhileRevalidate',
               options: {
                 cacheName: 'images-cache',

@@ -5,6 +5,7 @@ import type { CategoryRow, MerchantRow, ProductRow } from '../types/database';
 import { CategoryFilter } from '../components/marketplace/CategoryFilter';
 import { ProductCard, ProductCardSkeleton } from '../components/marketplace/ProductCard';
 import { SearchBar } from '../components/marketplace/SearchBar';
+import { ExternalImage } from '../components/ui/ExternalImage';
 import { Badge } from '../components/ui/Badge';
 import { useCart } from '../hooks/useCart';
 import { useToast } from '../hooks/useToast';
@@ -28,8 +29,6 @@ export function MerchantStorePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isBannerError, setIsBannerError] = useState(false);
-  const [isLogoError, setIsLogoError] = useState(false);
 
   const goBack = useCallback(() => {
     navigate('/marketplace');
@@ -220,15 +219,12 @@ export function MerchantStorePage() {
             que sobresale por debajo. */}
         <div className="relative">
           <div className="h-40 w-full overflow-hidden rounded-2xl bg-gradient-to-r from-brand-red via-[#f64a62] to-brand-amber/80 sm:h-48">
-            {merchant.banner_url && !isBannerError ? (
-              <img
-                src={merchant.banner_url}
-                alt={`Banner de ${merchant.name}`}
-                loading="lazy"
-                onError={() => setIsBannerError(true)}
-                className="h-full w-full object-cover"
-              />
-            ) : null}
+            <ExternalImage
+              src={merchant.banner_url}
+              alt={`Banner de ${merchant.name}`}
+              className="h-full w-full object-cover"
+              fallback={null}
+            />
 
             {promoChips.length > 0 ? (
               <div
@@ -257,22 +253,19 @@ export function MerchantStorePage() {
               del banner. El anillo blanco lo separa del banner. */}
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
             <div className="h-20 w-20 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-lg">
-              {merchant.logo_url && !isLogoError ? (
-                <img
-                  src={merchant.logo_url}
-                  alt={`Logo de ${merchant.name}`}
-                  loading="lazy"
-                  onError={() => setIsLogoError(true)}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div
-                  className="flex h-full w-full items-center justify-center bg-red-50 text-xl font-bold text-brand-red"
-                  aria-hidden="true"
-                >
-                  {merchant.name.charAt(0).toUpperCase()}
-                </div>
-              )}
+              <ExternalImage
+                src={merchant.logo_url}
+                alt={`Logo de ${merchant.name}`}
+                className="h-full w-full object-cover"
+                fallback={
+                  <div
+                    className="flex h-full w-full items-center justify-center bg-red-50 text-xl font-bold text-brand-red"
+                    aria-hidden="true"
+                  >
+                    {merchant.name.charAt(0).toUpperCase()}
+                  </div>
+                }
+              />
             </div>
           </div>
         </div>

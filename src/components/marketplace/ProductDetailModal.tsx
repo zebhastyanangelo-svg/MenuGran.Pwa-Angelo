@@ -3,6 +3,7 @@ import { useBCVRate } from '../../hooks/useExchangeRate';
 import type { ProductRow } from '../../types/database';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
+import { ExternalImage } from '../ui/ExternalImage';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { formatUSD, formatVES } from '../../utils/format';
@@ -54,17 +55,16 @@ function ProductDetailBody({
   return (
     <div className="flex flex-col gap-4">
       <div className="h-40 w-full overflow-hidden rounded-lg bg-gray-100">
-        {product.image_url ? (
-          <img
-            src={product.image_url}
-            alt={product.title}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-sm text-gray-400">
-            Sin foto
-          </div>
-        )}
+        <ExternalImage
+          src={product.image_url}
+          alt={product.title}
+          className="h-full w-full object-cover"
+          fallback={
+            <div className="flex h-full w-full items-center justify-center text-sm text-gray-400">
+              Sin foto
+            </div>
+          }
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
