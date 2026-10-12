@@ -512,12 +512,41 @@ async function readEdgeFunctionError(error: unknown): Promise<string | null> {
   return null;
 }
 
+/**
+ * Margen (segundos) antes de la expiración del token a partir del cual se
+ * fuerza el refresco: evita el 401 cuando la sesión expira justo entre el
+ * `getSession` y el `invoke` (típico en PWA reabierta tras inactividad).
+ */
+const TOKEN_REFRESH_MARGIN_SECONDS = 30;
+
+/**
+ * Devuelve un access token vigente, refrescando la sesión si el token
+ * almacenado ya expiró o está a punto de hacerlo.
+ *
+ * `getSession()` devuelve la sesión cacheada sin garantizar el refresco; si
+ * se envía un token vencido la Edge Function rechaza la petición con 401.
+ */
+async function getFreshAccessToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (session === null) return null;
+
+  const expiresAt = session.expires_at;
+  const isStillValid =
+    typeof expiresAt !== 'number' || expiresAt - Math.floor(Date.now() / 1000) > TOKEN_REFRESH_MARGIN_SECONDS;
+  if (isStillValid) return session.access_token;
+
+  const { data: refreshed, error } = await supabase.auth.refreshSession();
+  if (error !== null || refreshed.session === null) return null;
+  return refreshed.session.access_token;
+}
+
 /** Invoca la Edge Function send-push-notification con manejo de errores. */
 async function invokeSendPushNotification(payload: InvokePushPayload): Promise<SendPushResult> {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = await getFreshAccessToken();
 
-    if (session === null) {
+    if (accessToken === null) {
       return { ok: false, message: 'Sesión expirada. Inicia sesión nuevamente.' };
     }
 
@@ -526,7 +555,7 @@ async function invokeSendPushNotification(payload: InvokePushPayload): Promise<S
       {
         body: payload,
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       },
     );

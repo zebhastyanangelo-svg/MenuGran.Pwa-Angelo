@@ -5,6 +5,7 @@ import {
   buildOrderRatingInsert,
   buildSurveySteps,
   fetchDriverRatingSummary,
+  fetchMerchantDeliveryMetrics,
   fetchMerchantRatingSummary,
   fetchMerchantRatingsMap,
   fetchPlatformRatingSummary,
@@ -329,6 +330,47 @@ describe('resúmenes de valoraciones', () => {
 
     const summary = await fetchDriverRatingSummary('driver-1');
     expect(summary).toEqual({ average: 4.5, count: 2 });
+  });
+
+  it('fetchMerchantDeliveryMetrics agrupa estrellas por repartidor y calcula el global', async () => {
+    supabaseMocks.from.mockReturnValue(
+      mockSelectRows([
+        { driver_id: 'd-1', driver_stars: 5 },
+        { driver_id: 'd-1', driver_stars: 3 },
+        { driver_id: 'd-2', driver_stars: 4 },
+        { driver_id: null, driver_stars: null },
+        { driver_id: 'd-2', driver_stars: null },
+      ]),
+    );
+
+    const metrics = await fetchMerchantDeliveryMetrics('m-1');
+    expect(metrics.drivers).toHaveLength(2);
+    const d1 = metrics.drivers.find((entry) => entry.driverId === 'd-1');
+    const d2 = metrics.drivers.find((entry) => entry.driverId === 'd-2');
+    expect(d1?.summary).toEqual({ average: 4, count: 2 });
+    expect(d2?.summary).toEqual({ average: 4, count: 1 });
+    expect(metrics.overall).toEqual({ average: 4, count: 3 });
+  });
+
+  it('fetchMerchantDeliveryMetrics ordena los repartidores por mejor promedio', async () => {
+    supabaseMocks.from.mockReturnValue(
+      mockSelectRows([
+        { driver_id: 'd-bajo', driver_stars: 2 },
+        { driver_id: 'd-alto', driver_stars: 5 },
+      ]),
+    );
+
+    const metrics = await fetchMerchantDeliveryMetrics('m-1');
+    expect(metrics.drivers[0]?.driverId).toBe('d-alto');
+    expect(metrics.drivers[1]?.driverId).toBe('d-bajo');
+  });
+
+  it('fetchMerchantDeliveryMetrics devuelve resumen vacío sin calificaciones', async () => {
+    supabaseMocks.from.mockReturnValue(mockSelectRows([]));
+
+    const metrics = await fetchMerchantDeliveryMetrics('m-1');
+    expect(metrics.drivers).toEqual([]);
+    expect(metrics.overall).toEqual({ average: 0, count: 0 });
   });
 
   it('propaga errores de supabase con mensaje claro', async () => {

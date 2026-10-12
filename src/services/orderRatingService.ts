@@ -279,3 +279,64 @@ export async function fetchDriverRatingSummary(driverId: string): Promise<Rating
     .filter((value): value is number => value !== null);
   return summarizeStars(stars);
 }
+
+/** Resumen de estrellas de un repartidor dentro de un comercio. */
+export interface DriverRatingEntry {
+  driverId: string;
+  summary: RatingSummary;
+}
+
+/** Métricas de delivery de un comercio: resumen por repartidor y global. */
+export interface MerchantDeliveryMetrics {
+  /** Calificaciones individuales de cada repartidor que trabajó para el comercio. */
+  drivers: DriverRatingEntry[];
+  /** Resumen global de estrellas de delivery del comercio. */
+  overall: RatingSummary;
+}
+
+function groupDriverStars(
+  rows: Array<{ driver_id: string | null; driver_stars: number | null }>,
+): Map<string, number[]> {
+  const grouped = new Map<string, number[]>();
+  for (const row of rows) {
+    if (row.driver_id === null || row.driver_stars === null) continue;
+    const list = grouped.get(row.driver_id) ?? [];
+    list.push(row.driver_stars);
+    grouped.set(row.driver_id, list);
+  }
+  return grouped;
+}
+
+/**
+ * Métricas de calificaciones de delivery de un comercio.
+ *
+ * Una sola consulta agrupa las estrellas de repartidor por `driver_id`
+ * (una entrada por repartidor, uno o varios) y calcula el resumen global
+ * del equipo. Las filas sin repartidor asignado se ignoran.
+ */
+export async function fetchMerchantDeliveryMetrics(
+  merchantId: string,
+): Promise<MerchantDeliveryMetrics> {
+  const { data, error } = await supabase
+    .from(TABLE_NAMES.orderRatings)
+    .select('driver_id, driver_stars')
+    .eq('merchant_id', merchantId);
+
+  if (error !== null) {
+    throw new Error(`No se pudieron obtener las calificaciones de delivery: ${error.message}`);
+  }
+
+  const rows = data ?? [];
+  const grouped = groupDriverStars(rows);
+  const drivers: DriverRatingEntry[] = [];
+  for (const [driverId, stars] of grouped.entries()) {
+    drivers.push({ driverId, summary: summarizeStars(stars) });
+  }
+  // Mejores primero: el dueño identifica de un vistazo a su mejor repartidor.
+  drivers.sort((a, b) => b.summary.average - a.summary.average);
+
+  const allStars = rows
+    .map((row: { driver_stars: number | null }) => row.driver_stars)
+    .filter((value): value is number => value !== null);
+  return { drivers, overall: summarizeStars(allStars) };
+}

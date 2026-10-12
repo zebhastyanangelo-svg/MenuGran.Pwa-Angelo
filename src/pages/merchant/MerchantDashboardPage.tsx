@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useMerchantDashboardPage } from '../../hooks/useMerchantDashboardPage';
 import { useMerchantPopularity } from '../../hooks/useMerchantPopularity';
+import { useMerchantDeliveryMetrics } from '../../hooks/useMerchantDeliveryMetrics';
 import { MerchantPopularityCard } from '../../components/merchant/MerchantPopularityCard';
+import { MerchantDeliveriesCard } from '../../components/merchant/MerchantDeliveriesCard';
 import { useToast } from '../../hooks/useToast';
 import { supabase } from '../../services/supabase';
 import { PaymentProofLightbox } from '../../components/merchant/PaymentProofLightbox';
@@ -160,6 +162,13 @@ export function MerchantDashboardPage() {
     isLoading: popularityLoading,
     error: popularityError,
   } = useMerchantPopularity(merchantId);
+
+  // Calificaciones de delivery: estrellas por repartidor y resumen del equipo.
+  const {
+    metrics: deliveryMetrics,
+    isLoading: deliveryMetricsLoading,
+    error: deliveryMetricsError,
+  } = useMerchantDeliveryMetrics(merchantId);
 
   const [activeTab, setActiveTab] = useState<TabKey>('pending');
   const greetingName = merchantName ?? profile?.full_name ?? 'Comercio';
@@ -445,6 +454,18 @@ return (
               summary={popularitySummary}
               isLoading={popularityLoading}
               error={popularityError}
+            />
+          </section>
+
+          <section
+            className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+            aria-label="Calificaciones de delivery"
+          >
+            <MerchantDeliveriesCard
+              metrics={deliveryMetrics}
+              drivers={drivers}
+              isLoading={deliveryMetricsLoading}
+              error={deliveryMetricsError}
             />
           </section>
 

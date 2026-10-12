@@ -16,6 +16,7 @@ const invokeMock = vi.fn();
 const selectMaybeSingleMock = vi.fn();
 
 const getSessionMock = vi.fn();
+const refreshSessionMock = vi.fn();
 
 vi.mock('./supabase', () => ({
   TABLE_NAMES: {
@@ -30,7 +31,10 @@ vi.mock('./supabase', () => ({
   },
   supabase: {
     from: (...args: unknown[]) => fromMock(...args),
-    auth: { getSession: (...args: unknown[]) => getSessionMock(...args) },
+    auth: {
+      getSession: (...args: unknown[]) => getSessionMock(...args),
+      refreshSession: (...args: unknown[]) => refreshSessionMock(...args),
+    },
     functions: { invoke: (...args: unknown[]) => invokeMock(...args) },
   },
 }));
@@ -337,6 +341,48 @@ describe('sendTestPushNotification / sendBulkPushNotification', () => {
     const result = await sendTestPushNotification();
 
     expect(result.ok).toBe(false);
+  });
+
+  it('refresca la sesión y usa el nuevo token cuando el access token está vencido', async () => {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    getSessionMock.mockResolvedValue({
+      data: { session: { access_token: 'stale-token', expires_at: nowSeconds - 10 } },
+      error: null,
+    });
+    refreshSessionMock.mockResolvedValue({
+      data: { session: { access_token: 'fresh-token' } },
+      error: null,
+    });
+    invokeMock.mockResolvedValue({
+      data: { ok: true, sent: 5, failed: 0, deactivated: 0, total: 5 },
+      error: null,
+    });
+
+    const result = await sendBulkPushNotification('Promo', 'Cuerpo');
+
+    expect(refreshSessionMock).toHaveBeenCalledTimes(1);
+    expect(invokeMock).toHaveBeenCalledWith('send-push-notification', {
+      body: { target: 'all', title: 'Promo', body: 'Cuerpo' },
+      headers: { Authorization: 'Bearer fresh-token' },
+    });
+    expect(result.ok).toBe(true);
+  });
+
+  it('devuelve error de sesión cuando el refresco del token falla', async () => {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    getSessionMock.mockResolvedValue({
+      data: { session: { access_token: 'stale-token', expires_at: nowSeconds - 10 } },
+      error: null,
+    });
+    refreshSessionMock.mockResolvedValue({ data: { session: null }, error: { message: 'invalid grant' } });
+
+    const result = await sendBulkPushNotification('Promo', 'Cuerpo');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toContain('Sesión expirada');
+    }
+    expect(invokeMock).not.toHaveBeenCalled();
   });
 });
 

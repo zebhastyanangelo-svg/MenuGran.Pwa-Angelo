@@ -6,11 +6,32 @@ import { MerchantDetailsModal, formatDetailDate } from './MerchantDetailsModal';
 const serviceMocks = vi.hoisted(() => ({
   fetchMerchantDetails: vi.fn(),
   updateMerchantSubscription: vi.fn(),
+  fetchMerchantDrivers: vi.fn(),
 }));
 
 vi.mock('../../services/superAdminService', () => ({
   fetchMerchantDetails: serviceMocks.fetchMerchantDetails,
   updateMerchantSubscription: serviceMocks.updateMerchantSubscription,
+}));
+
+vi.mock('../../services/merchantStaffService', () => ({
+  fetchMerchantDrivers: serviceMocks.fetchMerchantDrivers,
+}));
+
+const popularityHookMocks = vi.hoisted(() => ({
+  useMerchantPopularity: vi.fn(),
+}));
+
+const deliveryHookMocks = vi.hoisted(() => ({
+  useMerchantDeliveryMetrics: vi.fn(),
+}));
+
+vi.mock('../../hooks/useMerchantPopularity', () => ({
+  useMerchantPopularity: popularityHookMocks.useMerchantPopularity,
+}));
+
+vi.mock('../../hooks/useMerchantDeliveryMetrics', () => ({
+  useMerchantDeliveryMetrics: deliveryHookMocks.useMerchantDeliveryMetrics,
 }));
 
 const DETAILS_FIXTURE = {
@@ -59,6 +80,21 @@ describe('MerchantDetailsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     serviceMocks.fetchMerchantDetails.mockResolvedValue(DETAILS_FIXTURE);
+    serviceMocks.fetchMerchantDrivers.mockResolvedValue([]);
+    popularityHookMocks.useMerchantPopularity.mockReturnValue({
+      summary: { average: 4.6, count: 12 },
+      isLoading: false,
+      error: null,
+    });
+    deliveryHookMocks.useMerchantDeliveryMetrics.mockReturnValue({
+      metrics: {
+        drivers: [{ driverId: 'd-1', summary: { average: 4, count: 3 } }],
+        overall: { average: 4, count: 3 },
+      },
+      drivers: [{ id: 'd-1', full_name: 'Luis Mensajero', email: 'luis@t.com' }],
+      isLoading: false,
+      error: null,
+    });
   });
 
   it('muestra el RIF, dirección, contacto y categoría del comercio', async () => {
@@ -148,5 +184,41 @@ describe('MerchantDetailsModal', () => {
     await waitFor(() => {
       expect(serviceMocks.fetchMerchantDetails).not.toHaveBeenCalled();
     });
+  });
+
+  it('muestra la popularidad y las calificaciones de delivery del comercio', async () => {
+    serviceMocks.fetchMerchantDrivers.mockResolvedValue([
+      { id: 'd-1', full_name: 'Luis Mensajero', email: 'luis@t.com' },
+    ]);
+    renderModal();
+
+    expect(await screen.findByTestId('merchant-popularity-card')).toBeInTheDocument();
+    expect(screen.getByTestId('popularity-average')).toHaveTextContent('4,6');
+    expect(screen.getByTestId('merchant-deliveries-card')).toBeInTheDocument();
+    expect(
+      await screen.findByTestId('delivery-driver-rating-d-1'),
+    ).toHaveTextContent('Luis Mensajero');
+    expect(serviceMocks.fetchMerchantDrivers).toHaveBeenCalledWith(['m-1']);
+  });
+
+  it('muestra popularidad sin valoraciones y delivery vacío para un comercio nuevo', async () => {
+    popularityHookMocks.useMerchantPopularity.mockReturnValue({
+      summary: { average: 0, count: 0 },
+      isLoading: false,
+      error: null,
+    });
+    deliveryHookMocks.useMerchantDeliveryMetrics.mockReturnValue({
+      metrics: { drivers: [], overall: { average: 0, count: 0 } },
+      isLoading: false,
+      error: null,
+    });
+    renderModal();
+
+    await screen.findByTestId('merchant-details-body');
+    expect(screen.getByTestId('popularity-average')).toHaveTextContent('—');
+    expect(screen.getByTestId('popularity-level')).toHaveTextContent('Sin valoraciones');
+    expect(
+      screen.getByText('Aún no hay calificaciones de entrega para tu equipo.'),
+    ).toBeInTheDocument();
   });
 });

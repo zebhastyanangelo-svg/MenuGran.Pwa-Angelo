@@ -17,6 +17,11 @@ import {
   updateMerchantSubscription,
   type MerchantDetails,
 } from '../../services/superAdminService';
+import { fetchMerchantDrivers, type DriverListItem } from '../../services/merchantStaffService';
+import { useMerchantPopularity } from '../../hooks/useMerchantPopularity';
+import { useMerchantDeliveryMetrics } from '../../hooks/useMerchantDeliveryMetrics';
+import { MerchantPopularityCard } from '../merchant/MerchantPopularityCard';
+import { MerchantDeliveriesCard } from '../merchant/MerchantDeliveriesCard';
 import { MerchantSubscriptionManager } from './MerchantSubscriptionManager';
 
 export interface MerchantDetailsModalProps {
@@ -119,6 +124,22 @@ export function MerchantDetailsModal({
   const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [drivers, setDrivers] = useState<DriverListItem[]>([]);
+  const [driversError, setDriversError] = useState<string | null>(null);
+
+  // Popularidad y delivery: el SuperAdmin ve de un vistazo la reputación del
+  // comercio y el desempeño (estrellas) de su equipo de repartidores.
+  const {
+    summary: popularitySummary,
+    isLoading: popularityLoading,
+    error: popularityError,
+  } = useMerchantPopularity(isOpen ? merchantId : null);
+
+  const {
+    metrics: deliveryMetrics,
+    isLoading: deliveryMetricsLoading,
+    error: deliveryMetricsError,
+  } = useMerchantDeliveryMetrics(isOpen ? merchantId : null);
 
   const handleUpdateSubscription = async (
     id: string,
@@ -130,10 +151,12 @@ export function MerchantDetailsModal({
 
   useEffect(() => {
     if (!isOpen || merchantId.trim() === '') {
-      setDetails(null);
-      setSubscriptionExpiresAt(null);
-      setError(null);
-      return;
+        setDetails(null);
+        setSubscriptionExpiresAt(null);
+        setError(null);
+        setDrivers([]);
+        setDriversError(null);
+        return;
     }
 
     let cancelled = false;
@@ -154,6 +177,23 @@ export function MerchantDetailsModal({
         );
       } finally {
         if (!cancelled) setIsLoading(false);
+      }
+    })();
+
+    void (async () => {
+      try {
+        const driverList = await fetchMerchantDrivers([merchantId]);
+        if (cancelled) return;
+        setDrivers(driverList);
+        setDriversError(null);
+      } catch (caught) {
+        if (cancelled) return;
+        setDrivers([]);
+        setDriversError(
+          caught instanceof Error
+            ? caught.message
+            : 'No se pudieron cargar los repartidores.',
+        );
       }
     })();
 
@@ -192,6 +232,20 @@ export function MerchantDetailsModal({
             Registrado: {formatDetailDate(createdAt)}
           </span>
         </div>
+
+        <section aria-label="Popularidad y delivery" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <MerchantPopularityCard
+            summary={popularitySummary}
+            isLoading={popularityLoading}
+            error={popularityError}
+          />
+          <MerchantDeliveriesCard
+            metrics={deliveryMetrics}
+            drivers={drivers}
+            isLoading={deliveryMetricsLoading}
+            error={deliveryMetricsError ?? driversError}
+          />
+        </section>
 
         <MerchantSubscriptionManager
           merchantId={merchantId}
