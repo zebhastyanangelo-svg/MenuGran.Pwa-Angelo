@@ -5,10 +5,12 @@ import { MerchantDetailsModal, formatDetailDate } from './MerchantDetailsModal';
 
 const serviceMocks = vi.hoisted(() => ({
   fetchMerchantDetails: vi.fn(),
+  updateMerchantSubscription: vi.fn(),
 }));
 
 vi.mock('../../services/superAdminService', () => ({
   fetchMerchantDetails: serviceMocks.fetchMerchantDetails,
+  updateMerchantSubscription: serviceMocks.updateMerchantSubscription,
 }));
 
 const DETAILS_FIXTURE = {

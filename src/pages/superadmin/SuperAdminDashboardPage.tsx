@@ -10,6 +10,10 @@ import { formatBCVRate } from '../../services/exchangeRate';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../services/supabase';
 import { parseGeoPoint } from '../../utils/geoPoint';
+import {
+  requestPermissionAndShowTestNotification,
+  type LocalNotificationStatus,
+} from '../../utils/localNotification';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -135,7 +139,15 @@ export function SuperAdminDashboardPage() {
   const [merchants, setMerchants] = useState<MerchantMapMarker[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const [showBulkNotificationModal, setShowBulkNotificationModal] = useState(false);
+  const [testNotificationStatus, setTestNotificationStatus] = useState<
+    LocalNotificationStatus | null
+  >(null);
   const mapRef = useRef<HTMLDivElement | null>(null);
+
+  const handleTestNotification = async (): Promise<void> => {
+    const status = await requestPermissionAndShowTestNotification();
+    setTestNotificationStatus(status);
+  };
 
   // Fetch merchants with location for map
   useEffect(() => {
@@ -236,6 +248,31 @@ export function SuperAdminDashboardPage() {
               <p className="text-sm text-gray-500">
                 Envía una notificación masiva a todos los clientes con notificaciones activas.
               </p>
+            </div>
+            <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+              <button
+                type="button"
+                onClick={() => void handleTestNotification()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-brand-red bg-white px-4 py-2.5 text-sm font-semibold text-brand-red shadow-sm transition hover:bg-brand-red/5 focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
+                data-testid="test-notification-button"
+              >
+                <i className="fa-solid fa-bell text-base" aria-hidden="true" />
+                Probar notificación en este dispositivo
+              </button>
+              {testNotificationStatus !== null && (
+                <p
+                  className="text-xs"
+                  role="status"
+                  data-testid="test-notification-status"
+                >
+                  {testNotificationStatus === 'granted' &&
+                    '✅ Notificación de prueba enviada a este dispositivo.'}
+                  {testNotificationStatus === 'denied' &&
+                    '⚠️ Permiso denegado: revisa los ajustes de notificaciones del navegador.'}
+                  {testNotificationStatus === 'unsupported' &&
+                    '⚠️ Este navegador no soporta notificaciones.'}
+                </p>
+              )}
             </div>
             <button
               type="button"

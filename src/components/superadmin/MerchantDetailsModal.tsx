@@ -14,8 +14,10 @@ import { Badge } from '../ui/Badge';
 import { Skeleton } from '../ui/Skeleton';
 import {
   fetchMerchantDetails,
+  updateMerchantSubscription,
   type MerchantDetails,
 } from '../../services/superAdminService';
+import { MerchantSubscriptionManager } from './MerchantSubscriptionManager';
 
 export interface MerchantDetailsModalProps {
   merchantId: string;
@@ -114,12 +116,22 @@ export function MerchantDetailsModal({
   onViewMetrics,
 }: MerchantDetailsModalProps) {
   const [details, setDetails] = useState<MerchantDetails | null>(null);
+  const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleUpdateSubscription = async (
+    id: string,
+    newExpirationDate: string,
+  ): Promise<void> => {
+    const storedDate = await updateMerchantSubscription(id, newExpirationDate);
+    setSubscriptionExpiresAt(storedDate);
+  };
 
   useEffect(() => {
     if (!isOpen || merchantId.trim() === '') {
       setDetails(null);
+      setSubscriptionExpiresAt(null);
       setError(null);
       return;
     }
@@ -132,6 +144,7 @@ export function MerchantDetailsModal({
         const data = await fetchMerchantDetails(merchantId);
         if (cancelled) return;
         setDetails(data);
+        setSubscriptionExpiresAt(data.subscription_expires_at ?? null);
       } catch (caught) {
         if (cancelled) return;
         setError(
@@ -179,6 +192,12 @@ export function MerchantDetailsModal({
             Registrado: {formatDetailDate(createdAt)}
           </span>
         </div>
+
+        <MerchantSubscriptionManager
+          merchantId={merchantId}
+          currentExpiration={subscriptionExpiresAt}
+          onUpdate={handleUpdateSubscription}
+        />
 
         <section aria-label="Datos fiscales">
           <p className="mb-1 flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">

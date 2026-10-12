@@ -10,18 +10,15 @@ import {
 } from '../utils/serviceMode';
 import { supabase } from '../services/supabase';
 import {
-  isPushSupported,
-  subscribeCurrentUserToPush,
-  sendTestPushNotification,
-  type SubscribePushResult,
-} from '../services/pushNotificationService';
+  requestPermissionAndShowTestNotification,
+  type LocalNotificationStatus,
+} from '../utils/localNotification';
 
-/** Mensajes de error según el resultado de la suscripción push. */
-const PUSH_SUBSCRIBE_ERRORS: Record<SubscribePushResult['status'] & string, string> = {
-  unsupported: 'Tu navegador no soporta notificaciones push.',
+/** Mensajes según el resultado de la notificación de prueba local. */
+const TEST_NOTIFICATION_MESSAGES: Record<LocalNotificationStatus, string> = {
+  granted: '¡Notificación enviada! Revisa tu dispositivo.',
   denied: 'Debes permitir las notificaciones en tu navegador para recibirlas.',
-  error: 'No se pudo registrar tu dispositivo para notificaciones.',
-  subscribed: '',
+  unsupported: 'Tu navegador no soporta notificaciones.',
 };
 
 export function ProfilePage() {
@@ -40,7 +37,6 @@ export function ProfilePage() {
   const [pushSending, setPushSending] = useState(false);
   const [pushMessage, setPushMessage] = useState<string | null>(null);
   const [pushError, setPushError] = useState<string | null>(null);
-  const pushSupported = isPushSupported();
 
   /**
    * Cambiar de modo de servicio desde el perfil.
@@ -60,7 +56,11 @@ export function ProfilePage() {
     navigate(DELIVERY_MARKETPLACE_PATH, { replace: true });
   }
 
-  /** Suscribe el dispositivo (si hace falta) y envía un push de verificación. */
+  /**
+   * Dispara la notificación de prueba real en este dispositivo: solicita el
+   * permiso si falta y la muestra vía Service Worker (con fallback al
+   * constructor `Notification`), reutilizando la utilidad compartida.
+   */
   const handleTestNotification = async () => {
     if (user === null || pushSending) return;
     setPushSending(true);
@@ -68,17 +68,11 @@ export function ProfilePage() {
     setPushError(null);
 
     try {
-      const subscription = await subscribeCurrentUserToPush(user.id);
-      if (subscription.status !== 'subscribed') {
-        setPushError(PUSH_SUBSCRIBE_ERRORS[subscription.status] || PUSH_SUBSCRIBE_ERRORS.error);
-        return;
-      }
-
-      const result = await sendTestPushNotification();
-      if (result.ok) {
-        setPushMessage('¡Notificación enviada! Revisa tu dispositivo.');
+      const status = await requestPermissionAndShowTestNotification();
+      if (status === 'granted') {
+        setPushMessage(TEST_NOTIFICATION_MESSAGES.granted);
       } else {
-        setPushError(result.message);
+        setPushError(TEST_NOTIFICATION_MESSAGES[status]);
       }
     } catch (err) {
       setPushError(err instanceof Error ? err.message : 'Error inesperado al probar la notificación.');
@@ -272,7 +266,7 @@ export function ProfilePage() {
           <button
             type="button"
             onClick={() => void handleTestNotification()}
-            disabled={pushSending || !pushSupported}
+            disabled={pushSending}
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-brand-red-dark focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
           >
             {pushSending ? (
@@ -282,11 +276,6 @@ export function ProfilePage() {
             )}
             {pushSending ? 'Enviando...' : 'Probar notificación'}
           </button>
-          {!pushSupported && (
-            <p className="mt-2 text-xs text-slate-500">
-              Tu navegador no soporta notificaciones push.
-            </p>
-          )}
           {pushMessage && (
             <p role="status" className="mt-3 rounded-lg bg-green-50 px-4 py-2 text-sm font-medium text-green-700">
               {pushMessage}

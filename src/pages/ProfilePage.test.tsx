@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
@@ -27,6 +27,18 @@ vi.mock('react-router-dom', async () => {
     useParams: () => ({}),
   };
 });
+
+vi.mock('../utils/localNotification', () => ({
+  requestPermissionAndShowTestNotification: vi.fn(),
+  TEST_NOTIFICATION_TITLE: 'Es hora de comer 🍽️',
+  TEST_NOTIFICATION_BODY: 'Notificación de prueba',
+}));
+
+import { requestPermissionAndShowTestNotification } from '../utils/localNotification';
+
+const mockRequestPermissionAndShowTestNotification = vi.mocked(
+  requestPermissionAndShowTestNotification,
+);
 
 describe('ProfilePage', () => {
   beforeEach(() => {
@@ -275,5 +287,82 @@ describe('ProfilePage', () => {
     await userEvent.click(screen.getByRole('button', { name: /eliminar definitivamente/i }));
     expect(deleteAccountMock).toHaveBeenCalledWith('user-1');
     // after deletion should navigate to home (navigation tested via integration)
+  });
+
+  it('dispara la notificación local de prueba al pulsar el botón', async () => {
+    mockRequestPermissionAndShowTestNotification.mockResolvedValue('granted');
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        id: 'user-1',
+        email: 'cliente@menugram.com',
+        user_metadata: { full_name: 'Ana García' },
+      },
+      profile: {
+        id: 'user-1',
+        email: 'cliente@menugram.com',
+        full_name: 'Ana García',
+        avatar_url: null,
+        role: 'customer',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+      isLoading: false,
+      signInWithGoogle: vi.fn(),
+      signInWithPassword: vi.fn(),
+      signUpWithPassword: vi.fn(),
+      resendConfirmationEmail: vi.fn(),
+      signOut: mockSignOut,
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/profile']}>
+        <Routes>
+          <Route path="/profile" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /probar notificación/i }));
+
+    expect(mockRequestPermissionAndShowTestNotification).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(
+        /Notificación enviada/i,
+      );
+    });
+  });
+
+  it('muestra un error cuando el permiso de notificación es denegado', async () => {
+    mockRequestPermissionAndShowTestNotification.mockResolvedValue('denied');
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        id: 'user-1',
+        email: 'cliente@menugram.com',
+        user_metadata: { full_name: 'Ana García' },
+      },
+      profile: null,
+      isLoading: false,
+      signInWithGoogle: vi.fn(),
+      signInWithPassword: vi.fn(),
+      signUpWithPassword: vi.fn(),
+      resendConfirmationEmail: vi.fn(),
+      signOut: mockSignOut,
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/profile']}>
+        <Routes>
+          <Route path="/profile" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /probar notificación/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        /Debes permitir las notificaciones/i,
+      );
+    });
   });
 });

@@ -165,11 +165,13 @@ export interface MerchantDetails {
   business_hours: BusinessHours;
   opening_time: string | null;
   closing_time: string | null;
+  /** Fecha de expiración manual de la suscripción (YYYY-MM-DD). NULL = sin plazo. */
+  subscription_expires_at: string | null;
   created_at: IsoTimestamp;
 }
 
 const MERCHANT_DETAILS_COLUMNS =
-  'id, name, slug, rif, status, is_active, is_open, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, opening_time, closing_time, created_at';
+  'id, name, slug, rif, status, is_active, is_open, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, opening_time, closing_time, subscription_expires_at, created_at';
 
 /**
  * Obtiene la ficha completa de un comercio para el panel de Super Admin.
@@ -197,4 +199,37 @@ export async function fetchMerchantDetails(
     throw new Error('No se encontró el comercio.');
   }
   return data as MerchantDetails;
+}
+
+/**
+ * Asigna (o reasigna) la fecha de expiración manual de la suscripción de un
+ * comercio. Solo el SuperAdmin puede llamarla: RLS lo garantiza vía la
+ * política `merchants_update_authorized`.
+ *
+ * Devuelve la fecha almacenada (YYYY-MM-DD).
+ */
+export async function updateMerchantSubscription(
+  merchantId: string,
+  expirationDate: string,
+): Promise<string> {
+  if (merchantId.trim() === '') {
+    throw new Error('Se requiere el identificador del comercio.');
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(expirationDate.trim())) {
+    throw new Error('La fecha de expiración debe tener formato YYYY-MM-DD.');
+  }
+
+  const { data, error } = await supabase
+    .from(TABLE_NAMES.merchants)
+    .update({ subscription_expires_at: expirationDate.trim() })
+    .eq('id', merchantId)
+    .select('subscription_expires_at')
+    .single();
+
+  if (error !== null) {
+    throw new Error(`Error al actualizar la suscripción: ${error.message}`);
+  }
+  const stored = (data as { subscription_expires_at: string | null } | null)
+    ?.subscription_expires_at;
+  return stored ?? expirationDate.trim();
 }

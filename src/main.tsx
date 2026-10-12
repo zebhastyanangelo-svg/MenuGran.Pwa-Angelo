@@ -11,6 +11,25 @@ import posthog, { isPostHogEnabled } from './posthog'
 import { refreshBCVRateIfStale, startPeriodicBCVRefresh } from './services/exchangeRate'
 
 let swRegistration: ServiceWorkerRegistration | undefined
+let hasController = navigator.serviceWorker?.controller !== null
+
+/**
+ * Actualiza el Service Worker atrapando el rechazo de la promesa.
+ *
+ * `registration.update()` falla con "Failed to update a ServiceWorker: An
+ * unknown error occurred" en móviles con señal inestable (o cuando
+ * importScripts no alcanza la red). Si el rechazo no se maneja, PostHog lo
+ * reporta como error no capturado; aquí se degrada a un log silencioso.
+ */
+async function safeUpdateServiceWorker(): Promise<void> {
+  const registration = swRegistration
+  if (!registration) return
+  try {
+    await registration.update()
+  } catch (error) {
+    console.debug('[PWA] Actualización del Service Worker pospuesta:', error)
+  }
+}
 
 if ('serviceWorker' in navigator) {
   registerSW({
@@ -40,7 +59,7 @@ if ('serviceWorker' in navigator) {
             event: 'service_worker_registered',
           })
         }
-        void registration.update()
+        void safeUpdateServiceWorker()
       }
     },
     onRegisterError(error) {
@@ -55,7 +74,14 @@ if ('serviceWorker' in navigator) {
   })
 
   // When a new Service Worker takes control, reload to pick up the new version.
+  // Con `clientsClaim: true` la PRIMERA activación también dispara el evento:
+  // se recarga solo si ya había un controller previo (es decir, es una
+  // actualización) para evitar recargas en bucle en la primera visita.
   navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hasController) {
+      hasController = true
+      return
+    }
     window.location.reload()
   })
 }
@@ -67,7 +93,7 @@ document.addEventListener('visibilitychange', () => {
     // estancada del día anterior.
     void refreshBCVRateIfStale();
     if (swRegistration) {
-      void swRegistration.update()
+      void safeUpdateServiceWorker()
     }
   }
 })

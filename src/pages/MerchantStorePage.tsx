@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase, TABLE_NAMES } from '../services/supabase';
+import { useSupabaseRealtimeRefresh } from '../hooks/useSupabaseRealtimeRefresh';
 import type { CategoryRow, MerchantRow, ProductRow } from '../types/database';
 import { CategoryFilter } from '../components/marketplace/CategoryFilter';
 import { ProductCard, ProductCardSkeleton } from '../components/marketplace/ProductCard';
@@ -34,49 +35,80 @@ export function MerchantStorePage() {
     navigate('/marketplace');
   }, [navigate]);
 
-  const fetchData = useCallback(async () => {
-    if (merchantId === undefined) return;
+  const fetchData = useCallback(
+    async (silent: boolean = false) => {
+      if (merchantId === undefined) return;
 
-    setIsLoading(true);
-    setError(null);
+      if (!silent) {
+        setIsLoading(true);
+      }
+      setError(null);
 
-    try {
-      const [mRes, cRes, pRes] = await Promise.all([
-        supabase
-          .from(TABLE_NAMES.merchants)
-          .select('*')
-          .eq('id', merchantId)
-          .single(),
-        supabase
-          .from(TABLE_NAMES.categories)
-          .select('*')
-          .eq('merchant_id', merchantId)
-          .order('sort_order'),
-        supabase
-          .from(TABLE_NAMES.products)
-          .select('*')
-          .eq('merchant_id', merchantId)
-          .eq('is_available', true),
-      ]);
+      try {
+        const [mRes, cRes, pRes] = await Promise.all([
+          supabase
+            .from(TABLE_NAMES.merchants)
+            .select('*')
+            .eq('id', merchantId)
+            .single(),
+          supabase
+            .from(TABLE_NAMES.categories)
+            .select('*')
+            .eq('merchant_id', merchantId)
+            .order('sort_order'),
+          supabase
+            .from(TABLE_NAMES.products)
+            .select('*')
+            .eq('merchant_id', merchantId)
+            .eq('is_available', true),
+        ]);
 
-      if (mRes.error) throw mRes.error;
-      if (cRes.error) throw cRes.error;
-      if (pRes.error) throw pRes.error;
+        if (mRes.error) throw mRes.error;
+        if (cRes.error) throw cRes.error;
+        if (pRes.error) throw pRes.error;
 
-      setMerchant((mRes.data as MerchantRow) ?? null);
-      setCategories((cRes.data as CategoryRow[]) ?? []);
-      setProducts((pRes.data as ProductRow[]) ?? []);
-    } catch (err) {
-      console.error('Error al cargar el comercio:', err);
-      setError('Ocurrió un error al cargar el comercio. Inténtalo de nuevo.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [merchantId]);
+        setMerchant((mRes.data as MerchantRow) ?? null);
+        setCategories((cRes.data as CategoryRow[]) ?? []);
+        setProducts((pRes.data as ProductRow[]) ?? []);
+      } catch (err) {
+        console.error('Error al cargar el comercio:', err);
+        setError('Ocurrió un error al cargar el comercio. Inténtalo de nuevo.');
+      } finally {
+        if (!silent) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [merchantId],
+  );
 
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
+
+  // Sincronización en tiempo real (Supabase Realtime): si el comercio edita
+  // sus productos, categorías o datos, la tienda se actualiza de forma
+  // asíncrona sin que el cliente deba recargar la página.
+  useSupabaseRealtimeRefresh({
+    channelName: `store-realtime-${merchantId ?? 'unknown'}`,
+    subscriptions:
+      merchantId === undefined
+        ? []
+        : [
+            { table: TABLE_NAMES.merchants, filter: `id=eq.${merchantId}` },
+            {
+              table: TABLE_NAMES.categories,
+              filter: `merchant_id=eq.${merchantId}`,
+            },
+            {
+              table: TABLE_NAMES.products,
+              filter: `merchant_id=eq.${merchantId}`,
+            },
+          ],
+    onRefresh: () => {
+      void fetchData(true);
+    },
+  });
 
   const categoryNameById = useMemo(() => {
     const map = new Map<string, string>();

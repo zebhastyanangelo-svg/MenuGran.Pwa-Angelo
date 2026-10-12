@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import type { GeoPoint, MerchantCategory, MerchantRow } from '../types/database';
 import { useAuth } from '../hooks/useAuth';
+import { useSupabaseRealtimeRefresh } from '../hooks/useSupabaseRealtimeRefresh';
 import { useMarketplaceMerchantRatings } from '../hooks/useMerchantPopularity';
 import { SearchBar } from '../components/marketplace/SearchBar';
 import { MerchantCard } from '../components/marketplace/MerchantCard';
@@ -108,8 +109,11 @@ export function MarketplacePage() {
 const MERCHANT_COLUMNS =
   'id, name, slug, logo_url, banner_url, status, is_active, is_open, location, created_at, rif, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, pago_movil_bank, pago_movil_id_number, pago_movil_phone, opening_time, closing_time, weekly_hours, promo_label, discount_percentage, estimated_delivery_minutes, offers_delivery, delivery_fee';
 
-const fetchData = useCallback(async () => {
-    setIsLoading(true);
+const fetchData = useCallback(
+  async (silent: boolean = false) => {
+    if (!silent) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       let query = supabase
@@ -147,7 +151,9 @@ const fetchData = useCallback(async () => {
       console.error('Error al cargar datos del marketplace:', err);
       setError('Ocurrió un error al cargar la información. Inténtalo de nuevo.');
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }, [serviceMode]);
 
@@ -158,6 +164,19 @@ const fetchData = useCallback(async () => {
     if (isGatePending) return;
     void fetchData();
   }, [fetchData, isGatePending]);
+
+  // Sincronización en tiempo real (Supabase Realtime): cualquier INSERT,
+  // UPDATE o DELETE en `merchants` (nuevos comercios, promociones, aperturas)
+  // refresca el listado de forma asíncrona, sin recargar ni parpadear el
+  // esqueleto de carga.
+  useSupabaseRealtimeRefresh({
+    channelName: 'marketplace-merchants-realtime',
+    subscriptions: [{ table: TABLE_NAMES.merchants }],
+    onRefresh: () => {
+      void fetchData(true);
+    },
+    enabled: !isGatePending,
+  });
 
   // La geolocalización también espera: su diálogo de permiso no debería
   // aparecer detrás del selector de modalidad.
