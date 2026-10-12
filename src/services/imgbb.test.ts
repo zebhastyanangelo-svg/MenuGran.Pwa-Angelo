@@ -95,6 +95,25 @@ describe('imgbb service', () => {
     expect(result).toBe(mockUrl);
   });
 
+  it('debe rechazar respuestas cuya única URL es la página del visor (ibb.co/...)', async () => {
+    const mockFile = new File(['image-data'], 'food.jpg', {
+      type: 'image/jpeg',
+    });
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        status: 200,
+        data: { url: 'https://ibb.co/xyz123' },
+      }),
+    } as Response);
+
+    await expect(
+      uploadToImgBB(mockFile, { compress: false }),
+    ).rejects.toThrow('Respuesta inválida de ImgBB');
+  });
+
   it('debe manejar errores devueltos por la API de ImgBB', async () => {
     const mockFile = new File(['image-data'], 'food.jpg', {
       type: 'image/jpeg',

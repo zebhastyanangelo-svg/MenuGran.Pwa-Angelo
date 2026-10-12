@@ -1,5 +1,8 @@
 const IMGBB_HOSTS = new Set(['ibb.co', 'www.ibb.co', 'i.ibb.co']);
 
+/** Hosts que sirven la página del visor HTML de ImgBB (no son imágenes). */
+const IMGBB_VIEWER_HOSTS = new Set(['ibb.co', 'www.ibb.co']);
+
 /**
  * Normaliza una URL de imagen externa (ImgBB) a HTTPS absoluto:
  *
@@ -32,5 +35,21 @@ export function normalizeImageUrl(
     return parsed.toString();
   } catch {
     return null;
+  }
+}
+
+/**
+ * Detecta si una URL apunta a la página del visor HTML de ImgBB
+ * (`https://ibb.co/<id>`), que es un documento HTML y NO una imagen
+ * renderizable dentro de un `<img>`. Solo el CDN `i.ibb.co` sirve archivos
+ * de imagen directos y persistentes; una URL de visor guardada en la base
+ * de datos deja la foto rota en el dispositivo (los móviles no hacen
+ * content-sniffing de páginas dentro de `<img>`).
+ */
+export function isImgbbViewerUrl(url: string): boolean {
+  try {
+    return IMGBB_VIEWER_HOSTS.has(new URL(url).hostname);
+  } catch {
+    return false;
   }
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ExternalImage } from './ExternalImage';
 
@@ -46,6 +46,30 @@ describe('ExternalImage', () => {
 
     expect(screen.getByText('Sin foto')).toBeInTheDocument();
     expect(screen.queryByAltText('Plato')).not.toBeInTheDocument();
+  });
+
+  it('registra en consola la URL exacta que falla (depuración en móvil)', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <ExternalImage
+        src="https://i.ibb.co/roto/plato.jpg"
+        alt="Plato"
+        fallback={<span>Sin foto</span>}
+      />,
+    );
+
+    fireEvent.error(screen.getByAltText('Plato'));
+
+    expect(consoleError).toHaveBeenCalledWith(
+      '[ExternalImage] Error al cargar imagen externa',
+      expect.objectContaining({
+        url: 'https://i.ibb.co/roto/plato.jpg',
+        alt: 'Plato',
+      }),
+    );
+
+    consoleError.mockRestore();
   });
 
   it('se recupera cuando la URL cambia después de un error', () => {

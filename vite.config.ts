@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(() => {
   const config: UserConfig = {
     plugins: [
       react(),
@@ -59,6 +59,21 @@ export default defineConfig(({ mode }) => {
           clientsClaim: true,
           runtimeCaching: [
             {
+              // ImgBB queda TOTALMENTE excluido del Service Worker: tanto las
+              // imágenes del CDN (i.ibb.co / *.ibb.co) como las subidas a
+              // api.imgbb.com pasan directo a la red sin tocar caché.
+              // NetworkOnly garantiza que, si un móvil falla una carga con
+              // mala señal, el SW nunca guarde un estado inválido permanente
+              // y el siguiente intento traiga la imagen fresca. Debe ser la
+              // PRIMERA regla para que gane sobre cualquier otra que pudiera
+              // coincidir con esos dominios.
+              urlPattern: ({ url }) =>
+                url.hostname === 'ibb.co' ||
+                url.hostname.endsWith('.ibb.co') ||
+                url.hostname.endsWith('.imgbb.com'),
+              handler: 'NetworkOnly',
+            },
+            {
               urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
               handler: 'NetworkFirst',
               options: {
@@ -94,11 +109,8 @@ export default defineConfig(({ mode }) => {
             },
             {
               // Solo se cachean imágenes del PROPIO origen (assets del bundle).
-              // Las imágenes externas de ImgBB (i.ibb.co / ibb.co) NO deben
-              // pasar por el Service Worker: las respuestas opacas cacheadas
-              // por Workbox se corrompen o caducan mal en navegadores móviles,
-              // dejando logos, banners y platos rotos. Al no haber regla que
-              // las coincida, esas peticiones van directo a la red.
+              // Las externas de ImgBB están además vetadas por la regla
+              // NetworkOnly de *.ibb.co que va primero en esta lista.
               urlPattern: ({ url, sameOrigin }) =>
                 sameOrigin && url.pathname.match(/\.(png|jpg|jpeg|svg|webp|ico)$/) !== null,
               handler: 'StaleWhileRevalidate',
@@ -130,11 +142,13 @@ export default defineConfig(({ mode }) => {
     ],
   }
 
-  // Elimina console.* y debugger del bundle de producción
-  // (no afecta el entorno de desarrollo, donde los logs son útiles)
-  if (mode === 'production') {
-    config.esbuild = { drop: ['console', 'debugger'] }
-  }
+  // Nota: en Vite 8 (rolldown/oxc) las opciones `esbuild.drop`/`esbuild.pure`
+  // se IGNORAN. El minificador de oxc sí tiene `compress.dropConsole`, pero es
+  // todo-o-nada y eliminaría también console.error, que ExternalImage usa para
+  // registrar las URLs de ImgBB que fallan — la única vía para depurar imágenes
+  // rotas desde la PWA instalada en un teléfono. Por eso se conservan los logs
+  // en el bundle de producción (los errores de imagen salen en la consola del
+  // dispositivo).
 
   return config
 })

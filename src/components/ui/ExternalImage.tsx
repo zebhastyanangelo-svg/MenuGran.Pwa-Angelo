@@ -19,8 +19,10 @@ export interface ExternalImageProps {
  * - Envía `referrerPolicy="no-referrer"`: algunos navegadores móviles y CDNs
  *   rechazan peticiones de imágenes con Referer cruzado.
  * - Si la imagen falla al cargar en un dispositivo (red, caché del Service
- *   Worker o decodificación), muestra el `fallback` recibido en lugar de
- *   dejar el hueco con el ícono de imagen rota.
+ *   Worker o decodificación), registra con `console.error` la URL exacta
+ *   que falló (conservada en el build de producción para poder depurar en
+ *   un teléfono real) y muestra el `fallback` recibido en lugar de dejar
+ *   el hueco con el ícono de imagen rota.
  */
 export function ExternalImage({ src, alt, className, fallback }: ExternalImageProps) {
   const [hasError, setHasError] = useState(false);
@@ -41,7 +43,15 @@ export function ExternalImage({ src, alt, className, fallback }: ExternalImagePr
       loading="lazy"
       decoding="async"
       referrerPolicy="no-referrer"
-      onError={() => setHasError(true)}
+      onError={(event) => {
+        // `currentTarget.src` es la URL absoluta que el navegador realmente
+        // solicitó: es lo que hay que ver en consola al depurar en móvil.
+        console.error('[ExternalImage] Error al cargar imagen externa', {
+          url: event.currentTarget.src || normalizedSrc,
+          alt,
+        });
+        setHasError(true);
+      }}
       className={className}
     />
   );

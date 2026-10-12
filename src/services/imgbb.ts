@@ -1,5 +1,5 @@
 import { compressImage } from '../utils/imageCompressor';
-import { normalizeImageUrl } from '../utils/imageUrl';
+import { isImgbbViewerUrl, normalizeImageUrl } from '../utils/imageUrl';
 
 export interface UploadToImgBBOptions {
   apiKey?: string;
@@ -57,8 +57,10 @@ function resolveApiKey(options?: UploadToImgBBOptions): string {
  * para reducir el payload antes de la subida; si la compresión falla se
  * envía el archivo original.
  *
- * La URL devuelta siempre es HTTPS absoluta, compatible con WebView y
- * navegadores de PWA en dispositivos móviles.
+ * La URL devuelta siempre es HTTPS absoluta del CDN `i.ibb.co`, compatible
+ * con WebView y navegadores de PWA en dispositivos móviles; las páginas del
+ * visor (`ibb.co/...`) se rechazan explícitamente para que nunca lleguen a
+ * la base de datos.
  *
  * @throws {Error} si la API key falta, la red falla o la API responde con error.
  */
@@ -106,21 +108,25 @@ export async function uploadToImgBB(
     }
 
     // ImgBB expone varias URLs en su respuesta: `display_url` es la imagen
-    // directa servida desde `i.ibb.co`, mientras que `url` es la página HTML
-    // del visor (`ibb.co/...`) que no puede renderizarse dentro de un <img>.
-    // Se prefieren las URLs directas y el resultado se normaliza a HTTPS
-    // absoluto, porque los navegadores móviles (WebView / PWA) bloquean el
-    // contenido mixto `http://`.
+    // directa servida desde `i.ibb.co`, mientras que `url` puede ser la
+    // página HTML del visor (`ibb.co/...`) que no puede renderizarse dentro
+    // de un `<img>`. Se prefieren las URLs directas de mayor calidad y el
+    // resultado se normaliza a HTTPS absoluto, porque los navegadores
+    // móviles (WebView / PWA) bloquean el contenido mixto `http://`.
     const rawUrl =
       data.data?.display_url ??
       data.data?.image?.url ??
+      data.data?.medium?.url ??
       data.data?.thumb?.url ??
       data.data?.url;
 
     const uploadedUrl = normalizeImageUrl(rawUrl);
-    if (!uploadedUrl) {
+
+    // Nunca se persiste una página del visor (`ibb.co/<id>`): es HTML, no una
+    // imagen, y dejaría el logo, banner o plato roto en el dispositivo.
+    if (uploadedUrl === null || isImgbbViewerUrl(uploadedUrl)) {
       throw new Error(
-        'Respuesta inválida de ImgBB: falta URL de la imagen.',
+        'Respuesta inválida de ImgBB: falta la URL directa de la imagen.',
       );
     }
 

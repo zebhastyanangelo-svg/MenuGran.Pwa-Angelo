@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeImageUrl } from './imageUrl';
+import { isImgbbViewerUrl, normalizeImageUrl } from './imageUrl';
 
 describe('normalizeImageUrl', () => {
   it('devuelve la misma URL cuando ya es HTTPS absoluta', () => {
@@ -42,5 +42,25 @@ describe('normalizeImageUrl', () => {
     expect(normalizeImageUrl('http://cdn.example.com/foto.png')).toBe(
       'http://cdn.example.com/foto.png',
     );
+  });
+});
+
+describe('isImgbbViewerUrl', () => {
+  it('detecta las páginas del visor HTML de ImgBB (ibb.co/<id>)', () => {
+    expect(isImgbbViewerUrl('https://ibb.co/xyz123')).toBe(true);
+    expect(isImgbbViewerUrl('https://www.ibb.co/xyz123')).toBe(true);
+  });
+
+  it('acepta URLs directas del CDN de ImgBB (i.ibb.co)', () => {
+    expect(isImgbbViewerUrl('https://i.ibb.co/abc/plato.jpg')).toBe(false);
+  });
+
+  it('acepta URLs de dominios ajenos a ImgBB', () => {
+    expect(isImgbbViewerUrl('https://cdn.example.com/foto.png')).toBe(false);
+  });
+
+  it('devuelve false para URLs que no se pueden parsear', () => {
+    expect(isImgbbViewerUrl('no-es-una-url')).toBe(false);
+    expect(isImgbbViewerUrl('')).toBe(false);
   });
 });
