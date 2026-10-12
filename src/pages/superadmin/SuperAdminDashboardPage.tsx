@@ -10,6 +10,8 @@ import { formatBCVRate } from '../../services/exchangeRate';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../services/supabase';
 import { parseGeoPoint } from '../../utils/geoPoint';
+import { useSubscriptionAlerts } from '../../hooks/useSubscriptionAlerts';
+import { showSubscriptionAlertNotification } from '../../utils/localNotification';
 import {
   requestPermissionAndShowTestNotification,
   type LocalNotificationStatus,
@@ -49,6 +51,64 @@ function MetricCard({ icon, label, value }: MetricCardProps) {
         </div>
       </div>
     </Card>
+  );
+}
+
+/**
+ * Alerta de suscripciones: comercios vencidos o próximos a vencer. Además del
+ * aviso visible en el dashboard, dispara una notificación push local una sola
+ * vez por sesión cuando existen comercios vencidos.
+ */
+function SubscriptionAlertsSection() {
+  const { issues, isLoading, error } = useSubscriptionAlerts();
+  const notifiedRef = useRef(false);
+
+  const expired = issues.filter((issue) => issue.status === 'expired');
+  const expiring = issues.filter((issue) => issue.status === 'expiring');
+
+  useEffect(() => {
+    if (isLoading || notifiedRef.current || expired.length === 0) return;
+    notifiedRef.current = true;
+    void showSubscriptionAlertNotification(expired.length, expiring.length);
+  }, [isLoading, expired.length, expiring.length]);
+
+  if (isLoading) return null;
+  if (error !== null) return null;
+  if (issues.length === 0) return null;
+
+  return (
+    <section
+      aria-label="Alertas de suscripciones"
+      data-testid="subscription-alerts"
+      className="rounded-xl border border-amber-200 bg-amber-50 p-4"
+      role="alert"
+    >
+      <h2 className="flex items-center gap-2 text-base font-semibold text-amber-900">
+        <i className="fa-solid fa-triangle-exclamation text-lg" aria-hidden="true" />
+        Suscripciones de comercios requieren atención
+      </h2>
+      <ul className="mt-3 space-y-2">
+        {issues.map((issue) => (
+          <li
+            key={issue.id}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 text-sm"
+            data-testid="subscription-alert-item"
+          >
+            <span className="font-semibold text-slate-900">{issue.name}</span>
+            <span className="text-slate-500">Vence: {issue.subscription_expires_at}</span>
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                issue.status === 'expired'
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-amber-100 text-amber-800'
+              }`}
+            >
+              {issue.status === 'expired' ? 'Vencida' : `Vence en ${issue.daysLeft} día(s)`}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -236,6 +296,9 @@ export function SuperAdminDashboardPage() {
             {error}
           </p>
         )}
+
+        {/* Alertas de suscripciones vencidas / próximas a vencer (SuperAdmin) */}
+        <SubscriptionAlertsSection />
 
         {/* Envío masivo de notificaciones push a clientes */}
         <section aria-label="Notificaciones push a clientes">

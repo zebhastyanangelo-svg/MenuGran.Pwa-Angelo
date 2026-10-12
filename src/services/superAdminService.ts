@@ -15,6 +15,10 @@ import {
   type CreateMerchantAccountInput,
   type CreateMerchantAccountResult,
 } from '../utils/merchantRegistration';
+import {
+  calculateSubscriptionDaysLeft,
+  getMerchantSubscriptionStatus,
+} from '../utils/subscription';
 
 export interface MerchantAccountListItem {
   id: string;
@@ -232,4 +236,57 @@ export async function updateMerchantSubscription(
   const stored = (data as { subscription_expires_at: string | null } | null)
     ?.subscription_expires_at;
   return stored ?? expirationDate.trim();
+}
+
+/** Comercio con su suscripción vencida o próxima a vencer (alerta SuperAdmin). */
+export interface MerchantSubscriptionIssue {
+  id: string;
+  name: string;
+  subscription_expires_at: string;
+  daysLeft: number;
+  status: 'expired' | 'expiring';
+}
+
+interface SubscriptionIssueQueryRow {
+  id: string;
+  name: string;
+  subscription_expires_at: string | null;
+}
+
+/**
+ * Lista los comercios activos con suscripciones vencidas o por vencer (≤ 7 días),
+ * usando `merchants.subscription_expires_at`. La clasificación se hace en el
+ * cliente con la misma regla del contador visual (`utils/subscription`), de
+ * modo que el dashboard y la ficha coinciden siempre.
+ */
+export async function fetchMerchantsWithSubscriptionIssues(): Promise<
+  MerchantSubscriptionIssue[]
+> {
+  const { data, error } = await supabase
+    .from(TABLE_NAMES.merchants)
+    .select('id, name, subscription_expires_at')
+    .eq('is_active', true)
+    .not('subscription_expires_at', 'is', null);
+
+  if (error !== null) {
+    throw new Error(`Error al consultar suscripciones: ${error.message}`);
+  }
+
+  const rows = (data ?? []) as unknown as SubscriptionIssueQueryRow[];
+  const issues: MerchantSubscriptionIssue[] = [];
+  for (const row of rows) {
+    if (row.subscription_expires_at === null) continue;
+    const status = getMerchantSubscriptionStatus(row.subscription_expires_at);
+    if (status !== 'expired' && status !== 'expiring') continue;
+    issues.push({
+      id: row.id,
+      name: row.name,
+      subscription_expires_at: row.subscription_expires_at,
+      daysLeft: calculateSubscriptionDaysLeft(row.subscription_expires_at) ?? 0,
+      status,
+    });
+  }
+
+  // Vencidas primero: son las que exigen acción inmediata del SuperAdmin.
+  return issues.sort((a, b) => a.daysLeft - b.daysLeft);
 }

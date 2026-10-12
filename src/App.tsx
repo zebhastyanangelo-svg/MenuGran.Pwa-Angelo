@@ -9,6 +9,7 @@ import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
 import { usePostHogAnalytics } from './hooks/usePostHogAnalytics';
 import { usePushSubscriptionSync } from './hooks/usePushSubscriptionSync';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import { useMenuReminderTimer } from './hooks/useMenuReminderTimer';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { OfflineBanner } from './components/pwa/OfflineBanner';
 import { ReloadPrompt } from './components/pwa/ReloadPrompt';
@@ -153,6 +154,8 @@ function AppRoutes() {
   usePostHogAnalytics();
   usePushNotifications();
   usePushSubscriptionSync();
+  // Recordatorios programados de retención ("Es hora de comer") mientras la app está abierta.
+  useMenuReminderTimer();
   useGeofencing();
   return (
     <>

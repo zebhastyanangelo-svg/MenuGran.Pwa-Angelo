@@ -3,6 +3,7 @@ import {
   createMerchantAccount,
   deleteMerchant,
   fetchMerchantDetails,
+  fetchMerchantsWithSubscriptionIssues,
   listMerchantsWithOwners,
 } from './superAdminService';
 import type { CreateMerchantAccountInput } from '../utils/merchantRegistration';
@@ -14,6 +15,7 @@ interface TableChain {
   eq: ReturnType<typeof vi.fn>;
   single: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
+  not: ReturnType<typeof vi.fn>;
 }
 
 const supabaseMocks = vi.hoisted(() => ({
@@ -44,6 +46,7 @@ function buildTableChain(): TableChain {
     eq: vi.fn(),
     single: vi.fn(),
     order: vi.fn(),
+    not: vi.fn(),
   };
   chain.update.mockReturnValue(chain);
   chain.eq.mockReturnValue({ single: chain.single });
@@ -366,3 +369,76 @@ describe('fetchMerchantDetails', () => {
     );
   });
 });
+
+describe('fetchMerchantsWithSubscriptionIssues', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    registeredTables.clear();
+  });
+
+  /** Cadena para `.select().eq().not()`. */
+  function registerSubscriptionTable(result: { data: unknown; error: unknown }): void {
+    const chain = buildTableChain();
+    const not = vi.fn().mockResolvedValue(result);
+    chain.select.mockReturnValue(chain);
+    chain.eq.mockReturnValue(chain);
+    chain.not = not;
+    registeredTables.set('merchants', chain);
+  }
+
+  it('filtra a comercios vencidos y próximos a vencer, ordenando vencidas primero', async () => {
+    registerSubscriptionTable({
+      data: [
+        { id: 'm-ok', name: 'Comercio Vigente', subscription_expires_at: '2099-01-01' },
+        { id: 'm-exp', name: 'Comercio Vencido', subscription_expires_at: '2026-01-01' },
+        { id: 'm-soon', name: 'Comercio Por Vencer', subscription_expires_at: tomorrowDate() },
+        { id: 'm-null', name: 'Comercio Sin Plazo', subscription_expires_at: null },
+      ],
+      error: null,
+    });
+
+    const issues = await fetchMerchantsWithSubscriptionIssues();
+
+    expect(issues).toHaveLength(2);
+    expect(issues[0]).toMatchObject({
+      id: 'm-exp',
+      name: 'Comercio Vencido',
+      status: 'expired',
+    });
+    expect(issues[1]).toMatchObject({
+      id: 'm-soon',
+      name: 'Comercio Por Vencer',
+      status: 'expiring',
+      daysLeft: 1,
+    });
+  });
+
+  it('filtra por comercios activos con fecha de expiración configurada', async () => {
+    registerSubscriptionTable({ data: [], error: null });
+
+    await fetchMerchantsWithSubscriptionIssues();
+
+    const merchantsChain = registeredTables.get('merchants');
+    expect(merchantsChain?.select).toHaveBeenCalledWith(
+      'id, name, subscription_expires_at',
+    );
+    expect(merchantsChain?.eq).toHaveBeenCalledWith('is_active', true);
+  });
+
+  it('propaga el error cuando la consulta falla', async () => {
+    registerSubscriptionTable({ data: null, error: { message: 'permiso denegado' } });
+
+    await expect(fetchMerchantsWithSubscriptionIssues()).rejects.toThrow(
+      'Error al consultar suscripciones: permiso denegado',
+    );
+  });
+});
+
+/** Fecha local de mañana en formato YYYY-MM-DD (para "por vencer"). */
+function tomorrowDate(): string {
+  const target = new Date();
+  target.setDate(target.getDate() + 1);
+  const month = String(target.getMonth() + 1).padStart(2, '0');
+  const day = String(target.getDate()).padStart(2, '0');
+  return `${target.getFullYear()}-${month}-${day}`;
+}

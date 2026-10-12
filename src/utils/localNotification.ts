@@ -79,3 +79,52 @@ export async function requestPermissionAndShowTestNotification(): Promise<LocalN
     return 'denied';
   }
 }
+
+/**
+ * Push local de administración: avisa al SuperAdmin de comercios con
+ * suscripciones vencidas o próximas a vencer. Se muestra una vez por sesión
+ * (el guard lo decide la página); el fallo silencioso no rompe el dashboard.
+ */
+export async function showSubscriptionAlertNotification(
+  expiredCount: number,
+  expiringCount: number,
+): Promise<void> {
+  if (typeof window === 'undefined' || !('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+
+  const parts: string[] = [];
+  if (expiredCount > 0) {
+    parts.push(`${expiredCount} suscripción${expiredCount === 1 ? '' : 'es'} vencida${expiredCount === 1 ? '' : 's'}`);
+  }
+  if (expiringCount > 0) {
+    parts.push(
+      `${expiringCount} por vencer${expiringCount === 1 ? '' : ' (7 días o menos)'}`,
+    );
+  }
+  if (parts.length === 0) return;
+
+  const body = `Revisa el panel: ${parts.join(' y ')}.`;
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification('⚠️ Suscripciones de comercios', {
+        body,
+        tag: 'menugran-subscription-alert',
+        data: { url: '/super-admin/dashboard' },
+      });
+      return;
+    }
+  } catch (error) {
+    console.warn('[Notificaciones] SW no disponible para la alerta de suscripciones:', error);
+  }
+
+  try {
+    new Notification('⚠️ Suscripciones de comercios', {
+      body,
+      tag: 'menugran-subscription-alert',
+    });
+  } catch (error) {
+    console.error('[Notificaciones] No se pudo mostrar la alerta de suscripciones:', error);
+  }
+}

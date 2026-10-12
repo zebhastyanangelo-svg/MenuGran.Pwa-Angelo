@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildExpirationDateFromDays,
   calculateSubscriptionDaysLeft,
+  getMerchantSubscriptionStatus,
 } from './subscription';
 
 const NOW = new Date(2026, 9, 12, 15, 30, 0); // 12/10/2026 15:30 local
@@ -60,5 +61,27 @@ describe('buildExpirationDateFromDays', () => {
     expect(buildExpirationDateFromDays(-5)).toBeNull();
     expect(buildExpirationDateFromDays(2.5)).toBeNull();
     expect(buildExpirationDateFromDays(Number.NaN)).toBeNull();
+  });
+});
+
+describe('getMerchantSubscriptionStatus', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('clasifica la suscripción según los días restantes', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+
+    expect(getMerchantSubscriptionStatus('2026-10-11')).toBe('expired');
+    expect(getMerchantSubscriptionStatus('2026-10-13')).toBe('expiring');
+    expect(getMerchantSubscriptionStatus('2026-10-19')).toBe('expiring');
+    expect(getMerchantSubscriptionStatus('2026-10-20')).toBe('active');
+  });
+
+  it('devuelve "none" sin fecha configurada o inválida', () => {
+    expect(getMerchantSubscriptionStatus(null)).toBe('none');
+    expect(getMerchantSubscriptionStatus(undefined)).toBe('none');
+    expect(getMerchantSubscriptionStatus('no-es-fecha')).toBe('none');
   });
 });

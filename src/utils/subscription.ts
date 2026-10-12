@@ -44,3 +44,23 @@ export function buildExpirationDateFromDays(days: number): string | null {
   const day = String(target.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/** Días que restan para considerar la suscripción "próxima a vencer". */
+export const SUBSCRIPTION_WARNING_DAYS = 7;
+
+/** Estado de una suscripción de comercio respecto a su fecha de expiración. */
+export type MerchantSubscriptionStatus = 'expired' | 'expiring' | 'active' | 'none';
+
+/**
+ * Clasifica la suscripción de un comercio a partir de su fecha de expiración:
+ * vencida (0 días o menos), próxima a vencer (≤ 7 días), activa o sin plazo.
+ */
+export function getMerchantSubscriptionStatus(
+  expirationDate: string | null | undefined,
+): MerchantSubscriptionStatus {
+  const daysLeft = calculateSubscriptionDaysLeft(expirationDate);
+  if (daysLeft === null) return 'none';
+  if (daysLeft === 0) return 'expired';
+  if (daysLeft <= SUBSCRIPTION_WARNING_DAYS) return 'expiring';
+  return 'active';
+}

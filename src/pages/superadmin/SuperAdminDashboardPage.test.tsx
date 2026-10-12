@@ -8,12 +8,17 @@ vi.mock('../../hooks/useSuperAdminMetrics', () => ({
 vi.mock('../../hooks/useSuperAdminOrderTrends', () => ({
   useSuperAdminOrderTrends: vi.fn(),
 }));
+vi.mock('../../hooks/useSubscriptionAlerts', () => ({
+  useSubscriptionAlerts: vi.fn(),
+}));
 
 import { useSuperAdminMetrics } from '../../hooks/useSuperAdminMetrics';
 import { useSuperAdminOrderTrends } from '../../hooks/useSuperAdminOrderTrends';
+import { useSubscriptionAlerts } from '../../hooks/useSubscriptionAlerts';
 
 const mockMetricsHook = vi.mocked(useSuperAdminMetrics);
 const mockTrendsHook = vi.mocked(useSuperAdminOrderTrends);
+const mockSubscriptionAlertsHook = vi.mocked(useSubscriptionAlerts);
 
 const loadedMetrics = {
   totalMerchants: 7,
@@ -38,6 +43,11 @@ describe('SuperAdminDashboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockTrendsHook.mockReturnValue(loadedTrends);
+    mockSubscriptionAlertsHook.mockReturnValue({
+      issues: [],
+      isLoading: false,
+      error: null,
+    });
   });
 
   it('renderiza las tres tarjetas de métricas globales con sus valores', () => {
@@ -194,5 +204,44 @@ describe('SuperAdminDashboardPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Cancelar/i }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('muestra la alerta de suscripciones vencidas y próximas a vencer', () => {
+    mockSubscriptionAlertsHook.mockReturnValue({
+      issues: [
+        {
+          id: 'm-1',
+          name: 'Comercio Vencido',
+          subscription_expires_at: '2026-10-01',
+          daysLeft: 0,
+          status: 'expired',
+        },
+        {
+          id: 'm-2',
+          name: 'Comercio Por Vencer',
+          subscription_expires_at: '2026-10-15',
+          daysLeft: 3,
+          status: 'expiring',
+        },
+      ],
+      isLoading: false,
+      error: null,
+    });
+
+    render(<SuperAdminDashboardPage />);
+
+    const alerts = screen.getByTestId('subscription-alerts');
+    expect(alerts).toBeInTheDocument();
+    expect(screen.getAllByTestId('subscription-alert-item')).toHaveLength(2);
+    expect(screen.getByText('Comercio Vencido')).toBeInTheDocument();
+    expect(screen.getByText('Comercio Por Vencer')).toBeInTheDocument();
+    expect(screen.getByText('Vencida')).toBeInTheDocument();
+    expect(screen.getByText('Vence en 3 día(s)')).toBeInTheDocument();
+  });
+
+  it('oculta la alerta de suscripciones cuando no hay comercios vencidos ni por vencer', () => {
+    render(<SuperAdminDashboardPage />);
+
+    expect(screen.queryByTestId('subscription-alerts')).not.toBeInTheDocument();
   });
 });
