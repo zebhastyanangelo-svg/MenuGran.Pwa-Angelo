@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../../hooks/useCart';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { formatPrice } from '../../types/cart';
 import { formatVES } from '../../utils/format';
 import { useBCVRate } from '../../hooks/useExchangeRate';
+import { resolveCartItemPricing, summarizeCartPricing } from '../../utils/cartPricing';
 import { getMissingProfileFields, isProfileIncomplete } from '../../utils/profileUtils';
 import { IncompleteProfileOrderModal } from './IncompleteProfileOrderModal';
 
@@ -49,6 +50,12 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const navigate = useNavigate();
   const panelRef = useRef<HTMLDivElement>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+
+  /**
+   * Totales con descuento: subtotal original, ahorro y total final. El total
+   * a cobrar sigue siendo `totalAmount`, que ya viene descontado del contexto.
+   */
+  const cartTotals = useMemo(() => summarizeCartPricing(items), [items]);
 
   /**
    * Intento de pedido: con el perfil incompleto la acción se bloquea por
@@ -139,8 +146,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           ) : (
             <ul className="divide-y divide-gray-100">
               {items.map((item) => {
-                const price = parseFloat(item.product.price);
-                const lineTotal = price * item.quantity;
+                const pricing = resolveCartItemPricing(item);
                 return (
                   <li key={item.product.id} className="flex gap-3 p-4">
                     <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
@@ -162,8 +168,20 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         {item.product.title}
                       </h3>
                       <p className="text-xs text-gray-500">
-                        {formatPrice(lineTotal)} ({item.quantity} × {formatPrice(item.product.price)})
+                        {formatPrice(pricing.lineTotal)} ({item.quantity} ×{' '}
+                        {formatPrice(pricing.unitPrice)})
                       </p>
+                      {pricing.discountPercentage !== null && (
+                        <p
+                          className="mt-0.5 text-xs text-brand-red"
+                          data-testid="cart-item-discount"
+                        >
+                          <span className="line-through">
+                            {formatPrice(pricing.originalUnitPrice)}
+                          </span>{' '}
+                          {pricing.discountPercentage}% OFF
+                        </p>
+                      )}
                       {item.notes ? (
                         <p className="mt-1 text-xs text-gray-600 italic">
                           {item.notes}
@@ -218,8 +236,28 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 <i className="fa-solid fa-bag-shopping text-gray-400" aria-hidden="true" />
                 Subtotal ({totalItems} ítems):
               </dt>
-              <dd className="font-semibold text-gray-900">{formatPrice(totalAmount)}</dd>
+              <dd className="font-semibold text-gray-900">
+                {formatPrice(cartTotals.originalTotal)}
+              </dd>
             </div>
+
+            {cartTotals.discountAmount > 0 && (
+              <div
+                className="flex items-center justify-between"
+                data-testid="cart-discount-row"
+              >
+                <dt className="inline-flex items-center gap-1.5 text-emerald-700">
+                  <i className="fa-solid fa-tag text-emerald-500" aria-hidden="true" />
+                  Descuento aplicado
+                  {cartTotals.discountPercentage !== null
+                    ? ` (${cartTotals.discountPercentage}%)`
+                    : ''}
+                </dt>
+                <dd className="font-semibold text-emerald-700">
+                  -{formatPrice(cartTotals.discountAmount)}
+                </dd>
+              </div>
+            )}
 
             {SUMMARY_ROWS.map(({ key, label, value, icon }) => (
               <div key={key} className="flex items-center justify-between">

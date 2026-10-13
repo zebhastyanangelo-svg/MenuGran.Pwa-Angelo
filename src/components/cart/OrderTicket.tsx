@@ -1,5 +1,6 @@
 import { formatUSD, formatVES } from '../../utils/format';
 import { isDeliveryFeeCharged } from '../../utils/deliveryPolicy';
+import { resolveCartItemPricing } from '../../utils/cartPricing';
 import type { CartItem } from '../../types/cart';
 import type { OrderType } from '../../types/database';
 
@@ -28,6 +29,10 @@ export interface OrderTicketProps {
   bcvRate: number;
   /** Total en USD: subtotal + envío. */
   total: number;
+  /** Ahorro total por descuentos (por plato y del comercio) en USD. */
+  discountAmount?: number;
+  /** Porcentaje de descuento si todas las líneas comparten el mismo. */
+  discountPercentage?: number | null;
   /**
    * Datos del comercio emisor (nombre legal, RIF, dirección). Cuando se
    * reciben, el ticket abre con la sección formal del emisor para que el
@@ -77,6 +82,8 @@ export function OrderTicket({
   orderType,
   bcvRate,
   total,
+  discountAmount = 0,
+  discountPercentage = null,
   merchant = null,
 }: OrderTicketProps) {
   const hasRate = bcvRate > 0;
@@ -135,7 +142,8 @@ export function OrderTicket({
       <div className="p-4">
         <ul className="space-y-1">
           {items.map((item) => {
-            const lineTotalUSD = parseFloat(item.product.price) * item.quantity;
+            const pricing = resolveCartItemPricing(item);
+            const lineTotalUSD = pricing.lineTotal;
             return (
               <li
                 key={item.product.id}
@@ -147,6 +155,17 @@ export function OrderTicket({
                   </span>
                   <span className="shrink-0">{formatUSD(lineTotalUSD)}</span>
                 </span>
+                {pricing.discountPercentage !== null && (
+                  <span
+                    className="ml-4 text-xs text-emerald-700"
+                    data-testid="ticket-line-discount"
+                  >
+                    <span className="line-through">
+                      {formatUSD(pricing.originalUnitPrice)}
+                    </span>{' '}
+                    {pricing.discountPercentage}% OFF
+                  </span>
+                )}
                 {hasRate && (
                   <span className="ml-4 text-xs text-emerald-700">
                     ≈ {formatVES(lineTotalUSD * bcvRate)}
@@ -166,6 +185,24 @@ export function OrderTicket({
           >
             {formatUSD(subtotal)}
           </SummaryRow>
+
+          {discountAmount > 0 && (
+            <SummaryRow
+              icon={<i className="fa-solid fa-tag text-emerald-500" aria-hidden="true" />}
+              label={
+                discountPercentage !== null
+                  ? `Descuento aplicado (${discountPercentage}%)`
+                  : 'Descuento aplicado'
+              }
+            >
+              <span
+                className="font-semibold text-emerald-700"
+                data-testid="ticket-discount-row"
+              >
+                -{formatUSD(discountAmount)}
+              </span>
+            </SummaryRow>
+          )}
 
           <SummaryRow
             icon={

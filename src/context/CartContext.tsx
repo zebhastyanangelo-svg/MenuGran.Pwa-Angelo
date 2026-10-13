@@ -2,11 +2,38 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import type { AddItemResult, CartItem, CartContextValue } from '../types/cart';
 import type { ProductRow } from '../types/database';
 import { loadCartFromStorage, saveCartToStorage } from '../types/cart';
+import { resolveUnitPrice } from '../utils/cartPricing';
 import { CartContext } from './cart-context';
 import posthog, { isPostHogEnabled } from '../posthog';
 
 interface CartProviderProps {
   children: ReactNode;
+}
+
+/**
+ * Construye la línea del carrito con el precio unitario efectivo ya
+ * descontado: gana el descuento del plato; si no tiene, el general del
+ * comercio.
+ */
+function buildCartItem(
+  product: ProductRow,
+  quantity: number,
+  notes: string | undefined,
+  merchantDiscountPercentage: number | null | undefined,
+): CartItem {
+  const { unitPrice, discountPercentage } = resolveUnitPrice(
+    product.price,
+    product.discount_percentage,
+    merchantDiscountPercentage,
+  );
+  return {
+    product,
+    quantity,
+    notes,
+    merchantDiscountPercentage: merchantDiscountPercentage ?? null,
+    unitPrice,
+    discountPercentage,
+  };
 }
 
 export function CartProvider({ children }: CartProviderProps) {
@@ -42,37 +69,53 @@ export function CartProvider({ children }: CartProviderProps) {
 
   const totalAmount = useMemo(() => {
     const total = items.reduce((sum, item) => {
-      const unitPrice = parseFloat(item.product.price);
-      return sum + unitPrice * item.quantity;
+      return sum + item.unitPrice * item.quantity;
     }, 0);
     return total.toFixed(2);
   }, [items]);
 
-  const addItem = useCallback((product: ProductRow, quantity: number = 1, notes?: string): void => {
-    if (isPostHogEnabled) {
-      posthog.capture('cart_item_added', { quantity, cart_action: 'add' });
-    }
-    setItems((prev) => {
-      const existingIndex = prev.findIndex(
-        (item) => item.product.id === product.id,
-      );
-
-      if (existingIndex !== -1) {
-        const updated = [...prev];
-        updated[existingIndex] = {
-          ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + quantity,
-          notes: notes ?? updated[existingIndex].notes,
-        };
-        return updated;
+  const addItem = useCallback(
+    (
+      product: ProductRow,
+      quantity: number = 1,
+      notes?: string,
+      merchantDiscountPercentage?: number | null,
+    ): void => {
+      if (isPostHogEnabled) {
+        posthog.capture('cart_item_added', { quantity, cart_action: 'add' });
       }
+      setItems((prev) => {
+        const existingIndex = prev.findIndex(
+          (item) => item.product.id === product.id,
+        );
 
-      return [...prev, { product, quantity, notes }];
-    });
-  }, []);
+        if (existingIndex !== -1) {
+          const updated = [...prev];
+          updated[existingIndex] = buildCartItem(
+            product,
+            updated[existingIndex].quantity + quantity,
+            notes ?? updated[existingIndex].notes,
+            merchantDiscountPercentage,
+          );
+          return updated;
+        }
+
+        return [
+          ...prev,
+          buildCartItem(product, quantity, notes, merchantDiscountPercentage),
+        ];
+      });
+    },
+    [],
+  );
 
   const confirmAddItem = useCallback(
-    (product: ProductRow, quantity: number = 1, notes?: string): AddItemResult => {
+    (
+      product: ProductRow,
+      quantity: number = 1,
+      notes?: string,
+      merchantDiscountPercentage?: number | null,
+    ): AddItemResult => {
       const hasItems = items.length > 0;
       const differentMerchant = hasItems && items[0].product.merchant_id !== product.merchant_id;
 
@@ -80,7 +123,7 @@ export function CartProvider({ children }: CartProviderProps) {
         if (isPostHogEnabled) {
           posthog.capture('cart_item_added', { quantity, cart_action: 'cleared_then_added' });
         }
-        setItems([{ product, quantity, notes }]);
+        setItems([buildCartItem(product, quantity, notes, merchantDiscountPercentage)]);
         return { action: 'cleared-then-added' };
       }
 
@@ -94,15 +137,19 @@ export function CartProvider({ children }: CartProviderProps) {
 
         if (existingIndex !== -1) {
           const updated = [...prev];
-          updated[existingIndex] = {
-            ...updated[existingIndex],
-            quantity: updated[existingIndex].quantity + quantity,
-            notes: notes ?? updated[existingIndex].notes,
-          };
+          updated[existingIndex] = buildCartItem(
+            product,
+            updated[existingIndex].quantity + quantity,
+            notes ?? updated[existingIndex].notes,
+            merchantDiscountPercentage,
+          );
           return updated;
         }
 
-        return [...prev, { product, quantity, notes }];
+        return [
+          ...prev,
+          buildCartItem(product, quantity, notes, merchantDiscountPercentage),
+        ];
       });
 
       return { action: 'added', merchantId: product.merchant_id };

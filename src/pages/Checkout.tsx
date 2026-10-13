@@ -21,6 +21,7 @@ import {
   resolveDeliveryFee,
   type MerchantDeliveryPolicy,
 } from '../utils/deliveryPolicy';
+import { resolveCartItemPricing, summarizeCartPricing } from '../utils/cartPricing';
 import {
   isOrderTypeLockedByMode,
   readServiceMode,
@@ -247,7 +248,10 @@ export function Checkout() {
   );
 
   // El envío se cobra en tiempo real: cambia con la tarifa del comercio y con
-  // el tipo de despacho, y el total se recalcula sin recargar nada.
+  // el tipo de despacho, y el total se recalcula sin recargar nada. El
+  // subtotal ya viene con el descuento aplicado (`totalAmount` del carrito);
+  // el desglose se calcula aparte para mostrar el ahorro en el ticket.
+  const cartTotals = useMemo(() => summarizeCartPricing(items), [items]);
   const subtotal = Number(totalAmount);
   const deliveryFee = useMemo(
     () => resolveDeliveryFee(deliveryPolicy, orderType),
@@ -329,7 +333,7 @@ export function Checkout() {
         items: items.map((item) => ({
           product_id: item.product.id,
           quantity: item.quantity,
-          unit_price: parseFloat(item.product.price),
+          unit_price: resolveCartItemPricing(item).unitPrice,
         })),
         deliveryLocation: orderType === 'delivery' ? deliveryLocation : null,
         deliveryAddress:
@@ -415,11 +419,13 @@ export function Checkout() {
 
       <OrderTicket
         items={items}
-        subtotal={subtotal}
+        subtotal={cartTotals.originalTotal}
         deliveryFee={deliveryFee}
         orderType={orderType}
         bcvRate={bcvRate}
         total={orderTotal}
+        discountAmount={cartTotals.discountAmount}
+        discountPercentage={cartTotals.discountPercentage}
         merchant={merchantIssuer}
       />
 

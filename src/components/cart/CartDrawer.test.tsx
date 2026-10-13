@@ -128,6 +128,65 @@ describe('CartDrawer', () => {
   });
 });
 
+describe('CartDrawer con descuentos', () => {
+  beforeEach(() => {
+    localStorageMock.getItem.mockReturnValue(null);
+    localStorageMock.setItem.mockReset();
+    mockProfile = null;
+  });
+
+  function seedDiscountedCart() {
+    localStorageMock.getItem.mockImplementation((key: string) =>
+      key === 'menugram_cart'
+        ? JSON.stringify([
+            {
+              product: {
+                id: 'p-1',
+                title: 'Arepa',
+                price: '5.00',
+                merchant_id: 'm-1',
+                image_url: null,
+                discount_percentage: 20,
+              },
+              quantity: 2,
+              merchantDiscountPercentage: null,
+              unitPrice: 4,
+              discountPercentage: 20,
+            },
+          ])
+        : null,
+    );
+  }
+
+  it('muestra la línea de descuento aplicado con el ahorro', () => {
+    seedDiscountedCart();
+    renderDrawerWithRoutes({ isOpen: true, onClose: vi.fn() });
+
+    expect(screen.getByTestId('cart-discount-row')).toHaveTextContent(
+      'Descuento aplicado (20%)',
+    );
+    expect(screen.getByTestId('cart-discount-row')).toHaveTextContent('-$2.00');
+    // El total cobra el precio descontado (2 × $4.00), no el de lista ($10.00).
+    expect(screen.getAllByText('$8.00').length).toBeGreaterThan(0);
+  });
+
+  it('muestra el precio descontado por ítem con el original tachado', () => {
+    seedDiscountedCart();
+    renderDrawerWithRoutes({ isOpen: true, onClose: vi.fn() });
+
+    expect(screen.getByTestId('cart-item-discount')).toHaveTextContent('$5.00');
+    expect(screen.getByTestId('cart-item-discount')).toHaveTextContent('20% OFF');
+  });
+
+  it('no muestra la línea de descuento cuando no hay descuentos', () => {
+    seedCartItem();
+    renderDrawerWithRoutes({ isOpen: true, onClose: vi.fn() });
+
+    expect(screen.queryByTestId('cart-discount-row')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('cart-item-discount')).not.toBeInTheDocument();
+  });
+});
+
 describe('CartDrawer con perfil incompleto', () => {
   beforeEach(() => {
     localStorageMock.getItem.mockReturnValue(null);

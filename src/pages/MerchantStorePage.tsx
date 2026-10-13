@@ -130,7 +130,14 @@ export function MerchantStorePage() {
 
   const handleAddToCart = useCallback(
     (product: ProductRow, quantity: number, notes?: string) => {
-      const result = confirmAddItem(product, quantity, notes);
+      // El descuento general del comercio se fija al momento de agregar:
+      // gana el descuento propio del plato si lo tiene, si no este.
+      const result = confirmAddItem(
+        product,
+        quantity,
+        notes,
+        merchant?.discount_percentage ?? null,
+      );
 
       if (result.action === 'cleared-then-added') {
         showToast({
@@ -146,7 +153,7 @@ export function MerchantStorePage() {
         });
       }
     },
-    [confirmAddItem, showToast],
+    [confirmAddItem, showToast, merchant],
   );
 
   const isOpen = merchant?.is_active && merchant?.is_open;

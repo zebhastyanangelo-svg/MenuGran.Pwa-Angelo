@@ -18,6 +18,16 @@ function buildProduct(id: string, merchantId: string, title: string, price: stri
   };
 }
 
+function buildDiscountedProduct(
+  id: string,
+  merchantId: string,
+  title: string,
+  price: string,
+  discount_percentage: number | null,
+): ProductRow {
+  return { ...buildProduct(id, merchantId, title, price), discount_percentage };
+}
+
 function wrapper({ children }: { children: React.ReactNode }) {
   return <CartProvider>{children}</CartProvider>;
 }
@@ -172,6 +182,79 @@ describe('useCart', () => {
       });
 
       expect(result.current.totalAmount).toBe('400.50');
+    });
+  });
+
+  describe('descuentos', () => {
+    it('guarda el precio unitario con el descuento del plato aplicado', () => {
+      const { result } = renderHook(() => useCart(), { wrapper });
+
+      const product = buildDiscountedProduct('p1', 'm1', 'Arepa', '5.00', 20);
+
+      act(() => {
+        result.current.addItem(product);
+      });
+
+      expect(result.current.items[0].unitPrice).toBe(4);
+      expect(result.current.items[0].discountPercentage).toBe(20);
+      expect(result.current.totalAmount).toBe('4.00');
+    });
+
+    it('aplica el descuento general del comercio cuando el plato no tiene', () => {
+      const { result } = renderHook(() => useCart(), { wrapper });
+
+      const product = buildDiscountedProduct('p1', 'm1', 'Arepa', '5.00', null);
+
+      act(() => {
+        result.current.addItem(product, 1, undefined, 10);
+      });
+
+      expect(result.current.items[0].unitPrice).toBe(4.5);
+      expect(result.current.items[0].discountPercentage).toBe(10);
+      expect(result.current.totalAmount).toBe('4.50');
+    });
+
+    it('el descuento del plato gana sobre el general del comercio', () => {
+      const { result } = renderHook(() => useCart(), { wrapper });
+
+      const product = buildDiscountedProduct('p1', 'm1', 'Arepa', '5.00', 4);
+
+      act(() => {
+        result.current.addItem(product, 1, undefined, 3);
+      });
+
+      expect(result.current.items[0].unitPrice).toBe(4.8);
+      expect(result.current.items[0].discountPercentage).toBe(4);
+      expect(result.current.totalAmount).toBe('4.80');
+    });
+
+    it('no aplica descuento cuando ni el plato ni el comercio tienen', () => {
+      const { result } = renderHook(() => useCart(), { wrapper });
+
+      const product = buildDiscountedProduct('p1', 'm1', 'Arepa', '5.00', null);
+
+      act(() => {
+        result.current.addItem(product, 1, undefined, null);
+      });
+
+      expect(result.current.items[0].unitPrice).toBe(5);
+      expect(result.current.items[0].discountPercentage).toBe(null);
+      expect(result.current.totalAmount).toBe('5.00');
+    });
+
+    it('confirmAddItem guarda el precio descontado y actualiza el total', () => {
+      const { result } = renderHook(() => useCart(), { wrapper });
+
+      const product = buildDiscountedProduct('p1', 'm1', 'Arepa', '5.00', 20);
+
+      act(() => {
+        result.current.confirmAddItem(product, 1, undefined, null);
+        result.current.confirmAddItem(product, 1, undefined, null);
+      });
+
+      expect(result.current.items[0].quantity).toBe(2);
+      expect(result.current.items[0].unitPrice).toBe(4);
+      expect(result.current.totalAmount).toBe('8.00');
     });
   });
 
