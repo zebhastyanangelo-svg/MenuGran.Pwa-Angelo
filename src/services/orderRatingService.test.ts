@@ -371,6 +371,26 @@ describe('resúmenes de valoraciones', () => {
     const metrics = await fetchMerchantDeliveryMetrics('m-1');
     expect(metrics.drivers).toEqual([]);
     expect(metrics.overall).toEqual({ average: 0, count: 0 });
+    expect(metrics.overallBreakdown).toEqual({ satisfied: 0, neutral: 0, complaints: 0 });
+  });
+
+  it('fetchMerchantDeliveryMetrics desglosa la satisfacción por repartidor y global', async () => {
+    supabaseMocks.from.mockReturnValue(
+      mockSelectRows([
+        { driver_id: 'd-1', driver_stars: 5 },
+        { driver_id: 'd-1', driver_stars: 4 },
+        { driver_id: 'd-1', driver_stars: 1 },
+        { driver_id: 'd-2', driver_stars: 3 },
+        { driver_id: 'd-2', driver_stars: 2 },
+      ]),
+    );
+
+    const metrics = await fetchMerchantDeliveryMetrics('m-1');
+    const d1 = metrics.drivers.find((entry) => entry.driverId === 'd-1');
+    const d2 = metrics.drivers.find((entry) => entry.driverId === 'd-2');
+    expect(d1?.breakdown).toEqual({ satisfied: 2, neutral: 0, complaints: 1 });
+    expect(d2?.breakdown).toEqual({ satisfied: 0, neutral: 1, complaints: 1 });
+    expect(metrics.overallBreakdown).toEqual({ satisfied: 2, neutral: 1, complaints: 2 });
   });
 
   it('propaga errores de supabase con mensaje claro', async () => {

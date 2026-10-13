@@ -80,6 +80,36 @@ function formatAmount(value: number): string {
   return `Bs ${value.toFixed(2)}`;
 }
 
+/**
+ * Muestra la notificación de nuevo pedido preferentemente vía Service
+ * Worker (`registration.showNotification`) para que llegue también con la
+ * PWA en segundo plano; si el SW no está disponible, cae al constructor
+ * `Notification`. Nunca lanza: el fallo no debe romper el flujo del pedido.
+ */
+async function showOrderNotification(orderId: string, amount: number): Promise<void> {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  const title = 'Nuevo pedido';
+  const body = `Pedido #${orderId} por Bs ${amount.toFixed(2)}`;
+  try {
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification(title, {
+        body,
+        tag: `new-order-${orderId}`,
+        data: { url: '/merchant' },
+      });
+      return;
+    }
+  } catch (error) {
+    console.warn('[new-order] SW no disponible, usando notificación local:', error);
+  }
+  try {
+    new Notification(title, { body, tag: `new-order-${orderId}` });
+  } catch {
+    // Notifications not supported in this environment
+  }
+}
+
 export function MerchantDashboardPage() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
@@ -124,13 +154,7 @@ export function MerchantDashboardPage() {
         message: `Pedido #${order.id} por Bs ${Number(order.total_amount ?? 0).toFixed(2)}`,
       });
       if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-        try {
-          new Notification('Nuevo pedido', {
-            body: `Pedido #${order.id} por Bs ${Number(order.total_amount ?? 0).toFixed(2)}`,
-          });
-        } catch {
-          // Notifications not supported in this environment
-        }
+        void showOrderNotification(order.id, Number(order.total_amount ?? 0));
       }
     },
     [playNotificationSound, showToast, notifyNewOrders],

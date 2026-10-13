@@ -280,10 +280,38 @@ export async function fetchDriverRatingSummary(driverId: string): Promise<Rating
   return summarizeStars(stars);
 }
 
+/**
+ * Desglose de satisfacción de un conjunto de valoraciones de delivery:
+ * clientes satisfechos (4-5 ★), neutrales (3 ★) y con quejas (1-2 ★).
+ * La categoría de quejas incluye los retrasos percibidos por el cliente.
+ */
+export interface SatisfactionBreakdown {
+  satisfied: number;
+  neutral: number;
+  complaints: number;
+}
+
+/** Clasifica un conjunto de estrellas del repartidor en el desglose. */
+export function buildSatisfactionBreakdown(
+  stars: readonly number[],
+): SatisfactionBreakdown {
+  let satisfied = 0;
+  let neutral = 0;
+  let complaints = 0;
+  for (const value of stars) {
+    if (value >= 4) satisfied += 1;
+    else if (value === 3) neutral += 1;
+    else complaints += 1;
+  }
+  return { satisfied, neutral, complaints };
+}
+
 /** Resumen de estrellas de un repartidor dentro de un comercio. */
 export interface DriverRatingEntry {
   driverId: string;
   summary: RatingSummary;
+  /** Desglose de satisfacción de los clientes que lo calificaron. */
+  breakdown: SatisfactionBreakdown;
 }
 
 /** Métricas de delivery de un comercio: resumen por repartidor y global. */
@@ -292,6 +320,8 @@ export interface MerchantDeliveryMetrics {
   drivers: DriverRatingEntry[];
   /** Resumen global de estrellas de delivery del comercio. */
   overall: RatingSummary;
+  /** Desglose de satisfacción global del equipo de entrega. */
+  overallBreakdown: SatisfactionBreakdown;
 }
 
 function groupDriverStars(
@@ -312,7 +342,8 @@ function groupDriverStars(
  *
  * Una sola consulta agrupa las estrellas de repartidor por `driver_id`
  * (una entrada por repartidor, uno o varios) y calcula el resumen global
- * del equipo. Las filas sin repartidor asignado se ignoran.
+ * del equipo junto con su desglose de satisfacción. Las filas sin
+ * repartidor asignado se ignoran.
  */
 export async function fetchMerchantDeliveryMetrics(
   merchantId: string,
@@ -330,7 +361,11 @@ export async function fetchMerchantDeliveryMetrics(
   const grouped = groupDriverStars(rows);
   const drivers: DriverRatingEntry[] = [];
   for (const [driverId, stars] of grouped.entries()) {
-    drivers.push({ driverId, summary: summarizeStars(stars) });
+    drivers.push({
+      driverId,
+      summary: summarizeStars(stars),
+      breakdown: buildSatisfactionBreakdown(stars),
+    });
   }
   // Mejores primero: el dueño identifica de un vistazo a su mejor repartidor.
   drivers.sort((a, b) => b.summary.average - a.summary.average);
@@ -338,5 +373,9 @@ export async function fetchMerchantDeliveryMetrics(
   const allStars = rows
     .map((row: { driver_stars: number | null }) => row.driver_stars)
     .filter((value): value is number => value !== null);
-  return { drivers, overall: summarizeStars(allStars) };
+  return {
+    drivers,
+    overall: summarizeStars(allStars),
+    overallBreakdown: buildSatisfactionBreakdown(allStars),
+  };
 }

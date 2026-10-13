@@ -14,10 +14,11 @@ function buildMetrics(
 ): MerchantDeliveryMetrics {
   return {
     drivers: [
-      { driverId: 'd-1', summary: { average: 4.5, count: 4 } },
-      { driverId: 'd-2', summary: { average: 3, count: 2 } },
+      { driverId: 'd-1', summary: { average: 4.5, count: 4 }, breakdown: { satisfied: 3, neutral: 0, complaints: 1 } },
+      { driverId: 'd-2', summary: { average: 3, count: 2 }, breakdown: { satisfied: 0, neutral: 2, complaints: 0 } },
     ],
     overall: { average: 4, count: 6 },
+    overallBreakdown: { satisfied: 3, neutral: 2, complaints: 1 },
     ...overrides,
   };
 }
@@ -71,7 +72,7 @@ describe('MerchantDeliveriesCard', () => {
     render(
       <MerchantDeliveriesCard
         metrics={buildMetrics({
-          drivers: [{ driverId: 'd-1', summary: { average: 4, count: 1 } }],
+          drivers: [{ driverId: 'd-1', summary: { average: 4, count: 1 }, breakdown: { satisfied: 1, neutral: 0, complaints: 0 } }],
         })}
         drivers={[{ id: 'd-1', full_name: null, email: 'luis@t.com' }]}
         isLoading={false}
@@ -107,7 +108,7 @@ describe('MerchantDeliveriesCard', () => {
     render(
       <MerchantDeliveriesCard
         metrics={buildMetrics({
-          drivers: [{ driverId: 'd-1', summary: { average: 4, count: 1 } }],
+          drivers: [{ driverId: 'd-1', summary: { average: 4, count: 1 }, breakdown: { satisfied: 1, neutral: 0, complaints: 0 } }],
           overall: { average: 4, count: 1 },
         })}
         drivers={[DRIVERS[0]!]}
@@ -145,5 +146,57 @@ describe('MerchantDeliveriesCard', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(
       'No se pudieron obtener las calificaciones',
     );
+  });
+
+  it('muestra el desglose de satisfacción por repartidor', () => {
+    render(
+      <MerchantDeliveriesCard
+        metrics={buildMetrics()}
+        drivers={DRIVERS}
+        isLoading={false}
+        error={null}
+      />,
+    );
+
+    expect(screen.getByTestId('delivery-driver-rating-d-1')).toHaveTextContent('3 satisfechos');
+    expect(screen.getByTestId('delivery-driver-rating-d-1')).toHaveTextContent('1 con quejas');
+    expect(screen.getByTestId('delivery-driver-rating-d-1')).toHaveTextContent('Requiere atención');
+    expect(screen.getByTestId('delivery-driver-rating-d-2')).toHaveTextContent('2 normales');
+    expect(screen.getByTestId('delivery-driver-rating-d-2')).not.toHaveTextContent(
+      'Requiere atención',
+    );
+  });
+
+  it('muestra el desglose de satisfacción global del equipo', () => {
+    render(
+      <MerchantDeliveriesCard
+        metrics={buildMetrics()}
+        drivers={DRIVERS}
+        isLoading={false}
+        error={null}
+      />,
+    );
+
+    expect(screen.getByTestId('merchant-deliveries-card')).toHaveTextContent('3 satisfechos');
+    expect(screen.getByTestId('merchant-deliveries-card')).toHaveTextContent('2 normales');
+    expect(screen.getByTestId('merchant-deliveries-card')).toHaveTextContent('1 con quejas');
+  });
+
+  it('no rompe con métricas antiguas sin desglose de satisfacción', () => {
+    render(
+      <MerchantDeliveriesCard
+        metrics={{
+          drivers: [{ driverId: 'd-1', summary: { average: 4, count: 1 }, breakdown: { satisfied: 1, neutral: 0, complaints: 0 } }],
+          overall: { average: 4, count: 1 },
+          overallBreakdown: { satisfied: 1, neutral: 0, complaints: 0 },
+        }}
+        drivers={DRIVERS}
+        isLoading={false}
+        error={null}
+      />,
+    );
+
+    expect(screen.getByTestId('delivery-driver-rating-d-1')).toBeInTheDocument();
+    expect(screen.getByTestId('delivery-overall-summary')).toHaveTextContent('4,0 ★');
   });
 });
