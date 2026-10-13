@@ -85,14 +85,15 @@ describe('registro de franjas mostradas', () => {
 });
 
 describe('getPendingMenuReminder', () => {
-  const dateKey = buildMenuReminderDateKey(new Date());
+  const testDate = new Date(2026, 9, 12, 13, 30);
+  const dateKey = buildMenuReminderDateKey(testDate);
 
   beforeEach(() => {
     window.localStorage.clear();
   });
 
   it('devuelve el recordatorio cuando la franja de hoy no se mostró', () => {
-    const pending = getPendingMenuReminder(new Date(2026, 9, 12, 13, 30));
+    const pending = getPendingMenuReminder(testDate);
     expect(pending).not.toBeNull();
     expect(pending?.slot).toBe(12);
     expect(pending?.copy.title).toContain('almorzar');
@@ -100,12 +101,12 @@ describe('getPendingMenuReminder', () => {
 
   it('devuelve null cuando la franja ya se mostró hoy', () => {
     markMenuReminderShown(dateKey, 12);
-    expect(getPendingMenuReminder(new Date(2026, 9, 12, 13, 30))).toBeNull();
+    expect(getPendingMenuReminder(testDate)).toBeNull();
   });
 
   it('permite la misma franja en otro día distinto', () => {
     window.localStorage.setItem(MENU_REMINDER_STORAGE_KEY, JSON.stringify({ '2026-10-11': [12] }));
-    const pending = getPendingMenuReminder(new Date(2026, 9, 12, 13, 30));
+    const pending = getPendingMenuReminder(testDate);
     expect(pending?.slot).toBe(12);
   });
 

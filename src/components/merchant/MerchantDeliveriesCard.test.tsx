@@ -68,7 +68,7 @@ describe('MerchantDeliveriesCard', () => {
     expect(screen.getByTestId('delivery-driver-rating-d-2')).toHaveTextContent('3,0 ★');
   });
 
-  it('usa el email cuando el repartidor no tiene nombre', () => {
+  it('usa el respaldo "Repartidor" y muestra el email cuando no hay nombre', () => {
     render(
       <MerchantDeliveriesCard
         metrics={buildMetrics({
@@ -80,7 +80,23 @@ describe('MerchantDeliveriesCard', () => {
       />,
     );
 
+    expect(screen.getByTestId('delivery-driver-rating-d-1')).toHaveTextContent('Repartidor');
     expect(screen.getByTestId('delivery-driver-rating-d-1')).toHaveTextContent('luis@t.com');
+  });
+
+  it('no confunde el id de fila staff con el driver_id al resolver el nombre', () => {
+    render(
+      <MerchantDeliveriesCard
+        metrics={buildMetrics({
+          drivers: [{ driverId: 'u-9', summary: { average: 5, count: 1 }, breakdown: { satisfied: 1, neutral: 0, complaints: 0 } }],
+        })}
+        drivers={[{ id: 's-1', full_name: 'José Mensajero', email: 'jose@t.com' }, { id: 'u-9', full_name: 'José Mensajero', email: 'jose@t.com' }]}
+        isLoading={false}
+        error={null}
+      />,
+    );
+
+    expect(screen.getByTestId('delivery-driver-rating-u-9')).toHaveTextContent('José Mensajero');
   });
 
   it('muestra el estado vacío cuando no hay calificaciones', () => {

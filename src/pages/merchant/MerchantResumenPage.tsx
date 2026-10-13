@@ -19,6 +19,7 @@ import {
   listStaff,
   setStaffActive,
   updateStaffPermissions,
+  STAFF_FALLBACK_NAME,
   type MerchantContext,
   type MerchantMetrics,
   type StaffListItem,
@@ -163,8 +164,11 @@ export function MerchantResumenPage() {
       staff
         .filter((item) => item.role === 'driver')
         .map((item) => ({
-          id: item.id,
-          full_name: item.fullName,
+          // Las calificaciones agrupan por `driver_id` (id de usuario), así que
+          // el id debe ser el `user_id` del staff, no el id de la fila staff.
+          id: item.userId,
+          full_name:
+            item.fullName === STAFF_FALLBACK_NAME ? null : item.fullName,
           email: item.email,
         })),
     [staff],

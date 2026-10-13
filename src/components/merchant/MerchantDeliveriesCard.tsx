@@ -264,7 +264,7 @@ export function MerchantDeliveriesCard({
             <ul className="space-y-2" aria-label="Calificaciones por repartidor">
               {metrics.drivers.map((entry) => {
                 const profile = drivers.find((driver) => driver.id === entry.driverId);
-                const name = profile?.full_name ?? profile?.email ?? 'Repartidor';
+                const name = profile?.full_name ?? 'Repartidor';
                 return (
                   <DriverRow
                     key={entry.driverId}

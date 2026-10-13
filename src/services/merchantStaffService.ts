@@ -35,6 +35,9 @@ export interface StaffListItem {
   permissions: MerchantStaffPermissions;
   isActive: boolean;
 }
+/** Nombre de respaldo cuando el perfil del empleado no tiene nombre ni email. */
+export const STAFF_FALLBACK_NAME = 'Empleado de Staff';
+
 interface StaffQueryRow extends MerchantStaffRow {
   profiles: { email: string | null; full_name: string | null; role: UserRole } | null;
 }
@@ -82,13 +85,6 @@ export async function fetchMerchantDrivers(
     .select('user_id, role, permissions, profiles:user_id ( full_name, email, role )')
     .in('merchant_id', merchantIds)
     .eq('is_active', true);
-
-  // Diagnóstico temporal: qué devuelve Supabase exactamente al listar el personal.
-  console.log('[DEBUG DRIVERS]', {
-    merchantIds,
-    rawStaffData: data,
-    error,
-  });
 
   if (error !== null) {
     console.error(
@@ -176,10 +172,11 @@ export async function listStaff(merchantId: string): Promise<StaffListItem[]> {
     const profileEmail: string | null = row.profiles?.email ?? null;
     const profileName: string | null = row.profiles?.full_name ?? null;
     // Si profiles vino NULL (join fallido por RLS o perfil inexistente) o
-    // los campos son null, usamos la parte local del email y "Empleado de Staff".
+    // los campos son null, usamos la parte local del email y el nombre de
+    // respaldo genérico del staff.
     const emailLocal = profileEmail?.split('@')[0];
     const fullName =
-      profileName ?? emailLocal ?? 'Empleado de Staff';
+      profileName ?? emailLocal ?? STAFF_FALLBACK_NAME;
     return {
       id: row.id,
       userId: row.user_id,

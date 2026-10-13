@@ -24,6 +24,7 @@ const serviceMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../../services/merchantStaffService', () => ({
+  STAFF_FALLBACK_NAME: 'Empleado de Staff',
   getMerchantContext: serviceMocks.getMerchantContext,
   listStaff: serviceMocks.listStaff,
   createEmployee: serviceMocks.createEmployee,
