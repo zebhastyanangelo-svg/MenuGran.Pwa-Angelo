@@ -10,7 +10,7 @@ import { useToast } from '../../hooks/useToast';
 import { supabase } from '../../services/supabase';
 import { PaymentProofLightbox } from '../../components/merchant/PaymentProofLightbox';
 import { Modal } from '../../components/ui/Modal';
-import type { OrderStatus, OrderType } from '../../types/database';
+import type { OrderStatus } from '../../types/database';
 import { shouldNotifyNewOrder } from '../../utils/orderNotificationRules';
 import { useStaffPermissions } from '../../hooks/useStaffPermissions';
 import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
@@ -40,8 +40,7 @@ interface OrderAction {
   next: OrderStatus;
 }
 
-function getOrderActions(status: OrderStatus, orderType: OrderType = 'delivery'): OrderAction[] {
-  const isLocalPickup = orderType === 'pickup' || orderType === 'in_store';
+function getOrderActions(status: OrderStatus): OrderAction[] {
   switch (status) {
     case 'payment_pending':
       return [
@@ -59,11 +58,9 @@ function getOrderActions(status: OrderStatus, orderType: OrderType = 'delivery')
         { label: 'Cancelar', next: 'cancelled' },
       ];
     case 'ready':
-      // En delivery el cliente confirma la recepción; en pickup/in_store el
-      // comercio entrega en caja y marca el pedido como entregado.
-      if (isLocalPickup) {
-        return [{ label: 'Entregado', next: 'delivered' }];
-      }
+      // Pickup/In Store: la confirmación final de la entrega la hace el
+      // cliente desde su app; el comercio solo llega hasta "Listo para
+      // retirar".
       return [];
     default:
       return [];
@@ -580,7 +577,16 @@ return (
                       </span>
                     ))}
                     <div className="flex flex-wrap gap-2">
-                      {getOrderActions(order.status, order.type).map((action) => (
+                      {order.type !== 'delivery' && order.status === 'ready' && (
+                        <span
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700"
+                          data-testid="pickup-ready-notice"
+                        >
+                          <i className="fa-solid fa-store" aria-hidden="true" />
+                          Listo para retirar. El cliente confirma la entrega desde su app.
+                        </span>
+                      )}
+                      {getOrderActions(order.status).map((action) => (
                         <button
                           key={action.label}
                           type="button"

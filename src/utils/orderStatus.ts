@@ -83,8 +83,10 @@ export function getAllowedTransitions(status: OrderStatus, orderType: OrderType 
     case 'preparing':
       return ['ready'];
     case 'ready':
-      // Pickup/In Store: el cliente retira en caja y se marca entregado.
-      return isLocalPickup ? ['delivered'] : ['on_the_way'];
+      // Pickup/In Store: la confirmación final de la entrega la hace el
+      // cliente desde su app (sección "Confirmar recepción"), así que el
+      // comercio no puede marcar el pedido como entregado por su cuenta.
+      return isLocalPickup ? [] : ['on_the_way'];
     case 'on_the_way':
       return isLocalPickup ? [] : ['delivered'];
     default:

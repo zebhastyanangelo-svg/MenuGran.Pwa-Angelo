@@ -10,6 +10,8 @@ import { ProductManagement } from '../components/merchant/ProductManagement';
 import { MerchantProfileForm } from '../components/merchant/MerchantProfileForm';
 import { OrdersBoard } from '../components/merchant/OrdersBoard';
 import { PaymentProofModal } from '../components/merchant/PaymentProofModal';
+import { MerchantDeliveriesCard } from '../components/merchant/MerchantDeliveriesCard';
+import { useMerchantDeliveryMetrics } from '../hooks/useMerchantDeliveryMetrics';
 
 export function MerchantDashboard() {
   const { user } = useAuth();
@@ -19,6 +21,13 @@ export function MerchantDashboard() {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithCustomer | null>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [proofError, setProofError] = useState<string | null>(null);
+
+  // Calificaciones de delivery: estrellas por repartidor y resumen del equipo.
+  const {
+    metrics: deliveryMetrics,
+    isLoading: deliveryMetricsLoading,
+    error: deliveryMetricsError,
+  } = useMerchantDeliveryMetrics(merchantIds[0] ?? null);
 
   async function handleOpenProof(order: OrderWithCustomer) {
     setProofError(null);
@@ -117,13 +126,26 @@ export function MerchantDashboard() {
             </nav>
 
              {activeTab === 'orders' ? (
-               <OrdersBoard
-                 orders={orders}
-                 drivers={drivers}
-                 onUpdateStatus={updateOrderStatus}
-                 onAssignDriver={assignDriver}
-                 onOpenProof={handleOpenProof}
-               />
+               <div className="space-y-4">
+                 <section
+                   className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+                   aria-label="Analíticas de delivery del equipo"
+                 >
+                   <MerchantDeliveriesCard
+                     metrics={deliveryMetrics}
+                     drivers={drivers}
+                     isLoading={deliveryMetricsLoading}
+                     error={deliveryMetricsError}
+                   />
+                 </section>
+                 <OrdersBoard
+                   orders={orders}
+                   drivers={drivers}
+                   onUpdateStatus={updateOrderStatus}
+                   onAssignDriver={assignDriver}
+                   onOpenProof={handleOpenProof}
+                 />
+               </div>
              ) : activeTab === 'catalog' ? (
                <ProductManagement merchantId={merchantIds[0] ?? ''} />
              ) : (

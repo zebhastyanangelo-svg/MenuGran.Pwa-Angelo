@@ -152,19 +152,22 @@ describe('OrdersBoard', () => {
     expect(onOpenProof).toHaveBeenCalledTimes(1);
   });
 
-  it('permite marcar como entregado un pickup listo (sin "Enviar para entrega")', async () => {
-    const { onUpdateStatus } = renderBoard([
+  it('pickup listo muestra aviso de confirmación del cliente y no permite marcarlo entregado', async () => {
+    renderBoard([
       buildOrder({ type: 'pickup', status: 'ready' }),
     ]);
 
     expect(
       screen.queryByRole('button', { name: 'Enviar para entrega' }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Marcar como entregado' }),
+    ).not.toBeInTheDocument();
 
-    const deliveredButton = screen.getAllByRole('button', { name: 'Marcar como entregado' })[0];
-    await userEvent.click(deliveredButton);
-
-    expect(onUpdateStatus).toHaveBeenCalledWith('order-1', 'delivered');
+    expect(screen.getAllByTestId('pickup-ready-notice').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/El cliente confirma la entrega desde su app/i).length,
+    ).toBeGreaterThan(0);
   });
 
   it('mantiene "Enviar para entrega" y oculta "Marcar como entregado" en delivery listo', () => {

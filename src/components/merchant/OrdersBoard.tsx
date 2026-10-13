@@ -12,6 +12,7 @@ import {
   getOrderStatusLabel,
   getTransitionButtonClass,
   getTransitionLabel,
+  isLocalPickupOrder,
   isTerminalOrderStatus,
 } from '../../utils/orderStatus';
 import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
@@ -88,6 +89,22 @@ function getCustomerLabel(order: OrderWithCustomer): string {
   const name = profile?.full_name ?? profile?.email ?? `Cliente ${order.customer_id?.slice(0, 6)}...`;
   const ci = profile?.ci ? ` - C.I. ${profile.ci}` : '';
   return `${name}${ci}`;
+}
+
+/**
+ * Aviso para pedidos de retiro en local que ya están listos: el comercio no
+ * marca la entrega; el cliente la confirma desde su app al retirar en caja.
+ */
+function PickupReadyNotice() {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+      data-testid="pickup-ready-notice"
+    >
+      <i className="fa-solid fa-store" aria-hidden="true" />
+      Listo para retirar. El cliente confirma la entrega desde su app.
+    </span>
+  );
 }
 
 export function OrdersBoard({
@@ -360,6 +377,9 @@ export function OrdersBoard({
                               ) : null}
                             </div>
                           )}
+                          {order.status === 'ready' && isLocalPickupOrder(order.type) && (
+                            <PickupReadyNotice />
+                          )}
                           {!isTerminalOrderStatus(order.status) &&
                             getAllowedTransitions(order.status, order.type).filter(s => s !== 'delivered' || order.type !== 'delivery').map((nextStatus) => (
                               <button
@@ -500,6 +520,9 @@ export function OrdersBoard({
                         </select>
                       ) : null}
                     </div>
+                  )}
+                  {order.status === 'ready' && isLocalPickupOrder(order.type) && (
+                    <PickupReadyNotice />
                   )}
                   {!isTerminalOrderStatus(order.status) &&
                     getAllowedTransitions(order.status, order.type).filter(s => s !== 'delivered' || order.type !== 'delivery').map((nextStatus) => (

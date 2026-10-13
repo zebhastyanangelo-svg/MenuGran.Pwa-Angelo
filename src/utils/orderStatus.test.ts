@@ -74,9 +74,10 @@ describe('orderStatus utilities', () => {
     ]);
   });
 
-  it('pickup pasa de Listo a Entregado sin pasar por En Camino', () => {
-    expect(getAllowedTransitions('ready', 'pickup')).toEqual(['delivered']);
-    expect(getAllowedTransitions('ready', 'in_store')).toEqual(['delivered']);
+  it('pickup listo no permite que el comercio lo marque como entregado', () => {
+    // La confirmación final es del cliente desde su app (OrderTracker).
+    expect(getAllowedTransitions('ready', 'pickup')).toEqual([]);
+    expect(getAllowedTransitions('ready', 'in_store')).toEqual([]);
     expect(getAllowedTransitions('on_the_way', 'pickup')).toEqual([]);
     expect(getAllowedTransitions('payment_pending', 'pickup')).toEqual([
       'confirmed',
