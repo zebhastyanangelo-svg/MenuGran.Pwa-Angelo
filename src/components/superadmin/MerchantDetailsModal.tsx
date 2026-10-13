@@ -233,7 +233,7 @@ export function MerchantDetailsModal({
           </span>
         </div>
 
-        <section aria-label="Popularidad y delivery" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <section aria-label="Popularidad y velocidad de entrega" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <MerchantPopularityCard
             summary={popularitySummary}
             isLoading={popularityLoading}

@@ -207,7 +207,7 @@ function DriverRow({
 }
 
 /**
- * Sección de deliveries del panel del comercio: desglose individual de cada
+ * Sección de velocidad de entrega del panel del comercio: desglose individual de cada
  * repartidor (nombre/email, estrellas, entregas, clientes satisfechos y
  * quejas por retrasos o mal servicio) más un resumen global del equipo de
  * entrega, para detectar rápidamente repartidores con valoraciones negativas.
@@ -221,7 +221,7 @@ export function MerchantDeliveriesCard({
   return (
     <div
       className="min-w-0 overflow-hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-100"
-      aria-label="Desempeño del equipo de delivery"
+      aria-label="Velocidad de entrega del equipo de delivery"
       data-testid="merchant-deliveries-card"
     >
       <div className="flex items-center justify-between gap-2">
@@ -233,7 +233,7 @@ export function MerchantDeliveriesCard({
             <i className="fa-solid fa-truck-fast text-lg text-indigo-600" />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-900">Deliveries</p>
+            <p className="text-sm font-semibold text-gray-900">Velocidad de entrega</p>
             <p className="truncate text-xs text-gray-400">
               {drivers.length} {drivers.length === 1 ? 'repartidor' : 'repartidores'}
             </p>

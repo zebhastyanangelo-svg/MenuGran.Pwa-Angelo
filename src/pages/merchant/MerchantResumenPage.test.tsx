@@ -49,6 +49,14 @@ vi.mock('../../hooks/useMerchantPopularity', () => ({
   useMerchantPopularity: popularityMocks.useMerchantPopularity,
 }));
 
+const deliveryMocks = vi.hoisted(() => ({
+  useMerchantDeliveryMetrics: vi.fn(),
+}));
+
+vi.mock('../../hooks/useMerchantDeliveryMetrics', () => ({
+  useMerchantDeliveryMetrics: deliveryMocks.useMerchantDeliveryMetrics,
+}));
+
 const authMocks = vi.hoisted(() => ({
   useAuth: vi.fn(),
 }));
@@ -140,6 +148,11 @@ describe('MerchantResumenPage', () => {
       isLoading: false,
       error: null,
     });
+    deliveryMocks.useMerchantDeliveryMetrics.mockReturnValue({
+      metrics: null,
+      isLoading: false,
+      error: null,
+    });
   });
 
   it('muestra las tarjetas de métricas del comercio', async () => {
@@ -164,6 +177,27 @@ describe('MerchantResumenPage', () => {
 
     await screen.findByTestId('metric-popularity', undefined, { timeout: 5000 });
     expect(popularityMocks.useMerchantPopularity).toHaveBeenCalledWith('m-1', true);
+  });
+
+  it('muestra la tarjeta de velocidad de entrega junto a las analíticas del resumen', async () => {
+    renderPage();
+
+    expect(
+      await screen.findByTestId('delivery-metrics-section', undefined, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('merchant-deliveries-card')).toBeInTheDocument();
+    expect(deliveryMocks.useMerchantDeliveryMetrics).toHaveBeenCalledWith('m-1', true);
+  });
+
+  it('no muestra la tarjeta de velocidad de entrega para empleados no dueños', async () => {
+    serviceMocks.getMerchantContext.mockResolvedValue({ ...context, isOwner: false });
+
+    renderPage();
+
+    expect(
+      await screen.findByTestId('staff-section', undefined, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('delivery-metrics-section')).not.toBeInTheDocument();
   });
 
   it('muestra el promedio y el porcentaje de satisfacción en la tarjeta de popularidad', async () => {

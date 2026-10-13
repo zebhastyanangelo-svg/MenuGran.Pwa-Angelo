@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { useMerchantPopularity } from '../../hooks/useMerchantPopularity';
+import { useMerchantDeliveryMetrics } from '../../hooks/useMerchantDeliveryMetrics';
+import { MerchantDeliveriesCard } from '../../components/merchant/MerchantDeliveriesCard';
 import type { RatingSummary } from '../../services/orderRatingService';
+import type { DriverProfile } from '../../hooks/useMerchantDashboardPage';
 import type { MerchantStaffPermissions } from '../../types/database';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -140,6 +143,31 @@ export function MerchantResumenPage() {
   } = useMerchantPopularity(
     context?.merchantId ?? null,
     context?.isOwner ?? false,
+  );
+
+  // Velocidad de entrega: calificaciones por repartidor y resumen global del
+  // equipo. Solo se consulta para el dueño del comercio.
+  const {
+    metrics: deliveryMetrics,
+    isLoading: deliveryMetricsLoading,
+    error: deliveryMetricsError,
+  } = useMerchantDeliveryMetrics(
+    context?.merchantId ?? null,
+    context?.isOwner ?? false,
+  );
+
+  // Repartidores del equipo de entrega, en el formato de DriverProfile para
+  // alimentar la tarjeta de velocidad de entrega.
+  const deliveryDrivers = useMemo<DriverProfile[]>(
+    () =>
+      staff
+        .filter((item) => item.role === 'driver')
+        .map((item) => ({
+          id: item.id,
+          full_name: item.fullName,
+          email: item.email,
+        })),
+    [staff],
   );
 
   const refetchMetrics = useCallback(
@@ -356,6 +384,25 @@ export function MerchantResumenPage() {
                 isLoading={isAnalyticsLoading}
               />
             </div>
+          </div>
+        </section>
+      )}
+
+      {context.isOwner && (
+        <section
+          aria-label="Velocidad de entrega del equipo"
+          data-testid="delivery-metrics-section"
+        >
+          <h2 className="text-lg font-semibold text-gray-900">
+            Velocidad de entrega
+          </h2>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <MerchantDeliveriesCard
+              metrics={deliveryMetrics}
+              drivers={deliveryDrivers}
+              isLoading={deliveryMetricsLoading}
+              error={deliveryMetricsError}
+            />
           </div>
         </section>
       )}
