@@ -22,6 +22,7 @@ import {
   subscribeCurrentUserToPush,
   type SubscribePushResult,
 } from '../services/pushNotificationService';
+import { MENU_REMINDER_CHECK_INTERVAL_MS } from '../utils/menuReminders';
 
 /** Marca de "ya se pidió el permiso en esta sesión de pestaña". */
 const SESSION_ASKED_KEY = 'menugram-push-auto-asked';
@@ -65,6 +66,16 @@ function writeSessionAsked(): void {
 /**
  * Registra el recordatorio periódico de menú en el navegador.
  *
+ * Pide el ciclo de 15 minutos (`MENU_REMINDER_CHECK_INTERVAL_MS`), la misma
+ * cadencia que el temporizador local: así cliente y service worker evalúan el
+ * recordatorio con el mismo reloj.
+ *
+ * `minInterval` es una *sugerencia*: Chrome la eleva a su propio mínimo (muy
+ * por encima de 15 minutos) y el evento puede llegar con más frecuencia. Por
+ * eso el handler `periodicsync` vuelve a comprobar la hora antes de mostrar
+ * nada, y los horarios que de verdad importan (9:00 / 12:00 / 19:00) los
+ * garantiza el Web Push programado del backend.
+ *
  * Devuelve `false` cuando el navegador no soporta Periodic Sync o el
  * permiso no está concedido: los recordatorios igual llegan por Web Push
  * desde el backend, así que el fallo nunca es fatal.
@@ -81,12 +92,12 @@ export async function registerMenuReminderPeriodicSync(): Promise<boolean> {
     if (periodicSync === undefined) return false;
 
     const registeredTags = await periodicSync.getTags?.().catch(() => [] as string[]);
-    if (registeredTags !== undefined && registeredTags.includes(MENU_REMINDER_PERIODIC_SYNC_TAG)) {
-      return true;
-    }
+    const alreadyRegistered =
+      registeredTags !== undefined && registeredTags.includes(MENU_REMINDER_PERIODIC_SYNC_TAG);
+    if (alreadyRegistered) return true;
 
     await periodicSync.register(MENU_REMINDER_PERIODIC_SYNC_TAG, {
-      minInterval: 24 * 60 * 60 * 1000,
+      minInterval: MENU_REMINDER_CHECK_INTERVAL_MS,
     });
     return true;
   } catch {

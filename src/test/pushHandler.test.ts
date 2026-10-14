@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -28,6 +28,7 @@ interface PushHandlerScope {
     resolveTitle: (payload: Record<string, unknown> | null) => string;
     sanitizeActions: (rawActions: unknown) => Array<{ action: string; title: string; url: string }>;
     buildReminderCopy: (hour: number) => { title: string; body: string };
+    resolveReminderSlot: (hour: number) => number | null;
   };
 }
 
@@ -430,6 +431,16 @@ const [title, options] = mockShowNotificationArgs(scope);
   });
 
   describe('evento periodicsync (recordatorios de menú)', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    /** Fija una hora local concreta para que el handler sea determinista. */
+    function setLocalHour(hour: number): void {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 0, 15, hour, 0, 0));
+    }
+
     it('ignora tags ajenos al recordatorio de menú', () => {
       const scope = loadPushHandler({
         matchAll: async () => [],
@@ -442,6 +453,7 @@ const [title, options] = mockShowNotificationArgs(scope);
     });
 
     it('muestra el recordatorio según la franja horaria local', () => {
+      setLocalHour(13);
       const scope = loadPushHandler({
         matchAll: async () => [],
         openWindow: async () => null,
@@ -468,6 +480,62 @@ const [title, options] = mockShowNotificationArgs(scope);
       expect(__pushHandlerTest.buildReminderCopy(9).title).toContain('Buenos días');
       expect(__pushHandlerTest.buildReminderCopy(12).title).toContain('almorzar');
       expect(__pushHandlerTest.buildReminderCopy(20).title).toContain('cenar');
+    });
+
+    it('no cae en el copy de cena a las 3 de la mañana', () => {
+      const { __pushHandlerTest } = loadPushHandler({
+        matchAll: async () => [],
+        openWindow: async () => null,
+      });
+
+      expect(__pushHandlerTest.buildReminderCopy(3).title).not.toContain('cenar');
+      expect(__pushHandlerTest.buildReminderCopy(3).title).toContain('antoja');
+    });
+
+    it('resolveReminderSlot devuelve la franja vigente y silencia madrugada y noche', () => {
+      const { __pushHandlerTest } = loadPushHandler({
+        matchAll: async () => [],
+        openWindow: async () => null,
+      });
+
+      // Franjas: desayuno desde las 9, almuerzo desde las 12, cena desde las 19.
+      expect(__pushHandlerTest.resolveReminderSlot(9)).toBe(9);
+      expect(__pushHandlerTest.resolveReminderSlot(11)).toBe(9);
+      expect(__pushHandlerTest.resolveReminderSlot(12)).toBe(12);
+      expect(__pushHandlerTest.resolveReminderSlot(19)).toBe(19);
+      expect(__pushHandlerTest.resolveReminderSlot(20)).toBe(19);
+
+      // Madrugada y noche avanzada: no se molesta al usuario.
+      expect(__pushHandlerTest.resolveReminderSlot(3)).toBeNull();
+      expect(__pushHandlerTest.resolveReminderSlot(23)).toBeNull();
+      expect(__pushHandlerTest.resolveReminderSlot(0)).toBeNull();
+      expect(__pushHandlerTest.resolveReminderSlot(-1)).toBeNull();
+      expect(__pushHandlerTest.resolveReminderSlot(24)).toBeNull();
+      expect(__pushHandlerTest.resolveReminderSlot(Number.NaN)).toBeNull();
+    });
+
+    it('no avisa de madrugada aunque el navegador dispare el evento', () => {
+      setLocalHour(3);
+      const scope = loadPushHandler({
+        matchAll: async () => [],
+        openWindow: async () => null,
+      });
+
+      scope.__listeners.periodicsync({ tag: 'menugram-reminders', waitUntil: vi.fn() });
+
+      expect(scope.registration.showNotification).not.toHaveBeenCalled();
+    });
+
+    it('no avisa a las 23:00 aunque el navegador dispare el evento', () => {
+      setLocalHour(23);
+      const scope = loadPushHandler({
+        matchAll: async () => [],
+        openWindow: async () => null,
+      });
+
+      scope.__listeners.periodicsync({ tag: 'menugram-reminders', waitUntil: vi.fn() });
+
+      expect(scope.registration.showNotification).not.toHaveBeenCalled();
     });
   });
 });

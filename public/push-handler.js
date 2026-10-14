@@ -253,6 +253,31 @@
     );
   });
 
+  /** Horas de inicio de cada franja de comida (hora local del dispositivo). */
+  var MENU_REMINDER_SLOTS = [9, 12, 19];
+
+  /** Franja en la que no se molesta al usuario: madrugada y noche avanzada. */
+  var QUIET_FROM_HOUR = 21;
+  var QUIET_TO_HOUR = 5;
+
+  /**
+   * Franja vigente para la hora dada, o `null` si no toca avisar.
+   *
+   * Espejo de `resolveMenuReminderSlot` (src/utils/menuReminders.ts): el
+   * navegador decide *cuándo* dispara `periodicsync` (no es una alarma), así
+   * que la hora se comprueba aquí. Sin este filtro, una ejecución nocturna
+   * mostraba el copy de cena a las 3 de la mañana.
+   */
+  function resolveReminderSlot(hour) {
+    if (typeof hour !== 'number' || !isFinite(hour) || hour < 0 || hour > 23) return null;
+    if (hour >= QUIET_FROM_HOUR || hour < QUIET_TO_HOUR) return null;
+
+    for (var i = MENU_REMINDER_SLOTS.length - 1; i >= 0; i -= 1) {
+      if (hour >= MENU_REMINDER_SLOTS[i]) return MENU_REMINDER_SLOTS[i];
+    }
+    return null;
+  }
+
   /**
    * Copy del recordatorio de menú según la hora local del dispositivo.
    *
@@ -273,9 +298,15 @@
         body: 'Mira los menús disponibles cerca de ti y pide antes de que se llene.',
       };
     }
+    if (hour >= 15 && hour < 21) {
+      return {
+        title: '🌙 Hora de cenar',
+        body: 'Termina el día con tu plato favorito, a la puerta de tu casa.',
+      };
+    }
     return {
-      title: '🌙 Hora de cenar',
-      body: 'Termina el día con tu plato favorito, a la puerta de tu casa.',
+      title: '🍽️ ¿Qué se te antoja?',
+      body: 'Descubre los menús de MenuGran disponibles cerca de ti.',
     };
   }
 
@@ -285,11 +316,19 @@
    * El registro del tag `menugram-reminders` lo hace `usePushNotifications`
    * cuando el usuario concede el permiso; los horarios exactos los garantiza
    * el Web Push del backend (cron jobs), esto es el refuerzo local.
+   *
+   * Solo muestra aviso si la hora local cae dentro de una franja de comida:
+   * el navegador dispara el evento cuando quiere (y con más frecuencia de la
+   * solicitada), así que hay que comprobar el reloj aquí para no avisar de
+   * madrugada ni saltarse la franja.
    */
   scope.addEventListener('periodicsync', function (event) {
     if (!event || event.tag !== 'menugram-reminders') return;
 
-    var copy = buildReminderCopy(new Date().getHours());
+    var hour = new Date().getHours();
+    if (resolveReminderSlot(hour) === null) return;
+
+    var copy = buildReminderCopy(hour);
 
     event.waitUntil(
       scope.registration.showNotification(copy.title, {
@@ -315,5 +354,6 @@
     resolveTitle: resolveTitle,
     sanitizeActions: sanitizeActions,
     buildReminderCopy: buildReminderCopy,
+    resolveReminderSlot: resolveReminderSlot,
   };
 })(typeof self !== 'undefined' ? self : this);

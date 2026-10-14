@@ -149,7 +149,7 @@ describe('usePushNotifications', () => {
 
     await waitFor(() => {
       expect(periodicSyncStub.register).toHaveBeenCalledWith('menugram-reminders', {
-        minInterval: 24 * 60 * 60 * 1000,
+        minInterval: 15 * 60 * 1000,
       });
     });
   });
