@@ -34,7 +34,7 @@ function buildRow(overrides: Record<string, unknown> = {}) {
     platform_comment: null,
     created_at: '2026-10-01T10:00:00Z',
     merchants: [{ name: 'La Pizza' }],
-    profiles: { full_name: 'María', email: 'maria@example.com' },
+    customer: { full_name: 'María', email: 'maria@example.com' },
     ...overrides,
   };
 }
@@ -115,7 +115,7 @@ describe('useSuperAdminRatings', () => {
           merchant_id: 'm-2',
           merchants: [{ name: 'El Arepazo' }],
           customer_id: 'c-2',
-          profiles: { full_name: 'Carlos', email: 'carlos@example.com' },
+          customer: { full_name: 'Carlos', email: 'carlos@example.com' },
           merchant_stars: 3,
           platform_stars: 3,
         }),
@@ -146,6 +146,47 @@ describe('useSuperAdminRatings', () => {
       result.current.setSearchQuery('inexistente');
     });
     expect(result.current.interactions).toHaveLength(0);
+  });
+
+  it('busca sin distinguir mayúsculas en comercio, cliente, correo y comentario', async () => {
+    mockQueryResult({
+      data: [
+        buildRow(),
+        buildRow({
+          id: 'r-2',
+          order_id: 'o-2',
+          merchant_id: 'm-2',
+          merchants: [{ name: 'El Arepazo' }],
+          customer_id: 'c-2',
+          customer: { full_name: 'Carlos', email: 'carlos@example.com' },
+          merchant_stars: 3,
+          platform_stars: 3,
+          platform_comment: 'Tardó mucho',
+        }),
+      ],
+      error: null,
+    });
+
+    const { result } = renderRatingsHook();
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    const searches: [string, string][] = [
+      ['AREP', 'r-2'],
+      ['cArLoS', 'r-2'],
+      ['CARLOS@EXAMPLE.COM', 'r-2'],
+      ['TARDÓ', 'r-2'],
+    ];
+
+    for (const [query, expectedId] of searches) {
+      act(() => {
+        result.current.setSearchQuery(query);
+      });
+      expect(result.current.interactions).toHaveLength(1);
+      expect(result.current.interactions[0].id).toBe(expectedId);
+    }
   });
 
   it('expone el error de la consulta', async () => {

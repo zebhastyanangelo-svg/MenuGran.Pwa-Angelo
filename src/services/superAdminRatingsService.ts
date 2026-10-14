@@ -56,6 +56,12 @@ export interface PlatformRatingsReport {
   interactions: RatingInteraction[];
 }
 
+/** Datos del perfil del cliente embebidos en la consulta de valoraciones. */
+interface CustomerProfileEmbed {
+  full_name: string | null;
+  email: string | null;
+}
+
 interface RatingQueryRow {
   id: string;
   order_id: string;
@@ -67,10 +73,17 @@ interface RatingQueryRow {
   platform_comment: string | null;
   created_at: string;
   merchants: { name: string } | { name: string }[] | null;
-  profiles: { full_name: string | null; email: string | null } | null;
+  customer: CustomerProfileEmbed | CustomerProfileEmbed[] | null;
 }
 
-/** Campos de `order_ratings` que consume el dashboard. */
+/**
+ * Campos de `order_ratings` que consume el dashboard.
+ *
+ * `order_ratings` referencia `profiles` con dos llaves foráneas
+ * (`customer_id` y `driver_id`), así que el embed debe nombrar la relación
+ * de forma explícita; si no, PostgREST responde:
+ * `Could not embed because more than one relationship was found`.
+ */
 const RATINGS_SELECT = `
   id,
   order_id,
@@ -82,7 +95,7 @@ const RATINGS_SELECT = `
   platform_comment,
   created_at,
   merchants ( name ),
-  profiles ( full_name, email )
+  customer:profiles!order_ratings_customer_id_fkey ( full_name, email )
 `;
 
 function extractMerchantName(row: RatingQueryRow): string | null {
@@ -96,20 +109,29 @@ function extractMerchantName(row: RatingQueryRow): string | null {
   return null;
 }
 
+function extractCustomerProfile(row: RatingQueryRow): CustomerProfileEmbed | null {
+  const customer = row.customer;
+  if (Array.isArray(customer)) {
+    return customer.length > 0 ? customer[0] : null;
+  }
+  return customer ?? null;
+}
+
 function buildInteraction(row: RatingQueryRow): RatingInteraction | null {
   const category = classifyRatingRow({
     merchantStars: row.merchant_stars,
     platformStars: row.platform_stars,
   });
   if (category === null) return null;
+  const customerProfile = extractCustomerProfile(row);
   return {
     id: row.id,
     orderId: row.order_id,
     merchantId: row.merchant_id,
     merchantName: extractMerchantName(row),
     customerId: row.customer_id,
-    customerName: row.profiles?.full_name ?? null,
-    customerEmail: row.profiles?.email ?? null,
+    customerName: customerProfile?.full_name ?? null,
+    customerEmail: customerProfile?.email ?? null,
     merchantStars: row.merchant_stars,
     driverStars: row.driver_stars,
     platformStars: row.platform_stars,

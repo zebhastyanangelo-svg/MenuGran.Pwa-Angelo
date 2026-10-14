@@ -13,9 +13,15 @@ import { fetchPlatformRatingsReport } from './superAdminRatingsService';
 
 type QueryResult = { data: unknown; error: { message: string } | null };
 
+let lastSelectArgs: string[] = [];
+
 function mockQueryResult(result: QueryResult): void {
+  lastSelectArgs = [];
   const builder = {
-    select: vi.fn().mockReturnThis(),
+    select: vi.fn((...args: string[]) => {
+      lastSelectArgs.push(...args);
+      return builder;
+    }),
     order: vi.fn().mockResolvedValue(result),
   };
   supabaseMock.from.mockReturnValue(builder);
@@ -33,7 +39,7 @@ function buildRow(overrides: Record<string, unknown> = {}) {
     platform_comment: 'Excelente servicio',
     created_at: '2026-10-01T10:00:00Z',
     merchants: [{ name: 'La Pizza' }],
-    profiles: { full_name: 'María', email: 'maria@example.com' },
+    customer: { full_name: 'María', email: 'maria@example.com' },
     ...overrides,
   };
 }
@@ -98,6 +104,39 @@ describe('fetchPlatformRatingsReport', () => {
     mockQueryResult({ data: null, error: { message: 'RLS denied' } });
 
     await expect(fetchPlatformRatingsReport()).rejects.toThrow('RLS denied');
+  });
+
+  it('embebe el perfil del cliente nombrando la llave foránea del cliente', async () => {
+    mockQueryResult({ data: [], error: null });
+
+    await fetchPlatformRatingsReport();
+
+    const selectClause = lastSelectArgs.join(' ');
+    expect(selectClause).toContain(
+      'customer:profiles!order_ratings_customer_id_fkey',
+    );
+    expect(selectClause).not.toMatch(/[^:!]profiles\s*\(/);
+  });
+
+  it('tolera que el perfil del cliente llegue como arreglo o ausente', async () => {
+    mockQueryResult({
+      data: [
+        buildRow({
+          id: 'r-1',
+          order_id: 'o-1',
+          customer: [{ full_name: 'María', email: 'maria@example.com' }],
+        }),
+        buildRow({ id: 'r-2', order_id: 'o-2', customer: null }),
+      ],
+      error: null,
+    });
+
+    const report = await fetchPlatformRatingsReport();
+
+    expect(report.interactions[0].customerName).toBe('María');
+    expect(report.interactions[0].customerEmail).toBe('maria@example.com');
+    expect(report.interactions[1].customerName).toBeNull();
+    expect(report.interactions[1].customerEmail).toBeNull();
   });
 
   it('devuelve un reporte vacío sin valoraciones', async () => {
