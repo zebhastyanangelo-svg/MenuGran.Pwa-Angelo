@@ -520,4 +520,49 @@ describe('DriverDeliveriesPage', () => {
     })
     expect(markDelivered).not.toHaveBeenCalled()
   })
+
+  it('muestra los botones de Llamar y Mensaje con el teléfono del cliente', () => {
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      assigned: [createOrder()],
+    })
+
+    renderPage()
+
+    const callButton = screen.getByTestId('call-customer-order-1')
+    const messageButton = screen.getByTestId('message-customer-order-1')
+    expect(callButton).toHaveAttribute('href', 'tel:+584141234567')
+    expect(messageButton).toHaveAttribute('href', 'https://wa.me/584141234567')
+    expect(callButton.getAttribute('aria-label')).toMatch(/María Pérez/i)
+  })
+
+  it('oculta los botones de contacto en entregas completadas', () => {
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      delivered: [createOrder({ id: 'order-9', status: 'delivered' })],
+    })
+
+    renderPage()
+    fireEvent.click(screen.getByTestId('tab-delivered'))
+
+    expect(screen.queryByTestId('call-customer-order-9')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('message-customer-order-9')).not.toBeInTheDocument()
+  })
+
+  it('no renderiza el botón de Mensaje si el teléfono no tiene dígitos', () => {
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      assigned: [
+        createOrder({
+          id: 'order-7',
+          profiles: { full_name: 'Sin Tel', email: 's@t.com', phone: 'no-teléfono' },
+        }),
+      ],
+    })
+
+    renderPage()
+
+    expect(screen.getByTestId('call-customer-order-7')).toBeInTheDocument()
+    expect(screen.queryByTestId('message-customer-order-7')).not.toBeInTheDocument()
+  })
 })

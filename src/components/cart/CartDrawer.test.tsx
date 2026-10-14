@@ -96,7 +96,7 @@ describe('CartDrawer', () => {
     expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0);
   });
 
-  it('desglose subtotal, tarifa y cupón con iconos, sin inventar el envío', () => {
+  it('desglose subtotal y total, sin envío, tarifa ni cupón', () => {
     renderDrawerWithRoutes({ isOpen: true, onClose: vi.fn() });
 
     // El envío no se lista en el carrito: depende del comercio y del tipo de
@@ -104,8 +104,10 @@ describe('CartDrawer', () => {
     // después, para que el total no se lea como cerrado.
     expect(screen.queryByText('Envío')).not.toBeInTheDocument();
     expect(screen.getByText(/Se calcula en el checkout/i)).toBeInTheDocument();
-    expect(screen.getByText('Tarifa de servicio')).toBeInTheDocument();
-    expect(screen.getByText('Cupón')).toBeInTheDocument();
+    // Tarifa de servicio y cupón están inactivos en el negocio: no se muestran.
+    expect(screen.queryByText('Tarifa de servicio')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cupón')).not.toBeInTheDocument();
+    expect(screen.getByText('Subtotal (0 ítems):')).toBeInTheDocument();
     expect(screen.getByText('Total')).toBeInTheDocument();
   });
 

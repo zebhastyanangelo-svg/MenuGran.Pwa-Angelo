@@ -15,24 +15,14 @@ export interface CartDrawerProps {
 }
 
 /**
- * Desglose de costos con icono por concepto.
+ * Desglose de costos: solo subtotal, descuento aplicado y total.
  *
- * La tarifa de servicio y el cupón siguen siendo informativos: la plataforma no
- * los cobra. El envío NO aparece aquí: su importe depende del comercio y del
- * tipo de despacho, que el cliente aún no ha elegido en este punto. Por eso el
+ * El envío NO aparece aquí: su importe depende del comercio y del tipo de
+ * despacho, que el cliente aún no ha elegido en este punto. Por eso el
  * carrito no puede mostrar un total final cerrado y remite al checkout, que es
  * donde ya se conoce la política de envío del comercio. Cualquier cargo nuevo
  * debe entrar aquí y en `createOrder` para que el total siga cuadrando.
  */
-const SUMMARY_ROWS: readonly {
-  key: string;
-  label: string;
-  value: string;
-  icon: string;
-}[] = [
-  { key: 'fee', label: 'Tarifa de servicio', value: 'Sin cargos', icon: 'fa-solid fa-receipt' },
-  { key: 'coupon', label: 'Cupón', value: 'No aplicado', icon: 'fa-solid fa-ticket' },
-];
 
 export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const bcvRate = useBCVRate();
@@ -258,17 +248,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 </dd>
               </div>
             )}
-
-            {SUMMARY_ROWS.map(({ key, label, value, icon }) => (
-              <div key={key} className="flex items-center justify-between">
-                <dt className="inline-flex items-center gap-1.5 text-gray-600">
-                  <i className={`${icon} text-gray-400`} aria-hidden="true" />
-                  {label}
-                </dt>
-                <dd className="text-gray-500">{value}</dd>
-              </div>
-            ))}
-          </dl>
+           </dl>
 
           <div className="mt-3 flex items-center justify-between gap-2 border-t border-dashed border-gray-200 pt-3 text-base">
             <span className="font-bold text-gray-900">Total</span>

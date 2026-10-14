@@ -415,13 +415,15 @@ describe('Checkout', () => {
     expect(screen.getByRole('button', { name: /Pago Móvil/ })).toBeInTheDocument();
   });
 
-  it('desglose subtotal, envio, tarifa y cupon en el resumen', () => {
+  it('desglose subtotal, envio y total en el resumen', () => {
     renderCheckout();
 
     expect(screen.getByText('Subtotal')).toBeInTheDocument();
     expect(screen.getByText('Envío')).toBeInTheDocument();
-    expect(screen.getByText('Tarifa de servicio')).toBeInTheDocument();
-    expect(screen.getByText('Cupón')).toBeInTheDocument();
+    expect(screen.getByText('Total')).toBeInTheDocument();
+    // El desglose ya no incluye tarifa de servicio ni cupón.
+    expect(screen.queryByText('Tarifa de servicio')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cupón')).not.toBeInTheDocument();
   });
 
   it('muestra el total en dólares y su equivalente en bolívares', () => {

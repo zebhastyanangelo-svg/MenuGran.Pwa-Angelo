@@ -12,6 +12,7 @@ const NON_BUYER_ROLES: readonly UserRole[] = [
   'superadmin',
   'merchant_owner',
   'merchant_staff',
+  'driver',
 ];
 
 export function CartFab() {

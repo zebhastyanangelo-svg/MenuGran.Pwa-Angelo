@@ -28,6 +28,7 @@ export const merchantNavItems: NavItem[] = [
 export const superadminNavItems: NavItem[] = [
   { to: '/super-admin/dashboard', label: 'Inicio', icon: 'fa-solid fa-chart-line' },
   { to: '/super-admin', label: 'Negocios', icon: 'fa-solid fa-building' },
+  { to: '/super-admin/ratings', label: 'Votaciones', icon: 'fa-solid fa-star-half-stroke' },
   { to: '/super-admin/users', label: 'Usuarios', icon: 'fa-solid fa-users' },
   { to: '/super-admin/profile', label: 'Perfil', icon: 'fa-solid fa-user' },
 ];

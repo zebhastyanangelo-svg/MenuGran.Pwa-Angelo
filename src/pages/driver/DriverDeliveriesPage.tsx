@@ -12,6 +12,7 @@ import { getOrderTypeLabel } from '../../utils/orderType'
 import {
   NEW_DELIVERY_STATUSES,
   getOrderDeliveryAddress,
+  buildWhatsAppUrl,
 } from '../../utils/delivery'
 import {
   filterDeliveredOrdersByPeriod,
@@ -388,6 +389,7 @@ function DeliveryCard({
 }: DeliveryCardProps) {
   const customerName = getCustomerName(order)
   const customerPhone = getCustomerPhone(order)
+  const whatsappUrl = customerPhone !== null ? buildWhatsAppUrl(customerPhone) : null
   const address = getOrderDeliveryAddress(order)
   const isInTransit = order.status === 'on_the_way'
   const isDelivered = order.status === 'delivered'
@@ -463,6 +465,36 @@ function DeliveryCard({
             <i className="fa-solid fa-location-arrow mr-2 text-base" />
             {isInTransit ? 'Ver ruta en mapa' : 'En camino'}
           </Button>
+        )}
+
+        {/* Quick contact actions: llamada directa y WhatsApp al cliente */}
+        {!isDelivered && customerPhone !== null && (
+          <div className="flex gap-2">
+            <a
+              href={`tel:${customerPhone}`}
+              data-testid={`call-customer-${order.id}`}
+              aria-label={`Llamar a ${customerName}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 text-sm font-semibold text-white shadow-sm ring-1 ring-emerald-600/30 transition hover:bg-emerald-600 active:scale-95"
+            >
+              <i className="fa-solid fa-phone text-base" aria-hidden="true" />
+              Llamar
+            </a>
+            {whatsappUrl !== null && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid={`message-customer-${order.id}`}
+                aria-label={`Enviar mensaje a ${customerName}`}
+                onClick={(e) => e.stopPropagation()}
+                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-brand-red text-sm font-semibold text-white shadow-sm ring-1 ring-black/10 transition hover:bg-brand-red-dark active:scale-95"
+              >
+                <i className="fa-solid fa-comment text-base" aria-hidden="true" />
+                Mensaje
+              </a>
+            )}
+          </div>
         )}
 
         {isDelivered && (

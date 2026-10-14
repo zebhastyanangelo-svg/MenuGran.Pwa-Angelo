@@ -1,7 +1,26 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SupportWidget } from './SupportWidget';
+import type { ProfileRow } from '../../types/database';
+
+const authState: { profile: ProfileRow | null } = { profile: null };
+
+vi.mock('../../hooks/useAuth', () => ({
+  useAuth: () => authState,
+}));
+
+function buildProfile(role: ProfileRow['role']): ProfileRow {
+  return {
+    id: 'u1',
+    email: 'u@menugram.com',
+    full_name: 'Usuario',
+    avatar_url: null,
+    role,
+    created_at: '',
+    updated_at: '',
+  };
+}
 
 async function openWidget(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByTestId('support-fab'));
@@ -12,7 +31,22 @@ describe('SupportWidget', () => {
   let user: ReturnType<typeof userEvent.setup>;
 
   beforeEach(() => {
+    authState.profile = null;
     user = userEvent.setup();
+  });
+
+  it('oculta el widget de soporte para el repartidor', () => {
+    authState.profile = buildProfile('driver');
+    render(<SupportWidget />);
+
+    expect(screen.queryByTestId('support-fab')).not.toBeInTheDocument();
+  });
+
+  it('muestra el widget de soporte para clientes', () => {
+    authState.profile = buildProfile('customer');
+    render(<SupportWidget />);
+
+    expect(screen.getByTestId('support-fab')).toBeInTheDocument();
   });
 
   it('arranca cerrado y sólo muestra el botón flotante', () => {

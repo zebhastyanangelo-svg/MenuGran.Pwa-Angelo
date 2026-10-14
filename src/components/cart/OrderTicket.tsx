@@ -220,24 +220,6 @@ export function OrderTicket({
               </span>
             )}
           </SummaryRow>
-
-          <SummaryRow
-            icon={
-              <i className="fa-solid fa-receipt text-slate-400" aria-hidden="true" />
-            }
-            label="Tarifa de servicio"
-          >
-            Sin cargos
-          </SummaryRow>
-
-          <SummaryRow
-            icon={
-              <i className="fa-solid fa-ticket text-slate-400" aria-hidden="true" />
-            }
-            label="Cupón"
-          >
-            No aplicado
-          </SummaryRow>
         </dl>
 
         <div className="mt-3 flex flex-col gap-0.5 border-t border-slate-100 pt-2 text-sm font-bold text-gray-900">

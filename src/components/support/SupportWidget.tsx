@@ -7,6 +7,8 @@
  */
 
 import { useCallback, useMemo, useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import type { UserRole } from '../../types/database';
 import {
   SUPPORT_ARTICLES,
   SUPPORT_CATEGORIES,
@@ -26,6 +28,9 @@ import { FLOATING_ACTION_CLASS, FLOATING_PANEL_CLASS } from '../layout/floatingA
 
 type ViewMode = 'home' | 'flow' | 'search';
 
+/** El repartidor no requiere soporte general dentro de su app. */
+const NO_SUPPORT_ROLES: readonly UserRole[] = ['driver'];
+
 export function SupportWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<ViewMode>('home');
@@ -33,6 +38,7 @@ export function SupportWidget() {
   const [categoryId, setCategoryId] = useState<SupportCategoryId | null>(null);
   const [openArticleId, setOpenArticleId] = useState<string | null>(null);
   const [flowStepId, setFlowStepId] = useState<string | null>(null);
+  const { profile } = useAuth();
 
   const openArticle = (article: SupportArticle): void => {
     setOpenArticleId(article.id);
@@ -66,6 +72,10 @@ export function SupportWidget() {
   );
 
   const close = useCallback(() => setIsOpen(false), []);
+
+  if (profile !== null && NO_SUPPORT_ROLES.includes(profile.role)) {
+    return null;
+  }
 
   if (!isOpen) {
     return (
