@@ -1,31 +1,34 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { OrdersBoard } from './OrdersBoard';
-import type { DriverProfile, OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
+import type { OrderStatus, UserRole, MerchantStaffPermissions } from '../../types/database';
+import type { OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 import { render } from '../../test/test-utils';
+import { OrdersBoard } from './OrdersBoard';
 
-const createSignedUrlMock = vi.fn();
+const refreshRate = vi.fn().mockResolvedValue(undefined);
 
-vi.mock('../../services/supabase', () => ({
-  supabase: {
-    storage: {
-      from: vi.fn().mockReturnThis(),
-      createSignedUrl: (...args: unknown[]) => createSignedUrlMock(...args),
-    },
-  },
+vi.mock('../../hooks/useExchangeRate', () => ({
+  useExchangeRate: () => ({
+    rate: 10,
+    isLoading: false,
+    error: null,
+    refresh: refreshRate,
+    lastUpdated: new Date('2026-10-24T15:00:00.000Z'),
+    source: 'BCV',
+  }),
 }));
 
 function buildOrder(overrides: Partial<OrderWithCustomer> = {}): OrderWithCustomer {
   return {
-    id: 'order-1',
+    id: '845f9a12-0000-4000-8000-000000000000',
     merchant_id: 'm-1',
     customer_id: 'c-1',
     driver_id: null,
     type: 'delivery',
-    status: 'on_the_way',
+    status: 'payment_pending',
     payment_method: 'pago_movil',
-    payment_reference: null,
+    payment_reference: 'REF-9999',
     payment_proof_url: null,
     total_amount: '150.00',
     table_number: null,
@@ -41,268 +44,264 @@ function buildOrder(overrides: Partial<OrderWithCustomer> = {}): OrderWithCustom
   };
 }
 
+function buildPermissions(
+  overrides: Partial<MerchantStaffPermissions> = {},
+): MerchantStaffPermissions {
+  return {
+    can_manage_menu: false,
+    can_view_orders: true,
+    can_view_assigned_deliveries: false,
+    ...overrides,
+  };
+}
+
 function renderBoard(
   orders: OrderWithCustomer[],
-  drivers: DriverProfile[] = [],
+  overrides: Partial<React.ComponentProps<typeof OrdersBoard>> = {},
 ) {
-  const onUpdateStatus = vi.fn();
+  const onUpdateStatus = vi.fn<(orderId: string, status: OrderStatus) => void>();
   const onAssignDriver = vi.fn();
   const onOpenProof = vi.fn();
-  render(
+  const onRequestReference = vi.fn();
+  const onSync = vi.fn();
+  const view = render(
     <OrdersBoard
       orders={orders}
-      drivers={drivers}
+      drivers={[]}
+      role={'merchant_owner' as UserRole}
+      staffPermissions={null}
       onUpdateStatus={onUpdateStatus}
       onAssignDriver={onAssignDriver}
       onOpenProof={onOpenProof}
+      onRequestReference={onRequestReference}
+      onSync={onSync}
+      {...overrides}
     />,
   );
-  return { onUpdateStatus, onAssignDriver, onOpenProof };
+  return { view, onUpdateStatus, onAssignDriver, onOpenProof, onRequestReference, onSync };
 }
 
 describe('OrdersBoard', () => {
-  it('muestra el badge "Entregado" con estilo verde claro para pedidos delivered', () => {
-    renderBoard([buildOrder({ status: 'delivered' })]);
+  it('muestra el título y el indicador de tiempo real', () => {
+    renderBoard([]);
 
-    const badge = screen.getAllByText('Entregado', { selector: 'span' })[0];
-    expect(badge).toBeInTheDocument();
-    expect(badge.className).toContain('bg-emerald-100');
-    expect(badge.className).toContain('text-emerald-800');
+    expect(screen.getByRole('heading', { name: 'Tablero de Pedidos en Vivo' })).toBeInTheDocument();
+    expect(screen.getByTestId('live-badge')).toHaveTextContent('En tiempo real');
   });
 
-  it('no muestra botones de acción de estado para pedidos delivered', () => {
-    renderBoard([buildOrder({ status: 'delivered' })]);
+  it('arranca en la pestaña de pendientes de pago', () => {
+    renderBoard([buildOrder({ status: 'confirmed' })]);
 
-    expect(
-      screen.queryByRole('button', { name: 'Marcar como entregado' }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByTestId('driver-select-order-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('tab-payment_pending')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText(/No hay pedidos que coincidan/i)).toBeInTheDocument();
   });
 
-  it('muestra el badge "En Camino" mientras el pedido está en tránsito', () => {
-    renderBoard([buildOrder({ status: 'on_the_way' })]);
+  it('muestra las cuatro tarjetas de métricas al propietario', () => {
+    renderBoard([]);
 
-    const badge = screen.getAllByText('En Camino', { selector: 'span' })[0];
-    expect(badge).toBeInTheDocument();
-    expect(badge.className).toContain('bg-purple-100');
+    expect(screen.getByTestId('kpi-pending-payment')).toBeInTheDocument();
+    expect(screen.getByTestId('kpi-kitchen')).toBeInTheDocument();
+    expect(screen.getByTestId('kpi-dispatch')).toBeInTheDocument();
+    expect(screen.getByTestId('kpi-today-sales')).toBeInTheDocument();
   });
 
-  it('muestra botones de acción para pedidos que aún pueden transicionar', async () => {
-    const { onUpdateStatus } = renderBoard([buildOrder({ status: 'preparing' })]);
+  it('oculta las ventas del día al personal sin acceso a finanzas', () => {
+    renderBoard([], {
+      role: 'merchant_staff',
+      staffPermissions: buildPermissions({ can_manage_orders: true }),
+    });
 
-    const actionButton = screen.getAllByRole('button', { name: 'Marcar como listo' })[0];
-    await userEvent.click(actionButton);
-
-    expect(onUpdateStatus).toHaveBeenCalledWith('order-1', 'ready');
+    expect(screen.queryByTestId('kpi-today-sales')).not.toBeInTheDocument();
+    expect(screen.getByTestId('kpi-pending-payment')).toBeInTheDocument();
   });
 
-  it('mantiene el botón de comprobante habilitado en pedidos delivered', async () => {
-    const { onOpenProof } = renderBoard([
-      buildOrder({ status: 'delivered', payment_proof_url: 'proofs/order-1.jpg' }),
-    ]);
-
-    const proofButtons = screen.getAllByRole('button', { name: /Ver comprobante/i });
-    expect(proofButtons[0]).toBeEnabled();
-    await userEvent.click(proofButtons[0]);
-    expect(onOpenProof).toHaveBeenCalledTimes(1);
-  });
-
-  it('oculta el select de repartidor para pedidos delivered y on_the_way', () => {
+  it('filtra las tarjetas por estado al pulsar una de las métricas', async () => {
     renderBoard([
-      buildOrder({ id: 'order-delivered', status: 'delivered' }),
-      buildOrder({ id: 'order-transito', status: 'on_the_way' }),
+      buildOrder({ id: 'a1', status: 'preparing' }),
+      buildOrder({ id: 'b2', status: 'confirmed' }),
     ]);
 
-    expect(screen.queryByTestId('driver-select-order-delivered')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('driver-select-order-transito')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('kpi-kitchen'));
+
+    expect(screen.getByTestId('tab-kitchen')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('order-card-a1')).toBeInTheDocument();
+    expect(screen.getByTestId('order-card-b2')).toBeInTheDocument();
   });
 
-  it('muestra "Punto de Venta" sin botón de comprobante para card_pos', () => {
+  it('refleja los contadores de cada pestaña', () => {
     renderBoard([
-      buildOrder({ payment_method: 'card_pos', payment_proof_url: null }),
+      buildOrder({ id: 'a1', status: 'preparing' }),
+      buildOrder({ id: 'b2', status: 'payment_pending' }),
     ]);
 
-    expect(screen.getAllByText('Punto de Venta')[0]).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /Ver comprobante/i }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText(/Sin comprobante/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId('tab-kitchen')).toHaveTextContent('1');
+    expect(screen.getByTestId('tab-payment_pending')).toHaveTextContent('1');
+    expect(screen.getByTestId('tab-all')).toHaveTextContent('2');
   });
 
-  it('muestra "Efectivo" sin botón de comprobante para cash', () => {
-    renderBoard([buildOrder({ payment_method: 'cash', payment_proof_url: null })]);
+  it('busca por código corto de orden', async () => {
+    renderBoard([
+      buildOrder({ id: '845f0000-0000' }),
+      buildOrder({ id: 'aaaa0000-0000' }),
+    ]);
 
-    expect(screen.getAllByText('Efectivo')[0]).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /Ver comprobante/i }),
-    ).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Buscar pedido o cliente'), '845F');
+
+    expect(screen.getByTestId('order-card-845f0000-0000')).toBeInTheDocument();
+    expect(screen.queryByTestId('order-card-aaaa0000-0000')).not.toBeInTheDocument();
   });
 
-  it('muestra "Pago Móvil" con botón cuando hay comprobante', async () => {
-    const { onOpenProof } = renderBoard([
+  it('busca por nombre del cliente', async () => {
+    renderBoard([
       buildOrder({
-        payment_method: 'pago_movil',
-        payment_proof_url: 'proofs/order-1.jpg',
+        id: '845f0000-0000',
+        profiles: { full_name: 'María López', email: 'maria@test.com' },
+      }),
+      buildOrder({
+        id: 'aaaa0000-0000',
+        profiles: { full_name: 'Pedro Pérez', email: 'pedro@test.com' },
       }),
     ]);
 
-    expect(screen.getAllByText('Pago Móvil')[0]).toBeInTheDocument();
-    const proofButtons = screen.getAllByRole('button', { name: /Ver comprobante/i });
-    await userEvent.click(proofButtons[0]);
-    expect(onOpenProof).toHaveBeenCalledTimes(1);
+    await userEvent.type(screen.getByLabelText('Buscar pedido o cliente'), 'María');
+
+    expect(screen.getByTestId('order-card-845f0000-0000')).toBeInTheDocument();
+    expect(screen.queryByTestId('order-card-aaaa0000-0000')).not.toBeInTheDocument();
   });
 
-  it('pickup listo muestra aviso de confirmación del cliente y no permite marcarlo entregado', async () => {
+  it('filtra por método de pago', async () => {
     renderBoard([
-      buildOrder({ type: 'pickup', status: 'ready' }),
+      buildOrder({ id: 'a1', payment_method: 'cash' }),
+      buildOrder({ id: 'b2', payment_method: 'zelle' }),
     ]);
 
-    expect(
-      screen.queryByRole('button', { name: 'Enviar para entrega' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Marcar como entregado' }),
-    ).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText('Método de pago'), 'cash');
 
-    expect(screen.getAllByTestId('pickup-ready-notice').length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(/El cliente confirma la entrega desde su app/i).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getByTestId('order-card-a1')).toBeInTheDocument();
+    expect(screen.queryByTestId('order-card-b2')).not.toBeInTheDocument();
   });
 
-  it('mantiene "Enviar para entrega" y oculta "Marcar como entregado" en delivery listo', () => {
-    renderBoard([buildOrder({ type: 'delivery', status: 'ready' })]);
-
-    expect(
-      screen.getAllByRole('button', { name: 'Enviar para entrega' }).length,
-    ).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.queryByRole('button', { name: 'Marcar como entregado' }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('muestra email, cédula y teléfono del cliente en el detalle del pedido', async () => {
+  it('excluye los pedidos anteriores al período seleccionado', async () => {
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString();
     renderBoard([
-      buildOrder({
-        status: 'confirmed',
-        profiles: {
-          full_name: 'Cliente Prueba',
-          email: 'cliente@test.com',
-          ci: 'V12345678',
-          phone: '+584121234567',
-        },
-      }),
+      buildOrder({ id: 'hoy' }),
+      buildOrder({ id: 'ayer', created_at: yesterday }),
     ]);
 
-    const detailButton = screen.getAllByRole('button', { name: /Ver detalles/i })[0];
-    await userEvent.click(detailButton);
+    await userEvent.selectOptions(screen.getByLabelText('Fecha'), 'last_7_days');
+    expect(screen.getByTestId('order-card-ayer')).toBeInTheDocument();
 
-    expect(await screen.findByText('Detalle del pedido')).toBeInTheDocument();
-    expect(screen.getByText('cliente@test.com')).toBeInTheDocument();
-    expect(screen.getByText('V12345678')).toBeInTheDocument();
-    expect(screen.getByText('+584121234567')).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText('Fecha'), 'today');
+    expect(screen.getByTestId('order-card-hoy')).toBeInTheDocument();
+    expect(screen.queryByTestId('order-card-ayer')).not.toBeInTheDocument();
   });
 
-  it('muestra la comanda con los ingredientes excluidos por el cliente', async () => {
+  it('muestra la comanda y la conciliación dentro de cada tarjeta', async () => {
     renderBoard([
       buildOrder({
-        status: 'confirmed',
-        items: [
-          { product_id: 'p-1', quantity: 2, unit_price: 25, title: 'Pizza Pepperoni' },
-          {
-            product_id: 'p-2',
-            quantity: 1,
-            unit_price: 5,
-            title: 'Refresco',
-            excluded_ingredients: ['Cebolla', 'Jamón'],
-          },
-        ],
-      }),
-    ]);
-
-    const detailButton = screen.getAllByRole('button', { name: /Ver detalles/i })[0];
-    await userEvent.click(detailButton);
-
-    expect(await screen.findByTestId('order-items-list')).toBeInTheDocument();
-    expect(screen.getByText('2 × Pizza Pepperoni')).toBeInTheDocument();
-    expect(screen.getByText(/^Sin:/)).toHaveTextContent('Sin: Cebolla, Jamón');
-    expect(screen.getByText('Cebolla, Jamón')).toHaveClass('line-through');
-  });
-
-  it('marca como personalizado el pedido con ingredientes tachados', () => {
-    renderBoard([
-      buildOrder({
-        id: 'order-custom',
+        id: '845f0000-0000',
+        status: 'payment_pending',
+        payment_proof_url: 'proofs/845f.jpg',
         items: [
           {
             product_id: 'p-1',
-            quantity: 1,
-            unit_price: 25,
+            quantity: 2,
+            unit_price: 75,
             title: 'Pizza',
             excluded_ingredients: ['Cebolla'],
           },
         ],
       }),
-      buildOrder({ id: 'order-plain' }),
     ]);
 
-    const badges = screen.getAllByTestId('customized-order-badge');
-    expect(badges.length).toBeGreaterThan(0);
-    expect(badges[0]).toHaveTextContent('Personalizado');
+    const card = screen.getByTestId('order-card-845f0000-0000');
+    expect(card).toBeInTheDocument();
+    expect(screen.getByText('2 × Pizza')).toBeInTheDocument();
+    expect(screen.getByTestId('customized-order-badge')).toHaveTextContent('Modificado por Cliente');
+    expect(screen.getByTestId('payment-reconciliation-panel')).toBeInTheDocument();
   });
 
-  it('cae al identificador del producto cuando el pedido no tiene snapshot del nombre', async () => {
-    renderBoard([
-      buildOrder({
-        status: 'confirmed',
-        items: [{ product_id: 'abcdefgh1234', quantity: 1, unit_price: 10 }],
-      }),
+  it('propaga el cambio de estado desde la tarjeta', async () => {
+    const { onUpdateStatus } = renderBoard([buildOrder({ id: '845f0000-0000', status: 'confirmed' })]);
+
+    await userEvent.click(screen.getByTestId('tab-kitchen'));
+    await userEvent.click(screen.getByTestId('transition-845f0000-0000-preparing'));
+
+    expect(onUpdateStatus).toHaveBeenCalledWith('845f0000-0000', 'preparing');
+  });
+
+  it('valida el pago desde la tarjeta de un pedido pendiente', async () => {
+    const { onUpdateStatus } = renderBoard([buildOrder({ id: '845f0000-0000' })]);
+
+    await userEvent.click(screen.getByTestId('validate-payment-845f0000-0000'));
+
+    expect(onUpdateStatus).toHaveBeenCalledWith('845f0000-0000', 'confirmed');
+  });
+
+  it('propaga la solicitud de referencia correcta', async () => {
+    const { onRequestReference } = renderBoard([buildOrder({ id: '845f0000-0000' })]);
+
+    await userEvent.click(screen.getByTestId('request-reference-845f0000-0000'));
+
+    expect(onRequestReference).toHaveBeenCalledTimes(1);
+  });
+
+  it('abre el comprobante del primer pedido adjunto desde la tarjeta de métrica', async () => {
+    const { onOpenProof } = renderBoard([
+      buildOrder({ id: 'con-prueba', payment_proof_url: 'proofs/a.jpg' }),
+      buildOrder({ id: 'sin-prueba' }),
     ]);
 
-    const detailButton = screen.getAllByRole('button', { name: /Ver detalles/i })[0];
-    await userEvent.click(detailButton);
+    await userEvent.click(screen.getByTestId('kpi-open-pending-proof'));
 
-    expect(await screen.findByText('1 × Producto #abcdefgh')).toBeInTheDocument();
+    expect(onOpenProof).toHaveBeenCalledTimes(1);
+    expect(onOpenProof.mock.calls[0][0].id).toBe('con-prueba');
   });
 
-  it('muestra la imagen del comprobante en el detalle usando una URL firmada', async () => {
-    createSignedUrlMock.mockResolvedValue({
-      data: { signedUrl: 'https://example.com/signed-proof.jpg' },
-      error: null,
+  it('sincroniza la tasa BCV y los pedidos del tablero', async () => {
+    const { onSync } = renderBoard([]);
+
+    await userEvent.click(screen.getByTestId('board-sync'));
+
+    expect(refreshRate).toHaveBeenCalledTimes(1);
+    expect(onSync).toHaveBeenCalledTimes(1);
+  });
+
+  it('omite el botón Sincronizar cuando la vista no lo ofrece', () => {
+    renderBoard([], { onSync: undefined });
+
+    expect(screen.queryByTestId('board-sync')).not.toBeInTheDocument();
+  });
+
+  it('pagina cuando hay más pedidos que el tamaño de página', async () => {
+    const orders = Array.from({ length: 9 }, (_, index) =>
+      buildOrder({ id: `order-${index}`, status: 'preparing' }),
+    );
+    renderBoard(orders);
+
+    await userEvent.click(screen.getByTestId('tab-kitchen'));
+    expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+    expect(screen.getByText('Página 2 de 2')).toBeInTheDocument();
+  });
+
+  it('deja el tablero en solo lectura para un empleado sin can_manage_orders', async () => {
+    renderBoard([buildOrder({ id: '845f0000-0000' })], {
+      role: 'merchant_staff',
+      staffPermissions: buildPermissions(),
     });
-    renderBoard([
-      buildOrder({
-        status: 'confirmed',
-        payment_proof_url: 'proofs/order-1.jpg',
-      }),
-    ]);
 
-    const detailButton = screen.getAllByRole('button', { name: /Ver detalles/i })[0];
-    await userEvent.click(detailButton);
-
-    const proofImage = await screen.findByRole('img', { name: 'Comprobante' });
-    expect(proofImage).toBeInTheDocument();
-    expect(proofImage).toHaveAttribute('src', 'https://example.com/signed-proof.jpg');
-    expect(createSignedUrlMock).toHaveBeenCalledWith('proofs/order-1.jpg', 3600);
+    expect(screen.queryByTestId('validate-payment-845f0000-0000')).not.toBeInTheDocument();
+    expect(screen.getByText(/Solo lectura/i)).toBeInTheDocument();
   });
 
-  it('muestra un mensaje de error en el detalle si no se puede firmar el comprobante', async () => {
-    createSignedUrlMock.mockResolvedValue({
-      data: null,
-      error: { message: 'No se pudo cargar el comprobante' },
+  it('permite operar al empleado con can_manage_orders', () => {
+    renderBoard([buildOrder({ id: '845f0000-0000' })], {
+      role: 'merchant_staff',
+      staffPermissions: buildPermissions({ can_manage_orders: true }),
     });
-    renderBoard([
-      buildOrder({
-        status: 'confirmed',
-        payment_proof_url: 'proofs/order-1.jpg',
-      }),
-    ]);
 
-    const detailButton = screen.getAllByRole('button', { name: /Ver detalles/i })[0];
-    await userEvent.click(detailButton);
-
-    expect(await screen.findByText('Detalle del pedido')).toBeInTheDocument();
-    expect(await screen.findByText('No se pudo cargar el comprobante')).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Comprobante' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('validate-payment-845f0000-0000')).toBeInTheDocument();
   });
 });

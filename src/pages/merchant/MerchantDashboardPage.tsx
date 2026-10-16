@@ -1,11 +1,14 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { useMerchantDashboardPage } from '../../hooks/useMerchantDashboardPage';
 import { useMerchantPopularity } from '../../hooks/useMerchantPopularity';
 import { useMerchantDeliveryMetrics } from '../../hooks/useMerchantDeliveryMetrics';
+import { useMerchantPagoMovil } from '../../hooks/useMerchantPagoMovil';
 import { MerchantPopularityCard } from '../../components/merchant/MerchantPopularityCard';
 import { MerchantDeliveriesCard } from '../../components/merchant/MerchantDeliveriesCard';
+import { OrdersBoard } from '../../components/merchant/OrdersBoard';
 import { useToast } from '../../hooks/useToast';
 import { supabase } from '../../services/supabase';
 import { PaymentProofLightbox } from '../../components/merchant/PaymentProofLightbox';
@@ -13,59 +16,11 @@ import { Modal } from '../../components/ui/Modal';
 import type { OrderStatus } from '../../types/database';
 import { shouldNotifyNewOrder } from '../../utils/orderNotificationRules';
 import { useStaffPermissions } from '../../hooks/useStaffPermissions';
-import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
-import { getOrderDeliveryCoordinates } from '../../utils/delivery';
+import { buildWhatsAppUrl } from '../../utils/delivery';
 import type { OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 import posthog, { isPostHogEnabled } from '../../posthog';
 
 const PAYMENT_PROOF_BUCKET = 'payment-proofs';
-
-type TabKey = 'pending' | 'preparing' | 'ready' | 'delivered';
-
-interface TabConfig {
-  key: TabKey;
-  label: string;
-  statuses: OrderStatus[];
-}
-
-const TABS: TabConfig[] = [
-  { key: 'pending', label: 'Pendientes', statuses: ['payment_pending', 'confirmed'] },
-  { key: 'preparing', label: 'En Preparación', statuses: ['preparing'] },
-  { key: 'ready', label: 'Listos', statuses: ['ready'] },
-  { key: 'delivered', label: 'Entregados', statuses: ['delivered'] },
-];
-
-interface OrderAction {
-  label: string;
-  next: OrderStatus;
-}
-
-function getOrderActions(status: OrderStatus): OrderAction[] {
-  switch (status) {
-    case 'payment_pending':
-      return [
-        { label: 'Aceptar', next: 'confirmed' },
-        { label: 'Cancelar', next: 'cancelled' },
-      ];
-    case 'confirmed':
-      return [
-        { label: 'Aceptar', next: 'preparing' },
-        { label: 'Cancelar', next: 'cancelled' },
-      ];
-    case 'preparing':
-      return [
-        { label: 'Listo', next: 'ready' },
-        { label: 'Cancelar', next: 'cancelled' },
-      ];
-    case 'ready':
-      // Pickup/In Store: la confirmación final de la entrega la hace el
-      // cliente desde su app; el comercio solo llega hasta "Listo para
-      // retirar".
-      return [];
-    default:
-      return [];
-  }
-}
 
 function startOfToday(): Date {
   const now = new Date();
@@ -75,6 +30,15 @@ function startOfToday(): Date {
 
 function formatAmount(value: number): string {
   return `Bs ${value.toFixed(2)}`;
+}
+
+/**
+ * Texto con el que el comercio le reclama al cliente la referencia bancaria que
+ * no coincide con el pago. Va precargado en WhatsApp porque no existe un canal
+ * backend para devolver la orden a un estado de "esperando referencia".
+ */
+function buildReferenceRequestMessage(order: OrderWithCustomer): string {
+  return `Hola ${order.profiles?.full_name ?? ''}, gracias por tu pedido. No pudimos validar tu pago móvil. ¿Podrías enviarnos la referencia bancaria para confirmarlo?`;
 }
 
 /**
@@ -110,6 +74,7 @@ async function showOrderNotification(orderId: string, amount: number): Promise<v
 export function MerchantDashboardPage() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { permissions: staffPermissions } = useStaffPermissions();
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -191,7 +156,10 @@ export function MerchantDashboardPage() {
     error: deliveryMetricsError,
   } = useMerchantDeliveryMetrics(merchantId);
 
-  const [activeTab, setActiveTab] = useState<TabKey>('pending');
+  // Datos bancarios del comercio: la tarjeta de conciliación los contrasta
+  // contra el capture que adjunta el cliente.
+  const { pagoMovil } = useMerchantPagoMovil(merchantId);
+
   const greetingName = merchantName ?? profile?.full_name ?? 'Comercio';
   const isStaff = profile?.role === 'merchant_staff';
 
@@ -256,7 +224,7 @@ export function MerchantDashboardPage() {
     setAssignSubmitting(false);
   }, []);
 
-  const handleAssignDriver = useCallback(async (orderId: string, driverId: string) => {
+  const handleAssignDriver = useCallback(async (orderId: string, driverId: string | null) => {
     await assignDriver(orderId, driverId);
     if (isPostHogEnabled) {
       posthog.capture('driver_assigned');
@@ -317,24 +285,54 @@ export function MerchantDashboardPage() {
     return { ordersToday: todays.length, salesToday: sales };
   }, [orders]);
 
-  const activeStatuses =
-    TABS.find((tab) => tab.key === activeTab)?.statuses ?? [];
-  const visibleOrders = orders.filter((order) =>
-    activeStatuses.includes(order.status),
-  );
-
   function handleToggle() {
     void toggleStoreOpen(!isOpen);
   }
 
-  async function handleAction(order: OrderWithCustomer, next: OrderStatus) {
+  async function handleOrderAction(
+    order: OrderWithCustomer,
+    next: OrderStatus,
+  ): Promise<void> {
     await updateOrderStatus(order.id, next);
     if (isPostHogEnabled) {
       posthog.capture('order_status_changed', { status: next, order_type: order.type });
     }
   }
 
-return (
+  /** El tablero entrega solo el id: el tipo se recupera del listado en vivo. */
+  function handleBoardStatusChange(orderId: string, next: OrderStatus): void {
+    const order = orders.find((candidate) => candidate.id === orderId);
+    if (order) void handleOrderAction(order, next);
+  }
+
+  /**
+   * El tablero no puede devolver el pedido a un estado de "esperando
+   * referencia" porque el flujo no tiene esa transición, así que la caja
+   * reclama el dato al cliente por su canal de contacto.
+   */
+  const handleRequestReference = useCallback((order: OrderWithCustomer) => {
+    const phone = order.profiles?.phone;
+    const url = phone ? buildWhatsAppUrl(phone) : null;
+    if (!url) {
+      showToast({
+        variant: 'warning',
+        title: 'Sin teléfono del cliente',
+        message: 'El cliente no registró un teléfono para pedirle la referencia.',
+      });
+      return;
+    }
+    window.open(
+      `${url}?text=${encodeURIComponent(buildReferenceRequestMessage(order))}`,
+      '_blank',
+      'noopener,noreferrer',
+    );
+  }, [showToast]);
+
+  const handleSyncOrders = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['merchantOrders'] });
+  }, [queryClient]);
+
+  return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       {!hasStore && (
         <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-sm p-6 text-center">
@@ -490,164 +488,26 @@ return (
             />
           </section>
 
-          <section className="bg-white rounded-xl shadow-sm p-4 space-y-4">
-            <nav
-              className="no-scrollbar flex snap-x gap-2 overflow-x-auto"
-              aria-label="Filtrar pedidos por estado"
-            >
-              {TABS.map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveTab(tab.key)}
-                  aria-pressed={activeTab === tab.key}
-                  className={`flex-1 min-w-[7rem] shrink-0 snap-start whitespace-nowrap px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeTab === tab.key
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-
-            {loading ? (
-              <p className="flex items-center gap-2 text-gray-600 text-sm" role="status">
-                <i className="fa-solid fa-spinner text-base animate-spin" />
-                Cargando pedidos...
-              </p>
-            ) : visibleOrders.length === 0 ? (
-              <p className="text-gray-600 text-sm" role="status">
-                No hay pedidos en esta sección.
-              </p>
-            ) : (
-              <ul className="space-y-3">
-                {visibleOrders.map((order) => (
-                  <li
-                    key={order.id}
-                    className="border border-gray-200 rounded-lg p-3 flex flex-col gap-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-gray-900">#{order.id}</span>
-                      <span className="text-sm font-semibold text-gray-700">
-                        {formatAmount(Number(order.total_amount ?? 0))}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-500">
-                      {order.items.length} producto(s) ·{' '}
-                      {new Date(order.created_at).toLocaleTimeString()}
-                    </p>
-                    <p className="text-sm font-medium text-gray-700">
-                      Pago: {getPaymentMethodLabel(order.payment_method)}
-                    </p>
-                    {order.profiles && (
-                      <p className="text-xs text-gray-500">
-                        Cliente: {order.profiles.full_name ?? 'Sin nombre'} {order.profiles.ci ? `(${order.profiles.ci})` : ''}
-                      </p>
-                    )}
-                    {order.type === 'delivery' && (
-                      <div className="text-xs text-gray-500">
-                        {order.delivery_address_notes && (
-                          <p>Dirección: {order.delivery_address_notes}</p>
-                        )}
-                        {(() => {
-                          const coords = getOrderDeliveryCoordinates(order);
-                          return coords ? (
-                            <p>Coordenadas: {coords[0].toFixed(5)}, {coords[1].toFixed(5)}</p>
-                          ) : null;
-                        })()}
-                      </div>
-                    )}
-                    {requiresPaymentProof(order.payment_method) && (order.payment_proof_url ? (
-                      <div className="flex items-center gap-2 mt-1">
-                        <button
-                          type="button"
-                          onClick={() => void handleOpenProof(order)}
-                          className="inline-flex items-center gap-1.5 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded font-medium transition-colors"
-                          data-testid={`proof-button-${order.id}`}
-                        >
-                          <i className="fa-solid fa-image text-sm" />
-                          Ver comprobante
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-400 italic mt-1 block">
-                        Sin comprobante
-                      </span>
-                    ))}
-                    <div className="flex flex-wrap gap-2">
-                      {order.type !== 'delivery' && order.status === 'ready' && (
-                        <span
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700"
-                          data-testid="pickup-ready-notice"
-                        >
-                          <i className="fa-solid fa-store" aria-hidden="true" />
-                          Listo para retirar. El cliente confirma la entrega desde su app.
-                        </span>
-                      )}
-                      {getOrderActions(order.status).map((action) => (
-                        <button
-                          key={action.label}
-                          type="button"
-                          onClick={() => handleAction(order, action.next)}
-                          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                            action.label === 'Cancelar'
-                              ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                              : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                          }`}
-                        >
-                          {action.label}
-                        </button>
-                      ))}
-                    </div>
-                    {order.type === 'delivery' && drivers.length > 0 && (
-                      <div className="flex items-center gap-2 mt-1">
-                        {order.driver_id ? (
-                          <span className="inline-flex items-center gap-1.5 text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1.5 rounded-lg font-medium">
-                            <i className="fa-solid fa-truck text-base" />
-                            Asignado a {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
-                          </span>
-                        ) : order.status !== 'delivered' && order.status !== 'cancelled' ? (
-                          <div className="flex items-center gap-2">
-                            <select
-                              className="text-sm border border-indigo-200 rounded-lg px-3 py-1.5 bg-indigo-50 text-indigo-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              data-testid={`driver-select-${order.id}`}
-                              defaultValue=""
-                              onChange={(e) => {
-                                const driverId = e.target.value;
-                                if (driverId) {
-                                  void handleAssignDriver(order.id, driverId);
-                                }
-                              }}
-                            >
-                              <option value="" disabled>
-                                Seleccionar repartidor
-                              </option>
-                              {drivers.map((driver) => (
-                                <option key={driver.id} value={driver.id}>
-                                  {driver.full_name ?? driver.email ?? driver.id}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              type="button"
-                              onClick={() => void handleOpenDriverModal(order)}
-                              className="inline-flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700"
-                              data-testid={`assign-driver-${order.id}`}
-                              title="Más opciones"
-                            >
-                              <i className="fa-solid fa-truck text-sm" />
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          {loading ? (
+            <p className="flex items-center gap-2 text-sm text-slate-600" role="status">
+              <i className="fa-solid fa-spinner text-base animate-spin" aria-hidden="true" />
+              Cargando pedidos...
+            </p>
+          ) : (
+            <OrdersBoard
+              orders={orders}
+              drivers={drivers}
+              role={profile?.role ?? null}
+              staffPermissions={staffPermissions}
+              pagoMovil={pagoMovil}
+              onUpdateStatus={handleBoardStatusChange}
+              onAssignDriver={(orderId, driverId) => void handleAssignDriver(orderId, driverId)}
+              onOpenDriverAssignment={handleOpenDriverModal}
+              onOpenProof={handleOpenProof}
+              onRequestReference={handleRequestReference}
+              onSync={handleSyncOrders}
+            />
+          )}
         </div>
       )}
       {selectedOrder && selectedOrder.payment_proof_url && (

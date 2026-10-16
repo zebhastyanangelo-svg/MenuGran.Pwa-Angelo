@@ -12,7 +12,7 @@ import { OrdersBoard } from '../components/merchant/OrdersBoard';
 import { PaymentProofModal } from '../components/merchant/PaymentProofModal';
 
 export function MerchantDashboard() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { merchantIds, orders, drivers, loading, error, updateOrderStatus, assignDriver } =
     useMerchantDashboard(user);
   const [activeTab, setActiveTab] = useState<'orders' | 'catalog' | 'profile'>('orders');
@@ -121,6 +121,8 @@ export function MerchantDashboard() {
                  <OrdersBoard
                    orders={orders}
                    drivers={drivers}
+                   role={profile?.role ?? null}
+                   staffPermissions={null}
                    onUpdateStatus={updateOrderStatus}
                    onAssignDriver={assignDriver}
                    onOpenProof={handleOpenProof}

@@ -228,7 +228,9 @@ describe('MerchantDashboardPage', () => {
 
     // Wait for data to load (should show no orders since we set empty array)
     await waitFor(() => {
-      expect(screen.getByText(/No hay pedidos que mostrar/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/No hay pedidos que coincidan con los filtros/i),
+      ).toBeInTheDocument();
     });
   });
 
@@ -247,29 +249,21 @@ describe('MerchantDashboardPage', () => {
       </BrowserRouter>
     );
 
-    // Wait for data to load
+    // El tablero arranca en la pestaña de pendientes de pago
     await waitFor(() => {
-      expect(screen.getAllByText(/order-1/i)[0]).toBeInTheDocument();
-      expect(screen.getAllByText(/order-2/i)[0]).toBeInTheDocument();
-      expect(screen.getAllByText(/order-3/i)[0]).toBeInTheDocument();
+      expect(screen.getByTestId('order-card-order-1')).toBeInTheDocument();
     });
+    expect(screen.queryByTestId('order-card-order-2')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('order-card-order-3')).not.toBeInTheDocument();
 
-    // Check default view shows all three
-    expect(
-      screen.getAllByRole('row').length
-    ).toBe(4); // header + 3 rows
+    // "En Cocina" agrupa confirmados y en preparación
+    await userEventInstance.click(screen.getByTestId('tab-kitchen'));
 
-    // Change filter to 'confirmed'
-    const select = screen.getByLabelText(/Filtrar por estado:/i) as HTMLSelectElement;
-    await userEventInstance.selectOptions(select, 'confirmed');
-
-    // Wait for filter to apply
     await waitFor(() => {
-      // Only order-2 should be visible
-      expect(screen.getAllByText(/order-2/i)[0]).toBeInTheDocument();
-      expect(screen.queryAllByText(/order-1/i)).toHaveLength(0);
-      expect(screen.queryAllByText(/order-3/i)).toHaveLength(0);
+      expect(screen.getByTestId('order-card-order-2')).toBeInTheDocument();
+      expect(screen.getByTestId('order-card-order-3')).toBeInTheDocument();
     });
+    expect(screen.queryByTestId('order-card-order-1')).not.toBeInTheDocument();
   });
 
   it('opens proof modal when clicking "Ver comprobante"', async () => {
@@ -325,7 +319,7 @@ describe('MerchantDashboardPage', () => {
     });
   });
 
-  it('muestra "Sin repartidores disponibles" en el select de repartidor cuando no hay drivers', async () => {
+  it('omite la asignación de repartidor cuando el comercio no tiene repartidores', async () => {
     const mockOrder = createMockOrder({
       id: 'order-delivery-1',
       type: 'delivery',
@@ -341,11 +335,9 @@ describe('MerchantDashboardPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getAllByText(/order-delivery-1/i)[0]).toBeInTheDocument();
+      expect(screen.getByTestId('order-card-order-delivery-1')).toBeInTheDocument();
     });
 
-    expect(
-      screen.getAllByText(/Sin repartidores disponibles/i)[0],
-    ).toBeInTheDocument();
+    expect(screen.queryByTestId('driver-select-order-delivery-1')).not.toBeInTheDocument();
   });
 });

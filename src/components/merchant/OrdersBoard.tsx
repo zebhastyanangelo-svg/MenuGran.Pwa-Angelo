@@ -1,750 +1,272 @@
-import { useMemo, useState } from 'react';
-import { useBCVRate } from '../../hooks/useExchangeRate';
-import { PAYMENT_PROOF_BUCKET } from '../../hooks/useMerchantDashboard';
-import { supabase } from '../../services/supabase';
-import type { OrderItem, OrderStatus } from '../../types/database';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { PaymentMethod, OrderStatus, UserRole, MerchantStaffPermissions } from '../../types/database';
+import type { MerchantPagoMovilInfo } from '../../services/merchantPaymentService';
 import type { DriverProfile, OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
-import { formatPrice } from '../../types/cart';
-import { OrderStatusBadge } from './OrderStatusBadge';
+import { useExchangeRate } from '../../hooks/useExchangeRate';
+import { OrdersFilterBar } from './OrdersFilterBar';
+import { OrdersKpiGrid } from './OrdersKpiGrid';
+import { OrderTicketCard } from './OrderTicketCard';
 import {
-  ORDER_STATUS_ORDER,
-  getAllowedTransitions,
-  getOrderStatusLabel,
-  getTransitionButtonClass,
-  getTransitionLabel,
-  isLocalPickupOrder,
-  isTerminalOrderStatus,
-} from '../../utils/orderStatus';
-import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
-import { Modal } from '../ui/Modal';
+  collectAvailablePaymentMethods,
+  countOrdersByTab,
+  filterOrdersByFacets,
+  filterOrdersByTab,
+  formatBoardDateLabel,
+  getOrderBoardDateRange,
+  getOrderBoardKpis,
+  type OrderBoardPeriod,
+  type OrderBoardTabKey,
+} from '../../utils/orderBoard';
+import {
+  canOperateBoard,
+  canViewBoardFinances,
+} from '../../utils/orderBoardPermissions';
+import { requiresPaymentProof } from '../../utils/paymentMethod';
 
-type PeriodPreset = 'this_month' | 'last_month' | 'today' | 'last_7_days' | 'custom';
+/**
+ * Tablero de Pedidos en Vivo del comercio.
+ *
+ * Es la vista de trabajo de caja y cocina: cuatro tarjetas de resumen, filtros
+ * con contadores y una tarjeta modular por pedido. El componente no consulta
+ * datos por su cuenta —los recibe de `useMerchantDashboardPage`, que ya
+ * mantiene la suscripción Realtime de Supabase— y solo aplica el corte por rol
+ * que corresponde a cada usuario.
+ */
 
-interface PeriodOption {
-  value: PeriodPreset;
-  label: string;
-}
-
-const PERIOD_OPTIONS: PeriodOption[] = [
-  { value: 'this_month', label: 'Este Mes' },
-  { value: 'last_month', label: 'Mes Pasado' },
-  { value: 'today', label: 'Hoy' },
-  { value: 'last_7_days', label: 'Últimos 7 días' },
-  { value: 'custom', label: 'Mes/Año personalizado' },
-];
-
-function getDateRange(preset: PeriodPreset, customMonth?: string): { start: Date; end: Date } {
-  const now = new Date();
-  const start = new Date();
-  const end = new Date(now);
-  end.setHours(23, 59, 59, 999);
-
-  switch (preset) {
-    case 'this_month':
-      start.setDate(1);
-      start.setHours(0, 0, 0, 0);
-      break;
-    case 'last_month':
-      start.setMonth(now.getMonth() - 1);
-      start.setDate(1);
-      start.setHours(0, 0, 0, 0);
-      end.setMonth(now.getMonth() - 1);
-      end.setDate(0); // last day of previous month
-      end.setHours(23, 59, 59, 999);
-      break;
-    case 'today':
-      start.setHours(0, 0, 0, 0);
-      break;
-    case 'last_7_days':
-      start.setDate(now.getDate() - 6);
-      start.setHours(0, 0, 0, 0);
-      break;
-    case 'custom':
-      if (customMonth) {
-        const [year, month] = customMonth.split('-').map(Number);
-        start.setFullYear(year, month - 1, 1);
-        start.setHours(0, 0, 0, 0);
-        end.setFullYear(year, month, 0); // last day of month
-        end.setHours(23, 59, 59, 999);
-      } else {
-        // fallback to this month
-        start.setDate(1);
-        start.setHours(0, 0, 0, 0);
-      }
-      break;
-  }
-  return { start, end };
-}
+const PAGE_SIZE = 8;
+const ELAPSED_TICK_MS = 60_000;
 
 export interface OrdersBoardProps {
   orders: OrderWithCustomer[];
-  drivers?: DriverProfile[];
+  drivers?: readonly DriverProfile[];
+  role: UserRole | null;
+  staffPermissions: MerchantStaffPermissions | null;
+  pagoMovil?: MerchantPagoMovilInfo | null;
   onUpdateStatus: (orderId: string, status: OrderStatus) => void;
   onAssignDriver?: (orderId: string, driverId: string | null) => void;
+  onOpenDriverAssignment?: (order: OrderWithCustomer) => void;
   onOpenProof: (order: OrderWithCustomer) => void;
-}
-
-function getCustomerLabel(order: OrderWithCustomer): string {
-  const profile = order.profiles;
-  const name = profile?.full_name ?? profile?.email ?? `Cliente ${order.customer_id?.slice(0, 6)}...`;
-  const ci = profile?.ci ? ` - C.I. ${profile.ci}` : '';
-  return `${name}${ci}`;
-}
-
-/**
- * Aviso para pedidos de retiro en local que ya están listos: el comercio no
- * marca la entrega; el cliente la confirma desde su app al retirar en caja.
- */
-function PickupReadyNotice() {
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
-      data-testid="pickup-ready-notice"
-    >
-      <i className="fa-solid fa-store" aria-hidden="true" />
-      Listo para retirar. El cliente confirma la entrega desde su app.
-    </span>
-  );
-}
-
-/**
- * Nombre del platillo en la comanda. Los pedidos anteriores al snapshot no
- * traen `title`, así que se cae al identificador para no mostrar una línea
- * vacía en el ticket.
- */
-function getOrderItemLabel(item: OrderItem): string {
-  const title = item.title?.trim();
-  return title && title.length > 0 ? title : `Producto #${item.product_id.slice(0, 8)}`;
-}
-
-function hasCustomizedItems(order: OrderWithCustomer): boolean {
-  return order.items.some((item) => (item.excluded_ingredients?.length ?? 0) > 0);
-}
-
-/** Chip que avisa de que el cliente personalizó el pedido antes de pagar. */
-function CustomizedOrderBadge() {
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800"
-      data-testid="customized-order-badge"
-    >
-      <i className="fa-solid fa-slash text-[10px]" aria-hidden="true" />
-      Personalizado
-    </span>
-  );
-}
-
-/**
- * Comanda del pedido con las exclusiones del cliente. Los ingredientes
- * tachados se repiten tachados para que la cocina los lea de un vistazo, sin
- * tener que comparar con la carta.
- */
-function OrderItemsList({ order }: { order: OrderWithCustomer }) {
-  if (order.items.length === 0) return null;
-  return (
-    <ul className="space-y-2" data-testid="order-items-list">
-      {order.items.map((item, index) => {
-        const excluded = item.excluded_ingredients ?? [];
-        return (
-          <li
-            key={`${item.product_id}-${index}`}
-            className="rounded-lg border border-gray-200 bg-gray-50 p-2"
-          >
-            <p className="text-sm font-medium text-gray-900">
-              {item.quantity} × {getOrderItemLabel(item)}
-            </p>
-            {excluded.length > 0 && (
-              <p className="mt-1 flex items-start gap-1.5 text-sm font-semibold text-red-700">
-                <i className="fa-solid fa-circle-minus mt-0.5 text-xs" aria-hidden="true" />
-                <span>
-                  Sin: <span className="line-through">{excluded.join(', ')}</span>
-                </span>
-              </p>
-            )}
-          </li>
-        );
-      })}
-    </ul>
-  );
+  onRequestReference?: (order: OrderWithCustomer) => void;
+  onSync?: () => void | Promise<void>;
 }
 
 export function OrdersBoard({
   orders,
   drivers = [],
+  role,
+  staffPermissions,
+  pagoMovil = null,
   onUpdateStatus,
   onAssignDriver,
+  onOpenDriverAssignment,
   onOpenProof,
+  onRequestReference,
+  onSync,
 }: OrdersBoardProps) {
-  const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('');
-  const [period, setPeriod] = useState<PeriodPreset>('this_month');
-  const [customMonth, setCustomMonth] = useState<string>(''); // format YYYY-MM
+  const { rate, refresh, lastUpdated } = useExchangeRate();
+  const bcvRate = rate ?? 0;
+
+  const [activeTab, setActiveTab] = useState<OrderBoardTabKey>('payment_pending');
+  const [period, setPeriod] = useState<OrderBoardPeriod>('today');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | 'all'>('all');
+  const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 10;
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<OrderWithCustomer | null>(null);
-  const [proofUrl, setProofUrl] = useState<string | null>(null);
-  const [proofError, setProofError] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  const bcvRate = useBCVRate();
+  const canOperate = canOperateBoard(role, staffPermissions);
+  const canSeeFinances = canViewBoardFinances(role);
 
-  function formatVES(amount: number): string {
-    return new Intl.NumberFormat('es-VE', {
-      style: 'currency',
-      currency: 'VES',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  }
+  // Reloj de un minuto para que el "Hace 4 min" no se quede congelado.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), ELAPSED_TICK_MS);
+    return () => clearInterval(timer);
+  }, []);
 
-  const { start: periodStart, end: periodEnd } = getDateRange(period, customMonth);
+  const range = useMemo(() => getOrderBoardDateRange(period), [period]);
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
-      const matchesStatus = !filterStatus || order.status === filterStatus;
-      const orderDate = new Date(order.created_at);
-      const matchesPeriod = orderDate >= periodStart && orderDate <= periodEnd;
-      return matchesStatus && matchesPeriod;
-    });
-  }, [orders, filterStatus, periodStart, periodEnd]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const paginatedOrders = useMemo(
-    () => filteredOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
-    [filteredOrders, currentPage]
+  const facetedOrders = useMemo(
+    () => filterOrdersByFacets(orders, { query, paymentMethod, range }),
+    [orders, query, paymentMethod, range],
   );
 
-  const handlePeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value as PeriodPreset;
-    setPeriod(value);
-    setPage(1);
-    if (value !== 'custom') setCustomMonth('');
-  };
+  const visibleOrders = useMemo(
+    () => filterOrdersByTab(facetedOrders, activeTab),
+    [facetedOrders, activeTab],
+  );
 
-  const handleCustomMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCustomMonth(e.target.value);
-    setPage(1);
-  };
+  const counts = useMemo(() => countOrdersByTab(facetedOrders), [facetedOrders]);
+  const kpis = useMemo(() => getOrderBoardKpis(orders, bcvRate), [orders, bcvRate]);
+  const availablePaymentMethods = useMemo(
+    () => collectAvailablePaymentMethods(orders),
+    [orders],
+  );
 
-  const goPrev = () => setPage((p) => Math.max(1, p - 1));
-  const goNext = () => setPage((p) => Math.min(totalPages, p + 1));
+  const totalPages = Math.max(1, Math.ceil(visibleOrders.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedOrders = useMemo(
+    () => visibleOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [visibleOrders, currentPage],
+  );
 
-  const openDetailOrder = async (order: OrderWithCustomer) => {
-    setSelectedOrder(order);
-    setDetailOpen(true);
-    setProofUrl(null);
-    setProofError(null);
-    if (!order.payment_proof_url) return;
+  const pendingProofOrder = useMemo(
+    () => orders.find((order) => requiresPaymentProof(order.payment_method) && order.payment_proof_url),
+    [orders],
+  );
+
+  const resetToFirstPage = useCallback(() => setPage(1), []);
+
+  const handleSync = useCallback(async () => {
+    setIsSyncing(true);
     try {
-      const { data, error: signedError } = await supabase.storage
-        .from(PAYMENT_PROOF_BUCKET)
-        .createSignedUrl(order.payment_proof_url, 3600);
-      if (signedError || !data?.signedUrl) {
-        setProofError(signedError?.message ?? 'No se pudo cargar el comprobante');
-        return;
-      }
-      setProofUrl(data.signedUrl);
-    } catch (err: unknown) {
-      setProofError(err instanceof Error ? err.message : 'Error de comprobante');
+      await refresh();
+      await onSync?.();
+    } finally {
+      setIsSyncing(false);
     }
-  };
+  }, [refresh, onSync]);
 
-  const closeDetail = () => {
-    setDetailOpen(false);
-    setSelectedOrder(null);
-    setProofUrl(null);
-    setProofError(null);
-  };
+  const rateLabel = lastUpdated
+    ? `Tasa BCV: 1 USD = ${bcvRate.toFixed(2)} Bs.`
+    : 'Sincronizando tasa BCV…';
 
   return (
-    <>
-      <section className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-          Panel de Comercio - Gestión de Pedidos
-        </h1>
-        <div className="flex items-center gap-3 flex-wrap">
-          <label
-            htmlFor="status-filter"
-            className="text-sm font-medium text-gray-700 whitespace-nowrap"
-          >
-            Filtrar por estado:
-          </label>
-          <select
-            id="status-filter"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as OrderStatus)}
-            className="border border-gray-300 rounded-md px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          >
-            <option value="">Todos los estados</option>
-            {ORDER_STATUS_ORDER.map((status) => (
-              <option key={status} value={status}>
-                {getOrderStatusLabel(status)}
-              </option>
-            ))}
-          </select>
+    <section className="space-y-4" data-testid="orders-board">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
+              Tablero de Pedidos en Vivo
+            </h1>
+            <span
+              data-testid="live-badge"
+              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700"
+            >
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" aria-hidden="true" />
+              En tiempo real
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-slate-500">
+            {formatBoardDateLabel(now)} · {rateLabel}
+          </p>
+        </div>
 
-          <label
-            htmlFor="period-filter"
-            className="text-sm font-medium text-gray-700 whitespace-nowrap"
-          >
-            Período:
-          </label>
-          <select
-            id="period-filter"
-            value={period}
-            onChange={handlePeriodChange}
-            className="border border-gray-300 rounded-md px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          >
-            {PERIOD_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-
-          {period === 'custom' && (
-            <>
-              <label
-                htmlFor="custom-month"
-                className="text-sm font-medium text-gray-700 whitespace-nowrap"
-              >
-                Mes/Año:
-              </label>
-              <input
-                id="custom-month"
-                type="month"
-                value={customMonth}
-                onChange={handleCustomMonthChange}
-                className="border border-gray-300 rounded-md px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        <div className="flex flex-wrap items-center gap-2">
+          {onSync && (
+            <button
+              type="button"
+              onClick={() => void handleSync()}
+              disabled={isSyncing}
+              data-testid="board-sync"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+            >
+              <i
+                className={`fa-solid fa-rotate ${isSyncing ? 'animate-spin' : ''}`}
+                aria-hidden="true"
               />
-            </>
+              Sincronizar
+            </button>
           )}
         </div>
-      </div>
+      </header>
 
-      {filteredOrders.length === 0 ? (
-        <p className="text-center py-8 text-gray-500">
-          No hay pedidos que mostrar
-          {filterStatus ? ` con estado ${getOrderStatusLabel(filterStatus)}` : ''}
+      <OrdersKpiGrid
+        kpis={kpis}
+        canSeeFinances={canSeeFinances}
+        activeTab={activeTab}
+        onSelectTab={(tab) => {
+          setActiveTab(tab);
+          resetToFirstPage();
+        }}
+        hasPendingProof={Boolean(pendingProofOrder) && canOperate}
+        onOpenFirstPendingProof={
+          pendingProofOrder ? () => onOpenProof(pendingProofOrder) : undefined
+        }
+      />
+
+      <OrdersFilterBar
+        counts={counts}
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          resetToFirstPage();
+        }}
+        period={period}
+        onPeriodChange={(value) => {
+          setPeriod(value);
+          resetToFirstPage();
+        }}
+        paymentMethod={paymentMethod}
+        onPaymentMethodChange={(value) => {
+          setPaymentMethod(value);
+          resetToFirstPage();
+        }}
+        availablePaymentMethods={availablePaymentMethods}
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value);
+          resetToFirstPage();
+        }}
+        resultCount={visibleOrders.length}
+      />
+
+      {visibleOrders.length === 0 ? (
+        <p
+          className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500"
+          role="status"
+        >
+          No hay pedidos que coincidan con los filtros seleccionados.
         </p>
       ) : (
         <>
-          {/* Desktop table view */}
-          <div className="hidden md:block overflow-hidden rounded-lg border border-gray-200 bg-white">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    {['ID', 'Cliente', 'Monto (USD / Bs)', 'Estado', 'Pago', 'Código', 'Acciones'].map(
-                      (head) => (
-                        <th
-                          key={head}
-                          className="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide"
-                        >
-                          {head}
-                        </th>
-                      )
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedOrders.map((order) => (
-                    <tr
-                      key={order.id}
-                      className="border-t border-gray-200 hover:bg-gray-50"
-                    >
-                      <td className="px-4 py-3 text-sm font-medium text-gray-800">
-                        {order.id}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-800">
-                        {getCustomerLabel(order)}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-900">
-                        <div className="flex flex-col gap-0.5">
-                          <span>{formatPrice(order.total_amount)}</span>
-                          {bcvRate > 0 && (
-                            <span className="text-xs text-emerald-700">
-                              {formatVES(Number(order.total_amount) * bcvRate)}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <div className="flex flex-col items-start gap-1">
-                          <OrderStatusBadge status={order.status} />
-                          {hasCustomizedItems(order) && <CustomizedOrderBadge />}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className="font-medium">
-                          {getPaymentMethodLabel(order.payment_method)}
-                        </span>
-                        {order.payment_reference && (
-                          <div className="mt-0.5 text-xs text-gray-500">
-                            Ref: {order.payment_reference}
-                          </div>
-                        )}
-                        {requiresPaymentProof(order.payment_method) && (order.payment_proof_url ? (
-                          <button
-                            type="button"
-                            onClick={() => onOpenProof(order)}
-                            className="mt-1.5 inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded font-medium transition-colors"
-                          >
-                            Ver comprobante
-                          </button>
-                        ) : (
-                          <span className="mt-1.5 block text-xs text-gray-400 italic">
-                            Sin comprobante
-                          </span>
-                        ))}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className="font-mono text-gray-700">Código: {order.id.slice(0, 4).toUpperCase()}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {order.type === 'delivery' && onAssignDriver && (
-                            <div className="w-full mb-1 md:w-auto">
-                              {order.driver_id ? (
-                                <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded font-medium">
-                                  <i className="fa-solid fa-truck text-xs" aria-hidden="true" />
-                                  {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
-                                </span>
-                              ) : !isTerminalOrderStatus(order.status) && order.status !== 'on_the_way' ? (
-                                <select
-                                  className="w-full text-xs border border-indigo-200 rounded px-2 py-1 bg-indigo-50 text-indigo-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                  data-testid={`driver-select-${order.id}`}
-                                  defaultValue=""
-                                  onChange={(e) => {
-                                    const driverId = e.target.value;
-                                    if (driverId) {
-                                      onAssignDriver(order.id, driverId);
-                                    }
-                                  }}
-                                >
-                                  <option value="" disabled>
-                                    Asignar repartidor
-                                  </option>
-                                  {drivers.length === 0 ? (
-                                    <option value="" disabled className="text-gray-400">
-                                      Sin repartidores disponibles
-                                    </option>
-                                  ) : (
-                                    drivers.map((driver) => (
-                                      <option key={driver.id} value={driver.id}>
-                                        {driver.full_name ?? driver.email ?? driver.id}
-                                      </option>
-                                    ))
-                                  )}
-                                </select>
-                              ) : null}
-                            </div>
-                          )}
-                          {order.status === 'ready' && isLocalPickupOrder(order.type) && (
-                            <PickupReadyNotice />
-                          )}
-                          {!isTerminalOrderStatus(order.status) &&
-                            getAllowedTransitions(order.status, order.type).filter(s => s !== 'delivered' || order.type !== 'delivery').map((nextStatus) => (
-                              <button
-                                key={nextStatus}
-                                type="button"
-                                onClick={() => onUpdateStatus(order.id, nextStatus)}
-                                className={`text-xs px-2.5 py-1 rounded font-medium transition-colors ${getTransitionButtonClass(
-                                  nextStatus
-                                )}`}
-                              >
-                                {getTransitionLabel(nextStatus)}
-                              </button>
-                            ))}
-                          <button
-                            type="button"
-                            onClick={() => void openDetailOrder(order)}
-                            className="text-xs px-2.5 py-1 rounded font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-colors"
-                          >
-                            <i className="fa-solid fa-eye text-xs inline mr-1" aria-hidden="true" />
-                            Ver detalles
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
-              <span className="text-sm text-gray-600">
-                Página {currentPage} de {totalPages}
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={goPrev}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded-md bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-                >
-                  Anterior
-                </button>
-                <button
-                  onClick={goNext}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded-md bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-                >
-                  Siguiente
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile card view */}
-          <div className="md:hidden space-y-3">
+          <ul className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             {paginatedOrders.map((order) => (
-              <article
-                key={order.id}
-                className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 truncate">{order.id}</p>
-                    <p className="text-sm text-gray-600">{getCustomerLabel(order)}</p>
-                    <div className="mt-1 flex flex-col gap-0.5">
-                      <span className="font-semibold text-gray-900">{formatPrice(order.total_amount)}</span>
-                      {bcvRate > 0 && (
-                        <span className="text-xs text-emerald-700">
-                          {formatVES(Number(order.total_amount) * bcvRate)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-2 flex items-center gap-2 text-xs">
-                      <OrderStatusBadge status={order.status} />
-                      <span className="font-medium">{getPaymentMethodLabel(order.payment_method)}</span>
-                      {order.payment_reference && (
-                        <span className="text-gray-500">Ref: {order.payment_reference}</span>
-                      )}
-                      <span className="font-mono text-gray-700">Código: {order.id.slice(0, 4).toUpperCase()}</span>
-                    </div>
-                    {hasCustomizedItems(order) && (
-                      <div className="mt-1.5">
-                        <CustomizedOrderBadge />
-                      </div>
-                    )}
-                    {requiresPaymentProof(order.payment_method) && (order.payment_proof_url ? (
-                      <button
-                        type="button"
-                        onClick={() => onOpenProof(order)}
-                        className="mt-1.5 inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded font-medium transition-colors"
-                      >
-                        Ver comprobante
-                      </button>
-                    ) : (
-                      <span className="mt-1.5 block text-xs text-gray-400 italic">
-                        Sin comprobante
-                      </span>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void openDetailOrder(order)}
-                    className="flex items-center gap-1 text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded text-xs font-medium hover:bg-indigo-100"
-                  >
-                    <i className="fa-solid fa-eye text-xs" aria-hidden="true" />
-                    Ver detalles
-                  </button>
-                </div>
-
-                {/* Actions row */}
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {order.type === 'delivery' && onAssignDriver && (
-                    <div className="w-full">
-                      {order.driver_id ? (
-                        <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded font-medium">
-                          <i className="fa-solid fa-truck text-xs" aria-hidden="true" />
-                          {drivers.find((d) => d.id === order.driver_id)?.full_name ?? 'Repartidor'}
-                        </span>
-                      ) : !isTerminalOrderStatus(order.status) && order.status !== 'on_the_way' ? (
-                        <select
-                          className="w-full text-xs border border-indigo-200 rounded px-2 py-1 bg-indigo-50 text-indigo-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          data-testid={`driver-select-${order.id}`}
-                          defaultValue=""
-                          onChange={(e) => {
-                            const driverId = e.target.value;
-                            if (driverId) {
-                              onAssignDriver(order.id, driverId);
-                            }
-                          }}
-                        >
-                          <option value="" disabled>
-                            Asignar repartidor
-                          </option>
-                          {drivers.length === 0 ? (
-                            <option value="" disabled className="text-gray-400">
-                              Sin repartidores disponibles
-                            </option>
-                          ) : (
-                            drivers.map((driver) => (
-                              <option key={driver.id} value={driver.id}>
-                                {driver.full_name ?? driver.email ?? driver.id}
-                              </option>
-                            ))
-                          )}
-                        </select>
-                      ) : null}
-                    </div>
-                  )}
-                  {order.status === 'ready' && isLocalPickupOrder(order.type) && (
-                    <PickupReadyNotice />
-                  )}
-                  {!isTerminalOrderStatus(order.status) &&
-                    getAllowedTransitions(order.status, order.type).filter(s => s !== 'delivered' || order.type !== 'delivery').map((nextStatus) => (
-                      <button
-                        key={nextStatus}
-                        type="button"
-                        onClick={() => onUpdateStatus(order.id, nextStatus)}
-                        className={`text-xs px-2.5 py-1 rounded font-medium transition-colors ${getTransitionButtonClass(
-                          nextStatus
-                        )}`}
-                      >
-                        {getTransitionLabel(nextStatus)}
-                      </button>
-                    ))}
-                </div>
-
-                {/* Pagination not needed in mobile card view; rely on page controls below */}
-              </article>
+              <li key={order.id}>
+                <OrderTicketCard
+                  order={order}
+                  drivers={drivers}
+                  pagoMovil={pagoMovil}
+                  bcvRate={bcvRate}
+                  now={now}
+                  canOperate={canOperate}
+                  onUpdateStatus={onUpdateStatus}
+                  onAssignDriver={onAssignDriver}
+                  onOpenDriverAssignment={onOpenDriverAssignment}
+                  onOpenProof={onOpenProof}
+                  onRequestReference={onRequestReference ?? (() => undefined)}
+                />
+              </li>
             ))}
-            {/* Pagination controls for mobile */}
-            <div className="flex items-center justify-between px-2 py-2 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-              <span className="text-sm text-gray-600">
-                Página {currentPage} de {totalPages}
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={goPrev}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded-md bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-                >
-                  Anterior
-                </button>
-                <button
-                  onClick={goNext}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded-md bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-                >
-                  Siguiente
-                </button>
-              </div>
+          </ul>
+
+          <nav
+            aria-label="Paginación de pedidos"
+            className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3"
+          >
+            <span className="text-sm text-slate-600">
+              Página {currentPage} de {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.max(1, value - 1))}
+                disabled={currentPage === 1}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Siguiente
+              </button>
             </div>
-          </div>
+          </nav>
         </>
       )}
     </section>
-
-      {/* Detail modal */}
-      <Modal
-        isOpen={detailOpen}
-        onClose={closeDetail}
-        title="Detalle del pedido"
-      >
-        {selectedOrder && (
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-500">Platillos del pedido</p>
-              <div className="mt-1">
-                <OrderItemsList order={selectedOrder} />
-              </div>
-            </div>
-            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-500">ID</p>
-                <p className="break-all font-mono text-gray-900">{selectedOrder.id}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-500">Código</p>
-                <p className="font-mono text-gray-900">{selectedOrder.id.slice(0, 4).toUpperCase()}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-500">Cliente</p>
-                <p className="break-words text-gray-900">{getCustomerLabel(selectedOrder)}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-500">Email</p>
-                <p className="break-all text-gray-900">{selectedOrder.profiles?.email ?? '—'}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-500">Cédula</p>
-                <p className="break-all text-gray-900">{selectedOrder.profiles?.ci ?? '—'}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-500">Teléfono</p>
-                <p className="break-words text-gray-900">{selectedOrder.profiles?.phone ?? '—'}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-500">Tipo</p>
-                <p className="break-words text-gray-900 capitalize">{selectedOrder.type.replace('_', ' ')}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-500">Estado</p>
-                <p className="break-words text-gray-900 capitalize">{getOrderStatusLabel(selectedOrder.status)}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-500">Método de pago</p>
-                <p className="break-words text-gray-900">{getPaymentMethodLabel(selectedOrder.payment_method)}</p>
-              </div>
-              {selectedOrder.payment_reference && (
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-500">Referencia</p>
-                  <p className="break-all text-gray-900">{selectedOrder.payment_reference}</p>
-                </div>
-              )}
-              {Number(selectedOrder.delivery_fee ?? 0) > 0 && (
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-500">Envío</p>
-                  <p className="break-words text-gray-900">
-                    {formatPrice(selectedOrder.delivery_fee ?? '0')}
-                  </p>
-                </div>
-              )}
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-500">Total (USD)</p>
-                <p className="break-words font-semibold text-gray-900">{formatPrice(selectedOrder.total_amount)}</p>
-              </div>
-              {bcvRate > 0 && (
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-500">Total (Bs.)</p>
-                  <p className="break-words font-semibold text-emerald-700">{formatVES(Number(selectedOrder.total_amount) * bcvRate)}</p>
-                </div>
-              )}
-              {(selectedOrder.delivery_address ||
-                selectedOrder.delivery_address_notes) && (
-                <div className="min-w-0 sm:col-span-2">
-                  <p className="text-sm font-medium text-gray-500">Dirección de entrega</p>
-                  <p className="break-words whitespace-pre-line text-gray-900">
-                    {selectedOrder.delivery_address ??
-                      selectedOrder.delivery_address_notes}
-                  </p>
-                </div>
-              )}
-              {selectedOrder.payment_proof_url && (
-                <div className="sm:col-span-2">
-                  <p className="text-sm font-medium text-gray-500">Comprobante de pago</p>
-                  {proofError ? (
-                    <p className="mt-2 text-xs text-red-500" role="alert">
-                      {proofError}
-                    </p>
-                  ) : proofUrl ? (
-                    <img
-                      src={proofUrl}
-                      alt="Comprobante"
-                      className="mt-2 max-w-full h-auto rounded-lg border border-gray-200"
-                    />
-                  ) : (
-                    <p className="mt-2 text-xs text-gray-400 italic">Cargando comprobante…</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
-    </>
   );
 }

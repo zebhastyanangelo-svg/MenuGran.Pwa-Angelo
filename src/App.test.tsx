@@ -231,7 +231,9 @@ describe('App Router Integration', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /Panel de Comercio/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /Tablero de Pedidos en Vivo/i }),
+      ).toBeInTheDocument();
     }, { timeout: 30000 });
   }, 45000);
 
@@ -256,7 +258,9 @@ describe('App Router Integration', () => {
     expect(
       await screen.findByRole('heading', { name: 'Entregas' }, { timeout: 30000 }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /Panel de Comercio/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /Tablero de Pedidos en Vivo/i }),
+    ).not.toBeInTheDocument();
   }, 45000);
 
   it('resolves lazy login route through Suspense and renders its content', async () => {

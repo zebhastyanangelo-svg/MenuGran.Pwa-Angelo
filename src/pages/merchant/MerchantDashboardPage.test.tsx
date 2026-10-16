@@ -117,10 +117,10 @@ describe('MerchantDashboardPage', () => {
     expect(screen.getByText(/Hola, La Pizza/i)).toBeInTheDocument();
     expect(screen.getByText('Tienda Abierta')).toBeInTheDocument();
     expect(screen.getByText('Pedidos hoy')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('Bs 150.00')).toBeInTheDocument();
     expect(screen.getByText('Productos activos')).toBeInTheDocument();
     expect(screen.getByText('8')).toBeInTheDocument();
+    expect(screen.getByTestId('orders-board')).toBeInTheDocument();
   });
 
   it('cierra la tienda al pulsar el interruptor', async () => {
@@ -169,14 +169,14 @@ describe('MerchantDashboardPage', () => {
 
     renderPage();
 
-    expect(screen.getByText('#pend-1')).toBeInTheDocument();
-    expect(screen.queryByText('#ready-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('order-card-pend-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('order-card-ready-1')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Listos/i }));
+    await user.click(screen.getByTestId('tab-dispatch'));
 
     await waitFor(() => {
-      expect(screen.queryByText('#pend-1')).not.toBeInTheDocument();
-      expect(screen.getByText('#ready-1')).toBeInTheDocument();
+      expect(screen.queryByTestId('order-card-pend-1')).not.toBeInTheDocument();
+      expect(screen.getByTestId('order-card-ready-1')).toBeInTheDocument();
     });
   });
 
@@ -199,7 +199,7 @@ describe('MerchantDashboardPage', () => {
 
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: /Aceptar/i }));
+    await user.click(screen.getByTestId('validate-payment-o1'));
 
     expect(updateOrderStatus).toHaveBeenCalledWith('o1', 'confirmed');
   });
@@ -558,7 +558,7 @@ describe('MerchantDashboardPage', () => {
     renderPage();
 
     expect(screen.getByTestId('driver-select-d-1')).toBeInTheDocument();
-    expect(screen.getByText('Seleccionar repartidor')).toBeInTheDocument();
+    expect(screen.getByText('Asignar Rider')).toBeInTheDocument();
     expect(screen.getByTestId('assign-driver-d-1')).toBeInTheDocument();
   });
 
@@ -614,6 +614,7 @@ describe('MerchantDashboardPage', () => {
 
     renderPage();
 
+    await user.click(screen.getByTestId('tab-kitchen'));
     await user.click(screen.getByTestId('assign-driver-d-2'));
 
     const dialog = await screen.findByRole('dialog', { name: /asignar repartidor/i });
