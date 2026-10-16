@@ -7,6 +7,7 @@ export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
     'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 type AuthResult =
@@ -76,10 +77,20 @@ function getServiceRoleKey(): string {
   return key;
 }
 
+/**
+ * Cliente de un solo uso para validar un JWT ajeno. En el runtime de Deno no
+ * hay almacenamiento persistente, así que se desactivan la persistencia y el
+ * refresco automático: la única fuente de token es el header del llamador.
+ */
 export function buildAuthenticatedClient(
   authorizationHeader: string,
 ): SupabaseClient {
   return createClient(getSupabaseUrl(), getPublishableKey(), {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
     global: { headers: { Authorization: authorizationHeader } },
   });
 }
@@ -101,6 +112,16 @@ function authFailure(error: string, status: number): AuthResult {
   return { ok: false, response: jsonResponse({ error }, status) };
 }
 
+/**
+ * Distingue "el token fue rechazado" (401, el cliente debe renovar sesión) de
+ * "el servidor de auth no respondió bien" (5xx). Reportar un 5xx como 401 hace
+ * que la UI acuse una sesión inválida cuando el problema es de plataforma.
+ */
+function isAuthServerFailure(caughtError: unknown): boolean {
+  const status = (caughtError as { status?: unknown } | null)?.status;
+  return typeof status === 'number' && status >= 500;
+}
+
 export async function assertAuthenticated(
   authorizationHeader: string | null,
 ): Promise<AuthResult> {
@@ -111,7 +132,12 @@ export async function assertAuthenticated(
   try {
     const client = buildAuthenticatedClient(authorizationHeader);
     const { data, error } = await client.auth.getUser(token);
-    if (error !== null || data.user === null) {
+    if (error !== null) {
+      return isAuthServerFailure(error)
+        ? authFailure('No se pudo verificar la sesión en este momento.', 503)
+        : authFailure('Sesión inválida o expirada.', 401);
+    }
+    if (data.user === null) {
       return authFailure('Sesión inválida o expirada.', 401);
     }
     return { ok: true, userId: data.user.id };

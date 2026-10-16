@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
   type ChangeEvent,
   type FormEvent,
@@ -40,6 +41,10 @@ import {
   parseDiscountPercentage,
   parseEstimatedMinutes,
 } from '../../utils/promos';
+import {
+  getVenezuelanBankOptions,
+  resolveVenezuelanBankName,
+} from '../../utils/venezuelanBanks';
 import type {
   GeoPoint,
   MerchantCategory,
@@ -58,20 +63,6 @@ const MERCHANT_CATEGORIES: MerchantCategory[] = [
 ];
 
 type SettingsTab = 'general' | 'location' | 'identity' | 'delivery' | 'payments' | 'qr' | 'promos';
-
-/** Bancos frecuentes para Pago Móvil (orientativo; el campo admite texto libre). */
-const PAGO_MOVIL_BANKS: readonly string[] = [
-  'Banco de Venezuela',
-  'Banesco',
-  'Mercantil',
-  'Provincial',
-  'BOD',
-  'BNC',
-  'Bancrecer',
-  'Banplus',
-  'Banco del Tesoro',
-  'Sofitasa',
-];
 
 function initialImageField(): ImageFieldState {
   return { url: null, uploading: false, error: null };
@@ -122,7 +113,10 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
       setLogo({ url: merchant.logo_url ?? null, uploading: false, error: null });
       setBanner({ url: merchant.banner_url ?? null, uploading: false, error: null });
       setIsActive(merchant.is_active);
-      setPagoMovilBank(merchant.pago_movil_bank ?? '');
+      // El banco se guarda con el nombre canónico del catálogo: los valores
+      // escritos a mano antes del selector ("Provincial", "BDV") se corrigen
+      // aquí sin tocar los demás datos.
+      setPagoMovilBank(resolveVenezuelanBankName(merchant.pago_movil_bank));
       setPagoMovilIdNumber(merchant.pago_movil_id_number ?? '');
       setPagoMovilPhone(merchant.pago_movil_phone ?? '');
       setWeeklyHours(parseWeeklyHours(merchant.weekly_hours));
@@ -599,6 +593,10 @@ function PagoMovilTab({
   phone,
   onPhoneChange,
 }: PagoMovilTabProps) {
+  // Un comercio dado de alta antes del selector puede tener un banco escrito a
+  // mano: se conserva como opción extra para que ni se pierda ni se invente.
+  const bankOptions = useMemo(() => getVenezuelanBankOptions(bank), [bank]);
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-500 rounded-lg bg-indigo-50 border border-indigo-100 px-3 py-2">
@@ -611,20 +609,25 @@ function PagoMovilTab({
         >
           Banco
         </label>
-        <input
+        <select
           id="pago-movil-bank"
-          type="text"
-          list="pago-movil-banks"
           value={bank}
           onChange={(e) => onBankChange(e.target.value)}
-          placeholder="Ej. Banesco"
           className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-        />
-        <datalist id="pago-movil-banks">
-          {PAGO_MOVIL_BANKS.map((bankName) => (
-            <option key={bankName} value={bankName} />
+        >
+          <option value="">Selecciona el banco</option>
+          {bankOptions.legacy && (
+            <option value={bankOptions.legacy}>{bankOptions.legacy} (fuera del catálogo)</option>
+          )}
+          {bankOptions.banks.map((bankItem) => (
+            <option key={bankItem.code} value={bankItem.name}>
+              {bankItem.name} · {bankItem.code}
+            </option>
           ))}
-        </datalist>
+        </select>
+        <p className="mt-1 text-xs text-gray-500">
+          El código es el que usa el cliente para hacer la transferencia.
+        </p>
       </div>
       <div>
         <label

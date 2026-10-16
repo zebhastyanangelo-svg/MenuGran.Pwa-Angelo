@@ -66,6 +66,46 @@ describe('PaymentReconciliationPanel', () => {
     expect(screen.getByText(/1[.\s]?500,00/)).toBeInTheDocument();
   });
 
+  it('muestra el banco con su código de institución', () => {
+    renderPanel(buildOrder());
+
+    expect(screen.getByText('(0134)')).toBeInTheDocument();
+  });
+
+  it('normaliza un banco guardado como texto libre', () => {
+    render(
+      <PaymentReconciliationPanel
+        order={buildOrder()}
+        pagoMovil={{ ...PAGO_MOVIL, bank: 'Provincial' }}
+        bcvRate={10}
+        canOperate
+        onOpenProof={vi.fn()}
+        onValidatePayment={vi.fn()}
+        onRequestReference={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('BBVA Provincial')).toBeInTheDocument();
+    expect(screen.queryByText('Provincial')).not.toBeInTheDocument();
+  });
+
+  it('omite el código cuando el banco no está en el catálogo', () => {
+    render(
+      <PaymentReconciliationPanel
+        order={buildOrder()}
+        pagoMovil={{ ...PAGO_MOVIL, bank: 'Banco Cooperativo Local' }}
+        bcvRate={10}
+        canOperate
+        onOpenProof={vi.fn()}
+        onValidatePayment={vi.fn()}
+        onRequestReference={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Banco Cooperativo Local')).toBeInTheDocument();
+    expect(screen.queryByText(/^\(\d{4}\)$/)).not.toBeInTheDocument();
+  });
+
   it('avisa cuando el comercio no configuró sus datos de Pago Móvil', () => {
     render(
       <PaymentReconciliationPanel

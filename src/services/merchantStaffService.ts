@@ -15,10 +15,7 @@ import {
   validateEmployeeInput,
   type EmployeeFormInput,
 } from '../utils/staffPermissions';
-import {
-  getAuthenticatedFunctionHeaders,
-  readFunctionError,
-} from './edgeFunctions';
+import { invokeAuthenticatedFunction } from './edgeFunctions';
 
 export interface MerchantContext {
   merchantId: string;
@@ -193,6 +190,11 @@ export async function listStaff(merchantId: string): Promise<StaffListItem[]> {
  * Crea la cuenta del empleado invocando el Edge Function `create-employee`,
  * que usa la service_role key en el servidor tras validar los permisos del
  * llamador. Devuelve el id del empleado creado.
+ *
+ * La invocación renueva la sesión y reintenta una sola vez si el servidor
+ * rechaza el token con 401; ese reintento vive en `invokeAuthenticatedFunction`
+ * para que el panel no se quede en "Sesión inválida o expirada" con un refresh
+ * token todavía válido.
  */
 export async function createEmployee(
   merchantId: string,
@@ -201,40 +203,31 @@ export async function createEmployee(
   const validationError = validateEmployeeInput(input);
   if (validationError !== null) throw new Error(validationError);
 
-  async function invokeWithAuth() {
-    const headers = await getAuthenticatedFunctionHeaders();
-    return supabase.functions.invoke<{ staffId?: string }>('create-employee', {
-      headers,
-      body: {
-        merchantId,
-        email: input.email.trim(),
-        password: input.password,
-        fullName: input.fullName.trim(),
-        role: input.role,
-        permissions:
-          input.role === 'driver'
-            ? DRIVER_PERMISSIONS
-            : toStaffPermissions(input.permissions),
-      },
-    });
-  }
+  const result = await invokeAuthenticatedFunction<{ staffId?: string }>(
+    'create-employee',
+    {
+      merchantId,
+      email: input.email.trim(),
+      password: input.password,
+      fullName: input.fullName.trim(),
+      role: input.role,
+      permissions:
+        input.role === 'driver'
+          ? DRIVER_PERMISSIONS
+          : toStaffPermissions(input.permissions),
+    },
+  );
 
-  let { data, error, response } = await invokeWithAuth();
-  if (error !== null && error.message?.includes('missing-session')) {
-    // Intentar refrescar la sesión y reintentar una vez
-    await supabase.auth.refreshSession();
-    ({ data, error, response } = await invokeWithAuth());
-  }
-  if (error !== null) {
-    const serverMessage = await readFunctionError(response);
+  if (!result.ok) {
     throw new Error(
-      serverMessage ?? `Error al crear el empleado: ${error.message}`,
+      result.serverMessage ?? `Error al crear el empleado: ${result.cause}`,
     );
   }
-  if (data === null || typeof data.staffId !== 'string') {
+  const staffId = result.data?.staffId;
+  if (typeof staffId !== 'string') {
     throw new Error('No se pudo registrar al empleado.');
   }
-  return data.staffId;
+  return staffId;
 }
 
 /** Revoca o restaura el acceso de un empleado sin eliminar su cuenta. */

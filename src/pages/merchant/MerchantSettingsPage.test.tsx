@@ -557,9 +557,53 @@ describe('MerchantSettingsPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Pago Móvil/i }));
 
-    expect(screen.getByDisplayValue('Banesco')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Banco/i)).toHaveValue('Banesco');
     expect(screen.getByDisplayValue('J-123456789')).toBeInTheDocument();
     expect(screen.getByDisplayValue('0412-1234567')).toBeInTheDocument();
+  });
+
+  it('ofrece un desplegable con el catálogo de bancos venezolanos', async () => {
+    await setMockState();
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Pago Móvil/i }));
+
+    const select = screen.getByLabelText(/^Banco/i) as HTMLSelectElement;
+    const values = Array.from(select.options, (option) => option.value);
+
+    expect(select.tagName).toBe('SELECT');
+    expect(values).toContain('');
+    expect(values).toContain('Banco de Venezuela');
+    expect(values).toContain('BBVA Provincial');
+    expect(values).toContain('Banco Nacional de Crédito');
+    expect(values).toContain('Fondo Común');
+    expect(values).toContain('Banplus');
+    expect(values).toContain('Sofitasa');
+  });
+
+  it('normaliza el banco escrito a mano antes del selector', async () => {
+    await setMockState({
+      merchant: { ...mockMerchant, pago_movil_bank: 'Provincial' },
+    });
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Pago Móvil/i }));
+
+    expect(screen.getByLabelText(/^Banco/i)).toHaveValue('BBVA Provincial');
+  });
+
+  it('conserva un banco fuera del catálogo como opción heredada', async () => {
+    await setMockState({
+      merchant: { ...mockMerchant, pago_movil_bank: 'Banco Cooperativo Local' },
+    });
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Pago Móvil/i }));
+
+    expect(screen.getByRole('option', { name: /Banco Cooperativo Local/i })).toBeInTheDocument();
   });
 
   it('guarda los datos de Pago Móvil junto con la configuración', async () => {

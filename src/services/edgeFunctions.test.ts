@@ -6,11 +6,15 @@ import {
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
+  refreshSession: vi.fn(),
 }));
 
 vi.mock('./supabase', () => ({
   supabase: {
-    auth: { getSession: mocks.getSession },
+    auth: {
+      getSession: mocks.getSession,
+      refreshSession: mocks.refreshSession,
+    },
   },
 }));
 
@@ -28,6 +32,7 @@ describe('edgeFunctions', () => {
     await expect(getAuthenticatedFunctionHeaders()).resolves.toEqual({
       Authorization: 'Bearer access-token',
     });
+    expect(mocks.refreshSession).not.toHaveBeenCalled();
   });
 
   it('falla de forma explícita cuando no hay token', async () => {
@@ -36,6 +41,44 @@ describe('edgeFunctions', () => {
     await expect(getAuthenticatedFunctionHeaders()).rejects.toThrow(
       'Tu sesión no está disponible. Inicia sesión nuevamente.',
     );
+  });
+
+  it('renueva el token que está por expirar antes de enviarlo', async () => {
+    mocks.getSession.mockResolvedValue({
+      data: {
+        session: {
+          access_token: 'stale-token',
+          expires_at: Math.floor(Date.now() / 1000) + 5,
+        },
+      },
+      error: null,
+    });
+    mocks.refreshSession.mockResolvedValue({
+      data: { session: { access_token: 'renewed-token' } },
+      error: null,
+    });
+
+    await expect(getAuthenticatedFunctionHeaders()).resolves.toEqual({
+      Authorization: 'Bearer renewed-token',
+    });
+    expect(mocks.refreshSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('conserva el token vigente si la renovación falla', async () => {
+    mocks.getSession.mockResolvedValue({
+      data: {
+        session: {
+          access_token: 'still-valid-token',
+          expires_at: Math.floor(Date.now() / 1000) + 5,
+        },
+      },
+      error: null,
+    });
+    mocks.refreshSession.mockResolvedValue({ data: { session: null }, error: {} });
+
+    await expect(getAuthenticatedFunctionHeaders()).resolves.toEqual({
+      Authorization: 'Bearer still-valid-token',
+    });
   });
 
   it('lee el mensaje JSON de una respuesta fallida', async () => {

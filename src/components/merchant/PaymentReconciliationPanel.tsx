@@ -3,6 +3,7 @@ import type { OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 import { formatPrice } from '../../types/cart';
 import { formatVes, getPaymentValidationState, toVes } from '../../utils/orderBoard';
 import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
+import { findVenezuelanBank, resolveVenezuelanBankName } from '../../utils/venezuelanBanks';
 
 /**
  * Conciliación de Pago Móvil.
@@ -27,14 +28,19 @@ interface BankFieldProps {
   label: string;
   value: string | null | undefined;
   fallback?: string;
+  /** Código de institución, cuando el dato corresponde a un banco del catálogo. */
+  code?: string;
 }
 
-function BankField({ label, value, fallback = 'No configurado' }: BankFieldProps) {
+function BankField({ label, value, fallback = 'No configurado', code }: BankFieldProps) {
   const resolved = value?.trim() || fallback;
   return (
     <div className="min-w-0">
       <dt className="text-xs font-medium text-slate-500">{label}</dt>
-      <dd className="truncate text-sm font-medium text-slate-900">{resolved}</dd>
+      <dd className="min-w-0 truncate text-sm font-medium text-slate-900">
+        {resolved}
+        {code && <span className="ml-1 font-normal text-slate-400">({code})</span>}
+      </dd>
     </div>
   );
 }
@@ -158,9 +164,15 @@ function BankDataGrid({
   order: OrderWithCustomer;
   pagoMovil: MerchantPagoMovilInfo | null;
 }) {
+  // El banco se muestra con su nombre canónico y el código de institución: es lo
+  // que el cajero contrasta contra el capture cuando el dato se guardó como
+  // texto libre ("Provincial", "BDV") antes de que existiera el selector.
+  const bank = resolveVenezuelanBankName(pagoMovil?.bank);
+  const bankCode = bank ? findVenezuelanBank(bank)?.code : undefined;
+
   return (
     <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-      <BankField label="Banco emisor" value={pagoMovil?.bank} />
+      <BankField label="Banco emisor" value={bank} code={bankCode} />
       <BankField label="Teléfono receptor" value={pagoMovil?.phone} />
       <BankField label="Cédula / RIF" value={pagoMovil?.idNumber} />
       <BankField label="Referencia" value={order.payment_reference} fallback="Sin referencia" />

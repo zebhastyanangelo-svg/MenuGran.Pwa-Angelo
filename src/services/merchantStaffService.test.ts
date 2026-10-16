@@ -15,11 +15,15 @@ const supabaseMocks = vi.hoisted(() => ({
   functionsInvoke: vi.fn(),
   from: vi.fn(),
   getSession: vi.fn(),
+  refreshSession: vi.fn(),
 }));
 
 vi.mock('./supabase', () => ({
   supabase: {
-    auth: { getSession: supabaseMocks.getSession },
+    auth: {
+      getSession: supabaseMocks.getSession,
+      refreshSession: supabaseMocks.refreshSession,
+    },
     functions: { invoke: supabaseMocks.functionsInvoke },
     from: supabaseMocks.from,
   },
@@ -212,6 +216,10 @@ describe('createEmployee', () => {
       data: { session: { access_token: 'access-token' } },
       error: null,
     });
+    supabaseMocks.refreshSession.mockResolvedValue({
+      data: { session: { access_token: 'refreshed-token' } },
+      error: null,
+    });
     supabaseMocks.functionsInvoke.mockResolvedValue({
       data: { staffId: 'staff-new' },
       error: null,
@@ -334,6 +342,83 @@ can_manage_orders: false,
     await expect(createEmployee('m-1', buildValidInput())).rejects.toThrow(
       'Error al crear el empleado: Edge Function returned a non-2xx status code',
     );
+  });
+
+  it('refresca la sesión y reintenta cuando la función responde 401', async () => {
+    // El token guardado ya expiró y el SDK no lo renovó a tiempo.
+    supabaseMocks.getSession
+      .mockResolvedValueOnce({
+        data: { session: { access_token: 'expired-token' } },
+        error: null,
+      })
+      .mockResolvedValue({
+        data: { session: { access_token: 'fresh-token' } },
+        error: null,
+      });
+    supabaseMocks.functionsInvoke
+      .mockResolvedValueOnce({
+        data: null,
+        error: new Error('Edge Function returned a non-2xx status code'),
+        response: {
+          status: 401,
+          json: vi.fn().mockResolvedValue({ error: 'Sesión inválida o expirada.' }),
+        },
+      })
+      .mockResolvedValueOnce({
+        data: { staffId: 'staff-retry' },
+        error: null,
+        response: { status: 200 },
+      });
+
+    await expect(createEmployee('m-1', buildValidInput())).resolves.toBe(
+      'staff-retry',
+    );
+
+    expect(supabaseMocks.refreshSession).toHaveBeenCalledTimes(1);
+    expect(supabaseMocks.functionsInvoke).toHaveBeenCalledTimes(2);
+    expect(supabaseMocks.functionsInvoke).toHaveBeenLastCalledWith(
+      'create-employee',
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer fresh-token' },
+      }),
+    );
+  });
+
+  it('propaga el 401 cuando el reintento con la sesión renovada también falla', async () => {
+    const unauthorized = {
+      status: 401,
+      json: vi.fn().mockResolvedValue({ error: 'Sesión inválida o expirada.' }),
+    };
+    supabaseMocks.functionsInvoke.mockResolvedValue({
+      data: null,
+      error: new Error('Edge Function returned a non-2xx status code'),
+      response: unauthorized,
+    });
+
+    await expect(createEmployee('m-1', buildValidInput())).rejects.toThrow(
+      'Sesión inválida o expirada.',
+    );
+    // Un solo reintento: no se insistirá en un bucle de refresh.
+    expect(supabaseMocks.functionsInvoke).toHaveBeenCalledTimes(2);
+  });
+
+  it('no reintenta cuando el fallo no es de autenticación', async () => {
+    supabaseMocks.functionsInvoke.mockResolvedValue({
+      data: null,
+      error: new Error('Edge Function returned a non-2xx status code'),
+      response: {
+        status: 403,
+        json: vi.fn().mockResolvedValue({
+          error: 'No tienes permisos para administrar este comercio.',
+        }),
+      },
+    });
+
+    await expect(createEmployee('m-1', buildValidInput())).rejects.toThrow(
+      'No tienes permisos para administrar este comercio.',
+    );
+    expect(supabaseMocks.refreshSession).not.toHaveBeenCalled();
+    expect(supabaseMocks.functionsInvoke).toHaveBeenCalledTimes(1);
   });
 });
 

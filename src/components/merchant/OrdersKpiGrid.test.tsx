@@ -35,10 +35,18 @@ describe('OrdersKpiGrid', () => {
 
     expect(screen.getByText('Pendientes de Pago')).toBeInTheDocument();
     expect(screen.getByText('En Cocina')).toBeInTheDocument();
-    expect(screen.getByText('Listos / Reparto')).toBeInTheDocument();
+    expect(screen.getByText('Listos / Entregados')).toBeInTheDocument();
     expect(screen.getByText('Ventas de Hoy')).toBeInTheDocument();
     expect(screen.getByText('$450.00')).toBeInTheDocument();
     expect(screen.getByText(/12[.\s]?000,00/)).toBeInTheDocument();
+  });
+
+  it('acomoda las cuatro tarjetas en una grilla horizontal responsiva', () => {
+    renderGrid();
+
+    const section = screen.getByRole('region', { name: 'Métricas del día' });
+
+    expect(section).toHaveClass('grid', 'grid-cols-2', 'lg:grid-cols-4');
   });
 
   it('desglosa los pedidos en marcha y en cola', () => {
