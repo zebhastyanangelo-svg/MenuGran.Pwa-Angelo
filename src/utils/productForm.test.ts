@@ -6,6 +6,19 @@ import {
   type ProductFormData,
   type CategoryFormData,
 } from './productForm';
+import {
+  MAX_INGREDIENT_LENGTH,
+  MAX_INGREDIENTS_PER_DISH,
+} from './ingredients';
+
+const baseProduct: ProductFormData = {
+  title: 'Pizza',
+  description: null,
+  price: '10.00',
+  category_id: 'cat-123',
+  is_available: true,
+  image_url: null,
+};
 
 describe('productForm utilities', () => {
   describe('validateProductForm', () => {
@@ -163,6 +176,47 @@ describe('productForm utilities', () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors.discount_percentage).toBe('El descuento debe ser un número entero.');
+    });
+
+    it('acepta platillos con y sin lista de ingredientes', () => {
+      const withIngredients = validateProductForm({
+        ...baseProduct,
+        ingredients: ['Queso', 'Cebolla'],
+      });
+      const withoutIngredients = validateProductForm({
+        ...baseProduct,
+        ingredients: [],
+      });
+      const undefinedIngredients = validateProductForm(baseProduct);
+
+      expect(withIngredients.isValid).toBe(true);
+      expect(withoutIngredients.isValid).toBe(true);
+      expect(undefinedIngredients.isValid).toBe(true);
+    });
+
+    it('debe fallar si hay más ingredientes que el máximo permitido', () => {
+      const result = validateProductForm({
+        ...baseProduct,
+        ingredients: Array.from(
+          { length: MAX_INGREDIENTS_PER_DISH + 1 },
+          (_, i) => `Ingrediente ${i}`,
+        ),
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors.ingredients).toContain(`más de ${MAX_INGREDIENTS_PER_DISH}`);
+    });
+
+    it('debe fallar si un ingrediente supera la longitud máxima', () => {
+      const result = validateProductForm({
+        ...baseProduct,
+        ingredients: ['Queso', 'a'.repeat(MAX_INGREDIENT_LENGTH + 1)],
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors.ingredients).toContain(
+        `hasta ${MAX_INGREDIENT_LENGTH} caracteres`,
+      );
     });
   });
 

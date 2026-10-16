@@ -103,6 +103,9 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
       badge_label: formData.badge_label ?? null,
       discount_percentage: formData.discount_percentage ?? null,
     };
+    // Lista vacía en vez de `null`: la columna es `NOT NULL DEFAULT '[]'` y el
+    // cliente solo ofrece la personalización cuando hay ingredientes.
+    const ingredientFields = { ingredients: formData.ingredients ?? [] };
 
     if (editingProduct) {
       // Actualización
@@ -116,6 +119,7 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
           is_available: formData.is_available,
           image_url: formData.image_url,
           ...promoFields,
+          ...ingredientFields,
         })
         .eq('id', editingProduct.id);
 
@@ -133,6 +137,7 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
           is_available: formData.is_available,
           image_url: formData.image_url,
           ...promoFields,
+          ...ingredientFields,
         });
 
       if (insertError) throw insertError;

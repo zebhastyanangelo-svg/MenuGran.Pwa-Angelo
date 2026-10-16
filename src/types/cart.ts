@@ -1,10 +1,16 @@
 import type { ProductRow } from './database';
 import { resolveUnitPrice } from '../utils/cartPricing';
+import { sanitizeIngredientList } from '../utils/ingredients';
 
 export interface CartItem {
   product: ProductRow;
   quantity: number;
   notes?: string;
+  /**
+   * Ingredientes del platillo que el cliente tachó en el checkout y que se
+   * enviarán como `excluded_ingredients` dentro de la orden.
+   */
+  excludedIngredients?: string[];
   /**
    * Descuento porcentual general del comercio vigente al agregar el plato.
    * Se guarda para poder recalcular precios de carritos persistidos.
@@ -36,6 +42,11 @@ export interface CartContextValue {
   ) => AddItemResult;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
+  /**
+   * Marca o desmarca un ingrediente como excluido del platillo. El ingrediente
+   * no se borra de la lista: queda tachado, estilo comanda de mesonero.
+   */
+  toggleExcludedIngredient: (productId: string, ingredient: string) => void;
   clearCart: () => void;
   totalItems: number;
   totalAmount: string;
@@ -52,12 +63,17 @@ const CART_STORAGE_KEY = 'menugram_cart';
  * si no, con el descuento del comercio almacenado en la propia línea.
  */
 function normalizeStoredCartItem(item: CartItem): CartItem {
+  const withExclusions = {
+    ...item,
+    // Los carritos guardados antes de la personalización no traen la lista.
+    excludedIngredients: sanitizeIngredientList(item.excludedIngredients),
+  };
   if (
-    typeof item.unitPrice === 'number' &&
-    Number.isFinite(item.unitPrice) &&
-    item.discountPercentage !== undefined
+    typeof withExclusions.unitPrice === 'number' &&
+    Number.isFinite(withExclusions.unitPrice) &&
+    withExclusions.discountPercentage !== undefined
   ) {
-    return item;
+    return withExclusions;
   }
   const resolved = resolveUnitPrice(
     item.product.price,
@@ -65,7 +81,7 @@ function normalizeStoredCartItem(item: CartItem): CartItem {
     item.merchantDiscountPercentage,
   );
   return {
-    ...item,
+    ...withExclusions,
     unitPrice: resolved.unitPrice,
     discountPercentage: resolved.discountPercentage,
   };

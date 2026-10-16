@@ -3,6 +3,7 @@ import type { AddItemResult, CartItem, CartContextValue } from '../types/cart';
 import type { ProductRow } from '../types/database';
 import { loadCartFromStorage, saveCartToStorage } from '../types/cart';
 import { resolveUnitPrice } from '../utils/cartPricing';
+import { toggleExcludedIngredient } from '../utils/ingredients';
 import { CartContext } from './cart-context';
 import posthog, { isPostHogEnabled } from '../posthog';
 
@@ -30,6 +31,7 @@ function buildCartItem(
     product,
     quantity,
     notes,
+    excludedIngredients: [],
     merchantDiscountPercentage: merchantDiscountPercentage ?? null,
     unitPrice,
     discountPercentage,
@@ -91,12 +93,17 @@ export function CartProvider({ children }: CartProviderProps) {
 
         if (existingIndex !== -1) {
           const updated = [...prev];
-          updated[existingIndex] = buildCartItem(
-            product,
-            updated[existingIndex].quantity + quantity,
-            notes ?? updated[existingIndex].notes,
-            merchantDiscountPercentage,
-          );
+          const existing = updated[existingIndex];
+          updated[existingIndex] = {
+            ...buildCartItem(
+              product,
+              existing.quantity + quantity,
+              notes ?? existing.notes,
+              merchantDiscountPercentage,
+            ),
+            // Volver a agregar el plato no borra la personalización ya elegida.
+            excludedIngredients: existing.excludedIngredients ?? [],
+          };
           return updated;
         }
 
@@ -137,12 +144,16 @@ export function CartProvider({ children }: CartProviderProps) {
 
         if (existingIndex !== -1) {
           const updated = [...prev];
-          updated[existingIndex] = buildCartItem(
-            product,
-            updated[existingIndex].quantity + quantity,
-            notes ?? updated[existingIndex].notes,
-            merchantDiscountPercentage,
-          );
+          const existing = updated[existingIndex];
+          updated[existingIndex] = {
+            ...buildCartItem(
+              product,
+              existing.quantity + quantity,
+              notes ?? existing.notes,
+              merchantDiscountPercentage,
+            ),
+            excludedIngredients: existing.excludedIngredients ?? [],
+          };
           return updated;
         }
 
@@ -177,6 +188,25 @@ export function CartProvider({ children }: CartProviderProps) {
     setItems([]);
   }, []);
 
+  const toggleIngredient = useCallback(
+    (productId: string, ingredient: string): void => {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.product.id === productId
+            ? {
+                ...item,
+                excludedIngredients: toggleExcludedIngredient(
+                  item.excludedIngredients ?? [],
+                  ingredient,
+                ),
+              }
+            : item,
+        ),
+      );
+    },
+    [],
+  );
+
   const value = useMemo<CartContextValue>(
     () => ({
       items,
@@ -184,6 +214,7 @@ export function CartProvider({ children }: CartProviderProps) {
       confirmAddItem,
       removeItem,
       updateQuantity,
+      toggleExcludedIngredient: toggleIngredient,
       clearCart,
       totalItems,
       totalAmount,
@@ -195,9 +226,10 @@ export function CartProvider({ children }: CartProviderProps) {
        items,
        addItem,
        confirmAddItem,
-       removeItem,
-       updateQuantity,
-       clearCart,
+        removeItem,
+        updateQuantity,
+        toggleIngredient,
+        clearCart,
        totalItems,
        totalAmount,
        canCheckout,

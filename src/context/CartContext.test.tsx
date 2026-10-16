@@ -343,4 +343,63 @@ describe('useCart', () => {
       expect(res!.action).toBe('cleared-then-added');
     });
   });
+
+  describe('toggleExcludedIngredient', () => {
+    it('marca y desmarca un ingrediente sin sacarlo de la lista', () => {
+      const { result } = renderHook(() => useCart(), { wrapper });
+
+      act(() => {
+        result.current.addItem(buildProduct('p1', 'm1', 'Pizza', '150.00'));
+      });
+
+      act(() => {
+        result.current.toggleExcludedIngredient('p1', 'Cebolla');
+      });
+
+      expect(result.current.items[0].excludedIngredients).toEqual(['Cebolla']);
+
+      act(() => {
+        result.current.toggleExcludedIngredient('p1', 'cebolla');
+      });
+
+      expect(result.current.items[0].excludedIngredients).toEqual([]);
+    });
+
+    it('no toca las líneas de otros platillos', () => {
+      const { result } = renderHook(() => useCart(), { wrapper });
+
+      act(() => {
+        result.current.addItem(buildProduct('p1', 'm1', 'Pizza', '150.00'));
+      });
+      act(() => {
+        result.current.addItem(buildProduct('p2', 'm1', 'Tacos', '100.00'));
+      });
+
+      act(() => {
+        result.current.toggleExcludedIngredient('p1', 'Queso');
+      });
+
+      expect(result.current.items[0].excludedIngredients).toEqual(['Queso']);
+      expect(result.current.items[1].excludedIngredients).toEqual([]);
+    });
+
+    it('conserva las exclusiones al volver a agregar el mismo platillo', () => {
+      const { result } = renderHook(() => useCart(), { wrapper });
+      const product = buildProduct('p1', 'm1', 'Pizza', '150.00');
+
+      act(() => {
+        result.current.addItem(product);
+      });
+      act(() => {
+        result.current.toggleExcludedIngredient('p1', 'Cebolla');
+      });
+
+      act(() => {
+        result.current.addItem(product);
+      });
+
+      expect(result.current.items[0].quantity).toBe(2);
+      expect(result.current.items[0].excludedIngredients).toEqual(['Cebolla']);
+    });
+  });
 });

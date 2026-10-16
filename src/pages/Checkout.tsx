@@ -5,6 +5,7 @@ import { PaymentProofUploader } from '../components/cart/PaymentProofUploader';
 import { OrderTicket } from '../components/cart/OrderTicket';
 import type { MerchantIssuerInfo } from '../components/cart/OrderTicket';
 import { IncompleteProfileOrderModal } from '../components/cart/IncompleteProfileOrderModal';
+import { IngredientPicker } from '../components/cart/IngredientPicker';
 import { LocationPicker } from '../components/map/LocationPicker';
 import { TermsAcceptanceCheckbox } from '../components/legal/TermsAcceptanceCheckbox';
 import { useCart } from '../hooks/useCart';
@@ -21,7 +22,7 @@ import {
   resolveDeliveryFee,
   type MerchantDeliveryPolicy,
 } from '../utils/deliveryPolicy';
-import { resolveCartItemPricing, summarizeCartPricing } from '../utils/cartPricing';
+import { summarizeCartPricing } from '../utils/cartPricing';
 import {
   isOrderTypeLockedByMode,
   readServiceMode,
@@ -36,6 +37,7 @@ import { isMerchantOpenNow } from '../utils/dateUtils';
 import { haversineDistance } from '../utils/distance';
 import { parseGeoPoint } from '../utils/geoPoint';
 import { getMissingProfileFields, isProfileIncomplete } from '../utils/profileUtils';
+import { buildOrderItems, itemsWithCustomizableIngredients } from '../utils/orderItems';
 import posthog, { isPostHogEnabled } from '../posthog';
 
 type CheckoutPaymentMethod = Extract<PaymentMethod, 'pago_movil' | 'card_pos' | 'cash'>;
@@ -124,6 +126,7 @@ export function Checkout() {
     canCheckout,
     clearCart,
     merchantId,
+    toggleExcludedIngredient,
   } = useCart();
   const { user, profile } = useAuth();
   const { showToast } = useToast();
@@ -330,11 +333,7 @@ export function Checkout() {
         paymentReference: paymentMethod === 'pago_movil' ? reference.trim() : '',
         totalAmount: orderTotal,
         deliveryFee,
-        items: items.map((item) => ({
-          product_id: item.product.id,
-          quantity: item.quantity,
-          unit_price: resolveCartItemPricing(item).unitPrice,
-        })),
+        items: buildOrderItems(items),
         deliveryLocation: orderType === 'delivery' ? deliveryLocation : null,
         deliveryAddress:
           orderType === 'delivery' && deliveryAddress.trim() !== ''
@@ -430,6 +429,17 @@ export function Checkout() {
       />
 
       <form className="space-y-4" onSubmit={handleSubmit} noValidate>
+        {itemsWithCustomizableIngredients(items).map((item) => (
+          <IngredientPicker
+            key={item.product.id}
+            productId={item.product.id}
+            productTitle={item.product.title}
+            ingredients={item.product.ingredients ?? []}
+            excludedIngredients={item.excludedIngredients ?? []}
+            onToggle={toggleExcludedIngredient}
+          />
+        ))}
+
         {!isDispatchLocked && (
           <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <legend className="flex items-center gap-1.5 px-1 text-sm font-semibold text-slate-700">

@@ -149,8 +149,105 @@ describe('DishFormModal', () => {
         image_url: null,
         badge_label: null,
         discount_percentage: null,
+        ingredients: [],
       });
     });
+  });
+
+  it('normaliza y guarda los ingredientes escritos por el comercio', async () => {
+    const handleSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <DishFormModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={handleSave}
+        categories={mockCategories}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/nombre del platillo/i), {
+      target: { value: 'Papas Fritas' },
+    });
+    fireEvent.change(screen.getByLabelText(/precio/i), {
+      target: { value: '4.00' },
+    });
+    fireEvent.change(screen.getByLabelText(/categoría/i), {
+      target: { value: 'cat-1' },
+    });
+
+    const ingredientInput = screen.getByLabelText(/añadir ingrediente/i);
+    fireEvent.change(ingredientInput, { target: { value: '  SALSA   DE   CEBOLLA ' } });
+    fireEvent.click(screen.getByRole('button', { name: /^agregar$/i }));
+    fireEvent.change(ingredientInput, { target: { value: 'Salsa de Cebolla' } });
+    fireEvent.click(screen.getByRole('button', { name: /^agregar$/i }));
+
+    expect(screen.getByTestId('dish-ingredient-list')).toHaveTextContent(
+      'Salsa de cebolla',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() => {
+      expect(handleSave).toHaveBeenCalledWith(
+        expect.objectContaining({ ingredients: ['Salsa de cebolla'] }),
+      );
+    });
+  });
+
+  it('permite quitar un ingrediente antes de guardar', async () => {
+    const handleSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <DishFormModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={handleSave}
+        categories={mockCategories}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/nombre del platillo/i), {
+      target: { value: 'Papas Fritas' },
+    });
+    fireEvent.change(screen.getByLabelText(/precio/i), {
+      target: { value: '4.00' },
+    });
+    fireEvent.change(screen.getByLabelText(/categoría/i), {
+      target: { value: 'cat-1' },
+    });
+
+    fireEvent.change(screen.getByLabelText(/añadir ingrediente/i), {
+      target: { value: 'Cebolla' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^agregar$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /quitar cebolla/i }));
+
+    expect(screen.queryByTestId('dish-ingredient-list')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() => {
+      expect(handleSave).toHaveBeenCalledWith(
+        expect.objectContaining({ ingredients: [] }),
+      );
+    });
+  });
+
+  it('muestra los ingredientes guardados al editar un platillo', () => {
+    render(
+      <DishFormModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        categories={mockCategories}
+        initialData={{
+          ...mockProducts[0],
+          ingredients: ['Queso', 'Cebolla'],
+        }}
+      />
+    );
+
+    expect(screen.getByTestId('dish-ingredient-list')).toHaveTextContent('Queso');
+    expect(screen.getByTestId('dish-ingredient-list')).toHaveTextContent('Cebolla');
   });
 
   it('persiste la etiqueta y el descuento configurados por el comercio', async () => {

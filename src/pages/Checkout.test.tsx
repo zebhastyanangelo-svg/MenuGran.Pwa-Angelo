@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useMerchantPagoMovil } from '../hooks/useMerchantPagoMovil';
 
 const mockShowToast = vi.fn();
+const mockToggleExcludedIngredient = vi.fn();
 
 vi.mock('../hooks/useCart', () => ({
   useCart: vi.fn(),
@@ -102,7 +103,29 @@ const validCart = {
   removeItem: vi.fn(),
   addItem: vi.fn(),
   confirmAddItem: vi.fn(),
+  toggleExcludedIngredient: mockToggleExcludedIngredient,
 };
+
+/** Carrito con un platillo que sí ofrece personalización de ingredientes. */
+function cartWithIngredients() {
+  return {
+    ...validCart,
+    items: [
+      {
+        product: {
+          id: 'p-1',
+          price: '100.00',
+          title: 'Pizza',
+          ingredients: ['Queso', 'Cebolla', 'Jamón'],
+        },
+        quantity: 2,
+        unitPrice: 100,
+        discountPercentage: null,
+        excludedIngredients: ['Cebolla'],
+      } as any,
+    ],
+  };
+}
 
 const validPagoMovil = {
   bank: 'Banesco',
@@ -144,6 +167,7 @@ describe('Checkout', () => {
     mockShowToast.mockClear();
     mockCreateOrder.mockClear().mockResolvedValue('order-abc-123');
     mockUploadPaymentProofTemp.mockClear().mockResolvedValue('tmp/abc123.jpg');
+    mockToggleExcludedIngredient.mockClear();
     vi.mocked(useCart).mockReturnValue(validCart);
     vi.mocked(useAuth).mockReturnValue({
       user: { id: 'user-123' } as any,
@@ -600,6 +624,85 @@ describe('Checkout', () => {
     });
     expect(mockCreateOrder).not.toHaveBeenCalled();
   }, 15000);
+
+  it('no ofrece tachado de ingredientes si el platillo no los tiene', () => {
+    renderCheckout();
+
+    expect(screen.queryByText(/Personaliza/i)).not.toBeInTheDocument();
+  });
+
+  it('lista los ingredientes del platillo y tacha los que el cliente excluye', async () => {
+    vi.mocked(useCart).mockReturnValue(cartWithIngredients());
+    renderCheckout();
+
+    const picker = screen.getByTestId('ingredient-picker-p-1');
+    expect(picker).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Queso' })).toBeInTheDocument();
+
+    // "Cebolla" viene excluida en el carrito: se muestra tachada.
+    const cebolla = screen.getByRole('button', { name: 'Cebolla' });
+    expect(cebolla).toHaveAttribute('aria-pressed', 'true');
+    expect(cebolla.className).toContain('line-through');
+    expect(screen.getByText('Sin: Cebolla')).toBeInTheDocument();
+
+    // Tocar un ingrediente included lo delega al carrito, no lo borra de la vista.
+    const queso = screen.getByRole('button', { name: 'Queso' });
+    expect(queso).toHaveAttribute('aria-pressed', 'false');
+    await user.click(queso);
+    expect(mockToggleExcludedIngredient).toHaveBeenCalledWith('p-1', 'Queso');
+  }, 10000);
+
+  it('envía los ingredientes excluidos dentro del payload de la orden', async () => {
+    vi.mocked(useCart).mockReturnValue(cartWithIngredients());
+    renderCheckout();
+
+    await user.click(screen.getByRole('button', { name: /Retiro en local/i }));
+    await user.click(screen.getByRole('button', { name: /Efectivo/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar pedido/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockCreateOrder).toHaveBeenCalled();
+    }, { timeout: 5000 });
+
+    expect(mockCreateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          {
+            product_id: 'p-1',
+            quantity: 2,
+            unit_price: 100,
+            title: 'Pizza',
+            excluded_ingredients: ['Cebolla'],
+          },
+        ],
+      }),
+    );
+  }, 10000);
+
+  it('omite excluded_ingredients cuando el cliente no tachó nada', async () => {
+    vi.mocked(useCart).mockReturnValue({
+      ...cartWithIngredients(),
+      items: [{ ...cartWithIngredients().items[0], excludedIngredients: [] }],
+    });
+    renderCheckout();
+
+    await user.click(screen.getByRole('button', { name: /Retiro en local/i }));
+    await user.click(screen.getByRole('button', { name: /Efectivo/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar pedido/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockCreateOrder).toHaveBeenCalled();
+    }, { timeout: 5000 });
+
+    const [params] = mockCreateOrder.mock.calls[0];
+    expect(params.items[0]).not.toHaveProperty('excluded_ingredients');
+  }, 10000);
 
   afterEach(() => {
     vi.useRealTimers();

@@ -3,6 +3,10 @@ import {
   MAX_DISCOUNT_PERCENTAGE,
   MIN_DISCOUNT_PERCENTAGE,
 } from './promos';
+import {
+  MAX_INGREDIENT_LENGTH,
+  MAX_INGREDIENTS_PER_DISH,
+} from './ingredients';
 
 export interface ProductFormData {
   title: string;
@@ -15,6 +19,11 @@ export interface ProductFormData {
   badge_label?: string | null;
   /** Descuento porcentual (1-100). `null` si no tiene. */
   discount_percentage?: number | null;
+  /**
+   * Ingredientes del plato ya normalizados. Vacío si el comercio no configuró
+   * ninguno; el cliente puede tachar algunos de ellos en el checkout.
+   */
+  ingredients?: readonly string[];
 }
 
 export interface CategoryFormData {
@@ -44,6 +53,27 @@ export function parsePrice(input: string | number): string | null {
 }
 
 /**
+ * Valida la lista de ingredientes del platillo. Se comprueban los límites que
+ * la UI y la base de datos necesitan: elCommerce ya normaliza y deduplica los
+ * textos antes de llegar aquí, así que no hay que revalidar eso.
+ */
+function validateIngredients(
+  ingredients: readonly string[] | undefined,
+): string | null {
+  if (!ingredients) return null;
+  if (ingredients.length > MAX_INGREDIENTS_PER_DISH) {
+    return `No puedes agregar más de ${MAX_INGREDIENTS_PER_DISH} ingredientes.`;
+  }
+  const tooLong = ingredients.some(
+    (ingredient) => ingredient.trim().length > MAX_INGREDIENT_LENGTH,
+  );
+  if (tooLong) {
+    return `Cada ingrediente puede tener hasta ${MAX_INGREDIENT_LENGTH} caracteres.`;
+  }
+  return null;
+}
+
+/**
  * Valida los datos del formulario de creación/edición de producto.
  */
 export function validateProductForm(data: ProductFormData): ValidationResult {
@@ -69,6 +99,11 @@ export function validateProductForm(data: ProductFormData): ValidationResult {
     if (trimmedBadge.length > MAX_BADGE_LABEL_LENGTH) {
       errors.badge_label = `La etiqueta no puede superar ${MAX_BADGE_LABEL_LENGTH} caracteres.`;
     }
+  }
+
+  const ingredientsError = validateIngredients(data.ingredients);
+  if (ingredientsError) {
+    errors.ingredients = ingredientsError;
   }
 
   if (

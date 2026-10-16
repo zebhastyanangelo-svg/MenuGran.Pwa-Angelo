@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useBCVRate } from '../../hooks/useExchangeRate';
 import { PAYMENT_PROOF_BUCKET } from '../../hooks/useMerchantDashboard';
 import { supabase } from '../../services/supabase';
-import type { OrderStatus } from '../../types/database';
+import type { OrderItem, OrderStatus } from '../../types/database';
 import type { DriverProfile, OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 import { formatPrice } from '../../types/cart';
 import { OrderStatusBadge } from './OrderStatusBadge';
@@ -104,6 +104,67 @@ function PickupReadyNotice() {
       <i className="fa-solid fa-store" aria-hidden="true" />
       Listo para retirar. El cliente confirma la entrega desde su app.
     </span>
+  );
+}
+
+/**
+ * Nombre del platillo en la comanda. Los pedidos anteriores al snapshot no
+ * traen `title`, así que se cae al identificador para no mostrar una línea
+ * vacía en el ticket.
+ */
+function getOrderItemLabel(item: OrderItem): string {
+  const title = item.title?.trim();
+  return title && title.length > 0 ? title : `Producto #${item.product_id.slice(0, 8)}`;
+}
+
+function hasCustomizedItems(order: OrderWithCustomer): boolean {
+  return order.items.some((item) => (item.excluded_ingredients?.length ?? 0) > 0);
+}
+
+/** Chip que avisa de que el cliente personalizó el pedido antes de pagar. */
+function CustomizedOrderBadge() {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800"
+      data-testid="customized-order-badge"
+    >
+      <i className="fa-solid fa-slash text-[10px]" aria-hidden="true" />
+      Personalizado
+    </span>
+  );
+}
+
+/**
+ * Comanda del pedido con las exclusiones del cliente. Los ingredientes
+ * tachados se repiten tachados para que la cocina los lea de un vistazo, sin
+ * tener que comparar con la carta.
+ */
+function OrderItemsList({ order }: { order: OrderWithCustomer }) {
+  if (order.items.length === 0) return null;
+  return (
+    <ul className="space-y-2" data-testid="order-items-list">
+      {order.items.map((item, index) => {
+        const excluded = item.excluded_ingredients ?? [];
+        return (
+          <li
+            key={`${item.product_id}-${index}`}
+            className="rounded-lg border border-gray-200 bg-gray-50 p-2"
+          >
+            <p className="text-sm font-medium text-gray-900">
+              {item.quantity} × {getOrderItemLabel(item)}
+            </p>
+            {excluded.length > 0 && (
+              <p className="mt-1 flex items-start gap-1.5 text-sm font-semibold text-red-700">
+                <i className="fa-solid fa-circle-minus mt-0.5 text-xs" aria-hidden="true" />
+                <span>
+                  Sin: <span className="line-through">{excluded.join(', ')}</span>
+                </span>
+              </p>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -310,7 +371,10 @@ export function OrdersBoard({
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <OrderStatusBadge status={order.status} />
+                        <div className="flex flex-col items-start gap-1">
+                          <OrderStatusBadge status={order.status} />
+                          {hasCustomizedItems(order) && <CustomizedOrderBadge />}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <span className="font-medium">
@@ -458,6 +522,11 @@ export function OrdersBoard({
                       )}
                       <span className="font-mono text-gray-700">Código: {order.id.slice(0, 4).toUpperCase()}</span>
                     </div>
+                    {hasCustomizedItems(order) && (
+                      <div className="mt-1.5">
+                        <CustomizedOrderBadge />
+                      </div>
+                    )}
                     {requiresPaymentProof(order.payment_method) && (order.payment_proof_url ? (
                       <button
                         type="button"
@@ -577,6 +646,12 @@ export function OrdersBoard({
       >
         {selectedOrder && (
           <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-500">Platillos del pedido</p>
+              <div className="mt-1">
+                <OrderItemsList order={selectedOrder} />
+              </div>
+            </div>
             <div className="grid min-w-0 gap-4 sm:grid-cols-2">
               <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-500">ID</p>

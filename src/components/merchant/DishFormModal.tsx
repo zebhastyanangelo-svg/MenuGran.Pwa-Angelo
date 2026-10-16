@@ -7,6 +7,12 @@ import {
 import type { CategoryRow, ProductRow } from '../../types/database';
 import { validateProductForm, type ProductFormData } from '../../utils/productForm';
 import {
+  MAX_INGREDIENTS_PER_DISH,
+  addIngredient,
+  removeIngredient,
+  sanitizeIngredientList,
+} from '../../utils/ingredients';
+import {
   BADGE_LABEL_SUGGESTIONS,
   MAX_DISCOUNT_PERCENTAGE,
   MIN_DISCOUNT_PERCENTAGE,
@@ -49,6 +55,8 @@ export function DishFormModal({
 }: DishFormModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [ingredients, setIngredients] = useState<string[]>([]);
+  const [ingredientInput, setIngredientInput] = useState('');
   const [price, setPrice] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [isAvailable, setIsAvailable] = useState(true);
@@ -71,6 +79,8 @@ export function DishFormModal({
     if (initialData) {
       setTitle(initialData.title || '');
       setDescription(initialData.description || '');
+      setIngredients(sanitizeIngredientList(initialData.ingredients));
+      setIngredientInput('');
       setPrice(initialData.price ? String(initialData.price) : '');
       setCategoryId(initialData.category_id || '');
       setIsAvailable(initialData.is_available ?? true);
@@ -88,6 +98,8 @@ export function DishFormModal({
     } else {
       setTitle('');
       setDescription('');
+      setIngredients([]);
+      setIngredientInput('');
       setPrice('');
       setCategoryId(categories.length > 0 ? categories[0].id : '');
       setIsAvailable(true);
@@ -126,6 +138,20 @@ export function DishFormModal({
   const handleRemoveImage = () =>
     setImage({ url: null, uploading: false, error: null });
 
+  /**
+   * El texto se normaliza dentro de `addIngredient`, así que el comercio puede
+   * escribir "TOMATE" o "tomate " y siempre se guarda como "Tomate".
+   */
+  const handleAddIngredient = () => {
+    if (!ingredientInput.trim()) return;
+    setIngredients((prev) => addIngredient(prev, ingredientInput));
+    setIngredientInput('');
+  };
+
+  const handleRemoveIngredient = (ingredient: string) => {
+    setIngredients((prev) => removeIngredient(prev, ingredient));
+  };
+
   const handleCreateCategory = async () => {
     if (!newCatName.trim() || !onAddCategory) return;
     setAddingCat(true);
@@ -153,6 +179,7 @@ export function DishFormModal({
       image_url: image.url,
       badge_label: parseBadgeLabel(badgeLabel),
       discount_percentage: parseDiscountPercentage(discountPercentage),
+      ingredients,
     };
 
     const validation = validateProductForm(formData);
@@ -174,6 +201,7 @@ export function DishFormModal({
           has_image: image.url !== null,
           has_badge: formData.badge_label !== null,
           has_discount: formData.discount_percentage !== null,
+          ingredient_count: ingredients.length,
         });
       }
       onClose();
@@ -190,6 +218,7 @@ export function DishFormModal({
   };
 
   const discountPreview = formatDiscountBadge(discountPercentage);
+  const isIngredientsFull = ingredients.length >= MAX_INGREDIENTS_PER_DISH;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 overflow-y-auto">
@@ -255,10 +284,79 @@ export function DishFormModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              placeholder="Ingredientes, acompañantes o notas del plato..."
+              placeholder="Notas del plato, acompañantes o detalles de la preparación..."
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             />
           </div>
+
+          {/* Ingredientes: el cliente puede tachar los que no quiera en el checkout */}
+          <fieldset className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
+            <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-indigo-900">
+              Ingredientes (opcional)
+            </legend>
+
+            <label htmlFor="dish-ingredient-input" className="sr-only">
+              Añadir ingrediente
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="dish-ingredient-input"
+                type="text"
+                value={ingredientInput}
+                onChange={(e) => setIngredientInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddIngredient();
+                  }
+                }}
+                placeholder="Ej. Cebolla"
+                className={`w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                  errors.ingredients ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={handleAddIngredient}
+                disabled={isIngredientsFull || !ingredientInput.trim()}
+                className="shrink-0 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                Agregar
+              </button>
+            </div>
+
+            {ingredients.length > 0 && (
+              <ul
+                className="mt-3 flex flex-wrap gap-2"
+                data-testid="dish-ingredient-list"
+              >
+                {ingredients.map((ingredient) => (
+                  <li key={ingredient}>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-xs font-medium text-indigo-900">
+                      {ingredient}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveIngredient(ingredient)}
+                        aria-label={`Quitar ${ingredient}`}
+                        className="text-indigo-400 hover:text-red-600"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <p className="mt-2 text-xs text-gray-500">
+              {isIngredientsFull
+                ? `Máximo ${MAX_INGREDIENTS_PER_DISH} ingredientes por platillo.`
+                : 'El cliente podrá tachar los que no quiera en su pedido. Cada uno se guarda con mayúscula inicial.'}
+            </p>
+            {errors.ingredients && (
+              <p className="mt-1 text-xs text-red-600">{errors.ingredients}</p>
+            )}
+          </fieldset>
 
           {/* Precio y Categoría */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

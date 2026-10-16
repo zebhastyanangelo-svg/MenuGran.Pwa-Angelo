@@ -129,6 +129,12 @@ CREATE TABLE public.products (
     badge_label TEXT,
     discount_percentage SMALLINT
         CHECK (discount_percentage IS NULL OR discount_percentage BETWEEN 1 AND 100),
+    -- Ingredientes del plato como lista JSONB de strings (ej. ["Queso",
+    -- "Cebolla"]). El cliente puede excluirlos en el checkout; la exclusion
+    -- viaja en `orders.items[].excluded_ingredients` (migration
+    -- 20261016120000_product_ingredients.sql).
+    ingredients JSONB NOT NULL DEFAULT '[]'::jsonb
+        CHECK (jsonb_typeof(ingredients) = 'array'),
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 

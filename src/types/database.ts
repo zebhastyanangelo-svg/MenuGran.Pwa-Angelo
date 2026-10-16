@@ -154,6 +154,17 @@ export interface OrderItem {
   quantity: number;
   unit_price: number;
   notes?: string;
+  /**
+   * Snapshot del nombre del platillo al momento de pedir. Se guarda para que
+   * el panel del comercio pueda mostrar la comanda aunque el plato se edite o
+   * se elimine después. Ausente en pedidos históricos.
+   */
+  title?: string;
+  /**
+   * Ingredientes que el cliente tachó en el checkout y que la cocina debe
+   * excluir (ej. `['Cebolla']`). Solo viene cuando el pedido fue personalizado.
+   */
+  excluded_ingredients?: readonly string[];
 }
 
 export type MerchantVerificationDocs = Readonly<Record<string, unknown>>;
@@ -269,6 +280,12 @@ export interface ProductRow {
   badge_label?: string | null;
   /** Descuento del plato en porcentaje (1-100). */
   discount_percentage?: number | null;
+  /**
+   * Ingredientes del plato como lista ordenada. El cliente puede tachar algunos
+   * en el checkout para excluirlos del pedido. Vacío o `null` si el comercio no
+   * configuró ingredientes.
+   */
+  ingredients?: readonly string[] | null;
 }
 
 export interface OrderRow {
@@ -378,7 +395,15 @@ export type ProductInsert = Pick<
   'merchant_id' | 'category_id' | 'title' | 'price'
 > &
   Partial<
-    Pick<ProductRow, 'description' | 'image_url' | 'is_available' | 'badge_label' | 'discount_percentage'>
+    Pick<
+      ProductRow,
+      | 'description'
+      | 'image_url'
+      | 'is_available'
+      | 'badge_label'
+      | 'discount_percentage'
+      | 'ingredients'
+    >
   >;
 
 export type OrderInsert = Pick<

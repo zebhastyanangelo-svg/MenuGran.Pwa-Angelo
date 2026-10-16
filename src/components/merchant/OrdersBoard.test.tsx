@@ -203,6 +203,68 @@ describe('OrdersBoard', () => {
     expect(screen.getByText('+584121234567')).toBeInTheDocument();
   });
 
+  it('muestra la comanda con los ingredientes excluidos por el cliente', async () => {
+    renderBoard([
+      buildOrder({
+        status: 'confirmed',
+        items: [
+          { product_id: 'p-1', quantity: 2, unit_price: 25, title: 'Pizza Pepperoni' },
+          {
+            product_id: 'p-2',
+            quantity: 1,
+            unit_price: 5,
+            title: 'Refresco',
+            excluded_ingredients: ['Cebolla', 'Jamón'],
+          },
+        ],
+      }),
+    ]);
+
+    const detailButton = screen.getAllByRole('button', { name: /Ver detalles/i })[0];
+    await userEvent.click(detailButton);
+
+    expect(await screen.findByTestId('order-items-list')).toBeInTheDocument();
+    expect(screen.getByText('2 × Pizza Pepperoni')).toBeInTheDocument();
+    expect(screen.getByText(/^Sin:/)).toHaveTextContent('Sin: Cebolla, Jamón');
+    expect(screen.getByText('Cebolla, Jamón')).toHaveClass('line-through');
+  });
+
+  it('marca como personalizado el pedido con ingredientes tachados', () => {
+    renderBoard([
+      buildOrder({
+        id: 'order-custom',
+        items: [
+          {
+            product_id: 'p-1',
+            quantity: 1,
+            unit_price: 25,
+            title: 'Pizza',
+            excluded_ingredients: ['Cebolla'],
+          },
+        ],
+      }),
+      buildOrder({ id: 'order-plain' }),
+    ]);
+
+    const badges = screen.getAllByTestId('customized-order-badge');
+    expect(badges.length).toBeGreaterThan(0);
+    expect(badges[0]).toHaveTextContent('Personalizado');
+  });
+
+  it('cae al identificador del producto cuando el pedido no tiene snapshot del nombre', async () => {
+    renderBoard([
+      buildOrder({
+        status: 'confirmed',
+        items: [{ product_id: 'abcdefgh1234', quantity: 1, unit_price: 10 }],
+      }),
+    ]);
+
+    const detailButton = screen.getAllByRole('button', { name: /Ver detalles/i })[0];
+    await userEvent.click(detailButton);
+
+    expect(await screen.findByText('1 × Producto #abcdefgh')).toBeInTheDocument();
+  });
+
   it('muestra la imagen del comprobante en el detalle usando una URL firmada', async () => {
     createSignedUrlMock.mockResolvedValue({
       data: { signedUrl: 'https://example.com/signed-proof.jpg' },
