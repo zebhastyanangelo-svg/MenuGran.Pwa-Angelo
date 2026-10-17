@@ -225,23 +225,37 @@ describe('MerchantDashboard (datos de pago del comercio)', () => {
     });
   });
 
-  it('resuelve la cuenta receptora del comercio en cada tarjeta de pedido', () => {
-    // Regresión: la página no leía `useMerchantPagoMovil`, así que la
-    // conciliación pintaba "No configurado" aun con los datos ya guardados.
+  it('confronta en cada tarjeta el pago declarado por el cliente', () => {
+    // Regresión: si el tablero no pide `payer_bank`, `payer_phone` y
+    // `payer_id_number` a PostgREST, la conciliación los pinta como "No indicado"
+    // aunque el cliente los haya ingresado en el checkout.
     useMerchantPagoMovilMock.mockReturnValue({
       pagoMovil: { bank: 'Banco de Venezuela', idNumber: '32663111', phone: '1274555' },
       isLoading: false,
       error: null,
     });
+    useMerchantDashboardMock.mockReturnValue({
+      merchantIds: ['m-1'],
+      orders: [
+        buildOrder({
+          payer_bank: 'Mercantil',
+          payer_phone: '0414-9876543',
+          payer_id_number: 'V87654321',
+        }),
+      ],
+      drivers: [],
+      loading: false,
+      error: null,
+      updateOrderStatus: vi.fn<(id: string, status: OrderStatus) => void>(),
+      assignDriver: vi.fn(),
+    });
 
     render(<MerchantDashboard />);
 
-    expect(useMerchantPagoMovilMock).toHaveBeenCalledWith('m-1');
-    expect(screen.getByText('Banco receptor')).toBeInTheDocument();
-    expect(screen.getByText('Banco de Venezuela')).toBeInTheDocument();
-    expect(screen.getByText('1274555')).toBeInTheDocument();
-    expect(screen.getByText('32663111')).toBeInTheDocument();
-    expect(screen.queryByText('No configurado')).not.toBeInTheDocument();
+    expect(screen.getByText('Mercantil')).toBeInTheDocument();
+    expect(screen.getByText('0414-9876543')).toBeInTheDocument();
+    expect(screen.getByText('V87654321')).toBeInTheDocument();
+    expect(screen.queryByText('No indicado')).not.toBeInTheDocument();
   });
 
   it('avisa que falta la referencia bancaria y ofrece pedirla por WhatsApp', async () => {
@@ -280,16 +294,25 @@ describe('MerchantDashboard (datos de pago del comercio)', () => {
     openSpy.mockRestore();
   });
 
-  it('avisa cuando el comercio todavía no configuró su Pago Móvil', () => {
+  it('avisa cuando el cliente no declaró los datos del pago', () => {
     useMerchantPagoMovilMock.mockReturnValue({
       pagoMovil: null,
       isLoading: false,
       error: null,
     });
+    useMerchantDashboardMock.mockReturnValue({
+      merchantIds: ['m-1'],
+      orders: [buildOrder({ payer_bank: null, payer_phone: null, payer_id_number: null })],
+      drivers: [],
+      loading: false,
+      error: null,
+      updateOrderStatus: vi.fn<(id: string, status: OrderStatus) => void>(),
+      assignDriver: vi.fn(),
+    });
 
     render(<MerchantDashboard />);
 
-    expect(screen.getAllByText('No configurado').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('No indicado').length).toBeGreaterThan(0);
   });
 });
 

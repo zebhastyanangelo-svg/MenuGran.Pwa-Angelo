@@ -24,6 +24,12 @@ function buildOrder(overrides: Partial<OrderWithCustomer> = {}): OrderWithCustom
     payment_reference: 'REF-9999',
     payment_proof_url: 'proofs/order-1.jpg',
     total_amount: '150.00',
+    // Datos que el cliente declaró en el checkout. Deliberadamente distintos
+    // de `PAGO_MOVIL` (la cuenta del comercio) para que las pruebas demuestren
+    // que la conciliación lee el pago reportado por el cliente.
+    payer_bank: 'Mercantil',
+    payer_phone: '0414-9876543',
+    payer_id_number: 'V87654321',
     table_number: null,
     delivery_location: null,
     delivery_address_notes: null,
@@ -55,71 +61,71 @@ function renderPanel(order: OrderWithCustomer, canOperate = true) {
 }
 
 describe('PaymentReconciliationPanel', () => {
-  it('muestra los datos bancarios del comercio y el monto en ambas monedas', () => {
+  it('muestra el pago reportado por el cliente y el monto en ambas monedas', () => {
     renderPanel(buildOrder());
 
-    expect(screen.getByText('Banesco')).toBeInTheDocument();
-    expect(screen.getByText('0412-1234567')).toBeInTheDocument();
-    expect(screen.getByText('J-123456789')).toBeInTheDocument();
+    expect(screen.getByText('Mercantil')).toBeInTheDocument();
+    expect(screen.getByText('0414-9876543')).toBeInTheDocument();
+    expect(screen.getByText('V87654321')).toBeInTheDocument();
     expect(screen.getByText('REF-9999')).toBeInTheDocument();
     expect(screen.getByText('$150.00')).toBeInTheDocument();
     expect(screen.getByText(/1[.\s]?500,00/)).toBeInTheDocument();
   });
 
+  it('etiqueta los cuatro campos de la conciliación con Banco, Teléfono, Cédula / RIF y Referencia', () => {
+    renderPanel(buildOrder());
+
+    expect(screen.getByText('Banco')).toBeInTheDocument();
+    expect(screen.getByText('Teléfono')).toBeInTheDocument();
+    expect(screen.getByText('Cédula / RIF')).toBeInTheDocument();
+    expect(screen.getByText('Referencia')).toBeInTheDocument();
+  });
+
+  it('elimina la sección redundante de datos de quien paga', () => {
+    renderPanel(buildOrder());
+
+    expect(screen.queryByText('Datos de quien paga')).not.toBeInTheDocument();
+  });
+
+  it('confronta el pago del cliente y no la cuenta receptora del comercio', () => {
+    renderPanel(buildOrder());
+
+    // `PAGO_MOVIL` describe la cuenta del comercio: el panel ya no la muestra,
+    // porque la conciliación parte de lo que declaró el cliente.
+    expect(screen.queryByText('Banesco')).not.toBeInTheDocument();
+    expect(screen.queryByText('0412-1234567')).not.toBeInTheDocument();
+    expect(screen.queryByText('J-123456789')).not.toBeInTheDocument();
+    expect(screen.queryByText('Banco receptor')).not.toBeInTheDocument();
+    expect(screen.queryByText('Teléfono receptor')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cédula / RIF del comercio')).not.toBeInTheDocument();
+  });
+
   it('muestra el banco con su código de institución', () => {
     renderPanel(buildOrder());
 
-    expect(screen.getByText('(0134)')).toBeInTheDocument();
+    expect(screen.getByText('(0105)')).toBeInTheDocument();
   });
 
   it('normaliza un banco guardado como texto libre', () => {
-    render(
-      <PaymentReconciliationPanel
-        order={buildOrder()}
-        pagoMovil={{ ...PAGO_MOVIL, bank: 'Provincial' }}
-        bcvRate={10}
-        canOperate
-        onOpenProof={vi.fn()}
-        onValidatePayment={vi.fn()}
-        onRequestReference={vi.fn()}
-      />,
-    );
+    renderPanel(buildOrder({ payer_bank: 'Provincial' }));
 
     expect(screen.getByText('BBVA Provincial')).toBeInTheDocument();
     expect(screen.queryByText('Provincial')).not.toBeInTheDocument();
   });
 
   it('omite el código cuando el banco no está en el catálogo', () => {
-    render(
-      <PaymentReconciliationPanel
-        order={buildOrder()}
-        pagoMovil={{ ...PAGO_MOVIL, bank: 'Banco Cooperativo Local' }}
-        bcvRate={10}
-        canOperate
-        onOpenProof={vi.fn()}
-        onValidatePayment={vi.fn()}
-        onRequestReference={vi.fn()}
-      />,
-    );
+    renderPanel(buildOrder({ payer_bank: 'Banco Cooperativo Local' }));
 
     expect(screen.getByText('Banco Cooperativo Local')).toBeInTheDocument();
     expect(screen.queryByText(/^\(\d{4}\)$/)).not.toBeInTheDocument();
   });
 
-  it('avisa cuando el comercio no configuró sus datos de Pago Móvil', () => {
-    render(
-      <PaymentReconciliationPanel
-        order={buildOrder()}
-        pagoMovil={null}
-        bcvRate={10}
-        canOperate
-        onOpenProof={vi.fn()}
-        onValidatePayment={vi.fn()}
-        onRequestReference={vi.fn()}
-      />,
+  it('avisa que el cliente no declaró los datos del pago', () => {
+    renderPanel(
+      buildOrder({ payer_bank: null, payer_phone: null, payer_id_number: null }),
     );
 
-    expect(screen.getAllByText('No configurado').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('No indicado')).toHaveLength(3);
   });
 
   it('abre el comprobante al tocar la miniatura', async () => {
@@ -141,7 +147,7 @@ describe('PaymentReconciliationPanel', () => {
     renderPanel(buildOrder({ payment_method: 'cash', payment_proof_url: null }));
 
     expect(screen.getByText(/no requiere comparar contra el banco/i)).toBeInTheDocument();
-    expect(screen.queryByText('Banco emisor')).not.toBeInTheDocument();
+    expect(screen.queryByText('Banco')).not.toBeInTheDocument();
     expect(screen.queryByTestId('proof-button-order-1')).not.toBeInTheDocument();
     expect(screen.queryByTestId('payment-awaiting-alert')).not.toBeInTheDocument();
   });
@@ -234,24 +240,27 @@ describe('PaymentReconciliationPanel', () => {
   it('distingue la cuenta receptora del comercio de la del cliente', () => {
     renderPanel(buildOrder());
 
-    expect(screen.getByText('Banco receptor')).toBeInTheDocument();
-    expect(screen.getByText('Teléfono receptor')).toBeInTheDocument();
-    expect(screen.getByText('Cédula / RIF del comercio')).toBeInTheDocument();
+    // La cuenta del comercio era el dato duplicado que la caja no necesita para
+    // validar: la conciliación se hace contra el pago reportado por el cliente.
+    expect(screen.queryByText('Banco receptor')).not.toBeInTheDocument();
+    expect(screen.queryByText('Teléfono receptor')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cédula / RIF del comercio')).not.toBeInTheDocument();
+    // Y se muestra la del cliente, no la del comercio.
+    expect(screen.getByText('Mercantil')).toBeInTheDocument();
   });
 
   it('avisa que el cliente no declaró datos del pagador', () => {
-    renderPanel(buildOrder());
+    renderPanel(buildOrder({ payer_bank: null, payer_phone: null, payer_id_number: null }));
 
-    // Banco y teléfono caen en el mismo texto de reserva.
-    expect(screen.getAllByText('No indicado')).toHaveLength(2);
-    expect(screen.getByText('No indicada')).toBeInTheDocument();
+    // Banco, teléfono y cédula caen en el mismo texto de reserva.
+    expect(screen.getAllByText('No indicado')).toHaveLength(3);
   });
 
   it('omite los datos del pagador en métodos sin captura', () => {
     renderPanel(buildOrder({ payment_method: 'cash', payment_proof_url: null }));
 
     expect(screen.queryByText('Datos de quien paga')).not.toBeInTheDocument();
-    expect(screen.queryByText('Banco emisor')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cédula / RIF')).not.toBeInTheDocument();
   });
 
   it('ofrece validar el pago y solicitar la referencia al cajero', async () => {

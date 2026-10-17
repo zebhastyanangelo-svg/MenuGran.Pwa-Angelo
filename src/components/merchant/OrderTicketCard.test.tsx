@@ -121,12 +121,15 @@ describe('OrderTicketCard', () => {
     expect(screen.getByText(/Cliente c-1/)).toBeInTheDocument();
   });
 
-  it('incluye la conciliación de pago con los datos bancarios del comercio', () => {
-    renderCard(buildOrder());
+  it('incluye la conciliación de pago con los datos reportados por el cliente', () => {
+    renderCard(
+      buildOrder({ payer_bank: 'Mercantil', payer_phone: '0414-9876543', payer_id_number: 'V87654321' }),
+    );
 
     expect(screen.getByTestId('payment-reconciliation-panel')).toBeInTheDocument();
-    expect(screen.getByText('Banesco')).toBeInTheDocument();
-    expect(screen.getByText('0412-1234567')).toBeInTheDocument();
+    expect(screen.getByText('Mercantil')).toBeInTheDocument();
+    expect(screen.getByText('0414-9876543')).toBeInTheDocument();
+    expect(screen.getByText('V87654321')).toBeInTheDocument();
     expect(screen.getByText('REF-9999')).toBeInTheDocument();
   });
 

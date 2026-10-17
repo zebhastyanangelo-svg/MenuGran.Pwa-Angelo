@@ -69,7 +69,11 @@ async function fetchOrders(ids: string[]): Promise<OrderWithCustomer[]> {
   if (ids.length === 0) return []
   const result = await supabase
     .from(TABLE_NAMES.orders)
-     .select('id, merchant_id, customer_id, driver_id, type, status, payment_method, payment_reference, payment_proof_url, total_amount, delivery_fee, customer_tax_id, delivery_address, table_number, delivery_location, delivery_address_notes, latitude, longitude, items, created_at, profiles!customer_id(full_name, email, ci, phone)')
+    // `payer_bank`, `payer_phone` y `payer_id_number` son los datos que el
+    // cliente declara en el checkout y contra los que la caja concilia el
+    // capture. Si no se piden explícitamente PostgREST no los devuelve y el
+    // panel los pinta como "No indicado" aunque se hayan guardado.
+     .select('id, merchant_id, customer_id, driver_id, type, status, payment_method, payment_reference, payment_proof_url, total_amount, delivery_fee, customer_tax_id, payer_bank, payer_phone, payer_id_number, delivery_address, table_number, delivery_location, delivery_address_notes, latitude, longitude, items, created_at, profiles!customer_id(full_name, email, ci, phone)')
     .in('merchant_id', ids)
     .order('created_at', { ascending: false })
   if (result.error) throw result.error
