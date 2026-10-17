@@ -76,7 +76,11 @@ export function MerchantDashboardPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { permissions: staffPermissions } = useStaffPermissions();
+  const {
+    permissions: staffPermissions,
+    isLoading: isLoadingStaffPermissions,
+    hasError: hasStaffPermissionsError,
+  } = useStaffPermissions();
   const audioCtxRef = useRef<AudioContext | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
@@ -499,6 +503,7 @@ export function MerchantDashboardPage() {
               drivers={drivers}
               role={profile?.role ?? null}
               staffPermissions={staffPermissions}
+              permissionsPending={isLoadingStaffPermissions || hasStaffPermissionsError}
               pagoMovil={pagoMovil}
               onUpdateStatus={handleBoardStatusChange}
               onAssignDriver={(orderId, driverId) => void handleAssignDriver(orderId, driverId)}

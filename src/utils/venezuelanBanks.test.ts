@@ -4,6 +4,7 @@ import {
   findVenezuelanBank,
   getVenezuelanBankOptions,
   resolveVenezuelanBankName,
+  searchVenezuelanBanks,
 } from './venezuelanBanks';
 
 describe('VENEZUELAN_BANKS', () => {
@@ -87,5 +88,49 @@ describe('getVenezuelanBankOptions', () => {
     expect(getVenezuelanBankOptions('  Mi Coop  ').legacy).toBe('Mi Coop');
     expect(getVenezuelanBankOptions('').legacy).toBeNull();
     expect(getVenezuelanBankOptions(null).legacy).toBeNull();
+  });
+});
+
+describe('searchVenezuelanBanks', () => {
+  it('devuelve el catálogo completo cuando no hay término', () => {
+    expect(searchVenezuelanBanks('').banks).toEqual(VENEZUELAN_BANKS);
+  });
+
+  it('filtra por nombre sin distinguir tildes ni mayúsculas', () => {
+    const names = searchVenezuelanBanks('banesco').banks.map((bank) => bank.name);
+    const unaccented = searchVenezuelanBanks('AGRICOLA').banks.map((bank) => bank.name);
+
+    expect(names).toContain('Banesco');
+    expect(unaccented).toContain('Banco Agrícola de Venezuela');
+  });
+
+  it('filtra por código de institución', () => {
+    const codes = searchVenezuelanBanks('0191').banks.map((bank) => bank.code);
+
+    expect(codes).toEqual(['0191']);
+  });
+
+  it('encuentra por un alias escrito de otra forma', () => {
+    const names = searchVenezuelanBanks('provincial').banks.map((bank) => bank.name);
+
+    expect(names).toContain('BBVA Provincial');
+  });
+
+  it('devuelve una lista vacía cuando nada coincide', () => {
+    const result = searchVenezuelanBanks('zzzz');
+
+    expect(result.banks).toEqual([]);
+    expect(result.legacy).toBeNull();
+  });
+
+  it('mantiene visible el valor previo al selector mientras encaje en la búsqueda', () => {
+    const result = searchVenezuelanBanks('mi coop', 'Mi Coop');
+
+    expect(result.legacy).toBe('Mi Coop');
+    expect(result.banks).toEqual([]);
+  });
+
+  it('oculta el valor previo al selector cuando ya no encaja', () => {
+    expect(searchVenezuelanBanks('banesco', 'Mi Coop').legacy).toBeNull();
   });
 });

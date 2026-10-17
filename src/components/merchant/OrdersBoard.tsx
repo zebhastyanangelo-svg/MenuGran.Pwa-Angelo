@@ -20,6 +20,7 @@ import {
 import {
   canOperateBoard,
   canViewBoardFinances,
+  isBoardPermissionsLoading,
 } from '../../utils/orderBoardPermissions';
 import { requiresPaymentProof } from '../../utils/paymentMethod';
 
@@ -41,6 +42,8 @@ export interface OrdersBoardProps {
   drivers?: readonly DriverProfile[];
   role: UserRole | null;
   staffPermissions: MerchantStaffPermissions | null;
+  /** `true` mientras los permisos del empleado siguen en vuelo o fallaron. */
+  permissionsPending?: boolean;
   pagoMovil?: MerchantPagoMovilInfo | null;
   onUpdateStatus: (orderId: string, status: OrderStatus) => void;
   onAssignDriver?: (orderId: string, driverId: string | null) => void;
@@ -55,6 +58,7 @@ export function OrdersBoard({
   drivers = [],
   role,
   staffPermissions,
+  permissionsPending = false,
   pagoMovil = null,
   onUpdateStatus,
   onAssignDriver,
@@ -75,6 +79,10 @@ export function OrdersBoard({
 
   const canOperate = canOperateBoard(role, staffPermissions);
   const canSeeFinances = canViewBoardFinances(role);
+  // Mientras los permisos del empleado se resuelven no se puede afirmar que el
+  // tablero sea de solo lectura: avisarlo ahí alarmaba al empleado que sí tiene
+  // el permiso, solo que la consulta aún no había respondido.
+  const permissionsLoading = isBoardPermissionsLoading(role, permissionsPending);
 
   // Reloj de un minuto para que el "Hace 4 min" no se quede congelado.
   const [now, setNow] = useState(() => new Date());
@@ -229,6 +237,7 @@ export function OrdersBoard({
                   bcvRate={bcvRate}
                   now={now}
                   canOperate={canOperate}
+                  permissionsLoading={permissionsLoading}
                   onUpdateStatus={onUpdateStatus}
                   onAssignDriver={onAssignDriver}
                   onOpenDriverAssignment={onOpenDriverAssignment}

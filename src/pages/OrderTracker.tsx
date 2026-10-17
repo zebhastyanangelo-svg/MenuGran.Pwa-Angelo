@@ -25,6 +25,7 @@ import { confirmOrderDelivery } from '../services/orderDeliveryService';
 import { OrderStatusStep } from '../components/orders/OrderStatusStep';
 import { getAllowedTransitions, getTransitionLabel, getTransitionButtonClass } from '../utils/orderStatus';
 import { OrderTrackingPanel } from '../components/orders/OrderTrackingPanel';
+import { ContactCard } from '../components/orders/ContactCard';
 import { MapErrorBoundary } from '../components/map/MapErrorBoundary';
 import { useQueryClient } from '@tanstack/react-query';
 import posthog, { isPostHogEnabled } from '../posthog';
@@ -386,30 +387,38 @@ export function OrderTracker() {
     };
   }, [loadOrder, orderId, handleStatusChange]);
 
-  // Perfil del repartidor asignado: alimenta la tarjeta de navegación.
+  // Perfil del repartidor asignado: alimenta la tarjeta de navegación y la
+  // tarjeta de contacto de la pantalla.
   useEffect(() => {
     const driverId = order?.driver_id;
-    if (!driverId || order.status !== 'on_the_way') {
+    // Antes solo se consultaba con `status === 'on_the_way'`, de modo que el
+    // cliente pasaba confirmado/preparando/listo sin ver a quién esperar. Basta
+    // con que el comercio haya asignado un repartidor.
+    if (!driverId) {
       setDriverProfile(null);
       return undefined;
     }
 
     let cancelled = false;
+    // `profiles` no es legible por el cliente salvo el suyo propio: la consulta
+    // directa devolvía cero filas. `customer_driver_contact` es una función
+    // SECURITY DEFINER que solo devuelve los datos de contacto del repartidor
+    // de los pedidos del propio cliente (nunca `ci` ni `email`).
     supabase
-      .from('profiles')
-      .select('full_name, phone, avatar_url')
-      .eq('id', driverId)
-      .maybeSingle()
+      .rpc('customer_driver_contact', { p_order_id: order?.id })
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error !== null) return;
-        setDriverProfile(data ?? null);
+        const row = (data as { full_name: string | null; phone: string | null; avatar_url: string | null }[] | null)?.[0];
+        setDriverProfile(
+          row ? { full_name: row.full_name, phone: row.phone, avatar_url: row.avatar_url } : null,
+        );
       });
 
     return () => {
       cancelled = true;
     };
-  }, [order?.driver_id, order?.status]);
+  }, [order?.id, order?.driver_id]);
 
   // Subscribe to driver GPS location broadcast only while order is on the way
   useEffect(() => {
@@ -685,6 +694,17 @@ export function OrderTracker() {
           ))}
         </div>
       </div>
+
+      {driverProfile !== null && order.driver_id !== null && (
+        <div className="mb-6">
+          <ContactCard
+            title="Tu repartidor"
+            name={driverProfile.full_name ?? 'Repartidor asignado'}
+            phone={driverProfile.phone ?? null}
+            avatarUrl={driverProfile.avatar_url ?? null}
+          />
+        </div>
+      )}
 
       {order.status === 'on_the_way' && isValidGeoPoint(deliveryPoint) && (
         trackingOpen ? (

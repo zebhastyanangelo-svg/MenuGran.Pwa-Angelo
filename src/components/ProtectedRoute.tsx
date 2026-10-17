@@ -28,8 +28,11 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, profile, isLoading } = useAuth();
   const location = useLocation();
-  const { permissions: staffPermissions, isLoading: isLoadingPermissions } =
-    useStaffPermissions();
+  const {
+    permissions: staffPermissions,
+    isLoading: isLoadingPermissions,
+    hasError: hasPermissionsError,
+  } = useStaffPermissions();
 
   if (isLoading) {
     return (
@@ -62,11 +65,17 @@ export function ProtectedRoute({
     }
   }
 
-  // Verificar permiso granular para merchant_staff y driver
+  // Verificar permiso granular para merchant_staff y driver.
+  // Con los permisos todavía en vuelo, o si la consulta falló, no se bloquea:
+  // sin ellos no se puede afirmar que falte el permiso, y expulsar al empleado
+  // en esa ventana lo dejaba sin poder trabajar hasta recargar.
+  const permissionsUnknown =
+    isLoadingPermissions || hasPermissionsError;
+
   if (
     requiredPermission !== undefined &&
     (profile?.role === 'merchant_staff' || profile?.role === 'driver') &&
-    !isLoadingPermissions
+    !permissionsUnknown
   ) {
     const hasPermission = staffPermissions?.[requiredPermission] === true;
     if (!hasPermission) {
@@ -81,6 +90,7 @@ export function ProtectedRoute({
   // can_view_assigned_deliveries y no tiene can_manage_orders
   if (
     location.pathname === '/admin/dashboard' &&
+    !permissionsUnknown &&
     (profile?.role === 'driver' ||
       staffPermissions?.can_view_assigned_deliveries === true) &&
     staffPermissions?.can_manage_orders !== true

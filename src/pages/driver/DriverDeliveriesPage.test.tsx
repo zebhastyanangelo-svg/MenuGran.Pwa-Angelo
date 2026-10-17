@@ -549,7 +549,7 @@ describe('DriverDeliveriesPage', () => {
     expect(screen.queryByTestId('message-customer-order-9')).not.toBeInTheDocument()
   })
 
-  it('no renderiza el botón de Mensaje si el teléfono no tiene dígitos', () => {
+  it('no renderiza los botones de contacto si el teléfono no tiene dígitos', () => {
     ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultHookReturn,
       assigned: [
@@ -562,7 +562,28 @@ describe('DriverDeliveriesPage', () => {
 
     renderPage()
 
-    expect(screen.getByTestId('call-customer-order-7')).toBeInTheDocument()
+    // Sin dígitos no hay ni WhatsApp ni `tel:` válido: antes se generaba un
+    // enlace roto `tel:no-teléfono`.
+    expect(screen.queryByTestId('call-customer-order-7')).not.toBeInTheDocument()
     expect(screen.queryByTestId('message-customer-order-7')).not.toBeInTheDocument()
+  })
+
+  it('normaliza el teléfono local al formato internacional en el botón de llamada', () => {
+    ;(useDriverDeliveries as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookReturn,
+      assigned: [
+        createOrder({
+          id: 'order-8',
+          profiles: { full_name: 'María Pérez', email: 'm@t.com', phone: '0412-9876543' },
+        }),
+      ],
+    })
+
+    renderPage()
+
+    expect(screen.getByTestId('call-customer-order-8')).toHaveAttribute(
+      'href',
+      'tel:+584129876543',
+    )
   })
 })

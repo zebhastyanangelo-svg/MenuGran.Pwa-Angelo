@@ -23,6 +23,8 @@
  *    (aunque haya expirado) y tasa por defecto como último recurso.
  */
 
+import { formatVES as formatBolivares } from '../utils/format';
+
 export const EXCHANGE_RATE_STORAGE_KEY = 'menugram_bcv_exchange_rate';
 /** Vigencia de la caché: la tasa nunca se sirve con más de 5 minutos. */
 export const EXCHANGE_RATE_TTL_MS = 5 * 60 * 1000; // 5 minutos en milisegundos
@@ -413,14 +415,12 @@ export async function convertUSDtoVES(priceUSD: number): Promise<number> {
 
 /**
  * Formatea un precio en Bolívares con localización venezolana.
+ *
+ * Delega en el formateador canónico (`utils/format.ts`) en vez de usar `Intl` con
+ * `style: 'currency'`, que para VES emite el símbolo espurio `Bs.S`.
  */
 export function formatVES(amount: number): string {
-  return new Intl.NumberFormat('es-VE', {
-    style: 'currency',
-    currency: 'VES',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  return formatBolivares(amount);
 }
 
 /**

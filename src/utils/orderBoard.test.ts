@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { OrderStatus, PaymentMethod } from '../types/database';
 import type { OrderWithCustomer } from '../hooks/useMerchantDashboardPage';
+import { formatVES } from './format';
 import {
   ORDER_BOARD_PERIODS,
   ORDER_BOARD_TABS,
@@ -10,7 +11,6 @@ import {
   filterOrdersByTab,
   formatBoardDateLabel,
   formatElapsedTime,
-  formatVes,
   getOrderBoardDateRange,
   getOrderBoardKpis,
   getOrderShortCode,
@@ -81,14 +81,16 @@ describe('formatBoardDateLabel', () => {
   });
 });
 
-describe('formatVes / toVes', () => {
-  it('formatea bolívares con dos decimales', () => {
-    expect(formatVes(1500)).toMatch(/1[.\s]?500,00/);
-  });
-
+describe('toVes', () => {
   it('devuelve 0 cuando la tasa BCV aún no está disponible', () => {
     expect(toVes(150, 0)).toBe(0);
     expect(toVes(150, 10)).toBe(1500);
+  });
+
+  it('deja el formateo al formateador canónico de utils/format', () => {
+    // El tablero ya no trae su propio `formatVes`: el símbolo espurio `Bs.S`
+    // que emitía `Intl` con `style: 'currency'` desapareció de todo el tablero.
+    expect(formatVES(toVes(150, 10))).toBe('Bs. 1.500,00');
   });
 });
 

@@ -2,9 +2,9 @@ import type { OrderStatus } from '../../types/database';
 import type { MerchantPagoMovilInfo } from '../../services/merchantPaymentService';
 import type { DriverProfile, OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 import { formatPrice } from '../../types/cart';
+import { formatVES } from '../../utils/format';
 import {
   formatElapsedTime,
-  formatVes,
   getOrderShortCode,
   toVes,
 } from '../../utils/orderBoard';
@@ -37,6 +37,13 @@ export interface OrderTicketCardProps {
   bcvRate: number;
   now: Date;
   canOperate: boolean;
+  /**
+   * `true` mientras se resuelven los permisos del empleado. Evita declarar
+   * "solo lectura" en la ventana en la que todavía no se sabe si el permiso
+   * existe: el empleado con `can_manage_orders` activo veía el tablero
+   * bloqueado mientras su consulta de permisos no respondía.
+   */
+  permissionsLoading?: boolean;
   onUpdateStatus: (orderId: string, status: OrderStatus) => void;
   onAssignDriver?: (orderId: string, driverId: string | null) => void;
   onOpenDriverAssignment?: (order: OrderWithCustomer) => void;
@@ -203,6 +210,7 @@ export function OrderTicketCard({
   bcvRate,
   now,
   canOperate,
+  permissionsLoading = false,
   onUpdateStatus,
   onAssignDriver,
   onOpenDriverAssignment,
@@ -279,7 +287,7 @@ export function OrderTicketCard({
             <span className="text-lg font-bold text-slate-900">{formatPrice(usd)}</span>
             {bcvRate > 0 && (
               <span className="text-sm font-semibold text-emerald-700">
-                {formatVes(toVes(usd, bcvRate))}
+                {formatVES(toVes(usd, bcvRate))}
               </span>
             )}
           </p>
@@ -313,7 +321,11 @@ export function OrderTicketCard({
       </footer>
 
       {!canOperate && (
-        <p className="text-xs text-slate-400">Solo lectura: tu rol no gestiona pedidos.</p>
+        <p className="text-xs text-slate-400" data-testid="read-only-notice">
+          {permissionsLoading
+            ? 'Verificando tus permisos de gestión de pedidos…'
+            : 'Solo lectura: tu rol no gestiona pedidos.'}
+        </p>
       )}
     </article>
   );

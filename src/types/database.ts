@@ -311,6 +311,20 @@ export interface OrderRow {
   /** RIF o cédula declarada por el cliente para el comprobante fiscal. */
   customer_tax_id?: string | null;
   /**
+   * Banco emisor de la transferencia, tal como lo declara el cliente en el
+   * checkout con el catálogo SUDEBAN (p. ej. `Banesco`). La caja lo contrasta
+   * contra el movimiento real. `null` si el pedido no se pagó por Pago Móvil.
+   */
+  payer_bank?: string | null;
+  /**
+   * Teléfono asociado a la transferencia. Es la clave con la que el banco
+   * localiza el movimiento, así que puede diferir del teléfono del perfil si el
+   * cliente pagó desde otra línea.
+   */
+  payer_phone?: string | null;
+  /** Cédula del titular de la transferencia de Pago Móvil. */
+  payer_id_number?: string | null;
+  /**
    * Snapshot del costo de envío cobrado en esta orden (USD, string por DECIMAL).
    * Se congela al pedir para que cambiar la tarifa del comercio no altere el
    * histórico. `'0.00'` si el envío fue gratis o el pedido fue para retiro.
@@ -426,6 +440,9 @@ export type OrderInsert = Pick<
       | 'longitude'
       | 'customer_tax_id'
       | 'delivery_fee'
+      | 'payer_bank'
+      | 'payer_phone'
+      | 'payer_id_number'
     > & {
       delivery_location?: DbPoint | null;
     }

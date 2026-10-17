@@ -14,6 +14,7 @@
 
 import type { ReactNode } from 'react';
 import type { ManeuverIconName } from '../../utils/navigationInstruction';
+import { buildTelUrl } from '../../utils/delivery';
 
 const MANEUVER_ICONS: Record<ManeuverIconName, string> = {
   straight: 'fa-solid fa-arrow-up',
@@ -150,7 +151,7 @@ export interface NavigationPersonCardProps {
   detailLabel?: string | null;
   /** Teléfono para el botón de llamada; sin teléfono se oculta. */
   phone?: string | null;
-  /** Acción del botón de chat; sin acción se oculta. */
+  /** Acción del botón de chat (WhatsApp); sin acción se oculta. */
   onChat?: () => void;
   /** Barra de acción principal a ancho completo (botón o estado interactivo). */
   primaryAction?: ReactNode;
@@ -176,6 +177,8 @@ export function NavigationPersonCard({
   onChat,
   primaryAction,
 }: NavigationPersonCardProps) {
+  const telUrl = buildTelUrl(phone);
+
   return (
     <div
       className="absolute inset-x-0 bottom-0 z-20 rounded-t-3xl bg-white px-4 pb-4 pt-3 shadow-[0_-8px_30px_rgba(0,0,0,0.18)] ring-1 ring-black/5"
@@ -231,6 +234,14 @@ export function NavigationPersonCard({
                 {rating.toFixed(1)}
               </span>
             )}
+            {phone !== null && phone !== '' && (
+              <span
+                className="text-sm font-semibold text-gray-600"
+                data-testid="person-phone"
+              >
+                {phone}
+              </span>
+            )}
             {detailLabel !== null && detailLabel !== '' && (
               <span className="truncate text-sm text-gray-500" data-testid="person-detail">
                 {detailLabel}
@@ -240,10 +251,10 @@ export function NavigationPersonCard({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {phone !== null && phone !== '' && (
+          {telUrl !== null && (
             <a
-              href={`tel:${phone}`}
-              aria-label="Llamar"
+              href={telUrl}
+              aria-label={`Llamar a ${name}`}
               data-testid="person-call-button"
               className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md ring-1 ring-emerald-600/30 transition hover:bg-emerald-600 active:scale-95"
             >
@@ -254,7 +265,7 @@ export function NavigationPersonCard({
             <button
               type="button"
               onClick={onChat}
-              aria-label="Chat"
+              aria-label={`Escribir a ${name}`}
               data-testid="person-chat-button"
               className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-red text-white shadow-md ring-1 ring-black/10 transition hover:bg-brand-red-dark active:scale-95"
             >

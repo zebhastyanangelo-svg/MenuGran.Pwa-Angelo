@@ -2,6 +2,12 @@ import { supabase, TABLE_NAMES } from './supabase';
 import { buildProofFileName, buildTempProofFileName } from '../utils/imageCompressor';
 import type { OrderInsert, PaymentMethod, OrderType, OrderItem, GeoPoint } from '../types/database';
 
+/** Subconjunto de `OrderInsert` con los datos del emisor de Pago Móvil. */
+type OrderPayerColumns = Pick<
+  OrderInsert,
+  'payer_bank' | 'payer_phone' | 'payer_id_number'
+>;
+
 const PAYMENT_PROOF_BUCKET = 'payment-proofs';
 
 /**
@@ -106,6 +112,35 @@ interface CreateOrderParams {
    * comercio no altere el histórico de pedidos ya realizados.
    */
   deliveryFee?: number | null;
+  /**
+   * Emisor de la transferencia de Pago Móvil, declarado por el cliente para que
+   * la caja pueda conciliar contra el banco. Es opcional porque solo aplica al
+   * método `pago_movil`, y el checkout lo omite cuando el cliente todavía no ha
+   * confirmado esos datos.
+   */
+  payer?: PayerIdentity | null;
+}
+
+/** Identifica al emisor de una transferencia de Pago Móvil. */
+export interface PayerIdentity {
+  bank: string;
+  phone: string;
+  idNumber: string;
+}
+
+/**
+ * Normaliza los datos del pagador a columnas: se descartan cuando el pedido no
+ * se paga por Pago Móvil o cuando el cliente no los completó, para no dejar
+ * campos a medio llenar que la caja interpretaría como datos verificados.
+ */
+function toPayerColumns(params: CreateOrderParams): OrderPayerColumns {
+  const payer = params.paymentMethod === 'pago_movil' ? params.payer : null;
+  if (!payer) return { payer_bank: null, payer_phone: null, payer_id_number: null };
+  return {
+    payer_bank: payer.bank.trim() || null,
+    payer_phone: payer.phone.trim() || null,
+    payer_id_number: payer.idNumber.trim() || null,
+  };
 }
 
 /**
@@ -135,6 +170,7 @@ export async function createOrder(params: CreateOrderParams): Promise<string> {
     delivery_address: params.deliveryAddress ?? undefined,
     delivery_address_notes: params.deliveryAddressNotes ?? undefined,
     table_number: params.tableNumber ?? undefined,
+    ...toPayerColumns(params),
   };
 
   const { data, error } = await supabase

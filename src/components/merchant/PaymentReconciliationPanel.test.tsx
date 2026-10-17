@@ -191,6 +191,69 @@ describe('PaymentReconciliationPanel', () => {
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
+  it('no deja un cero fantasma cuando el envío llega como número 0', () => {
+    // PostgREST devuelve las columnas `numeric` como número, no como texto. Con
+    // el valor `0` la expresión anterior pintaba un "0" suelto justo debajo del
+    // monto en bolívares, ensuciando el bloque de montos.
+    renderPanel(buildOrder({ delivery_fee: 0 as unknown as string }));
+
+    const amounts = screen.getByTestId('payment-amounts');
+    expect(amounts.children).toHaveLength(2);
+    expect(amounts.textContent).toBe('Monto (USD)$150.00Monto (Bs.)Bs. 1.500,00');
+    expect(screen.queryByText('Envío')).not.toBeInTheDocument();
+  });
+
+  it('muestra el envío cuando el comercio sí cobra tarifa', () => {
+    renderPanel(buildOrder({ delivery_fee: '2.50' }));
+
+    expect(screen.getByText('Envío')).toBeInTheDocument();
+  });
+
+  it('usa el formateador canónico de bolívares sin el símbolo "Bs.S"', () => {
+    renderPanel(buildOrder());
+
+    expect(screen.getByText('Bs. 1.500,00')).toBeInTheDocument();
+    expect(screen.queryByText(/Bs\.S/)).not.toBeInTheDocument();
+  });
+
+  it('muestra los datos reales del pagador declarados en el checkout', () => {
+    renderPanel(
+      buildOrder({
+        payer_bank: 'Provincial',
+        payer_phone: '0414-9876543',
+        payer_id_number: 'V87654321',
+      }),
+    );
+
+    expect(screen.getByText('BBVA Provincial')).toBeInTheDocument();
+    expect(screen.getByText('(0108)')).toBeInTheDocument();
+    expect(screen.getByText('0414-9876543')).toBeInTheDocument();
+    expect(screen.getByText('V87654321')).toBeInTheDocument();
+  });
+
+  it('distingue la cuenta receptora del comercio de la del cliente', () => {
+    renderPanel(buildOrder());
+
+    expect(screen.getByText('Banco receptor')).toBeInTheDocument();
+    expect(screen.getByText('Teléfono receptor')).toBeInTheDocument();
+    expect(screen.getByText('Cédula / RIF del comercio')).toBeInTheDocument();
+  });
+
+  it('avisa que el cliente no declaró datos del pagador', () => {
+    renderPanel(buildOrder());
+
+    // Banco y teléfono caen en el mismo texto de reserva.
+    expect(screen.getAllByText('No indicado')).toHaveLength(2);
+    expect(screen.getByText('No indicada')).toBeInTheDocument();
+  });
+
+  it('omite los datos del pagador en métodos sin captura', () => {
+    renderPanel(buildOrder({ payment_method: 'cash', payment_proof_url: null }));
+
+    expect(screen.queryByText('Datos de quien paga')).not.toBeInTheDocument();
+    expect(screen.queryByText('Banco emisor')).not.toBeInTheDocument();
+  });
+
   it('ofrece validar el pago y solicitar la referencia al cajero', async () => {
     const { onValidatePayment, onRequestReference } = renderPanel(buildOrder());
 

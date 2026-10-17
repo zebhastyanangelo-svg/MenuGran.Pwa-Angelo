@@ -1,5 +1,5 @@
 import type { OrderBoardKpis, OrderBoardTabKey } from '../../utils/orderBoard';
-import { formatVes } from '../../utils/orderBoard';
+import { formatVES } from '../../utils/format';
 import { formatPrice } from '../../types/cart';
 
 /**
@@ -82,7 +82,7 @@ function MoneyLine({ usd, ves }: MoneyLineProps) {
       <p className={KPI_VALUE_CLASS}>{formatPrice(usd)}</p>
       {ves > 0 && (
         <p className="truncate text-[11px] font-medium leading-tight text-emerald-700 sm:text-xs">
-          {formatVes(ves)}
+          {formatVES(ves)}
         </p>
       )}
     </>
@@ -175,7 +175,7 @@ export function OrdersKpiGrid({
           <p className={KPI_VALUE_CLASS}>{formatPrice(kpis.todaySales.usd)}</p>
           <p className={KPI_HINT_CLASS}>
             {kpis.todaySales.count} pedidos ·{' '}
-            {kpis.todaySales.ves > 0 ? formatVes(kpis.todaySales.ves) : 'Tasa BCV pendiente'}
+            {kpis.todaySales.ves > 0 ? formatVES(kpis.todaySales.ves) : 'Tasa BCV pendiente'}
           </p>
         </KpiCardShell>
       )}

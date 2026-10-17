@@ -134,3 +134,36 @@ export function getVenezuelanBankOptions(
     legacy: trimmed.length > 0 && !isKnown ? trimmed : null,
   };
 }
+
+export interface VenezuelanBankSearchResult {
+  banks: readonly VenezuelanBank[];
+  /** Texto previo al selector que coincide con la búsqueda, si sigue visible. */
+  legacy: string | null;
+}
+
+/** `true` si alguna etiqueta del banco (nombre, código o alias) contiene el término. */
+function matchesBankQuery(bank: VenezuelanBank, term: string): boolean {
+  if (term === '') return true;
+  return [bank.name, bank.code, ...bank.aliases].some((label) =>
+    normalizeBankKey(label).includes(term),
+  );
+}
+
+/**
+ * Filtra el catálogo para el buscador del formulario de Pago Móvil.
+ *
+ * La búsqueda ignora tildes, mayúsculas y signos, así que "bancoaz", "BANCO
+ * ACTIVO" y "Activo" dan el mismo resultado. El valor ya guardado se pasa en
+ * `persistedValue` para que un banco fuera del catálogo siga siendo elegible.
+ */
+export function searchVenezuelanBanks(
+  query: string,
+  persistedValue: string | null = null,
+): VenezuelanBankSearchResult {
+  const { banks, legacy } = getVenezuelanBankOptions(persistedValue);
+  const term = normalizeBankKey(query);
+  return {
+    banks: banks.filter((bank) => matchesBankQuery(bank, term)),
+    legacy: legacy !== null && normalizeBankKey(legacy).includes(term) ? legacy : null,
+  };
+}

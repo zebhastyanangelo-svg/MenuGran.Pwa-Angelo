@@ -156,6 +156,13 @@ CREATE TABLE public.orders (
     -- 20261006120000_merchant_delivery_policy.sql).
     delivery_fee DECIMAL(10, 2) NOT NULL DEFAULT 0.00
         CHECK (delivery_fee >= 0),
+    -- Datos del emisor de la transferencia de Pago Movil, declarados por el
+    -- cliente en el checkout para que la caja concilie contra el banco emisor.
+    -- NULL en pedidos con tarjeta, efectivo o en efectivo. Migration
+    -- 20261017120000_add_payer_info_to_orders.sql.
+    payer_bank TEXT,
+    payer_phone TEXT,
+    payer_id_number TEXT,
     table_number TEXT,
     delivery_location POINT,
     delivery_address_notes TEXT,

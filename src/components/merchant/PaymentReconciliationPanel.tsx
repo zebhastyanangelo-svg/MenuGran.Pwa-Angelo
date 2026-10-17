@@ -1,7 +1,8 @@
 import type { MerchantPagoMovilInfo } from '../../services/merchantPaymentService';
 import type { OrderWithCustomer } from '../../hooks/useMerchantDashboardPage';
 import { formatPrice } from '../../types/cart';
-import { formatVes, getPaymentValidationState, toVes } from '../../utils/orderBoard';
+import { formatVES } from '../../utils/format';
+import { getPaymentValidationState, toVes } from '../../utils/orderBoard';
 import { getPaymentMethodLabel, requiresPaymentProof } from '../../utils/paymentMethod';
 import { findVenezuelanBank, resolveVenezuelanBankName } from '../../utils/venezuelanBanks';
 
@@ -156,8 +157,8 @@ function ReconciliationActions({
   );
 }
 
-/** Datos bancarios del comercio contra los que se compara el capture. */
-function BankDataGrid({
+/** Cuenta receptora del comercio: contra ella se recibe la transferencia. */
+function ReceptionDataGrid({
   order,
   pagoMovil,
 }: {
@@ -172,19 +173,52 @@ function BankDataGrid({
 
   return (
     <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-      <BankField label="Banco emisor" value={bank} code={bankCode} />
+      <BankField label="Banco receptor" value={bank} code={bankCode} />
       <BankField label="Teléfono receptor" value={pagoMovil?.phone} />
-      <BankField label="Cédula / RIF" value={pagoMovil?.idNumber} />
+      <BankField label="Cédula / RIF del comercio" value={pagoMovil?.idNumber} />
       <BankField label="Referencia" value={order.payment_reference} fallback="Sin referencia" />
     </dl>
+  );
+}
+
+/**
+ * Datos que declaró el propio cliente al pagar: son la segunda pata de la
+ * conciliación. El banco emisor puede diferir del receptor (el cliente transfiere
+ * desde su banco), y el teléfono y la cédula son la clave con la que el banco
+ * localiza el movimiento.
+ */
+function PayerDataGrid({ order }: { order: OrderWithCustomer }) {
+  const bank = resolveVenezuelanBankName(order.payer_bank);
+  const bankCode = bank ? findVenezuelanBank(bank)?.code : undefined;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Datos de quien paga
+      </p>
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <BankField label="Banco emisor" value={bank} fallback="No indicado" code={bankCode} />
+        <BankField label="Teléfono del pagador" value={order.payer_phone} fallback="No indicado" />
+        <BankField
+          label="Cédula del pagador"
+          value={order.payer_id_number}
+          fallback="No indicada"
+        />
+      </dl>
+    </div>
   );
 }
 
 /** Montos que el cajero necesita ver siempre, sea cual sea el método de pago. */
 function AmountGrid({ order, bcvRate }: { order: OrderWithCustomer; bcvRate: number }) {
   const usd = Number(order.total_amount ?? 0);
+  // La columna llega como `numeric`: PostgREST la devuelve como número, así que
+  // `order.delivery_fee` puede ser el número `0`. Con `{order.delivery_fee && …}`
+  // React pintaba ese `0` suelto debajo del monto en bolívares. Se compara ya
+  // convertido para que la expresión sea siempre booleana.
+  const deliveryFee = Number(order.delivery_fee ?? 0);
   return (
-    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3" data-testid="payment-amounts">
       <div className="min-w-0">
         <dt className="text-xs font-medium text-slate-500">Monto (USD)</dt>
         <dd className="truncate text-sm font-semibold text-slate-900">{formatPrice(usd)}</dd>
@@ -192,14 +226,14 @@ function AmountGrid({ order, bcvRate }: { order: OrderWithCustomer; bcvRate: num
       <div className="min-w-0">
         <dt className="text-xs font-medium text-slate-500">Monto (Bs.)</dt>
         <dd className="truncate text-sm font-semibold text-emerald-700">
-          {bcvRate > 0 ? formatVes(toVes(usd, bcvRate)) : '—'}
+          {bcvRate > 0 ? formatVES(toVes(usd, bcvRate)) : '—'}
         </dd>
       </div>
-      {order.delivery_fee && Number(order.delivery_fee) > 0 && (
+      {deliveryFee > 0 && (
         <div className="min-w-0">
           <dt className="text-xs font-medium text-slate-500">Envío</dt>
           <dd className="truncate text-sm font-medium text-slate-700">
-            {formatPrice(order.delivery_fee)}
+            {formatPrice(deliveryFee)}
           </dd>
         </div>
       )}
@@ -229,7 +263,8 @@ function ReconciliationSection({
   return (
     <>
       <ProofTile order={order} onOpenProof={onOpenProof} />
-      <BankDataGrid order={order} pagoMovil={pagoMovil} />
+      <ReceptionDataGrid order={order} pagoMovil={pagoMovil} />
+      <PayerDataGrid order={order} />
       <ValidationAlert order={order} bcvRate={bcvRate} />
     </>
   );

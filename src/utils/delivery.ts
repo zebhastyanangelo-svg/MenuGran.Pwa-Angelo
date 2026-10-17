@@ -73,3 +73,24 @@ export function buildWhatsAppUrl(phone: string): string | null {
   if (digits === '') return null;
   return `https://wa.me/${digits}`;
 }
+
+/**
+ * URL `tel:` de un teléfono.
+ *
+ * Se conserva el prefijo internacional cuando está (un `+58412…` es válido en
+ * cualquier país) y, si el número viene en formato(local (`0412-1234567`), se
+ * normaliza a `+58412…`, que es la forma que entienden los teclados de llamada
+ * fuera de Venezuela. Sin dígitos devuelve `null` para que el botón de llamada
+ * no se renderice.
+ */
+export function buildTelUrl(phone: string | null | undefined): string | null {
+  const trimmed = (phone ?? '').trim();
+  if (trimmed === '') return null;
+  if (trimmed.startsWith('+')) {
+    const digits = trimmed.replace(/\D/g, '');
+    return digits.length > 0 ? `tel:+${digits}` : null;
+  }
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length === 0) return null;
+  return `tel:+58${digits.replace(/^0+/, '')}`;
+}

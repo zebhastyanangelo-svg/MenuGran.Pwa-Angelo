@@ -45,6 +45,7 @@ vi.mock('../services/supabase', () => {
       },
       channel: vi.fn().mockReturnValue(mockChannel),
       removeChannel: vi.fn(),
+      rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
       from: vi.fn().mockImplementation(() => {
         return {
           select: vi.fn().mockReturnThis(),
@@ -547,8 +548,7 @@ describe('OrderTracker', () => {
     expect(lastCall.status).toBeNull();
   });
 
-  it('muestra el panel de rastreo panorámico cuando el repartidor está en camino', async () => {
-    const user = userEvent.setup();
+it('muestra el panel de rastreo panorámico cuando el repartidor está en camino', async () => {
     useAuthMock.user = { id: 'test-customer-id', email: 'test@example.com' };
     const onTheWayOrder = {
       ...mockOrder,
@@ -561,12 +561,15 @@ describe('OrderTracker', () => {
       eq: vi.fn().mockReturnThis(),
       in: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: onTheWayOrder, error: null }),
-      maybeSingle: vi.fn().mockResolvedValue({
-        data: { full_name: 'Carlos Pérez', phone: '+584121234567', avatar_url: null },
-        error: null,
-      }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     };
     (supabase.from as Mock).mockReturnValue(mockFrom);
+    // El contacto del repartidor llega por RPC: `profiles` no es legible por el
+    // cliente, así que la consulta directa devolvía cero filas.
+    (supabase.rpc as Mock).mockResolvedValue({
+      data: [{ driver_id: 'driver-1', full_name: 'Carlos Pérez', phone: '+584121234567', avatar_url: null }],
+      error: null,
+    });
 
     const { wrapper } = createWrapper();
     render(<OrderTracker />, { wrapper });
@@ -574,11 +577,79 @@ describe('OrderTracker', () => {
     const panel = await screen.findByTestId('order-tracking-panel');
     expect(panel).toBeInTheDocument();
 
-    expect(await screen.findByText('Carlos Pérez')).toBeInTheDocument();
+    // El nombre aparece en la tarjeta de contacto y en el panel de rastreo.
+    expect((await screen.findAllByText('Carlos Pérez')).length).toBeGreaterThan(0);
+    expect(within(panel).getByTestId('tracking-driver-name')).toHaveTextContent(
+      'Carlos Pérez',
+    );
     expect(screen.getByTestId('tracking-delivery-code')).toHaveTextContent('#TEST-ORD');
 
-    // El botón de confirmación vive en los detalles expandidos de la tarjeta.
-    await user.click(screen.getByTestId('tracking-card-toggle'));
-    expect(screen.getByTestId('confirm-delivery')).toBeInTheDocument();
+    // La tarjeta del panel arranca plegada; al expandirla aparece la llamada.
+    await userEvent.click(within(panel).getByTestId('tracking-card-toggle'));
+    expect(within(panel).getByTestId('tracking-driver-call')).toHaveAttribute(
+      'href',
+      'tel:+584121234567',
+    );
+  });
+
+  it('muestra el contacto del repartidor con botón de llamada antes de salir', async () => {
+    // El cliente necesita saber a quién esperar desde que el comercio asigna el
+    // repartidor, no solo cuando el pedido ya va en camino.
+    useAuthMock.user = { id: 'test-customer-id', email: 'test@example.com' };
+    const preparingOrder = {
+      ...mockOrder,
+      status: 'preparing',
+      driver_id: 'driver-1',
+    };
+    const mockFrom = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: preparingOrder, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    (supabase.from as Mock).mockReturnValue(mockFrom);
+    (supabase.rpc as Mock).mockResolvedValue({
+      data: [
+        { driver_id: 'driver-1', full_name: 'Carlos Pérez', phone: '0412-1234567', avatar_url: null },
+      ],
+      error: null,
+    });
+
+    const { wrapper } = createWrapper();
+    render(<OrderTracker />, { wrapper });
+
+    expect(await screen.findByText('Tu repartidor')).toBeInTheDocument();
+    const card = screen.getByTestId('contact-card');
+    expect(within(card).getByTestId('contact-name')).toHaveTextContent('Carlos Pérez');
+    expect(within(card).getByTestId('contact-phone')).toHaveTextContent('0412-1234567');
+    expect(within(card).getByTestId('contact-call-button')).toHaveAttribute(
+      'href',
+      'tel:+584121234567',
+    );
+    expect(supabase.rpc).toHaveBeenCalledWith('customer_driver_contact', {
+      p_order_id: mockOrder.id,
+    });
+  });
+
+  it('oculta la tarjeta de repartidor cuando todavía no hay ninguno asignado', async () => {
+    useAuthMock.user = { id: 'test-customer-id', email: 'test@example.com' };
+    const mockFrom = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { ...mockOrder, driver_id: null }, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    (supabase.from as Mock).mockReturnValue(mockFrom);
+    (supabase.rpc as Mock).mockResolvedValue({ data: [], error: null });
+
+    const { wrapper } = createWrapper();
+    render(<OrderTracker />, { wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText(/seguimiento de orden/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('contact-card')).not.toBeInTheDocument();
   });
 });

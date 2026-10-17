@@ -304,4 +304,49 @@ describe('OrdersBoard', () => {
 
     expect(screen.getByTestId('validate-payment-845f0000-0000')).toBeInTheDocument();
   });
+
+  it('no declara solo lectura mientras los permisos del empleado se resuelven', () => {
+    // El caso reportado: el empleado llegaba con el permiso puesto en la base y
+    // veía el tablero bloqueado mientras su consulta de permisos no respondía.
+    renderBoard([buildOrder({ id: '845f0000-0000' })], {
+      role: 'merchant_staff',
+      staffPermissions: null,
+      permissionsPending: true,
+    });
+
+    expect(screen.queryByText(/Solo lectura/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Verificando tus permisos/i)).toBeInTheDocument();
+  });
+
+  it('deja operar al empleado aunque su consulta de permisos siga en vuelo', () => {
+    renderBoard([buildOrder({ id: '845f0000-0000' })], {
+      role: 'merchant_staff',
+      staffPermissions: buildPermissions({ can_manage_orders: true }),
+      permissionsPending: true,
+    });
+
+    expect(screen.getByTestId('validate-payment-845f0000-0000')).toBeInTheDocument();
+  });
+
+  it('deja operar al propietario aunque los permisos nunca se carguen', () => {
+    renderBoard([buildOrder({ id: '845f0000-0000' })], {
+      role: 'merchant_owner',
+      staffPermissions: null,
+      permissionsPending: true,
+    });
+
+    expect(screen.getByTestId('validate-payment-845f0000-0000')).toBeInTheDocument();
+    expect(screen.queryByText(/Solo lectura/i)).not.toBeInTheDocument();
+  });
+
+  it('opera al empleado cuyo permiso llegó como texto', () => {
+    renderBoard([buildOrder({ id: '845f0000-0000' })], {
+      role: 'merchant_staff',
+      staffPermissions: buildPermissions({
+        can_manage_orders: 'true' as unknown as boolean,
+      }),
+    });
+
+    expect(screen.getByTestId('validate-payment-845f0000-0000')).toBeInTheDocument();
+  });
 });

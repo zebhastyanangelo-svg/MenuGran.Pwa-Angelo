@@ -7,6 +7,7 @@ import {
   buildDeliveryMapsUrl,
   buildDeliveryWazeUrl,
   buildWhatsAppUrl,
+  buildTelUrl,
 } from './delivery';
 
 const baseOrder = {
@@ -114,6 +115,27 @@ describe('delivery utils', () => {
     it('devuelve null cuando el teléfono no tiene dígitos', () => {
       expect(buildWhatsAppUrl('+---')).toBeNull();
       expect(buildWhatsAppUrl('')).toBeNull();
+    });
+  });
+
+  describe('buildTelUrl', () => {
+    it('conserva el teléfono internacional tal como viene', () => {
+      expect(buildTelUrl('+584141234567')).toBe('tel:+584141234567');
+      expect(buildTelUrl('+58 414-1234567')).toBe('tel:+584141234567');
+    });
+
+    it('normaliza el formato local venezolano a internacional', () => {
+      // `tel:0412-1234567` no marca desde fuera de Venezuela.
+      expect(buildTelUrl('0412-1234567')).toBe('tel:+584121234567');
+      expect(buildTelUrl(' 0412 1234567 ')).toBe('tel:+584121234567');
+    });
+
+    it('devuelve null cuando no hay un teléfono usable', () => {
+      expect(buildTelUrl(null)).toBeNull();
+      expect(buildTelUrl(undefined)).toBeNull();
+      expect(buildTelUrl('')).toBeNull();
+      expect(buildTelUrl('   ')).toBeNull();
+      expect(buildTelUrl('+---')).toBeNull();
     });
   });
 });

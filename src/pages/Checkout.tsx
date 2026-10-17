@@ -2,6 +2,7 @@ import { useState, type FormEvent, useEffect, useCallback, useMemo } from 'react
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { PaymentProofUploader } from '../components/cart/PaymentProofUploader';
+import { VenezuelanBankPicker } from '../components/cart/VenezuelanBankPicker';
 import { OrderTicket } from '../components/cart/OrderTicket';
 import type { MerchantIssuerInfo } from '../components/cart/OrderTicket';
 import { IncompleteProfileOrderModal } from '../components/cart/IncompleteProfileOrderModal';
@@ -31,7 +32,7 @@ import {
 } from '../utils/serviceMode';
 import type { GeoPoint, OrderType, PaymentMethod } from '../types/database';
 import type { MerchantPagoMovilInfo } from '../services/merchantPaymentService';
-import { createOrder, isNetworkUploadError, uploadPaymentProofTemp } from '../services/checkoutService';
+import { createOrder, isNetworkUploadError, uploadPaymentProofTemp, type PayerIdentity } from '../services/checkoutService';
 import { supabase, TABLE_NAMES } from '../services/supabase';
 import { isMerchantOpenNow } from '../utils/dateUtils';
 import { haversineDistance } from '../utils/distance';
@@ -53,6 +54,23 @@ interface ValidateParams {
   deliveryLocation: GeoPoint | null;
   /** `false` si el comercio no ofrece delivery y el pedido lo exige. */
   merchantAcceptsDelivery: boolean;
+  payer: PayerIdentity;
+  /** `true` cuando el formulario pide banco, teléfono y cédula del pagador. */
+  requirePayerData: boolean;
+}
+
+/** Datos del emisor que la caja necesita para rastrear la transferencia. */
+function validatePayerData(payer: PayerIdentity): string | null {
+  if (!payer.bank.trim()) {
+    return 'Selecciona el banco desde el que hiciste la transferencia.';
+  }
+  if (!payer.phone.trim()) {
+    return 'Ingresa el teléfono asociado al pago.';
+  }
+  if (!payer.idNumber.trim()) {
+    return 'Ingresa la cédula asociada al pago.';
+  }
+  return null;
 }
 
 function validateCheckoutForm(params: ValidateParams): string | null {
@@ -65,6 +83,10 @@ function validateCheckoutForm(params: ValidateParams): string | null {
     }
     if (params.file === null || params.file.size > MAX_IMAGE_BYTES) {
       return 'Adjunta una foto o PDF del comprobante (máx. 5 MB).';
+    }
+    if (params.requirePayerData) {
+      const payerError = validatePayerData(params.payer);
+      if (payerError) return payerError;
     }
   }
   if (params.orderType === 'delivery') {
@@ -233,6 +255,37 @@ export function Checkout() {
   const profileMissingFields = useMemo(() => getMissingProfileFields(profile), [profile]);
   const isProfileBlocked = isProfileIncomplete(profile);
 
+  /**
+   * Datos del emisor de la transferencia. Solo se preguntan cuando el perfil
+   * ya tiene teléfono y cédula: si falta alguno, el pedido está bloqueado igual
+   * por el modal de perfil incompleto y el cliente debe resolverlo allí.
+   */
+  const profilePhone = profile?.phone?.trim() ?? '';
+  const profileIdNumber = profile?.ci?.trim() ?? '';
+  const requirePayerData = profile !== null && !isProfileBlocked;
+
+  const [payerBank, setPayerBank] = useState('');
+  const [useProfilePayerData, setUseProfilePayerData] = useState(true);
+  const [customPayerPhone, setCustomPayerPhone] = useState('');
+  const [customPayerIdNumber, setCustomPayerIdNumber] = useState('');
+
+  /** Combina el perfil con lo que el cliente haya escrito a mano. */
+  const payer = useMemo<PayerIdentity>(
+    () => ({
+      bank: payerBank,
+      phone: useProfilePayerData ? profilePhone : customPayerPhone,
+      idNumber: useProfilePayerData ? profileIdNumber : customPayerIdNumber,
+    }),
+    [
+      payerBank,
+      useProfilePayerData,
+      profilePhone,
+      profileIdNumber,
+      customPayerPhone,
+      customPayerIdNumber,
+    ],
+  );
+
   useEffect(() => {
     if (isProfileBlocked) {
       setProfileModalOpen(true);
@@ -288,6 +341,8 @@ export function Checkout() {
       orderType,
       deliveryLocation,
       merchantAcceptsDelivery,
+      payer,
+      requirePayerData,
     });
     if (formError) {
       setError(formError);
@@ -340,6 +395,7 @@ export function Checkout() {
             ? deliveryAddress.trim()
             : null,
         paymentProofUrl: proofPath,
+        payer,
       });
 
       if (isPostHogEnabled) {
@@ -555,6 +611,13 @@ export function Checkout() {
               }}
               totalAmount={orderTotal}
               bcvRate={bcvRate}
+              showPayerData={requirePayerData}
+              payer={payer}
+              useProfilePayerData={useProfilePayerData}
+              onToggleProfilePayerData={setUseProfilePayerData}
+              onPayerBankChange={setPayerBank}
+              onPayerPhoneChange={setCustomPayerPhone}
+              onPayerIdNumberChange={setCustomPayerIdNumber}
             />
           )}
           {paymentMethod === 'card_pos' && (
@@ -664,6 +727,126 @@ interface PagoMovilSectionProps {
   onFileSelect: (file: File | null) => void;
   totalAmount: number;
   bcvRate: number;
+  /** `true` cuando el perfil tiene teléfono y cédula y se pueden precargar. */
+  showPayerData: boolean;
+  payer: PayerIdentity;
+  useProfilePayerData: boolean;
+  onToggleProfilePayerData: (value: boolean) => void;
+  onPayerBankChange: (value: string) => void;
+  onPayerPhoneChange: (value: string) => void;
+  onPayerIdNumberChange: (value: string) => void;
+}
+
+/** Campo de texto del bloque del pagador, de ancho completo. */
+function PayerField({
+  id,
+  label,
+  value,
+  onChange,
+  readOnly,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  readOnly: boolean;
+  placeholder: string;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1 block text-sm font-medium text-slate-700">
+        {label}
+      </label>
+      <input
+        id={id}
+        type="text"
+        value={value}
+        readOnly={readOnly}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        className={`h-11 w-full rounded-xl border px-3 text-sm focus:outline-none focus:ring-2 ${
+          readOnly
+            ? 'border-slate-200 bg-slate-50 text-slate-600'
+            : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-brand-red focus:ring-brand-red'
+        }`}
+      />
+    </div>
+  );
+}
+
+/**
+ * Datos del emisor: banco, teléfono y cédula.
+ *
+ * El caso normal es que el cliente pague desde su propio perfil, así que se
+ * ofrecen precargados y de solo lectura. Quien paga desde otra línea desmarca
+ * la casilla y los campos quedan editables.
+ */
+function PayerDataFields({
+  payer,
+  useProfileData,
+  onToggleProfileData,
+  onBankChange,
+  onPhoneChange,
+  onIdNumberChange,
+}: {
+  payer: PayerIdentity;
+  useProfileData: boolean;
+  onToggleProfileData: (value: boolean) => void;
+  onBankChange: (value: string) => void;
+  onPhoneChange: (value: string) => void;
+  onIdNumberChange: (value: string) => void;
+}) {
+  return (
+    <fieldset
+      className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+      data-testid="pago-movil-payer"
+    >
+      <legend className="px-1 text-sm font-semibold text-slate-700">Datos de quien paga</legend>
+      <div className="space-y-3">
+        <div className="flex items-start gap-2">
+          <input
+            id="payer-use-profile"
+            type="checkbox"
+            checked={useProfileData}
+            onChange={(event) => onToggleProfileData(event.target.checked)}
+            className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
+          />
+          <label htmlFor="payer-use-profile" className="text-xs leading-relaxed text-slate-600">
+            Usar el teléfono y la cédula de mi perfil. Desmarca si pagas desde otra
+            cuenta o línea.
+          </label>
+        </div>
+
+        <VenezuelanBankPicker
+          id="payer-bank"
+          label="Banco desde el que pagaste"
+          value={payer.bank}
+          onChange={onBankChange}
+          hint="El comercio lo usa para conciliar tu transferencia."
+        />
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <PayerField
+            id="payer-phone"
+            label="Teléfono del pagador"
+            value={payer.phone}
+            onChange={onPhoneChange}
+            readOnly={useProfileData}
+            placeholder="Ej. 0412-1234567"
+          />
+          <PayerField
+            id="payer-id-number"
+            label="Cédula del pagador"
+            value={payer.idNumber}
+            onChange={onIdNumberChange}
+            readOnly={useProfileData}
+            placeholder="Ej. V12345678"
+          />
+        </div>
+      </div>
+    </fieldset>
+  );
 }
 
 function PagoMovilSection({
@@ -676,6 +859,13 @@ function PagoMovilSection({
   onFileSelect,
   totalAmount,
   bcvRate,
+  showPayerData,
+  payer,
+  useProfilePayerData,
+  onToggleProfilePayerData,
+  onPayerBankChange,
+  onPayerPhoneChange,
+  onPayerIdNumberChange,
 }: PagoMovilSectionProps) {
   const totalVES = bcvRate > 0 ? totalAmount * bcvRate : 0;
 
@@ -687,7 +877,7 @@ function PagoMovilSection({
           data-testid="pago-movil-data"
         >
           <div className="flex justify-between gap-2">
-            <dt className="font-medium text-indigo-900">Banco</dt>
+            <dt className="font-medium text-indigo-900">Banco receptor</dt>
             <dd className="text-indigo-950">{pagoMovil.bank}</dd>
           </div>
           <div className="mt-1 flex justify-between gap-2">
@@ -713,6 +903,17 @@ function PagoMovilSection({
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 font-medium">
           Monto exacto a transferir: {formatVES(totalVES)} (Tasa BCV: Bs. {formatBCVRate(bcvRate)})
         </div>
+      )}
+
+      {showPayerData && (
+        <PayerDataFields
+          payer={payer}
+          useProfileData={useProfilePayerData}
+          onToggleProfileData={onToggleProfilePayerData}
+          onBankChange={onPayerBankChange}
+          onPhoneChange={onPayerPhoneChange}
+          onIdNumberChange={onPayerIdNumberChange}
+        />
       )}
 
       <div>

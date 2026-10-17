@@ -111,6 +111,29 @@ describe('DeliveryTrackingModal', () => {
     )
   })
 
+  it('deja claro a quién llama y muestra el teléfono escrito', () => {
+    renderModal()
+    expect(screen.getByTestId('person-call-button')).toHaveAttribute(
+      'aria-label',
+      'Llamar a María Pérez',
+    )
+    expect(screen.getByTestId('person-phone')).toHaveTextContent('+584141234567')
+  })
+
+  it('normaliza el teléfono local del cliente en la llamada', () => {
+    renderModal({ order: createOrder({ profiles: { full_name: 'María Pérez', email: 'm@t.com', phone: '0412-9876543' } }) })
+    expect(screen.getByTestId('person-call-button')).toHaveAttribute(
+      'href',
+      'tel:+584129876543',
+    )
+  })
+
+  it('omite el botón de llamada cuando el cliente no tiene teléfono', () => {
+    renderModal({ order: createOrder({ profiles: { full_name: 'Sin Tel', email: 's@t.com', phone: null } }) })
+    expect(screen.queryByTestId('person-call-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('person-chat-button')).not.toBeInTheDocument()
+  })
+
   it('muestra el HUD de navegación: barra de instrucciones y botones laterales', () => {
     renderModal()
     expect(screen.getByTestId('navigation-side-controls')).toBeInTheDocument()

@@ -141,6 +141,33 @@ function setPagoMovilMock(pagoMovil: typeof validPagoMovil | null) {
   });
 }
 
+/** Cliente con teléfono y cédula, que es lo que habilita el bloque del pagador. */
+function mockCompleteProfile() {
+  vi.mocked(useAuth).mockReturnValue({
+    user: { id: 'user-123' } as any,
+    profile: {
+      id: 'user-123',
+      email: 'cli@test.com',
+      full_name: 'Cliente',
+      role: 'customer',
+      phone: '0412-1234567',
+      ci: 'V12345678',
+      avatar_url: null,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    } as any,
+    isLoading: false,
+    signInWithGoogle: vi.fn(),
+    linkGoogleIdentity: vi.fn(),
+    signInWithPassword: vi.fn(),
+    signUpWithPassword: vi.fn(),
+    completeRegistration: vi.fn(),
+    resendConfirmationEmail: vi.fn(),
+    signOut: vi.fn(),
+    reloadProfile: vi.fn(),
+  });
+}
+
 beforeAll(() => {
   process.env.VITE_SUPABASE_URL = 'http://localhost';
   process.env.VITE_SUPABASE_ANON_KEY = 'anon-key';
@@ -703,6 +730,154 @@ describe('Checkout', () => {
     const [params] = mockCreateOrder.mock.calls[0];
     expect(params.items[0]).not.toHaveProperty('excluded_ingredients');
   }, 10000);
+
+  it('ofrece el buscador de bancos y precarga teléfono y cédula del perfil', () => {
+    mockCompleteProfile();
+    renderCheckout();
+
+    expect(screen.getByTestId('pago-movil-payer')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /Banco desde el que pagaste/i })).toHaveValue('');
+    expect(screen.getByLabelText(/Teléfono del pagador/i)).toHaveValue('0412-1234567');
+    expect(screen.getByLabelText(/Cédula del pagador/i)).toHaveValue('V12345678');
+  });
+
+  it('deja editar teléfono y cédula cuando el cliente paga desde otra línea', async () => {
+    mockCompleteProfile();
+    renderCheckout();
+
+    const phoneField = screen.getByLabelText(/Teléfono del pagador/i);
+    expect(phoneField).toHaveAttribute('readonly');
+
+    await user.click(screen.getByLabelText(/Usar el teléfono y la cédula de mi perfil/i));
+
+    expect(phoneField).not.toHaveAttribute('readonly');
+    await user.clear(phoneField);
+    await user.type(phoneField, '0414-0000000');
+    expect(phoneField).toHaveValue('0414-0000000');
+  });
+
+  it('busca el banco emisor por nombre y guarda el nombre canónico', async () => {
+    mockCompleteProfile();
+    renderCheckout();
+
+    const bankField = screen.getByRole('combobox', { name: /Banco desde el que pagaste/i });
+    await user.click(bankField);
+    await user.type(bankField, 'banesco');
+    await user.click(screen.getByRole('option'));
+
+    expect(bankField).toHaveValue('Banesco');
+  });
+
+  it('bloquea el pago si no se elige el banco emisor', async () => {
+    mockCompleteProfile();
+    renderCheckout();
+
+    await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
+    const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
+    await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
+
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/Selecciona el banco desde el que hiciste la transferencia/i);
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+  });
+
+  it('exige teléfono y cédula cuando el cliente deja de usar los de su perfil', async () => {
+    mockCompleteProfile();
+    renderCheckout();
+
+    const bankField = screen.getByRole('combobox', { name: /Banco desde el que pagaste/i });
+    await user.click(bankField);
+    await user.type(bankField, 'banesco');
+    await user.click(screen.getByRole('option'));
+
+    await user.click(screen.getByLabelText(/Usar el teléfono y la cédula de mi perfil/i));
+    await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
+    const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
+    await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
+
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/Ingresa el teléfono asociado al pago/i);
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+  });
+
+  it('envía el pedido con los datos del pagador completos', async () => {
+    mockCompleteProfile();
+    renderCheckout();
+
+    const bankField = screen.getByRole('combobox', { name: /Banco desde el que pagaste/i });
+    await user.click(bankField);
+    await user.type(bankField, '0102');
+    await user.click(screen.getByRole('option'));
+    await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
+    const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
+    await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
+    await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockCreateOrder).toHaveBeenCalled();
+    }, { timeout: 5000 });
+    expect(mockCreateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paymentMethod: 'pago_movil',
+        paymentReference: 'REF123456',
+        payer: {
+          bank: 'Banco de Venezuela',
+          phone: '0412-1234567',
+          idNumber: 'V12345678',
+        },
+      }),
+    );
+  }, 10000);
+
+  it('envía los datos del pagador escritos a mano al pagar desde otra línea', async () => {
+    mockCompleteProfile();
+    renderCheckout();
+
+    const bankField = screen.getByRole('combobox', { name: /Banco desde el que pagaste/i });
+    await user.click(bankField);
+    await user.type(bankField, 'banesco');
+    await user.click(screen.getByRole('option'));
+    await user.click(screen.getByLabelText(/Usar el teléfono y la cédula de mi perfil/i));
+
+    await user.type(screen.getByLabelText(/Teléfono del pagador/i), '0414-0000000');
+    await user.type(screen.getByLabelText(/Cédula del pagador/i), 'V99999999');
+    await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
+    const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
+    await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
+    await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockCreateOrder).toHaveBeenCalled();
+    }, { timeout: 5000 });
+    expect(mockCreateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payer: { bank: 'Banesco', phone: '0414-0000000', idNumber: 'V99999999' },
+      }),
+    );
+  }, 10000);
+
+  it('no pide los datos del pagador si el perfil aún no está completo', () => {
+    renderCheckout();
+
+    expect(screen.getByTestId('pago-movil-data')).toBeInTheDocument();
+    expect(screen.queryByTestId('pago-movil-payer')).not.toBeInTheDocument();
+  });
 
   afterEach(() => {
     vi.useRealTimers();

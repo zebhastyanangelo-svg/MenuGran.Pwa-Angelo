@@ -13,6 +13,7 @@ import {
   NEW_DELIVERY_STATUSES,
   getOrderDeliveryAddress,
   buildWhatsAppUrl,
+  buildTelUrl,
 } from '../../utils/delivery'
 import {
   filterDeliveredOrdersByPeriod,
@@ -390,6 +391,7 @@ function DeliveryCard({
   const customerName = getCustomerName(order)
   const customerPhone = getCustomerPhone(order)
   const whatsappUrl = customerPhone !== null ? buildWhatsAppUrl(customerPhone) : null
+  const telUrl = buildTelUrl(customerPhone)
   const address = getOrderDeliveryAddress(order)
   const isInTransit = order.status === 'on_the_way'
   const isDelivered = order.status === 'delivered'
@@ -468,10 +470,10 @@ function DeliveryCard({
         )}
 
         {/* Quick contact actions: llamada directa y WhatsApp al cliente */}
-        {!isDelivered && customerPhone !== null && (
+        {!isDelivered && customerPhone !== null && telUrl !== null && (
           <div className="flex gap-2">
             <a
-              href={`tel:${customerPhone}`}
+              href={telUrl}
               data-testid={`call-customer-${order.id}`}
               aria-label={`Llamar a ${customerName}`}
               onClick={(e) => e.stopPropagation()}

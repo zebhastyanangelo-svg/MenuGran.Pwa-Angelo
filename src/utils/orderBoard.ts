@@ -122,16 +122,13 @@ export function formatBoardDateLabel(now: Date = new Date()): string {
 
 /* ---------- Moneda ---------- */
 
-export function formatVes(amount: number): string {
-  return new Intl.NumberFormat('es-VE', {
-    style: 'currency',
-    currency: 'VES',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
-/** Convierte un monto en USD a bolívares con la tasa oficial sincronizada. */
+/**
+ * Convierte un monto en USD a bolívares con la tasa oficial sincronizada.
+ *
+ * El formateo vive en `utils/format.ts` (`formatVES`): aquí se duplicaba con
+ * `Intl` en modo `currency`, que para VES emite el símbolo espurio `Bs.S`. Todo
+ * el tablero y los KPIs importan el mismo formateador canónico.
+ */
 export function toVes(usd: number, bcvRate: number): number {
   return bcvRate > 0 ? usd * bcvRate : 0;
 }
