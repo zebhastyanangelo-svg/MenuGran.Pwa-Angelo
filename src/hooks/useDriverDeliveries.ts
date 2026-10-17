@@ -3,6 +3,7 @@ import type { User, RealtimeChannel } from '@supabase/supabase-js'
 import { supabase, TABLE_NAMES } from '../services/supabase'
 import { NEW_DELIVERY_STATUSES, TRACKED_DELIVERY_STATUSES } from '../utils/delivery'
 import { dispatchOrderStatusPushToCustomer } from '../services/orderStatusPushService'
+import { hydrateDriverCustomerContacts } from '../services/driverContactService'
 import type { OrderRow, OrderStatus, UserRole } from '../types/database'
 import type { DriverOrder } from './useDriverDashboard'
 import posthog, { isPostHogEnabled } from '../posthog'
@@ -102,7 +103,10 @@ async function fetchDriverDeliveries(
   const scopedQuery = merchantScope ? baseQuery : baseQuery.eq('driver_id', userId)
   const result = await scopedQuery.order('created_at', { ascending: false })
   if (result.error) throw result.error
-  return (result.data ?? []) as unknown as DriverOrder[]
+  const orders = (result.data ?? []) as unknown as DriverOrder[]
+  // El RLS de `profiles` no deja leer al repartidor el perfil del cliente: sin
+  // su teléfono las tarjetas de entrega se quedan sin botón de llamada.
+  return hydrateDriverCustomerContacts(orders)
 }
 
 async function updateOrderStatus(

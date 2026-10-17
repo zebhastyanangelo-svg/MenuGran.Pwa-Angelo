@@ -217,6 +217,69 @@ describe('DriverDashboard', () => {
     )
   })
 
+  it('ofrece llamar al cliente desde la entrega activa con un enlace tel: internacional', async () => {
+    // Regresión: el botón se armaba con `window.location.href = tel:<teléfono>`,
+    // que ni respeta el prefijo internacional ni es un enlace navegable.
+    ;(useDriverDashboard as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      merchantId: 'm-1',
+      merchantName: 'La Pizza',
+      orders: [
+        createOrder({
+          id: 'order-1',
+          status: 'on_the_way',
+          profiles: { full_name: 'María Pérez', email: 'maria@example.com', phone: '0412-9876543' },
+        }),
+      ],
+      loading: false,
+      error: null,
+      actionLoading: false,
+      actionError: null,
+      takeOrder: vi.fn(),
+      startDelivery: vi.fn(),
+      markDelivered: vi.fn(),
+      refresh: vi.fn(),
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('mark-delivered')).toBeInTheDocument()
+    })
+
+    const callButton = screen.getByTestId('call-customer')
+    expect(callButton).toHaveAttribute('href', 'tel:+584129876543')
+    expect(callButton.getAttribute('aria-label')).toMatch(/María Pérez/i)
+  })
+
+  it('oculta el botón de llamada cuando el cliente no tiene teléfono', async () => {
+    ;(useDriverDashboard as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      merchantId: 'm-1',
+      merchantName: 'La Pizza',
+      orders: [
+        createOrder({
+          id: 'order-1',
+          status: 'on_the_way',
+          profiles: { full_name: 'Sin Teléfono', email: 's@t.com', phone: null },
+        }),
+      ],
+      loading: false,
+      error: null,
+      actionLoading: false,
+      actionError: null,
+      takeOrder: vi.fn(),
+      startDelivery: vi.fn(),
+      markDelivered: vi.fn(),
+      refresh: vi.fn(),
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('mark-delivered')).toBeInTheDocument()
+    })
+    expect(screen.queryByTestId('call-customer')).not.toBeInTheDocument()
+  })
+
   it('muestra estado vacío cuando no hay pedidos asignados', () => {
     ;(useDriverDashboard as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       merchantId: 'm-1',

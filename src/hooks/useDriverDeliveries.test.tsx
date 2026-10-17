@@ -15,6 +15,7 @@ interface ChainRecorder {
 }
 
 const fromMock = vi.hoisted(() => vi.fn())
+const rpcMock = vi.hoisted(() => vi.fn())
 
 vi.mock('../services/supabase', () => {
   const channel = vi.fn().mockImplementation(() => {
@@ -29,6 +30,7 @@ vi.mock('../services/supabase', () => {
       from: fromMock,
       channel,
       removeChannel: vi.fn(),
+      rpc: rpcMock,
     },
     TABLE_NAMES: {
       merchants: 'merchants',
@@ -114,6 +116,7 @@ const asUser = (id: string) => ({ id }) as unknown as User
 describe('useDriverDeliveries — alcance por rol', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    rpcMock.mockResolvedValue({ data: [], error: null })
   })
 
   it('driver: filtra las entregas por driver_id del usuario', async () => {
@@ -173,5 +176,45 @@ describe('useDriverDeliveries — alcance por rol', () => {
     expect(result.current.merchantName).toBe('La Pizza')
     expect(result.current.assigned.map((o) => o.id)).toContain('order-1')
     expect(result.current.delivered.map((o) => o.id)).toContain('order-2')
+  })
+
+  it('completa el teléfono del cliente con la RPC cuando el RLS oculta su perfil', async () => {
+    // El repartidor no puede leer `profiles` del cliente: sin la RPC el botón
+    // "Llamar" de la entrega activa no se renderiza nunca.
+    configureTables({
+      staffData: { merchant_id: 'm-1', merchants: { id: 'm-1', name: 'La Pizza' } },
+      ownerData: [],
+      ordersData: [buildOrder({ driver_id: 'driver-1' })],
+    })
+    rpcMock.mockResolvedValue({
+      data: [{ customer_id: 'c-1', full_name: 'Ana', email: 'a@t.com', phone: '04121234567' }],
+      error: null,
+    })
+
+    const { result } = renderHook(() =>
+      useDriverDeliveries(asUser('driver-1'), { role: 'driver' }),
+    )
+
+    await waitFor(() => expect(result.current.assigned[0]?.profiles?.phone).toBe('04121234567'))
+    expect(rpcMock).toHaveBeenCalledWith('driver_customer_contact', { p_order_id: 'order-1' })
+  })
+
+  it('no rompe la lista de entregas cuando la RPC de contacto falla', async () => {
+    configureTables({
+      staffData: { merchant_id: 'm-1', merchants: { id: 'm-1', name: 'La Pizza' } },
+      ownerData: [],
+      ordersData: [buildOrder({ driver_id: 'driver-1' })],
+    })
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    rpcMock.mockResolvedValue({ data: null, error: new Error('postgrest down') })
+
+    const { result } = renderHook(() =>
+      useDriverDeliveries(asUser('driver-1'), { role: 'driver' }),
+    )
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.assigned).toHaveLength(1)
+    expect(result.current.assigned[0]?.profiles).toBeNull()
+    vi.mocked(console.warn).mockRestore()
   })
 })

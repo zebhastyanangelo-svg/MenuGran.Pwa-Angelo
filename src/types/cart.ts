@@ -47,6 +47,11 @@ export interface CartContextValue {
    * no se borra de la lista: queda tachado, estilo comanda de mesonero.
    */
   toggleExcludedIngredient: (productId: string, ingredient: string) => void;
+  /**
+   * Guarda la nota libre de una línea (ej. "Sin cebolla"). La nota vive en el
+   * ítem del carrito y viaja a la orden como `notes`, sin tocar el backend.
+   */
+  updateItemNotes: (productId: string, notes: string) => void;
   clearCart: () => void;
   totalItems: number;
   totalAmount: string;

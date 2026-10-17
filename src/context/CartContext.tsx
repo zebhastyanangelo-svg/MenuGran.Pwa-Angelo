@@ -184,6 +184,17 @@ export function CartProvider({ children }: CartProviderProps) {
     );
   }, []);
 
+  const updateItemNotes = useCallback((productId: string, notes: string): void => {
+    const trimmed = notes.trim();
+    setItems((prev) =>
+      prev.map((item) =>
+        item.product.id === productId
+          ? { ...item, notes: trimmed === '' ? undefined : trimmed }
+          : item,
+      ),
+    );
+  }, []);
+
   const clearCart = useCallback((): void => {
     setItems([]);
   }, []);
@@ -215,6 +226,7 @@ export function CartProvider({ children }: CartProviderProps) {
       removeItem,
       updateQuantity,
       toggleExcludedIngredient: toggleIngredient,
+      updateItemNotes,
       clearCart,
       totalItems,
       totalAmount,
@@ -223,20 +235,21 @@ export function CartProvider({ children }: CartProviderProps) {
       merchantId,
     }),
      [
-       items,
-       addItem,
-       confirmAddItem,
+        items,
+        addItem,
+        confirmAddItem,
         removeItem,
         updateQuantity,
         toggleIngredient,
+        updateItemNotes,
         clearCart,
-       totalItems,
-       totalAmount,
-       canCheckout,
-       validationError,
-       merchantId,
-     ],
-   );
+        totalItems,
+        totalAmount,
+        canCheckout,
+        validationError,
+        merchantId,
+      ],
+    );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

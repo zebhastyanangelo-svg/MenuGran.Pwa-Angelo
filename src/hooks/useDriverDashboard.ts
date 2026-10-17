@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { User, RealtimeChannel } from '@supabase/supabase-js'
 import { supabase, TABLE_NAMES } from '../services/supabase'
 import { dispatchOrderStatusPushToCustomer } from '../services/orderStatusPushService'
+import { hydrateDriverCustomerContacts } from '../services/driverContactService'
 import type { OrderRow, OrderStatus } from '../types/database'
 
 export interface DriverCustomerProfile {
@@ -66,7 +67,10 @@ async function fetchDriverOrders(
     .eq('driver_id', userId)
     .order('created_at', { ascending: false })
   if (result.error) throw result.error
-  return (result.data ?? []) as unknown as DriverOrder[]
+  const orders = (result.data ?? []) as unknown as DriverOrder[]
+  // El RLS de `profiles` no deja leer al repartidor el perfil del cliente: sin
+  // su teléfono la entrega activa se queda sin botón de llamada.
+  return hydrateDriverCustomerContacts(orders)
 }
 
 async function updateOrderStatus(

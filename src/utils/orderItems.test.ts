@@ -69,6 +69,14 @@ describe('orderItems utilities', () => {
       expect(plain).not.toHaveProperty('excluded_ingredients');
     });
 
+    it('incluye notes solo cuando la línea trae una nota con texto', () => {
+      const [noted] = buildOrderItems([buildCartItem({ notes: '  Sin cebolla  ' })]);
+      const [blank] = buildOrderItems([buildCartItem({ notes: '   ' })]);
+
+      expect(noted.notes).toBe('Sin cebolla');
+      expect(blank).not.toHaveProperty('notes');
+    });
+
     it('recalcula el precio unitario con el descuento del platillo', () => {
       const [item] = buildOrderItems([
         buildCartItem({

@@ -8,6 +8,8 @@ export interface IngredientPickerProps {
   /** Ingredientes que el cliente ya tachó. */
   excludedIngredients: readonly string[];
   onToggle: (productId: string, ingredient: string) => void;
+  /** Dentro del acordeón de modificaciones omite su tarjeta propia. */
+  embedded?: boolean;
 }
 
 /**
@@ -33,6 +35,7 @@ export function IngredientPicker({
   ingredients,
   excludedIngredients,
   onToggle,
+  embedded = false,
 }: IngredientPickerProps) {
   const available = sanitizeIngredientList(ingredients);
   const excluded = sanitizeIngredientList(excludedIngredients);
@@ -44,12 +47,19 @@ export function IngredientPicker({
 
   return (
     <fieldset
-      className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+      className={
+        embedded
+          ? ''
+          : 'rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'
+      }
       data-testid={`ingredient-picker-${productId}`}
+      aria-label={embedded ? `Personaliza ${productTitle}` : undefined}
     >
-      <legend className="px-1 text-sm font-semibold text-slate-700">
-        Personaliza {productTitle}
-      </legend>
+      {!embedded && (
+        <legend className="px-1 text-sm font-semibold text-slate-700">
+          Personaliza {productTitle}
+        </legend>
+      )}
       <p className="mb-3 text-xs text-slate-500">
         Toca los ingredientes que <span className="font-semibold">no</span> quieres
         en tu pedido.

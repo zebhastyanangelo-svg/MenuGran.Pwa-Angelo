@@ -25,16 +25,19 @@ export function itemsWithCustomizableIngredients(
 /**
  * Convierte el carrito en los ítems de la orden. `excluded_ingredients` solo se
  * incluye cuando el cliente tachó algo: los pedidos sin personalización no
- * necesitan arrastrar una lista vacía.
+ * necesitan arrastrar una lista vacía. `notes` solo se incluye si tiene texto,
+ * para no ensuciar pedidos sin nota.
  */
 export function buildOrderItems(items: readonly CartItem[]): OrderItem[] {
   return items.map((item) => {
     const excludedIngredients = sanitizeIngredientList(item.excludedIngredients);
+    const notes = item.notes?.trim() ?? '';
     return {
       product_id: item.product.id,
       quantity: item.quantity,
       unit_price: resolveCartItemPricing(item).unitPrice,
       title: item.product.title,
+      ...(notes ? { notes } : {}),
       ...(excludedIngredients.length > 0
         ? { excluded_ingredients: excludedIngredients }
         : {}),

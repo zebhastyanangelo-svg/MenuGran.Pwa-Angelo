@@ -53,6 +53,13 @@ export interface DriverStaffQueryRow {
   profiles: { email: string | null; full_name: string | null; role: UserRole } | null;
 }
 
+/** Fila del directorio de repartidores que devuelve la RPC. */
+interface DriverDirectoryRow {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+}
+
 /**
  * Un empleado actúa como repartidor si su rol en merchant_staff es `driver`,
  * si su perfil lo marca como `driver`, o si tiene el permiso
@@ -65,6 +72,56 @@ export function isDriverStaffRow(row: DriverStaffQueryRow): boolean {
     row.profiles?.role === 'driver' ||
     row.permissions?.can_view_assigned_deliveries === true
   );
+}
+
+/**
+ * Nombre y correo de los repartidores desde `merchant_drivers_directory`.
+ *
+ * El empleado de tipo `merchant_staff` no puede leer el perfil de un repartidor
+ * de su comercio: `private.is_profile_visible_by_merchant` solo abre los perfiles
+ * cuyo rol en `merchant_staff` es `merchant_staff`. Cuando eso ocurre el JOIN
+ * llega `null` y el selector "Asignar Rider" terminaba pintando el UUID. La RPC
+ * devuelve solo esas dos columnas y filtra por el acceso al comercio. Nunca
+ * debe romper la carga del tablero: si falla, se sigue con lo que haya.
+ */
+async function fetchDriversDirectory(
+  merchantIds: string[],
+): Promise<Map<string, DriverDirectoryRow>> {
+  const empty = new Map<string, DriverDirectoryRow>();
+  try {
+    const { data, error } = await supabase.rpc('merchant_drivers_directory', {
+      p_merchant_ids: merchantIds,
+    });
+    if (error !== null) return empty;
+    return new Map(
+      ((data ?? []) as DriverDirectoryRow[])
+        .filter((row) => typeof row.user_id === 'string')
+        .map((row) => [row.user_id, row]),
+    );
+  } catch (err) {
+    console.error('[merchantStaffService] Error al resolver el directorio de repartidores:', err);
+    return empty;
+  }
+}
+
+/** Rellena con el directorio los repartidores sin nombre ni correo en el JOIN. */
+async function attachDriverNames(
+  drivers: DriverListItem[],
+  merchantIds: string[],
+): Promise<DriverListItem[]> {
+  if (!drivers.some((driver) => driver.full_name === null && driver.email === null)) {
+    return drivers;
+  }
+  const directory = await fetchDriversDirectory(merchantIds);
+  return drivers.map((driver) => {
+    const entry = directory.get(driver.id);
+    if (entry === undefined) return driver;
+    return {
+      id: driver.id,
+      full_name: entry.full_name ?? driver.full_name,
+      email: entry.email ?? driver.email,
+    };
+  });
 }
 
 /**
@@ -91,13 +148,15 @@ export async function fetchMerchantDrivers(
     throw new Error(`Error al cargar los repartidores: ${error.message}`);
   }
 
-  return ((data ?? []) as unknown as DriverStaffQueryRow[])
+  const drivers = ((data ?? []) as unknown as DriverStaffQueryRow[])
     .filter(isDriverStaffRow)
     .map((row) => ({
       id: row.user_id,
       full_name: row.profiles?.full_name ?? null,
       email: row.profiles?.email ?? null,
     }));
+
+  return attachDriverNames(drivers, merchantIds);
 }
 
 export interface MerchantMetrics {

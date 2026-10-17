@@ -6,7 +6,7 @@ import { VenezuelanBankPicker } from '../components/cart/VenezuelanBankPicker';
 import { OrderTicket } from '../components/cart/OrderTicket';
 import type { MerchantIssuerInfo } from '../components/cart/OrderTicket';
 import { IncompleteProfileOrderModal } from '../components/cart/IncompleteProfileOrderModal';
-import { IngredientPicker } from '../components/cart/IngredientPicker';
+import { ItemModificationsAccordion } from '../components/cart/ItemModificationsAccordion';
 import { LocationPicker } from '../components/map/LocationPicker';
 import { TermsAcceptanceCheckbox } from '../components/legal/TermsAcceptanceCheckbox';
 import { useCart } from '../hooks/useCart';
@@ -149,6 +149,7 @@ export function Checkout() {
     clearCart,
     merchantId,
     toggleExcludedIngredient,
+    updateItemNotes,
   } = useCart();
   const { user, profile } = useAuth();
   const { showToast } = useToast();
@@ -486,13 +487,15 @@ export function Checkout() {
 
       <form className="space-y-4" onSubmit={handleSubmit} noValidate>
         {itemsWithCustomizableIngredients(items).map((item) => (
-          <IngredientPicker
+          <ItemModificationsAccordion
             key={item.product.id}
             productId={item.product.id}
             productTitle={item.product.title}
             ingredients={item.product.ingredients ?? []}
             excludedIngredients={item.excludedIngredients ?? []}
-            onToggle={toggleExcludedIngredient}
+            notes={item.notes ?? ''}
+            onToggleIngredient={toggleExcludedIngredient}
+            onNotesChange={updateItemNotes}
           />
         ))}
 
@@ -797,12 +800,22 @@ function PayerDataFields({
   onPhoneChange: (value: string) => void;
   onIdNumberChange: (value: string) => void;
 }) {
+  const [isExpanded, setIsExpanded] = useState(true);
   return (
     <fieldset
       className="rounded-xl border border-slate-200 bg-slate-50 p-3"
       data-testid="pago-movil-payer"
     >
       <legend className="px-1 text-sm font-semibold text-slate-700">Datos de quien paga</legend>
+      <button
+        type="button"
+        aria-expanded={isExpanded}
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 hover:border-slate-300 hover:text-slate-900"
+      >
+        {isExpanded ? 'Ocultar datos del pagador' : 'Editar datos del pagador'}
+      </button>
+      {isExpanded && (
       <div className="space-y-3">
         <div className="flex items-start gap-2">
           <input
@@ -845,6 +858,7 @@ function PayerDataFields({
           />
         </div>
       </div>
+      )}
     </fieldset>
   );
 }

@@ -1,21 +1,38 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useStaffPermissions } from '../hooks/useStaffPermissions';
+import { useToast } from '../hooks/useToast';
 import {
   useMerchantDashboard,
   PAYMENT_PROOF_BUCKET,
 } from '../hooks/useMerchantDashboard';
+import { useMerchantPagoMovil } from '../hooks/useMerchantPagoMovil';
 import { supabase } from '../services/supabase';
 import type { OrderWithCustomer } from '../hooks/useMerchantDashboardPage';
+import { buildWhatsAppUrl } from '../utils/delivery';
 import { ProductManagement } from '../components/merchant/ProductManagement';
 import { MerchantProfileForm } from '../components/merchant/MerchantProfileForm';
 import { OrdersBoard } from '../components/merchant/OrdersBoard';
 import { PaymentProofModal } from '../components/merchant/PaymentProofModal';
 
+/**
+ * Texto con el que el comercio le reclama al cliente la referencia bancaria que
+ * no coincide con el pago. Va precargado en WhatsApp porque no existe un canal
+ * backend para devolver la orden a un estado de "esperando referencia".
+ */
+function buildReferenceRequestMessage(order: OrderWithCustomer): string {
+  return `Hola ${order.profiles?.full_name ?? ''}, gracias por tu pedido. No pudimos validar tu pago móvil. ¿Podrías enviarnos la referencia bancaria para confirmarlo?`;
+}
+
 export function MerchantDashboard() {
   const { user, profile } = useAuth();
+  const { showToast } = useToast();
   const { merchantIds, orders, drivers, loading, error, updateOrderStatus, assignDriver } =
     useMerchantDashboard(user);
+  // Datos de Pago Móvil del comercio: la conciliación de cada pedido los
+  // contrasta contra el comprobante que adjuntó el cliente. Sin ellos la tarjeta
+  // pintaba "No configurado" aunque el comercio ya los hubiera guardado.
+  const { pagoMovil } = useMerchantPagoMovil(merchantIds[0]);
   // El tablero decide si el empleado puede operar con esta ficha. Sin ella el
   // empleado con `can_manage_orders` ve invariably "solo lectura" aunque el
   // permiso esté activo en la base.
@@ -54,6 +71,25 @@ export function MerchantDashboard() {
     setSelectedOrder(null);
     setProofUrl(null);
     setProofError(null);
+  }
+
+  /** Abre WhatsApp pidiéndole al cliente la referencia bancaria del pago. */
+  function handleRequestReference(order: OrderWithCustomer) {
+    const phone = order.profiles?.phone;
+    const url = phone ? buildWhatsAppUrl(phone) : null;
+    if (url === null) {
+      showToast({
+        variant: 'warning',
+        title: 'Sin teléfono del cliente',
+        message: 'El cliente no registró un teléfono para pedirle la referencia.',
+      });
+      return;
+    }
+    window.open(
+      `${url}?text=${encodeURIComponent(buildReferenceRequestMessage(order))}`,
+      '_blank',
+      'noopener,noreferrer',
+    );
   }
 
   const tabClass = (
@@ -128,15 +164,17 @@ export function MerchantDashboard() {
              {activeTab === 'orders' ? (
                <div className="space-y-4">
 <OrdersBoard
-                    orders={orders}
-                    drivers={drivers}
-                    role={profile?.role ?? null}
-                    staffPermissions={staffPermissions}
-                    permissionsPending={isLoadingStaffPermissions || hasStaffPermissionsError}
-                    onUpdateStatus={updateOrderStatus}
-                    onAssignDriver={assignDriver}
-                    onOpenProof={handleOpenProof}
-                  />
+                     orders={orders}
+                     drivers={drivers}
+                     role={profile?.role ?? null}
+                     staffPermissions={staffPermissions}
+                     permissionsPending={isLoadingStaffPermissions || hasStaffPermissionsError}
+                     pagoMovil={pagoMovil}
+                     onUpdateStatus={updateOrderStatus}
+                     onAssignDriver={assignDriver}
+                     onOpenProof={handleOpenProof}
+                     onRequestReference={handleRequestReference}
+                   />
                </div>
              ) : activeTab === 'catalog' ? (
                <ProductManagement merchantId={merchantIds[0] ?? ''} />

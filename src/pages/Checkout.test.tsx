@@ -9,6 +9,7 @@ import { useMerchantPagoMovil } from '../hooks/useMerchantPagoMovil';
 
 const mockShowToast = vi.fn();
 const mockToggleExcludedIngredient = vi.fn();
+const mockUpdateItemNotes = vi.fn();
 
 vi.mock('../hooks/useCart', () => ({
   useCart: vi.fn(),
@@ -104,6 +105,7 @@ const validCart = {
   addItem: vi.fn(),
   confirmAddItem: vi.fn(),
   toggleExcludedIngredient: mockToggleExcludedIngredient,
+  updateItemNotes: mockUpdateItemNotes,
 };
 
 /** Carrito con un platillo que sí ofrece personalización de ingredientes. */
@@ -195,6 +197,7 @@ describe('Checkout', () => {
     mockCreateOrder.mockClear().mockResolvedValue('order-abc-123');
     mockUploadPaymentProofTemp.mockClear().mockResolvedValue('tmp/abc123.jpg');
     mockToggleExcludedIngredient.mockClear();
+    mockUpdateItemNotes.mockClear();
     vi.mocked(useCart).mockReturnValue(validCart);
     vi.mocked(useAuth).mockReturnValue({
       user: { id: 'user-123' } as any,
@@ -662,6 +665,9 @@ describe('Checkout', () => {
     vi.mocked(useCart).mockReturnValue(cartWithIngredients());
     renderCheckout();
 
+    // El acordeón arranca plegado: hay que abrirlo para ver los ingredientes.
+    await user.click(screen.getByRole('button', { name: /Personalizar Pizza/i }));
+
     const picker = screen.getByTestId('ingredient-picker-p-1');
     expect(picker).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Queso' })).toBeInTheDocument();
@@ -677,6 +683,62 @@ describe('Checkout', () => {
     expect(queso).toHaveAttribute('aria-pressed', 'false');
     await user.click(queso);
     expect(mockToggleExcludedIngredient).toHaveBeenCalledWith('p-1', 'Queso');
+  }, 10000);
+
+  it('pliega y despliega el acordeón de modificaciones por platillo', async () => {
+    vi.mocked(useCart).mockReturnValue(cartWithIngredients());
+    renderCheckout();
+
+    const toggle = screen.getByRole('button', { name: /Personalizar Pizza/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('ingredient-picker-p-1')).not.toBeInTheDocument();
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByTestId('ingredient-picker-p-1')).toBeInTheDocument();
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('ingredient-picker-p-1')).not.toBeInTheDocument();
+  }, 10000);
+
+  it('guarda la nota del platillo y la envía dentro del payload de la orden', async () => {
+    vi.mocked(useCart).mockReturnValue(cartWithIngredients());
+    renderCheckout();
+
+    await user.click(screen.getByRole('button', { name: /Personalizar Pizza/i }));
+    fireEvent.change(screen.getByLabelText(/Notas adicionales/i), {
+      target: { value: 'Sin salsa' },
+    });
+
+    expect(mockUpdateItemNotes).toHaveBeenCalledWith('p-1', 'Sin salsa');
+  }, 10000);
+
+  it('envía la nota del cliente dentro del payload de la orden', async () => {
+    vi.mocked(useCart).mockReturnValue({
+      ...cartWithIngredients(),
+      items: [{ ...cartWithIngredients().items[0], notes: 'Sin cebolla' }],
+    });
+    renderCheckout();
+
+    await user.click(screen.getByRole('button', { name: /Retiro en local/i }));
+    await user.click(screen.getByRole('button', { name: /Efectivo/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar pedido/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockCreateOrder).toHaveBeenCalled();
+    }, { timeout: 5000 });
+
+    expect(mockCreateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({ notes: 'Sin cebolla' }),
+        ],
+      }),
+    );
   }, 10000);
 
   it('envía los ingredientes excluidos dentro del payload de la orden', async () => {
@@ -739,6 +801,18 @@ describe('Checkout', () => {
     expect(screen.getByRole('combobox', { name: /Banco desde el que pagaste/i })).toHaveValue('');
     expect(screen.getByLabelText(/Teléfono del pagador/i)).toHaveValue('0412-1234567');
     expect(screen.getByLabelText(/Cédula del pagador/i)).toHaveValue('V12345678');
+  });
+
+  it('oculta y muestra los datos del pagador con el botón de toggle', async () => {
+    mockCompleteProfile();
+    renderCheckout();
+    expect(screen.getByLabelText(/Teléfono del pagador/i)).toHaveValue('0412-1234567');
+
+    await user.click(screen.getByRole('button', { name: /Ocultar datos del pagador/i }));
+    expect(screen.queryByLabelText(/Teléfono del pagador/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Editar datos del pagador/i }));
+    expect(screen.getByLabelText(/Teléfono del pagador/i)).toHaveValue('0412-1234567');
   });
 
   it('deja editar teléfono y cédula cuando el cliente paga desde otra línea', async () => {

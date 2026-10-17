@@ -402,4 +402,33 @@ describe('useCart', () => {
       expect(result.current.items[0].excludedIngredients).toEqual(['Cebolla']);
     });
   });
+
+  describe('updateItemNotes', () => {
+    it('guarda la nota en la línea indicada y no toca las demás', () => {
+      const { result } = renderHook(() => useCart(), { wrapper });
+
+      act(() => {
+        result.current.addItem(buildProduct('p1', 'm1', 'Pizza', '150.00'));
+        result.current.addItem(buildProduct('p2', 'm1', 'Tacos', '100.00'));
+      });
+      act(() => {
+        result.current.updateItemNotes('p1', 'Sin cebolla');
+      });
+
+      expect(result.current.items[0].notes).toBe('Sin cebolla');
+      expect(result.current.items[1].notes).toBeUndefined();
+    });
+
+    it('borra la nota cuando llega en blanco y conserva la del otro platillo', () => {
+      const { result } = renderHook(() => useCart(), { wrapper });
+
+      act(() => {
+        result.current.addItem(buildProduct('p1', 'm1', 'Pizza', '150.00'));
+        result.current.updateItemNotes('p1', 'Sin cebolla');
+        result.current.updateItemNotes('p1', '   ');
+      });
+
+      expect(result.current.items[0].notes).toBeUndefined();
+    });
+  });
 });

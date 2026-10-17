@@ -9,7 +9,7 @@ import { Badge } from '../../components/ui/Badge';
 import { CompletedPeriodFilter } from '../../components/driver/CompletedPeriodFilter';
 import { formatPrice } from '../../types/cart';
 import { getOrderTypeLabel } from '../../utils/orderType';
-import { getOrderDeliveryCoordinates } from '../../utils/delivery';
+import { buildTelUrl, getOrderDeliveryCoordinates } from '../../utils/delivery';
 import { filterDeliveredOrdersByPeriod, type CompletedPeriod } from '../../utils/completedDeliveries';
 import { MapView } from '../../components/map/MapView';
 import type { DriverOrder } from '../../hooks/useDriverDashboard';
@@ -123,10 +123,6 @@ export function DriverDashboard() {
     }
   }, [signOut, stopTracking]);
 
-  const handleCallCustomer = useCallback((phone: string) => {
-    window.location.href = `tel:${phone}`;
-  }, []);
-
   // Determine which state to render
   const isActiveDelivery = !!activeDeliveryOrder;
   const hasAssignedReady = !!assignedReadyOrder;
@@ -168,7 +164,6 @@ export function DriverDashboard() {
           gpsError={gpsError}
           actionLoading={actionLoading}
           onMarkDelivered={() => void handleMarkDelivered(activeDeliveryOrder.id)}
-          onCallCustomer={handleCallCustomer}
           onLogout={handleLogout}
           isLoggingOut={isLoggingOut}
         />
@@ -269,7 +264,6 @@ interface ActiveDeliveryViewProps {
   gpsError: string | null;
   actionLoading: boolean;
   onMarkDelivered: () => void;
-  onCallCustomer: (phone: string) => void;
   onLogout: () => void;
   isLoggingOut: boolean;
 }
@@ -281,12 +275,12 @@ function ActiveDeliveryView({
   gpsError,
   actionLoading,
   onMarkDelivered,
-  onCallCustomer,
   onLogout,
   isLoggingOut,
 }: ActiveDeliveryViewProps) {
   const customerName = getCustomerName(order);
-  const customerPhone = getCustomerPhone(order);
+  // Enlace `tel:` con prefijo internacional: sin teléfono válido no se pinta.
+  const customerTelUrl = buildTelUrl(getCustomerPhone(order));
   const address = getDeliveryAddress(order);
   const mapsUrl = buildMapsUrl(address);
   const deliveryCoords = getOrderDeliveryCoordinates(order);
@@ -379,16 +373,16 @@ function ActiveDeliveryView({
 
         {/* Action buttons */}
         <div className="flex gap-2">
-          {customerPhone && (
-            <button
-              type="button"
-              onClick={() => onCallCustomer(customerPhone)}
+          {customerTelUrl !== null && (
+            <a
+              href={customerTelUrl}
+              aria-label={`Llamar a ${customerName}`}
               className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 transition-colors"
               data-testid="call-customer"
             >
               <i className="fa-solid fa-phone text-base" />
               Llamar al cliente
-            </button>
+            </a>
           )}
 
           <a

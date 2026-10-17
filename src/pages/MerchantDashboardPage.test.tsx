@@ -4,6 +4,7 @@ import { render } from '../test/test-utils';
 import userEvent from '@testing-library/user-event';
 import { MerchantDashboardPage } from './MerchantDashboardPage';
 import { BrowserRouter } from 'react-router-dom';
+import { NotificationToastProvider } from '../components/pwa/NotificationToast';
 
 // Mock useAuth
 vi.mock('../hooks/useAuth', () => ({
@@ -171,6 +172,20 @@ const createMockOrder = (overrides: Partial<any> = {}) => ({
 describe('MerchantDashboardPage', () => {
   const userEventInstance = userEvent.setup();
 
+  /**
+   * El tablero usa `useToast`, que vive en `NotificationToastProvider`; sin él
+   * el componente revienta al montar. Se envuelve siempre con el proveedor.
+   */
+  function renderDashboardPage() {
+    return render(
+      <NotificationToastProvider>
+        <BrowserRouter>
+          <MerchantDashboardPage />
+        </BrowserRouter>
+      </NotificationToastProvider>,
+    );
+  }
+
   let useAuthMock: any;
   let supabaseModule: any;
 
@@ -212,11 +227,7 @@ describe('MerchantDashboardPage', () => {
     // Hold the orders query pending so loading state stays visible
     supabaseModule.__setMockOrdersPending(true);
 
-    render(
-      <BrowserRouter>
-        <MerchantDashboardPage />
-      </BrowserRouter>
-    );
+    renderDashboardPage();
 
     // Initially loading — use findByText since loading appears after merchantIds resolves
     expect(
@@ -243,11 +254,7 @@ describe('MerchantDashboardPage', () => {
     ];
     supabaseModule.__setMockOrdersData(mockOrders);
 
-    render(
-      <BrowserRouter>
-        <MerchantDashboardPage />
-      </BrowserRouter>
-    );
+    renderDashboardPage();
 
     // El tablero arranca en la pestaña de pendientes de pago
     await waitFor(() => {
@@ -271,11 +278,7 @@ describe('MerchantDashboardPage', () => {
     const mockOrder = createMockOrder({ id: 'order-proof', payment_proof_url: 'https://example.com/proof.jpg' });
     supabaseModule.__setMockOrdersData([mockOrder]);
 
-    render(
-      <BrowserRouter>
-        <MerchantDashboardPage />
-      </BrowserRouter>
-    );
+    renderDashboardPage();
 
     await waitFor(() => {
       expect(screen.getAllByText(/Ver comprobante/i)[0]).toBeInTheDocument();
@@ -299,11 +302,7 @@ describe('MerchantDashboardPage', () => {
     const mockOrder = createMockOrder({ id: 'order-status', status: 'payment_pending' });
     supabaseModule.__setMockOrdersData([mockOrder]);
 
-    render(
-      <BrowserRouter>
-        <MerchantDashboardPage />
-      </BrowserRouter>
-    );
+    renderDashboardPage();
 
     await waitFor(() => {
       expect(screen.getAllByText(/Aceptar pago/i)[0]).toBeInTheDocument();
@@ -328,11 +327,7 @@ describe('MerchantDashboardPage', () => {
     });
     supabaseModule.__setMockOrdersData([mockOrder]);
 
-    render(
-      <BrowserRouter>
-        <MerchantDashboardPage />
-      </BrowserRouter>
-    );
+    renderDashboardPage();
 
     await waitFor(() => {
       expect(screen.getByTestId('order-card-order-delivery-1')).toBeInTheDocument();

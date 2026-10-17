@@ -14,6 +14,7 @@ import type { EmployeeFormInput } from '../utils/staffPermissions';
 const supabaseMocks = vi.hoisted(() => ({
   functionsInvoke: vi.fn(),
   from: vi.fn(),
+  rpc: vi.fn(),
   getSession: vi.fn(),
   refreshSession: vi.fn(),
 }));
@@ -26,6 +27,7 @@ vi.mock('./supabase', () => ({
     },
     functions: { invoke: supabaseMocks.functionsInvoke },
     from: supabaseMocks.from,
+    rpc: supabaseMocks.rpc,
   },
   TABLE_NAMES: {
     profiles: 'profiles',
@@ -581,6 +583,7 @@ describe('fetchMerchantDrivers', () => {
     vi.clearAllMocks();
     tables.clear();
     supabaseMocks.from.mockImplementation((t: string) => tables.get(t));
+    supabaseMocks.rpc.mockResolvedValue({ data: [], error: null });
   });
 
   it('devuelve lista vacía sin consultar cuando no hay comercios', async () => {
@@ -650,6 +653,72 @@ describe('fetchMerchantDrivers', () => {
     await expect(fetchMerchantDrivers(['m-1'])).rejects.toThrow(
       'Error al cargar los repartidores: RLS denegado',
     );
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it('recupera los nombres cuando el RLS deja el perfil del repartidor en null', async () => {
+    // El empleado `merchant_staff` no puede leer el perfil de un repartidor de
+    // su comercio: sin el directorio el selector "Asignar Rider" pintaba el UUID.
+    const staff = register('merchant_staff');
+    staff.in.mockReturnValue({
+      eq: vi.fn().mockResolvedValue({
+        data: [{ user_id: 'driver-1', role: 'driver', permissions: {}, profiles: null }],
+        error: null,
+      }),
+    });
+    supabaseMocks.rpc.mockResolvedValue({
+      data: [{ user_id: 'driver-1', full_name: 'Jesús Pérez', email: 'jesus@t.com' }],
+      error: null,
+    });
+
+    const drivers = await fetchMerchantDrivers(['m-1']);
+
+    expect(supabaseMocks.rpc).toHaveBeenCalledWith('merchant_drivers_directory', {
+      p_merchant_ids: ['m-1'],
+    });
+    expect(drivers).toEqual([
+      { id: 'driver-1', full_name: 'Jesús Pérez', email: 'jesus@t.com' },
+    ]);
+  });
+
+  it('no consulta el directorio cuando el JOIN ya trajo los nombres', async () => {
+    const staff = register('merchant_staff');
+    staff.in.mockReturnValue({
+      eq: vi.fn().mockResolvedValue({
+        data: [
+          {
+            user_id: 'driver-1',
+            role: 'driver',
+            permissions: {},
+            profiles: { full_name: 'Luis', email: 'luis@t.com', role: 'driver' },
+          },
+        ],
+        error: null,
+      }),
+    });
+
+    await fetchMerchantDrivers(['m-1']);
+
+    expect(supabaseMocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it('mantiene los repartidores aunque el directorio falle', async () => {
+    const staff = register('merchant_staff');
+    staff.in.mockReturnValue({
+      eq: vi.fn().mockResolvedValue({
+        data: [{ user_id: 'driver-1', role: 'driver', permissions: {}, profiles: null }],
+        error: null,
+      }),
+    });
+    const consoleSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    supabaseMocks.rpc.mockRejectedValue(new Error('function not found'));
+
+    const drivers = await fetchMerchantDrivers(['m-1']);
+
+    expect(drivers).toEqual([{ id: 'driver-1', full_name: null, email: null }]);
     expect(consoleSpy).toHaveBeenCalled();
     consoleSpy.mockRestore();
   });
