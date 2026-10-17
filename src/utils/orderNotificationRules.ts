@@ -11,6 +11,7 @@
  */
 
 import type { MerchantStaffPermissions, UserRole } from '../types/database';
+import { isPermissionGranted } from './staffPermissions';
 
 /**
  * Indica si el rol debe recibir la notificación de nuevo pedido.
@@ -30,7 +31,7 @@ export function shouldNotifyNewOrder(
       return true;
     case 'merchant_staff':
       // Solo los pedidos asignados a su gestión.
-      return permissions?.can_manage_orders ?? false;
+      return isPermissionGranted(permissions?.can_manage_orders);
     case 'driver':
       // El repartidor solo recibe la notificación de entrega asignada.
       return false;

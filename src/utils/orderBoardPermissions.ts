@@ -8,20 +8,10 @@
  */
 
 import type { MerchantStaffPermissions, UserRole } from '../types/database';
+import { isPermissionGranted } from './staffPermissions';
 
 /** Roles con control total del negocio: ven finanzas y todas las acciones. */
 const FINANCE_ROLES: readonly UserRole[] = ['merchant_owner', 'superadmin'];
-
-/**
- * `permissions` es un JSONB que cada escritor de la plataforma ha guardado con
- * una forma ligeramente distinta: las fichas antiguas no tienen la clave
- * `can_manage_orders`, y los importes o scripts manuales pueden haber dejado el
- * booleano como el texto `"true"`. Leerlo con `=== true` producía un falso
- * negativo que bloqueaba al empleado con el permiso bien puesto en la base.
- */
-function isPermissionGranted(value: unknown): boolean {
-  return value === true || value === 'true';
-}
 
 /**
  * Las finanzas globales del local (ventas del día, totales agregados) solo son

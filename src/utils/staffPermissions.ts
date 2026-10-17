@@ -23,6 +23,23 @@ export interface EmployeeFormInput {
 export const MIN_EMPLOYEE_PASSWORD_LENGTH = 6;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Única lectura de permisos de la app.
+ *
+ * `permissions` es un JSONB que cada escritor de la plataforma ha guardado con
+ * una forma ligeramente distinta: las fichas antiguas no tienen la clave
+ * `can_manage_orders`, y los importes o scripts manuales pueden haber dejado el
+ * booleano como el texto `"true"`. Leerlo con `=== true` producía un falso
+ * negativo que bloqueaba al empleado con el permiso bien puesto en la base.
+ *
+ * Tablero, rutas protegidas, menú lateral y avisos de pedidos deben pasar por
+ * aquí: si un permiso se acepta en un sitio y se rechaza en otro, el empleado ve
+ * el enlace pero no la acción (o al revés).
+ */
+export function isPermissionGranted(value: unknown): boolean {
+  return value === true || value === 'true';
+}
+
 /** Permisos por defecto: solo consulta de pedidos y métricas. */
 export const DEFAULT_STAFF_PERMISSIONS: MerchantStaffPermissions = {
   can_manage_menu: false,

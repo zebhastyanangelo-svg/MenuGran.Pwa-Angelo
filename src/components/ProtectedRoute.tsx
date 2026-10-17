@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useStaffPermissions } from '../hooks/useStaffPermissions';
+import { isPermissionGranted } from '../utils/staffPermissions';
 import type { MerchantStaffPermissions, UserRole } from '../types/database';
 
 export interface ProtectedRouteProps {
@@ -77,7 +78,7 @@ export function ProtectedRoute({
     (profile?.role === 'merchant_staff' || profile?.role === 'driver') &&
     !permissionsUnknown
   ) {
-    const hasPermission = staffPermissions?.[requiredPermission] === true;
+    const hasPermission = isPermissionGranted(staffPermissions?.[requiredPermission]);
     if (!hasPermission) {
       if (profile?.role === 'driver') {
         return <Navigate to="/" replace />;
@@ -92,8 +93,8 @@ export function ProtectedRoute({
     location.pathname === '/admin/dashboard' &&
     !permissionsUnknown &&
     (profile?.role === 'driver' ||
-      staffPermissions?.can_view_assigned_deliveries === true) &&
-    staffPermissions?.can_manage_orders !== true
+      isPermissionGranted(staffPermissions?.can_view_assigned_deliveries)) &&
+    !isPermissionGranted(staffPermissions?.can_manage_orders)
   ) {
     if (profile?.role === 'driver') {
       return <Navigate to="/driver" replace />;

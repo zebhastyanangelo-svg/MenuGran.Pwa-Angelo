@@ -1,4 +1,5 @@
 import type { MerchantStaffPermissions, UserRole } from '../../types/database';
+import { isPermissionGranted } from '../../utils/staffPermissions';
 
 export interface NavItem {
   to: string;
@@ -69,7 +70,7 @@ export function getNavItemsForRole(
         role === 'merchant_staff'
       ) {
         // Sin permisos cargados aún: mostrar solo secciones siempre visibles.
-        return staffPermissions?.[item.requiredPermission] === true;
+        return isPermissionGranted(staffPermissions?.[item.requiredPermission]);
       }
       return true;
     });

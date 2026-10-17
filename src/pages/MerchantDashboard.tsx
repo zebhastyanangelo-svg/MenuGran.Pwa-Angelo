@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useStaffPermissions } from '../hooks/useStaffPermissions';
 import {
   useMerchantDashboard,
   PAYMENT_PROOF_BUCKET,
@@ -15,6 +16,14 @@ export function MerchantDashboard() {
   const { user, profile } = useAuth();
   const { merchantIds, orders, drivers, loading, error, updateOrderStatus, assignDriver } =
     useMerchantDashboard(user);
+  // El tablero decide si el empleado puede operar con esta ficha. Sin ella el
+  // empleado con `can_manage_orders` ve invariably "solo lectura" aunque el
+  // permiso esté activo en la base.
+  const {
+    permissions: staffPermissions,
+    isLoading: isLoadingStaffPermissions,
+    hasError: hasStaffPermissionsError,
+  } = useStaffPermissions();
   const [activeTab, setActiveTab] = useState<'orders' | 'catalog' | 'profile'>('orders');
   const [selectedOrder, setSelectedOrder] = useState<OrderWithCustomer | null>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
@@ -118,15 +127,16 @@ export function MerchantDashboard() {
 
              {activeTab === 'orders' ? (
                <div className="space-y-4">
-                 <OrdersBoard
-                   orders={orders}
-                   drivers={drivers}
-                   role={profile?.role ?? null}
-                   staffPermissions={null}
-                   onUpdateStatus={updateOrderStatus}
-                   onAssignDriver={assignDriver}
-                   onOpenProof={handleOpenProof}
-                 />
+<OrdersBoard
+                    orders={orders}
+                    drivers={drivers}
+                    role={profile?.role ?? null}
+                    staffPermissions={staffPermissions}
+                    permissionsPending={isLoadingStaffPermissions || hasStaffPermissionsError}
+                    onUpdateStatus={updateOrderStatus}
+                    onAssignDriver={assignDriver}
+                    onOpenProof={handleOpenProof}
+                  />
                </div>
              ) : activeTab === 'catalog' ? (
                <ProductManagement merchantId={merchantIds[0] ?? ''} />
