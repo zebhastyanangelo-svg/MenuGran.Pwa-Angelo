@@ -42,21 +42,24 @@ function buildOrder(overrides: Partial<OrderWithCustomer> = {}): OrderWithCustom
   };
 }
 
+function panelProps(order: OrderWithCustomer, pagoMovil: MerchantPagoMovilInfo | null) {
+  return {
+    order,
+    pagoMovil,
+    bcvRate: 10,
+    canOperate: true,
+    onOpenProof: vi.fn(),
+    onValidatePayment: vi.fn(),
+    onRequestReference: vi.fn(),
+  };
+}
+
 function renderPanel(order: OrderWithCustomer, canOperate = true) {
-  const onOpenProof = vi.fn();
-  const onValidatePayment = vi.fn();
-  const onRequestReference = vi.fn();
-  render(
-    <PaymentReconciliationPanel
-      order={order}
-      pagoMovil={PAGO_MOVIL}
-      bcvRate={10}
-      canOperate={canOperate}
-      onOpenProof={onOpenProof}
-      onValidatePayment={onValidatePayment}
-      onRequestReference={onRequestReference}
-    />,
-  );
+  const props = panelProps(order, PAGO_MOVIL);
+  const onOpenProof = props.onOpenProof;
+  const onValidatePayment = props.onValidatePayment;
+  const onRequestReference = props.onRequestReference;
+  render(<PaymentReconciliationPanel {...props} canOperate={canOperate} />);
   return { onOpenProof, onValidatePayment, onRequestReference };
 }
 
@@ -72,52 +75,76 @@ describe('PaymentReconciliationPanel', () => {
     expect(screen.getByText(/1[.\s]?500,00/)).toBeInTheDocument();
   });
 
-  it('etiqueta los cuatro campos de la conciliación con Banco, Teléfono, Cédula / RIF y Referencia', () => {
+  it('etiqueta los cuatro campos de quien paga con Banco emisor, Teléfono, Cédula / RIF y Referencia', () => {
     renderPanel(buildOrder());
 
-    expect(screen.getByText('Banco')).toBeInTheDocument();
+    expect(screen.getByText('Banco emisor')).toBeInTheDocument();
     expect(screen.getByText('Teléfono')).toBeInTheDocument();
     expect(screen.getByText('Cédula / RIF')).toBeInTheDocument();
     expect(screen.getByText('Referencia')).toBeInTheDocument();
   });
 
-  it('elimina la sección redundante de datos de quien paga', () => {
+  it('separa los datos del comercio de los del cliente en dos secciones', () => {
     renderPanel(buildOrder());
 
-    expect(screen.queryByText('Datos de quien paga')).not.toBeInTheDocument();
+    // Cada bloque tiene su propio contenedor: nada se cruza entre receptor y
+    // emisor, porque son cuentas de titulares distintos.
+    expect(screen.getByTestId('payment-reception-data')).toBeInTheDocument();
+    expect(screen.getByTestId('payment-reported-data')).toBeInTheDocument();
+    expect(screen.getByText(/Banco receptor · Datos del comercio/i)).toBeInTheDocument();
+    expect(screen.getByText('Datos de quien paga')).toBeInTheDocument();
   });
 
-  it('confronta el pago del cliente y no la cuenta receptora del comercio', () => {
+  it('muestra la cuenta receptora del comercio con banco, teléfono y cédula', () => {
     renderPanel(buildOrder());
 
-    // `PAGO_MOVIL` describe la cuenta del comercio: el panel ya no la muestra,
-    // porque la conciliación parte de lo que declaró el cliente.
-    expect(screen.queryByText('Banesco')).not.toBeInTheDocument();
-    expect(screen.queryByText('0412-1234567')).not.toBeInTheDocument();
-    expect(screen.queryByText('J-123456789')).not.toBeInTheDocument();
-    expect(screen.queryByText('Banco receptor')).not.toBeInTheDocument();
-    expect(screen.queryByText('Teléfono receptor')).not.toBeInTheDocument();
-    expect(screen.queryByText('Cédula / RIF del comercio')).not.toBeInTheDocument();
+    const reception = screen.getByTestId('payment-reception-data');
+    expect(reception).toHaveTextContent('Banesco');
+    expect(reception).toHaveTextContent('0412-1234567');
+    expect(reception).toHaveTextContent('J-123456789');
+    expect(reception).toHaveTextContent('Banco receptor');
+    expect(reception).toHaveTextContent('Teléfono receptor');
+    expect(reception).toHaveTextContent('Cédula / RIF del comercio');
   });
 
-  it('muestra el banco con su código de institución', () => {
+  it('no mezcla el banco del comercio con los datos del cliente', () => {
     renderPanel(buildOrder());
 
-    expect(screen.getByText('(0105)')).toBeInTheDocument();
+    const reception = screen.getByTestId('payment-reception-data');
+    const payer = screen.getByTestId('payment-reported-data');
+    expect(reception).not.toHaveTextContent('Mercantil');
+    expect(reception).not.toHaveTextContent('0414-9876543');
+    expect(payer).not.toHaveTextContent('Banesco');
+    expect(payer).not.toHaveTextContent('J-123456789');
+  });
+
+  it('avisa que el comercio no configuró su cuenta receptora', () => {
+    render(<PaymentReconciliationPanel {...panelProps(buildOrder(), null)} />);
+
+    const reception = screen.getByTestId('payment-reception-data');
+    expect(screen.getAllByText('No configurado')).toHaveLength(3);
+    expect(reception).toBeInTheDocument();
+  });
+
+  it('muestra el banco del cliente con su código de institución', () => {
+    renderPanel(buildOrder());
+
+    expect(screen.getByTestId('payment-reported-data')).toHaveTextContent('(0105)');
   });
 
   it('normaliza un banco guardado como texto libre', () => {
     renderPanel(buildOrder({ payer_bank: 'Provincial' }));
 
-    expect(screen.getByText('BBVA Provincial')).toBeInTheDocument();
+    expect(screen.getByTestId('payment-reported-data')).toHaveTextContent('BBVA Provincial');
     expect(screen.queryByText('Provincial')).not.toBeInTheDocument();
   });
 
   it('omite el código cuando el banco no está en el catálogo', () => {
     renderPanel(buildOrder({ payer_bank: 'Banco Cooperativo Local' }));
 
-    expect(screen.getByText('Banco Cooperativo Local')).toBeInTheDocument();
-    expect(screen.queryByText(/^\(\d{4}\)$/)).not.toBeInTheDocument();
+    const payer = screen.getByTestId('payment-reported-data');
+    expect(payer).toHaveTextContent('Banco Cooperativo Local');
+    expect(payer.querySelector('.text-slate-400')).toBeNull();
   });
 
   it('avisa que el cliente no declaró los datos del pago', () => {
@@ -240,13 +267,14 @@ describe('PaymentReconciliationPanel', () => {
   it('distingue la cuenta receptora del comercio de la del cliente', () => {
     renderPanel(buildOrder());
 
-    // La cuenta del comercio era el dato duplicado que la caja no necesita para
-    // validar: la conciliación se hace contra el pago reportado por el cliente.
-    expect(screen.queryByText('Banco receptor')).not.toBeInTheDocument();
-    expect(screen.queryByText('Teléfono receptor')).not.toBeInTheDocument();
-    expect(screen.queryByText('Cédula / RIF del comercio')).not.toBeInTheDocument();
-    // Y se muestra la del cliente, no la del comercio.
+    // Ambas conviven, pero cada una en su sección: la del comercio dice
+    // "receptor" y la del cliente "emisor", y los teléfonos no se cruzan.
+    expect(screen.getByText('Banco receptor')).toBeInTheDocument();
+    expect(screen.getByText('Teléfono receptor')).toBeInTheDocument();
+    expect(screen.getByText('Cédula / RIF del comercio')).toBeInTheDocument();
+    expect(screen.getByText('Banco emisor')).toBeInTheDocument();
     expect(screen.getByText('Mercantil')).toBeInTheDocument();
+    expect(screen.getByText('0414-9876543')).toBeInTheDocument();
   });
 
   it('avisa que el cliente no declaró datos del pagador', () => {
@@ -254,6 +282,8 @@ describe('PaymentReconciliationPanel', () => {
 
     // Banco, teléfono y cédula caen en el mismo texto de reserva.
     expect(screen.getAllByText('No indicado')).toHaveLength(3);
+    // Y la cuenta del comercio sigue visible: son bloques independientes.
+    expect(screen.getByTestId('payment-reception-data')).toHaveTextContent('Banesco');
   });
 
   it('omite los datos del pagador en métodos sin captura', () => {

@@ -80,6 +80,40 @@ describe('VenezuelanBankPicker', () => {
     expect(onChange).toHaveBeenCalledWith('Banplus');
   });
 
+  it('no da por elegido el primer banco al abrir y pulsar Enter', async () => {
+    const user = userEvent.setup();
+    const { onChange } = renderPicker();
+
+    // Con el catálogo completo abierto la primera sugerencia es Banco de
+    // Venezuela. Sin señal explícita del usuario, Enter no debe guardarla.
+    await user.click(bankInput());
+    await user.keyboard('{Enter}');
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(bankInput()).toHaveValue('');
+  });
+
+  it('tampoco elige solo por escribir el término', async () => {
+    const user = userEvent.setup();
+    const { onChange } = renderPicker();
+
+    await user.click(bankInput());
+    await user.type(bankInput(), 'banesco');
+    await user.keyboard('{Enter}');
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('sí elige tras señalar la sugerencia con la flecha', async () => {
+    const user = userEvent.setup();
+    const { onChange } = renderPicker();
+
+    await user.click(bankInput());
+    await user.keyboard('{ArrowDown}{Enter}');
+
+    expect(onChange).toHaveBeenCalledWith('Banco de Venezuela');
+  });
+
   it('avisa cuando la búsqueda no arroja resultados', async () => {
     const user = userEvent.setup();
     renderPicker();

@@ -158,36 +158,72 @@ function ReconciliationActions({
 }
 
 /**
- * Datos del pago que reportó el cliente en el checkout.
+ * Banco receptor: la cuenta configurada por el comercio para recibir el pago.
  *
- * Es lo que el cajero contrasta contra el movimiento que le llega al banco:
- * el banco emisor puede diferir del receptor porque el cliente transfiere desde
- * su propia cuenta, y teléfono y cédula son la clave con la que el banco localiza
- * la operación. La referencia la escribió el cliente al confirmar el pago.
- *
- * Antes vivían repartidos entre la cuenta receptora del comercio y una sección
- * aparte titulada "Datos de quien paga", que enterraba el banco emisor —el dato
- * más consultado— bajo un encabezado redundante. Ahora los cuatro datos
- * declarados conviven en una sola rejilla, en el mismo plano visual.
+ * Es la contraparte de la transferencia. Va en su propia sección, separada de los
+ * datos del cliente, porque son de dos titulares distintos y mezclarlos hacía que
+ * el cajero acabara copiando el teléfono del comercio donde debía el del emisor.
  */
-function ReconciliationDataGrid({ order }: { order: OrderWithCustomer }) {
+function ReceptionDataGrid({
+  pagoMovil,
+}: {
+  pagoMovil: MerchantPagoMovilInfo | null;
+}) {
   // El banco se muestra con su nombre canónico y el código de institución: es lo
   // que el cajero contrasta contra el capture cuando el dato se guardó como
   // texto libre ("Provincial", "BDV") antes de que existiera el selector.
+  const bank = resolveVenezuelanBankName(pagoMovil?.bank);
+  const bankCode = bank ? findVenezuelanBank(bank)?.code : undefined;
+
+  return (
+    <section
+      aria-label="Banco receptor del comercio"
+      data-testid="payment-reception-data"
+      className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+    >
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Banco receptor · Datos del comercio
+      </p>
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <BankField label="Banco receptor" value={bank} code={bankCode} />
+        <BankField label="Teléfono receptor" value={pagoMovil?.phone} />
+        <BankField label="Cédula / RIF del comercio" value={pagoMovil?.idNumber} />
+      </dl>
+    </section>
+  );
+}
+
+/**
+ * Datos de quien paga: lo que el cliente declaró en el checkout.
+ *
+ * El banco emisor puede diferir del receptor porque el cliente transfiere desde
+ * su propia cuenta, y teléfono y cédula son la clave con la que el banco localiza
+ * la operación. La referencia la escribió el cliente al confirmar el pago.
+ */
+function PayerDataGrid({ order }: { order: OrderWithCustomer }) {
   const bank = resolveVenezuelanBankName(order.payer_bank);
   const bankCode = bank ? findVenezuelanBank(bank)?.code : undefined;
 
   return (
-    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3" data-testid="payment-reported-data">
-      <BankField label="Banco" value={bank} fallback="No indicado" code={bankCode} />
-      <BankField label="Teléfono" value={order.payer_phone} fallback="No indicado" />
-      <BankField
-        label="Cédula / RIF"
-        value={order.payer_id_number}
-        fallback="No indicado"
-      />
-      <BankField label="Referencia" value={order.payment_reference} fallback="Sin referencia" />
-    </dl>
+    <section
+      aria-label="Datos de quien paga"
+      data-testid="payment-reported-data"
+      className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+    >
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Datos de quien paga
+      </p>
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <BankField label="Banco emisor" value={bank} fallback="No indicado" code={bankCode} />
+        <BankField label="Teléfono" value={order.payer_phone} fallback="No indicado" />
+        <BankField
+          label="Cédula / RIF"
+          value={order.payer_id_number}
+          fallback="No indicado"
+        />
+        <BankField label="Referencia" value={order.payment_reference} fallback="Sin referencia" />
+      </dl>
+    </section>
   );
 }
 
@@ -225,10 +261,12 @@ function AmountGrid({ order, bcvRate }: { order: OrderWithCustomer; bcvRate: num
 
 function ReconciliationSection({
   order,
+  pagoMovil,
   bcvRate,
   onOpenProof,
 }: {
   order: OrderWithCustomer;
+  pagoMovil: MerchantPagoMovilInfo | null;
   bcvRate: number;
   onOpenProof: PaymentReconciliationPanelProps['onOpenProof'];
 }) {
@@ -243,7 +281,8 @@ function ReconciliationSection({
   return (
     <>
       <ProofTile order={order} onOpenProof={onOpenProof} />
-      <ReconciliationDataGrid order={order} />
+      <ReceptionDataGrid pagoMovil={pagoMovil} />
+      <PayerDataGrid order={order} />
       <ValidationAlert order={order} bcvRate={bcvRate} />
     </>
   );
@@ -251,6 +290,7 @@ function ReconciliationSection({
 
 export function PaymentReconciliationPanel({
   order,
+  pagoMovil,
   bcvRate,
   canOperate,
   onOpenProof,
@@ -271,6 +311,7 @@ export function PaymentReconciliationPanel({
 
       <ReconciliationSection
         order={order}
+        pagoMovil={pagoMovil}
         bcvRate={bcvRate}
         onOpenProof={onOpenProof}
       />

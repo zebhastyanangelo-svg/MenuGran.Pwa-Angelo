@@ -2,7 +2,8 @@ import { useState, type FormEvent, useEffect, useCallback, useMemo } from 'react
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { PaymentProofUploader } from '../components/cart/PaymentProofUploader';
-import { VenezuelanBankPicker } from '../components/cart/VenezuelanBankPicker';
+import { PayerIdentityFields } from '../components/cart/PayerIdentityFields';
+import { PayerVerificationModal } from '../components/cart/PayerVerificationModal';
 import { OrderTicket } from '../components/cart/OrderTicket';
 import type { MerchantIssuerInfo } from '../components/cart/OrderTicket';
 import { IncompleteProfileOrderModal } from '../components/cart/IncompleteProfileOrderModal';
@@ -24,6 +25,7 @@ import {
   type MerchantDeliveryPolicy,
 } from '../utils/deliveryPolicy';
 import { summarizeCartPricing } from '../utils/cartPricing';
+import { isSamePayerIdentity, validatePayerIdentity } from '../utils/payerIdentity';
 import {
   isOrderTypeLockedByMode,
   readServiceMode,
@@ -54,23 +56,6 @@ interface ValidateParams {
   deliveryLocation: GeoPoint | null;
   /** `false` si el comercio no ofrece delivery y el pedido lo exige. */
   merchantAcceptsDelivery: boolean;
-  payer: PayerIdentity;
-  /** `true` cuando el formulario pide banco, teléfono y cédula del pagador. */
-  requirePayerData: boolean;
-}
-
-/** Datos del emisor que la caja necesita para rastrear la transferencia. */
-function validatePayerData(payer: PayerIdentity): string | null {
-  if (!payer.bank.trim()) {
-    return 'Selecciona el banco desde el que hiciste la transferencia.';
-  }
-  if (!payer.phone.trim()) {
-    return 'Ingresa el teléfono asociado al pago.';
-  }
-  if (!payer.idNumber.trim()) {
-    return 'Ingresa la cédula asociada al pago.';
-  }
-  return null;
 }
 
 function validateCheckoutForm(params: ValidateParams): string | null {
@@ -83,10 +68,6 @@ function validateCheckoutForm(params: ValidateParams): string | null {
     }
     if (params.file === null || params.file.size > MAX_IMAGE_BYTES) {
       return 'Adjunta una foto o PDF del comprobante (máx. 5 MB).';
-    }
-    if (params.requirePayerData) {
-      const payerError = validatePayerData(params.payer);
-      if (payerError) return payerError;
     }
   }
   if (params.orderType === 'delivery') {
@@ -269,6 +250,9 @@ export function Checkout() {
   const [useProfilePayerData, setUseProfilePayerData] = useState(true);
   const [customPayerPhone, setCustomPayerPhone] = useState('');
   const [customPayerIdNumber, setCustomPayerIdNumber] = useState('');
+  const [isVerificationOpen, setIsVerificationOpen] = useState(false);
+  /** Copia de los datos que el cliente confirmó en el paso de verificación. */
+  const [verifiedPayer, setVerifiedPayer] = useState<PayerIdentity | null>(null);
 
   /** Combina el perfil con lo que el cliente haya escrito a mano. */
   const payer = useMemo<PayerIdentity>(
@@ -285,6 +269,34 @@ export function Checkout() {
       customPayerPhone,
       customPayerIdNumber,
     ],
+  );
+
+  const isPayerVerified = isSamePayerIdentity(verifiedPayer, payer);
+
+  /**
+   * El paso de verificación solo tiene sentido cuando el formulario llegó a
+   * recoger los datos: si el perfil aún no cargó, no hay nada que confirmar y el
+   * pedido sigue su curso normal.
+   */
+  const needsPayerVerification =
+    paymentMethod === 'pago_movil' && requirePayerData && !isPayerVerified;
+
+  /**
+   * Aplica lo corregido en el modal. Editar teléfono o cédula allí significa que
+   * la transferencia salió de otra línea, así que deja de copiar el perfil.
+   */
+  const applyPayerPatch = useCallback(
+    (patch: Partial<PayerIdentity>) => {
+      if (patch.bank !== undefined) setPayerBank(patch.bank);
+      const editsIdentity =
+        (patch.phone !== undefined && patch.phone !== payer.phone) ||
+        (patch.idNumber !== undefined && patch.idNumber !== payer.idNumber);
+      if (!editsIdentity) return;
+      setUseProfilePayerData(false);
+      if (patch.phone !== undefined) setCustomPayerPhone(patch.phone);
+      if (patch.idNumber !== undefined) setCustomPayerIdNumber(patch.idNumber);
+    },
+    [payer.phone, payer.idNumber],
   );
 
   useEffect(() => {
@@ -319,6 +331,137 @@ export function Checkout() {
     [subtotal, deliveryFee],
   );
 
+  /** Sube el comprobante y registra la orden, devolviendo su id. */
+  const recordOrder = async (customerId: string, targetMerchantId: string) => {
+    const proofPath = await uploadProofIfNeeded(paymentMethod, file);
+    return createOrder({
+      merchantId: targetMerchantId,
+      customerId,
+      orderType,
+      paymentMethod,
+      paymentReference: paymentMethod === 'pago_movil' ? reference.trim() : '',
+      totalAmount: orderTotal,
+      deliveryFee,
+      items: buildOrderItems(items),
+      deliveryLocation: orderType === 'delivery' ? deliveryLocation : null,
+      deliveryAddress:
+        orderType === 'delivery' && deliveryAddress.trim() !== ''
+          ? deliveryAddress.trim()
+          : null,
+      paymentProofUrl: proofPath,
+      payer,
+    });
+  };
+
+  const announceOrderPlaced = (data: string) => {
+    if (isPostHogEnabled) {
+      posthog.capture('order_placed', {
+        order_type: orderType,
+        payment_method: paymentMethod,
+        item_count: totalItems,
+        total_amount: orderTotal,
+        delivery_fee: deliveryFee,
+      });
+    }
+    showToast({
+      variant: 'success',
+      title: '¡Pedido enviado!',
+      message:
+        orderType === 'delivery'
+          ? 'Tu pedido con entrega a domicilio fue registrado. El comercio confirmará pronto.'
+          : 'Tu pedido para retiro en local fue registrado. El comercio confirmará pronto.',
+    });
+    clearCart();
+    navigate(`/orders/${data}`);
+  };
+
+  /** Sube el comprobante y registra la orden. Solo se llega aquí tras verificar. */
+  const placeOrder = async (customerId: string, targetMerchantId: string) => {
+    setIsProcessing(true);
+    try {
+      announceOrderPlaced(await recordOrder(customerId, targetMerchantId));
+    } catch (err) {
+      console.error('[Checkout] error during submit:', err);
+      const errMsg = err instanceof Error ? err.message : 'Error al enviar el pedido.';
+      setError(errMsg);
+      showToast({ variant: 'error', title: 'Error', message: errMsg });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  /**
+   * Tramo final: pasa por la verificación obligatoria de los datos de emisión y,
+   * si cuadran, manda la orden. Un fallo aquí deja el comprobante sin enviar.
+   */
+  const confirmAndPlaceOrder = async (customerId: string, targetMerchantId: string) => {
+    if (needsPayerVerification) {
+      setIsVerificationOpen(true);
+      return;
+    }
+    if (requirePayerData) {
+      const payerError = validatePayerIdentity(payer);
+      if (payerError) {
+        setError(payerError);
+        return;
+      }
+    }
+    await placeOrder(customerId, targetMerchantId);
+  };
+
+  /** Sesión y comercio: sin ambos no hay ni un pedido que registrar. */
+  const requireCheckoutSession = useCallback(() => {
+    if (!user?.id) {
+      const message = 'Debes iniciar sesión para realizar un pedido.';
+      setError(message);
+      showToast({ variant: 'error', title: 'Sesión requerida', message });
+      return null;
+    }
+    if (!merchantId) {
+      const message = 'No se pudo identificar el comercio. Intenta recargar la página.';
+      setError(message);
+      showToast({ variant: 'error', title: 'Error', message });
+      return null;
+    }
+    return { customerId: user.id, targetMerchantId: merchantId };
+  }, [user?.id, merchantId, showToast]);
+
+  /**
+   * Cobertura de entrega: el comercio solo atiende su zona. Un punto de entrega
+   * demasiado lejos no se puede registrar y hay que avisarlo con el mapa abierto.
+   */
+  const getDeliveryCoverageError = useCallback(() => {
+    if (orderType !== 'delivery' || !deliveryLocation || !merchantLocation) return null;
+    const MAX_DELIVERY_RADIUS_KM = 1;
+    const distanceKm = haversineDistance(deliveryLocation, merchantLocation).km;
+    if (distanceKm <= MAX_DELIVERY_RADIUS_KM) return null;
+    return 'Este comercio se encuentra a más de 1 km de tu ubicación actual y no ofrece cobertura a tu zona.';
+  }, [orderType, deliveryLocation, merchantLocation]);
+
+  /** Error de los campos del propio formulario, o `null` si todo cuadra. */
+  const getFormError = useCallback(() => {
+    if (!canCheckout) return validationError ?? 'No se puede continuar con el pedido.';
+    return validateCheckoutForm({
+      paymentMethod,
+      pagoMovil,
+      reference,
+      file,
+      orderType,
+      deliveryLocation,
+      merchantAcceptsDelivery,
+    });
+  }, [
+    canCheckout,
+    validationError,
+    paymentMethod,
+    pagoMovil,
+    reference,
+    file,
+    orderType,
+    deliveryLocation,
+    merchantAcceptsDelivery,
+  ]);
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -330,103 +473,25 @@ export function Checkout() {
       return;
     }
 
-    if (!canCheckout) {
-      setError(validationError ?? 'No se puede continuar con el pedido.');
-      return;
-    }
-    const formError = validateCheckoutForm({
-      paymentMethod,
-      pagoMovil,
-      reference,
-      file,
-      orderType,
-      deliveryLocation,
-      merchantAcceptsDelivery,
-      payer,
-      requirePayerData,
-    });
+    const formError = getFormError();
     if (formError) {
       setError(formError);
       return;
     }
 
-    // Validate delivery distance coverage (1km)
-    if (orderType === 'delivery' && deliveryLocation && merchantLocation) {
-      const distance = haversineDistance(deliveryLocation, merchantLocation).km;
-      const MAX_DELIVERY_RADIUS_KM = 1; // 1km coverage radius
-      if (distance > MAX_DELIVERY_RADIUS_KM) {
-        const errorMsg = `Este comercio se encuentra a más de 1 km de tu ubicación actual y no ofrece cobertura a tu zona.`;
-        setDeliveryCoverageError(errorMsg);
-        setError(errorMsg);
-        setOutOfRange(true);
-        return;
-      }
+    const coverageError = getDeliveryCoverageError();
+    if (coverageError) {
+      setDeliveryCoverageError(coverageError);
+      setError(coverageError);
+      setOutOfRange(true);
+      return;
     }
     setOutOfRange(false);
 
-    // Validaciones defensivas para evitar null pointer
-    if (!user?.id) {
-      const errMsg = 'Debes iniciar sesión para realizar un pedido.';
-      setError(errMsg);
-      showToast({ variant: 'error', title: 'Sesión requerida', message: errMsg });
-      return;
-    }
-    if (!merchantId) {
-      const errMsg = 'No se pudo identificar el comercio. Intenta recargar la página.';
-      setError(errMsg);
-      showToast({ variant: 'error', title: 'Error', message: errMsg });
-      return;
-    }
+    const session = requireCheckoutSession();
+    if (!session) return;
 
-    setIsProcessing(true);
-    try {
-      const proofPath = await uploadProofIfNeeded(paymentMethod, file);
-      const data = await createOrder({
-        merchantId,
-        customerId: user.id,
-        orderType,
-        paymentMethod,
-        paymentReference: paymentMethod === 'pago_movil' ? reference.trim() : '',
-        totalAmount: orderTotal,
-        deliveryFee,
-        items: buildOrderItems(items),
-        deliveryLocation: orderType === 'delivery' ? deliveryLocation : null,
-        deliveryAddress:
-          orderType === 'delivery' && deliveryAddress.trim() !== ''
-            ? deliveryAddress.trim()
-            : null,
-        paymentProofUrl: proofPath,
-        payer,
-      });
-
-      if (isPostHogEnabled) {
-        posthog.capture('order_placed', {
-          order_type: orderType,
-          payment_method: paymentMethod,
-          item_count: totalItems,
-          total_amount: orderTotal,
-          delivery_fee: deliveryFee,
-        });
-      }
-
-      showToast({
-        variant: 'success',
-        title: '¡Pedido enviado!',
-        message:
-          orderType === 'delivery'
-            ? 'Tu pedido con entrega a domicilio fue registrado. El comercio confirmará pronto.'
-            : 'Tu pedido para retiro en local fue registrado. El comercio confirmará pronto.',
-      });
-      clearCart();
-      navigate(`/orders/${data}`);
-    } catch (err) {
-      console.error('[Checkout] error during submit:', err);
-      const errMsg = err instanceof Error ? err.message : 'Error al enviar el pedido.';
-      setError(errMsg);
-      showToast({ variant: 'error', title: 'Error', message: errMsg });
-    } finally {
-      setIsProcessing(false);
-    }
+    await confirmAndPlaceOrder(session.customerId, session.targetMerchantId);
   };
 
   const handleAddressChange = useCallback((address: string) => {
@@ -661,6 +726,18 @@ export function Checkout() {
         </Button>
       </form>
 
+      <PayerVerificationModal
+        isOpen={isVerificationOpen}
+        payer={payer}
+        onChange={applyPayerPatch}
+        isProcessing={isProcessing}
+        onConfirm={() => {
+          setVerifiedPayer(payer);
+          setIsVerificationOpen(false);
+          void placeOrder(user?.id ?? '', merchantId ?? '');
+        }}
+      />
+
       <IncompleteProfileOrderModal
         isOpen={profileModalOpen}
         missingFields={profileMissingFields}
@@ -740,46 +817,8 @@ interface PagoMovilSectionProps {
   onPayerIdNumberChange: (value: string) => void;
 }
 
-/** Campo de texto del bloque del pagador, de ancho completo. */
-function PayerField({
-  id,
-  label,
-  value,
-  onChange,
-  readOnly,
-  placeholder,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  readOnly: boolean;
-  placeholder: string;
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className="mb-1 block text-sm font-medium text-slate-700">
-        {label}
-      </label>
-      <input
-        id={id}
-        type="text"
-        value={value}
-        readOnly={readOnly}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        className={`h-11 w-full rounded-xl border px-3 text-sm focus:outline-none focus:ring-2 ${
-          readOnly
-            ? 'border-slate-200 bg-slate-50 text-slate-600'
-            : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-brand-red focus:ring-brand-red'
-        }`}
-      />
-    </div>
-  );
-}
-
 /**
- * Datos del emisor: banco, teléfono y cédula.
+ * Datos del emisor: banco emisor, teléfono y cédula / RIF.
  *
  * El caso normal es que el cliente pague desde su propio perfil, así que se
  * ofrecen precargados y de solo lectura. Quien paga desde otra línea desmarca
@@ -813,51 +852,32 @@ function PayerDataFields({
         onClick={() => setIsExpanded(!isExpanded)}
         className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 hover:border-slate-300 hover:text-slate-900"
       >
-        {isExpanded ? 'Ocultar datos del pagador' : 'Editar datos del pagador'}
+        {isExpanded ? 'Ocultar datos' : 'Editar datos'}
       </button>
       {isExpanded && (
-      <div className="space-y-3">
-        <div className="flex items-start gap-2">
-          <input
-            id="payer-use-profile"
-            type="checkbox"
-            checked={useProfileData}
-            onChange={(event) => onToggleProfileData(event.target.checked)}
-            className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
-          />
-          <label htmlFor="payer-use-profile" className="text-xs leading-relaxed text-slate-600">
-            Usar el teléfono y la cédula de mi perfil. Desmarca si pagas desde otra
-            cuenta o línea.
-          </label>
-        </div>
+        <div className="space-y-3">
+          <div className="flex items-start gap-2">
+            <input
+              id="payer-use-profile"
+              type="checkbox"
+              checked={useProfileData}
+              onChange={(event) => onToggleProfileData(event.target.checked)}
+              className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
+            />
+            <label htmlFor="payer-use-profile" className="text-xs leading-relaxed text-slate-600">
+              Usar el teléfono y la cédula de mi perfil. Desmarca si pagas desde otra
+              cuenta o línea.
+            </label>
+          </div>
 
-        <VenezuelanBankPicker
-          id="payer-bank"
-          label="Banco desde el que pagaste"
-          value={payer.bank}
-          onChange={onBankChange}
-          hint="El comercio lo usa para conciliar tu transferencia."
-        />
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <PayerField
-            id="payer-phone"
-            label="Teléfono del pagador"
-            value={payer.phone}
-            onChange={onPhoneChange}
-            readOnly={useProfileData}
-            placeholder="Ej. 0412-1234567"
-          />
-          <PayerField
-            id="payer-id-number"
-            label="Cédula del pagador"
-            value={payer.idNumber}
-            onChange={onIdNumberChange}
-            readOnly={useProfileData}
-            placeholder="Ej. V12345678"
+          <PayerIdentityFields
+            payer={payer}
+            onBankChange={onBankChange}
+            onPhoneChange={onPhoneChange}
+            onIdNumberChange={onIdNumberChange}
+            readOnlyPhoneAndId={useProfileData}
           />
         </div>
-      </div>
       )}
     </fieldset>
   );

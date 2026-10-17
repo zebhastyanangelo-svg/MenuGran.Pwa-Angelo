@@ -82,12 +82,19 @@ export function VenezuelanBankPicker({
 }: VenezuelanBankPickerProps) {
   const [query, setQuery] = useState(value);
   const [isOpen, setIsOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
+  /**
+   * `-1` significa "nada resaltado". Con el catálogo completo abierto, el primer
+   * banco es Banco de Venezuela: si venía resaltado, bastaba enfocar el campo y
+   * pulsar Enter para guardar un banco que el cliente nunca eligió. Ahora solo
+   * se selecciona algo que el usuario señaló con las flechas o con el ratón.
+   */
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   // El valor puede llegar desde fuera (carga inicial o reinicio del formulario):
   // el texto del campo debe seguirlo sin que el usuario tenga que retiparlo.
   useEffect(() => {
     setQuery(value);
+    setActiveIndex(-1);
   }, [value]);
 
   const choices = useMemo(() => buildChoices(query, value), [query, value]);
@@ -98,7 +105,7 @@ export function VenezuelanBankPicker({
   const selectChoice = (choice: BankChoice) => {
     onChange(choice.value);
     setQuery(choice.value);
-    setActiveIndex(0);
+    setActiveIndex(-1);
     setIsOpen(false);
   };
 
@@ -114,7 +121,8 @@ export function VenezuelanBankPicker({
       setActiveIndex((index) => Math.min(Math.max(index + delta, 0), choices.length - 1));
       return;
     }
-    if (event.key === 'Enter' && isOpen) {
+    // Enter solo elige si el usuario ya está señalando una sugerencia.
+    if (event.key === 'Enter' && isOpen && activeIndex >= 0) {
       const choice = choices[activeIndex];
       if (!choice) return;
       event.preventDefault();
@@ -124,7 +132,7 @@ export function VenezuelanBankPicker({
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
-    setActiveIndex(0);
+    setActiveIndex(-1);
     setIsOpen(true);
   };
 
@@ -146,7 +154,9 @@ export function VenezuelanBankPicker({
           aria-expanded={isOpen}
           aria-controls={listboxId}
           aria-autocomplete="list"
-          aria-activedescendant={isOpen && hasChoices ? optionId(activeIndex) : undefined}
+          aria-activedescendant={
+            isOpen && activeIndex >= 0 ? optionId(activeIndex) : undefined
+          }
           aria-invalid={invalid || undefined}
           value={query}
           placeholder={placeholder}

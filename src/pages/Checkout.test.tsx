@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach, beforeAll } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Checkout } from './Checkout';
@@ -220,6 +220,21 @@ describe('Checkout', () => {
       <MemoryRouter>
         <Checkout />
       </MemoryRouter>,
+    );
+  }
+
+  /**
+   * El modal de verificación queda en el DOM aunque esté cerrado (el `<dialog>`
+   * es quien lo oculta), así que las consultas se acotan a cada bloque para no
+   * confundir los campos del formulario con los del modal.
+   */
+  function payerForm() {
+    return within(screen.getByTestId('pago-movil-payer'));
+  }
+
+  function verificationModal() {
+    return within(
+      screen.getByRole('dialog', { name: /verifica tus datos de emisión de pago/i }),
     );
   }
 
@@ -798,28 +813,35 @@ describe('Checkout', () => {
     renderCheckout();
 
     expect(screen.getByTestId('pago-movil-payer')).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: /Banco desde el que pagaste/i })).toHaveValue('');
-    expect(screen.getByLabelText(/Teléfono del pagador/i)).toHaveValue('0412-1234567');
-    expect(screen.getByLabelText(/Cédula del pagador/i)).toHaveValue('V12345678');
+    expect(payerForm().getByRole('combobox', { name: /Banco emisor/i })).toHaveValue('');
+    expect(payerForm().getByLabelText('Teléfono')).toHaveValue('0412-1234567');
+    expect(payerForm().getByLabelText('Cédula / RIF')).toHaveValue('V12345678');
+  });
+
+  it('evita la palabra "pagador" en los campos de emisión del pago', () => {
+    mockCompleteProfile();
+    renderCheckout();
+
+    expect(screen.getByTestId('pago-movil-payer')).not.toHaveTextContent(/pagador/i);
   });
 
   it('oculta y muestra los datos del pagador con el botón de toggle', async () => {
     mockCompleteProfile();
     renderCheckout();
-    expect(screen.getByLabelText(/Teléfono del pagador/i)).toHaveValue('0412-1234567');
+    expect(payerForm().getByLabelText('Teléfono')).toHaveValue('0412-1234567');
 
-    await user.click(screen.getByRole('button', { name: /Ocultar datos del pagador/i }));
-    expect(screen.queryByLabelText(/Teléfono del pagador/i)).not.toBeInTheDocument();
+    await user.click(payerForm().getByRole('button', { name: 'Ocultar datos' }));
+    expect(payerForm().queryByLabelText('Teléfono')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Editar datos del pagador/i }));
-    expect(screen.getByLabelText(/Teléfono del pagador/i)).toHaveValue('0412-1234567');
+    await user.click(payerForm().getByRole('button', { name: 'Editar datos' }));
+    expect(payerForm().getByLabelText('Teléfono')).toHaveValue('0412-1234567');
   });
 
   it('deja editar teléfono y cédula cuando el cliente paga desde otra línea', async () => {
     mockCompleteProfile();
     renderCheckout();
 
-    const phoneField = screen.getByLabelText(/Teléfono del pagador/i);
+    const phoneField = payerForm().getByLabelText('Teléfono');
     expect(phoneField).toHaveAttribute('readonly');
 
     await user.click(screen.getByLabelText(/Usar el teléfono y la cédula de mi perfil/i));
@@ -834,7 +856,7 @@ describe('Checkout', () => {
     mockCompleteProfile();
     renderCheckout();
 
-    const bankField = screen.getByRole('combobox', { name: /Banco desde el que pagaste/i });
+    const bankField = payerForm().getByRole('combobox', { name: /Banco emisor/i });
     await user.click(bankField);
     await user.type(bankField, 'banesco');
     await user.click(screen.getByRole('option'));
@@ -842,28 +864,66 @@ describe('Checkout', () => {
     expect(bankField).toHaveValue('Banesco');
   });
 
-  it('bloquea el pago si no se elige el banco emisor', async () => {
+  it('no da por elegido un banco que el cliente no seleccionó', async () => {
+    mockCompleteProfile();
+    renderCheckout();
+
+    // Con el catálogo abierto, la primera sugerencia es Banco de Venezuela: si
+    // el cliente solo pulsa Enter, el campo debe quedarse vacío.
+    const bankField = payerForm().getByRole('combobox', { name: /Banco emisor/i });
+    await user.click(bankField);
+    await user.keyboard('{Enter}');
+
+    expect(bankField).toHaveValue('');
+  });
+
+  it('exige verificar los datos de emisión antes de enviar el comprobante', async () => {
     mockCompleteProfile();
     renderCheckout();
 
     await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
     const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
     await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
+    await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
 
     const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
     if (!form) throw new Error('No se encontró el formulario');
     fireEvent.submit(form);
 
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent(/Selecciona el banco desde el que hiciste la transferencia/i);
+    const modal = verificationModal();
+    expect(modal.getByRole('combobox', { name: /Banco emisor/i })).toHaveValue('');
+    expect(modal.getByLabelText('Teléfono')).toHaveValue('0412-1234567');
+    expect(modal.getByLabelText('Cédula / RIF')).toHaveValue('V12345678');
+    // El primer clic solo abre la verificación: el comprobante sigue sin salir.
     expect(mockCreateOrder).not.toHaveBeenCalled();
-  });
+  }, 10000);
+
+  it('bloquea el envío si en la verificación no se eligió banco emisor', async () => {
+    mockCompleteProfile();
+    renderCheckout();
+
+    await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
+    const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
+    await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
+    await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    await user.click(await screen.findByTestId('confirm-payer-verification'));
+
+    expect(
+      await screen.findByTestId('payer-verification-error'),
+    ).toHaveTextContent(/Selecciona el banco desde el que hiciste la transferencia/i);
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+  }, 10000);
 
   it('exige teléfono y cédula cuando el cliente deja de usar los de su perfil', async () => {
     mockCompleteProfile();
     renderCheckout();
 
-    const bankField = screen.getByRole('combobox', { name: /Banco desde el que pagaste/i });
+    const bankField = payerForm().getByRole('combobox', { name: /Banco emisor/i });
     await user.click(bankField);
     await user.type(bankField, 'banesco');
     await user.click(screen.getByRole('option'));
@@ -872,21 +932,25 @@ describe('Checkout', () => {
     await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
     const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
     await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
+    await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
 
     const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
     if (!form) throw new Error('No se encontró el formulario');
     fireEvent.submit(form);
 
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent(/Ingresa el teléfono asociado al pago/i);
-    expect(mockCreateOrder).not.toHaveBeenCalled();
-  });
+    await user.click(await screen.findByTestId('confirm-payer-verification'));
 
-  it('envía el pedido con los datos del pagador completos', async () => {
+    expect(await screen.findByTestId('payer-verification-error')).toHaveTextContent(
+      /Ingresa el teléfono asociado al pago/i,
+    );
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+  }, 10000);
+
+  it('envía el pedido tras verificar los datos del pagador completos', async () => {
     mockCompleteProfile();
     renderCheckout();
 
-    const bankField = screen.getByRole('combobox', { name: /Banco desde el que pagaste/i });
+    const bankField = payerForm().getByRole('combobox', { name: /Banco emisor/i });
     await user.click(bankField);
     await user.type(bankField, '0102');
     await user.click(screen.getByRole('option'));
@@ -898,6 +962,8 @@ describe('Checkout', () => {
     const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
     if (!form) throw new Error('No se encontró el formulario');
     fireEvent.submit(form);
+
+    await user.click(await screen.findByTestId('confirm-payer-verification'));
 
     await waitFor(() => {
       expect(mockCreateOrder).toHaveBeenCalled();
@@ -915,18 +981,17 @@ describe('Checkout', () => {
     );
   }, 10000);
 
-  it('envía los datos del pagador escritos a mano al pagar desde otra línea', async () => {
+  it('envía los datos corregidos en la verificación', async () => {
     mockCompleteProfile();
     renderCheckout();
 
-    const bankField = screen.getByRole('combobox', { name: /Banco desde el que pagaste/i });
+    await user.click(screen.getByLabelText(/Usar el teléfono y la cédula de mi perfil/i));
+    const bankField = payerForm().getByRole('combobox', { name: /Banco emisor/i });
     await user.click(bankField);
     await user.type(bankField, 'banesco');
     await user.click(screen.getByRole('option'));
-    await user.click(screen.getByLabelText(/Usar el teléfono y la cédula de mi perfil/i));
-
-    await user.type(screen.getByLabelText(/Teléfono del pagador/i), '0414-0000000');
-    await user.type(screen.getByLabelText(/Cédula del pagador/i), 'V99999999');
+    await user.type(payerForm().getByLabelText('Teléfono'), '0414-0000000');
+    await user.type(payerForm().getByLabelText('Cédula / RIF'), 'V99999999');
     await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
     const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
     await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
@@ -935,6 +1000,41 @@ describe('Checkout', () => {
     const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
     if (!form) throw new Error('No se encontró el formulario');
     fireEvent.submit(form);
+
+    await user.click(await screen.findByTestId('confirm-payer-verification'));
+
+    await waitFor(() => {
+      expect(mockCreateOrder).toHaveBeenCalled();
+    }, { timeout: 5000 });
+    expect(mockCreateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payer: { bank: 'Banesco', phone: '0414-0000000', idNumber: 'V99999999' },
+      }),
+    );
+  }, 10000);
+
+  it('envía los datos del pagador escritos a mano al pagar desde otra línea', async () => {
+    mockCompleteProfile();
+    renderCheckout();
+
+    const bankField = payerForm().getByRole('combobox', { name: /Banco emisor/i });
+    await user.click(bankField);
+    await user.type(bankField, 'banesco');
+    await user.click(screen.getByRole('option'));
+    await user.click(screen.getByLabelText(/Usar el teléfono y la cédula de mi perfil/i));
+
+    await user.type(payerForm().getByLabelText('Teléfono'), '0414-0000000');
+    await user.type(payerForm().getByLabelText('Cédula / RIF'), 'V99999999');
+    await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
+    const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
+    await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
+    await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    await user.click(await screen.findByTestId('confirm-payer-verification'));
 
     await waitFor(() => {
       expect(mockCreateOrder).toHaveBeenCalled();
