@@ -59,6 +59,30 @@ export default defineConfig(() => {
           clientsClaim: true,
           runtimeCaching: [
             {
+              // Caché de mosaicos de mapas (OpenStreetMap). CacheFirst hace que
+              // el fondo del mapa siga cargando sin conexión en la zona local:
+              // las teselas ya vistas se sirven del Cache Storage y las nuevas
+              // se acumulan para futuros recorridos del repartidor. Las teselas
+              // de OSM son inmutables en la práctica, así que 30 días de TTL
+              // es seguro y respetuoso con el proveedor.
+              urlPattern: ({ url }) =>
+                url.hostname === 'tile.openstreetmap.org' ||
+                url.hostname.endsWith('.tile.openstreetmap.org'),
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'map-tiles-cache-v1',
+                expiration: {
+                  // ~500 teselas cubren una zona local en varios niveles de
+                  // zoom; el límite evita que la caché crezca sin control.
+                  maxEntries: 500,
+                  maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+                },
+                // 0 cubre respuestas opacas (cross-origin sin CORS) y 200 las
+                // teselas válidas; los errores 4xx/5xx no se cachean.
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
               // ImgBB queda TOTALMENTE excluido del Service Worker: tanto las
               // imágenes del CDN (i.ibb.co / *.ibb.co) como las subidas a
               // api.imgbb.com pasan directo a la red sin tocar caché.

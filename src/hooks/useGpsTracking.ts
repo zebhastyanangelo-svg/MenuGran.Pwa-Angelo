@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '../services/supabase'
+import { scheduleOfflineSync } from '../services/offlineSyncService'
+import { enqueueOfflineEvent, isBrowserOffline } from '../utils/offlineSyncQueue'
 
 export interface GpsPosition {
   lat: number
@@ -29,7 +31,22 @@ export function useGpsTracking(
 
   const broadcastPosition = useCallback(
     (pos: GpsPosition) => {
-      if (!channelRef.current || !orderId) return
+      if (!orderId) return
+      // Sin internet el GPS nativo del teléfono sigue reportando (la API de
+      // geolocalización no depende de la red): la posición alimenta el mapa
+      // local y se guarda en la cola offline para sincronizar con Supabase
+      // apenas vuelva la conectividad.
+      if (isBrowserOffline()) {
+        void enqueueOfflineEvent({
+          type: 'driver_location',
+          orderId,
+          lat: pos.lat,
+          lng: pos.lng,
+          recordedAt: Date.now(),
+        })
+        return
+      }
+      if (!channelRef.current) return
       channelRef.current.send({
         type: 'broadcast',
         event: 'driver_location',
@@ -109,6 +126,13 @@ export function useGpsTracking(
       channelRef.current = null
     }
     setTracking(false)
+  }, [])
+
+  // Sincronización diferida: al montar el rastreo se programa el vaciado
+  // automático de la cola cuando el navegador recupere conexión (evento
+  // `online`) y un intento inmediato si hay pendientes de sesiones previas.
+  useEffect(() => {
+    scheduleOfflineSync()
   }, [])
 
   // Cleanup on unmount or orderId change

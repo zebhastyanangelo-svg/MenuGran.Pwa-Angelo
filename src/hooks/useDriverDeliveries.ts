@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { User, RealtimeChannel } from '@supabase/supabase-js'
 import { supabase, TABLE_NAMES } from '../services/supabase'
+import { persistOrderStatus, scheduleOfflineSync } from '../services/offlineSyncService'
 import { NEW_DELIVERY_STATUSES, TRACKED_DELIVERY_STATUSES } from '../utils/delivery'
-import { dispatchOrderStatusPushToCustomer } from '../services/orderStatusPushService'
 import { hydrateDriverCustomerContacts } from '../services/driverContactService'
-import type { OrderRow, OrderStatus, UserRole } from '../types/database'
+import type { OrderRow, UserRole } from '../types/database'
 import type { DriverOrder } from './useDriverDashboard'
 import posthog, { isPostHogEnabled } from '../posthog'
 
@@ -109,25 +109,6 @@ async function fetchDriverDeliveries(
   return hydrateDriverCustomerContacts(orders)
 }
 
-async function updateOrderStatus(
-  orderId: string,
-  status: OrderStatus,
-  driverId?: string | null,
-): Promise<void> {
-  const update: Record<string, unknown> = { status }
-  if (driverId !== undefined) {
-    update.driver_id = driverId
-  }
-  const result = await supabase
-    .from(TABLE_NAMES.orders)
-    .update(update)
-    .eq('id', orderId)
-  if (result.error) throw result.error
-  // Aviso push al cliente (fire-and-forget): el repartidor marcó una novedad
-  // y el cliente la recibe por Web Push aunque tenga la app cerrada.
-  void dispatchOrderStatusPushToCustomer(orderId, status)
-}
-
 export function useDriverDeliveries(
   user: User | null,
   options?: UseDriverDeliveriesOptions,
@@ -192,6 +173,12 @@ export function useDriverDeliveries(
   useEffect(() => {
     void loadOrders()
   }, [loadOrders])
+
+  // Sincronización diferida: sin conexión los estados de entrega quedan en
+  // cola local; al recuperar red se envían a Supabase en segundo plano.
+  useEffect(() => {
+    scheduleOfflineSync()
+  }, [])
 
   useEffect(() => {
     if (!merchantId) return
@@ -312,7 +299,7 @@ export function useDriverDeliveries(
       setActionLoading(true)
       setActionError(null)
       try {
-        await updateOrderStatus(orderId, 'on_the_way', user.id)
+        await persistOrderStatus(orderId, 'on_the_way', user.id)
         if (isPostHogEnabled) {
           posthog.capture('delivery_started')
         }
@@ -338,7 +325,7 @@ export function useDriverDeliveries(
       setActionLoading(true)
       setActionError(null)
       try {
-        await updateOrderStatus(orderId, 'on_the_way', user.id)
+        await persistOrderStatus(orderId, 'on_the_way', user.id)
         if (isPostHogEnabled) {
           posthog.capture('delivery_started')
         }
@@ -363,7 +350,7 @@ export function useDriverDeliveries(
       setActionLoading(true)
       setActionError(null)
       try {
-        await updateOrderStatus(orderId, 'delivered')
+        await persistOrderStatus(orderId, 'delivered')
         setOrders((prev) =>
           prev.map((o) =>
             o.id === orderId ? { ...o, status: 'delivered' } : o,
