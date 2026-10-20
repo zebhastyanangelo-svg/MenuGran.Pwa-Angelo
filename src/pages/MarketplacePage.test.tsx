@@ -210,12 +210,17 @@ describe('MarketplacePage', () => {
   });
 
   describe('filtrado por geolocalización', () => {
-    it('solo muestra comercios dentro de 1 km cuando GPS está disponible', async () => {
+    it('solo muestra comercios dentro de 25 km cuando GPS está disponible', async () => {
       mocks.getCurrentGeoPointMock.mockResolvedValue(userLocation);
+      // ~0.06 km: dentro del radio de cobertura.
       const cerca = buildMerchant('m1', 'Cerca', { x: -66.904, y: 10.481 });
-      const lejos = buildMerchant('m2', 'Lejos', { x: -66.92, y: 10.5 });
+      // ~6.7 km: supera el antiguo límite de 1 km pero sigue dentro de los
+      // 25 km actuales, así que debe aparecer en el listado.
+      const medio = buildMerchant('m2', 'Medio', { x: -66.95, y: 10.52 });
+      // ~26.6 km: fuera del radio de 25 km, no debe aparecer.
+      const lejos = buildMerchant('m3', 'Lejos', { x: -66.9036, y: 10.72 });
       mockTableResults({
-        merchants: { data: [cerca, lejos], error: null },
+        merchants: { data: [cerca, medio, lejos], error: null },
       });
 
       render(
@@ -225,6 +230,7 @@ describe('MarketplacePage', () => {
       );
 
       expect(await screen.findByText('Cerca')).toBeInTheDocument();
+      expect(screen.getByText('Medio')).toBeInTheDocument();
       expect(screen.queryByText('Lejos')).not.toBeInTheDocument();
     });
 

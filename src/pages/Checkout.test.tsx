@@ -6,6 +6,7 @@ import { Checkout } from './Checkout';
 import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
 import { useMerchantPagoMovil } from '../hooks/useMerchantPagoMovil';
+import type { DeliveryFeeTierRow } from '../types/database';
 
 const mockShowToast = vi.fn();
 const mockToggleExcludedIngredient = vi.fn();
@@ -67,6 +68,11 @@ vi.mock('../hooks/useAuth', () => ({
 
 // Mock supabase client used in Checkout to fetch merchant location
 const mockMerchantSelect = vi.fn().mockResolvedValue({ data: null, error: null });
+// Mock supabase client used in Checkout to fetch merchant delivery fee tiers.
+const mockFeeTiersQuery: {
+  data: DeliveryFeeTierRow[];
+  error: { message: string } | null;
+} = { data: [], error: null };
 // Mock supabase client used in Checkout to fetch merchant hours and delivery policy.
 // `TABLE_NAMES` se reexporta porque Checkout lo usa en lugar del literal, igual
 // que el resto de la app.
@@ -80,15 +86,30 @@ vi.mock('../services/supabase', () => ({
     orders: 'orders',
     deliveries: 'deliveries',
     userPushSubscriptions: 'user_push_subscriptions',
+    deliveryFeeTiers: 'delivery_fee_tiers',
   },
   supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          maybeSingle: mockMerchantSelect,
+    from: vi.fn((table: string) => {
+      if (table === 'delivery_fee_tiers') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              order: vi.fn(() => ({
+                then: (onFulfilled: unknown) =>
+                  Promise.resolve(mockFeeTiersQuery).then(onFulfilled as never),
+              })),
+            })),
+          })),
+        };
+      }
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: mockMerchantSelect,
+          })),
         })),
-      })),
-    })),
+      };
+    }),
   },
 }));
 
@@ -198,6 +219,8 @@ describe('Checkout', () => {
     mockUploadPaymentProofTemp.mockClear().mockResolvedValue('tmp/abc123.jpg');
     mockToggleExcludedIngredient.mockClear();
     mockUpdateItemNotes.mockClear();
+    mockFeeTiersQuery.data = [];
+    mockFeeTiersQuery.error = null;
     vi.mocked(useCart).mockReturnValue(validCart);
     vi.mocked(useAuth).mockReturnValue({
       user: { id: 'user-123' } as any,
@@ -438,7 +461,7 @@ describe('Checkout', () => {
     expect(validCart.clearCart).toHaveBeenCalled();
   }, 10000);
 
-  it('bloquea el pedido cuando la entrega está a más de 1 km del comercio', async () => {
+  it('bloquea el pedido cuando la entrega supera el radio maximo de cobertura', async () => {
     // Mock merchant location far away (Caracas)
     mockMerchantSelect.mockResolvedValueOnce({
       data: {
@@ -461,7 +484,7 @@ describe('Checkout', () => {
     fireEvent.submit(form);
 
     // Expect error alert about distance (multiple alerts may render)
-    const alerts = await screen.findAllByText(/más de 1 km/);
+    const alerts = await screen.findAllByText(/más de 25 km/);
     expect(alerts.length).toBeGreaterThan(0);
     expect(mockCreateOrder).not.toHaveBeenCalled();
   }, 10000);
@@ -541,6 +564,64 @@ describe('Checkout', () => {
     });
     expect(screen.getByTestId('ticket-total-usd')).toHaveTextContent('$100.00');
   });
+
+  it('aplica la tarifa del tramo por distancia en lugar de la tarifa plana', async () => {
+    mockMerchantSelect.mockResolvedValueOnce({
+      data: {
+        opening_time: '08:00',
+        closing_time: '20:00',
+        // Mismo punto que el LocationPicker mockeado (CDMX) → distancia 0 km.
+        location: { x: -99.1332, y: 19.4326 },
+        offers_delivery: true,
+        delivery_fee: '1.00',
+      },
+      error: null,
+    });
+    mockFeeTiersQuery.data = [
+      { id: 't1', merchant_id: 'm-123', min_km: 0, max_km: 5, fee: 3.5, created_at: '2026-01-01T00:00:00Z' },
+      { id: 't2', merchant_id: 'm-123', min_km: 5, max_km: 15, fee: 5, created_at: '2026-01-01T00:00:00Z' },
+    ];
+    renderCheckout();
+
+    await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ticket-delivery-fee')).toHaveTextContent('$3.50');
+    });
+    expect(screen.getByTestId('ticket-total-usd')).toHaveTextContent('$103.50');
+  }, 10000);
+
+  it('bloquea el pedido fuera del tramo máximo definido por el comercio', async () => {
+    mockMerchantSelect.mockResolvedValueOnce({
+      data: {
+        opening_time: '00:00',
+        closing_time: '23:59',
+        // Caracas: a miles de km del punto que devuelve el LocationPicker mockeado.
+        location: { x: -66.9036, y: 10.4806 },
+        offers_delivery: true,
+        delivery_fee: '1.00',
+      },
+      error: null,
+    });
+    mockFeeTiersQuery.data = [
+      { id: 't1', merchant_id: 'm-123', min_km: 0, max_km: 5, fee: 2, created_at: '2026-01-01T00:00:00Z' },
+      { id: 't2', merchant_id: 'm-123', min_km: 5, max_km: 15, fee: 4, created_at: '2026-01-01T00:00:00Z' },
+    ];
+    renderCheckout();
+
+    await user.type(screen.getByLabelText(/Número de comprobante/i), 'REF123456');
+    const file = new File(['fake'], 'proof.jpg', { type: 'image/jpeg' });
+    await user.upload(screen.getByLabelText(/Comprobante \(solo imagen\)/i), file);
+    await user.click(screen.getByRole('button', { name: /Seleccionar ubicación/i }));
+
+    const form = screen.getByRole('button', { name: /Confirmar y enviar comprobante/i }).closest('form');
+    if (!form) throw new Error('No se encontró el formulario');
+    fireEvent.submit(form);
+
+    const alerts = await screen.findAllByText(/no cubre entregas a más de 15 km/);
+    expect(alerts.length).toBeGreaterThan(0);
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+  }, 10000);
 
   it('fuerza el retiro en local cuando el comercio no ofrece delivery', async () => {
     mockMerchantSelect.mockResolvedValueOnce({

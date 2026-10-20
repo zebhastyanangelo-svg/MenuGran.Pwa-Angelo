@@ -24,6 +24,8 @@ import {
   resolveDeliveryFee,
   type MerchantDeliveryPolicy,
 } from '../utils/deliveryPolicy';
+import { resolveDeliveryFeeByDistance } from '../utils/deliveryFeeTiers';
+import type { DeliveryFeeTierRow } from '../types/database';
 import { summarizeCartPricing } from '../utils/cartPricing';
 import { isSamePayerIdentity, validatePayerIdentity } from '../utils/payerIdentity';
 import {
@@ -143,6 +145,7 @@ export function Checkout() {
   const [closingTimeStr, setClosingTimeStr] = useState('');
   const [merchantLocation, setMerchantLocation] = useState<GeoPoint | null>(null);
   const [deliveryPolicy, setDeliveryPolicy] = useState<MerchantDeliveryPolicy>({});
+  const [feeTiers, setFeeTiers] = useState<DeliveryFeeTierRow[]>([]);
   /** Datos fiscales del emisor que encabezan el ticket del cliente. */
   const [merchantIssuer, setMerchantIssuer] =
     useState<MerchantIssuerInfo | null>(null);
@@ -190,6 +193,27 @@ export function Checkout() {
             setMerchantLocation({ x: parsed.x, y: parsed.y });
           }
         }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [merchantId]);
+
+  useEffect(() => {
+    if (!merchantId) return;
+    let cancelled = false;
+    supabase
+      .from(TABLE_NAMES.deliveryFeeTiers)
+      .select('*')
+      .eq('merchant_id', merchantId)
+      .order('min_km', { ascending: true })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error('Error fetching delivery fee tiers', error);
+          return;
+        }
+        setFeeTiers((data ?? []) as DeliveryFeeTierRow[]);
       });
     return () => {
       cancelled = true;
@@ -320,12 +344,25 @@ export function Checkout() {
   // el tipo de despacho, y el total se recalcula sin recargar nada. El
   // subtotal ya viene con el descuento aplicado (`totalAmount` del carrito);
   // el desglose se calcula aparte para mostrar el ahorro en el ticket.
+  //
+  // Si el comercio tiene tramos por distancia configurados, se calcula la
+  // distancia real entre el comercio y la dirección del cliente, y se aplica
+  // la tarifa del tramo correspondiente. Si no hay tramos, se usa la tarifa
+  // plana de `merchants.delivery_fee`.
   const cartTotals = useMemo(() => summarizeCartPricing(items), [items]);
   const subtotal = Number(totalAmount);
-  const deliveryFee = useMemo(
-    () => resolveDeliveryFee(deliveryPolicy, orderType),
-    [deliveryPolicy, orderType],
-  );
+  const deliveryFee = useMemo(() => {
+    if (orderType !== 'delivery' || !merchantAcceptsDelivery) return 0;
+
+    if (feeTiers.length > 0) {
+      if (!deliveryLocation || !merchantLocation) return 0;
+      const distanceKm = haversineDistance(deliveryLocation, merchantLocation).km;
+      const result = resolveDeliveryFeeByDistance(feeTiers, distanceKm);
+      return result.outOfRange ? 0 : result.fee;
+    }
+
+    return resolveDeliveryFee(deliveryPolicy, orderType);
+  }, [orderType, merchantAcceptsDelivery, feeTiers, deliveryLocation, merchantLocation, deliveryPolicy]);
   const orderTotal = useMemo(
     () => calculateOrderTotal(subtotal, deliveryFee),
     [subtotal, deliveryFee],
@@ -429,14 +466,25 @@ export function Checkout() {
   /**
    * Cobertura de entrega: el comercio solo atiende su zona. Un punto de entrega
    * demasiado lejos no se puede registrar y hay que avisarlo con el mapa abierto.
+   *
+   * Si el comercio tiene tramos por distancia configurados, el radio máximo
+   * es el `max_km` del tramo más lejano. Si no tiene tramos, se usa un radio
+   * fijo de 25 km.
    */
   const getDeliveryCoverageError = useCallback(() => {
     if (orderType !== 'delivery' || !deliveryLocation || !merchantLocation) return null;
-    const MAX_DELIVERY_RADIUS_KM = 1;
     const distanceKm = haversineDistance(deliveryLocation, merchantLocation).km;
+
+    if (feeTiers.length > 0) {
+      const maxRange = Math.max(...feeTiers.map((t) => t.max_km));
+      if (distanceKm <= maxRange) return null;
+      return `Este comercio no cubre entregas a más de ${maxRange} km de tu ubicación actual.`;
+    }
+
+    const MAX_DELIVERY_RADIUS_KM = 25;
     if (distanceKm <= MAX_DELIVERY_RADIUS_KM) return null;
-    return 'Este comercio se encuentra a más de 1 km de tu ubicación actual y no ofrece cobertura a tu zona.';
-  }, [orderType, deliveryLocation, merchantLocation]);
+    return 'Este comercio se encuentra a más de 25 km de tu ubicación actual y no ofrece cobertura a tu zona.';
+  }, [orderType, deliveryLocation, merchantLocation, feeTiers]);
 
   /** Error de los campos del propio formulario, o `null` si todo cuadra. */
   const getFormError = useCallback(() => {

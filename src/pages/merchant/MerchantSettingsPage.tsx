@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useMerchantSettings } from '../../hooks/useMerchantSettings';
+import { useDeliveryFeeTiers } from '../../hooks/useDeliveryFeeTiers';
 import { useToast } from '../../hooks/useToast';
 import { uploadToImgBB } from '../../services/imgbb';
 import type { ImageFieldState } from '../../components/merchant/ImageUploadField';
@@ -50,7 +51,10 @@ import type {
   MerchantCategory,
   MerchantUpdate,
   WeeklyHours,
+  DeliveryFeeTierRow,
 } from '../../types/database';
+import type { DeliveryFeeTierInput } from '../../services/deliveryFeeTiersService';
+import { DeliveryFeeTiersEditor } from '../../components/merchant/DeliveryFeeTiersEditor';
 
 const MERCHANT_CATEGORIES: MerchantCategory[] = [
   'Comida rápida',
@@ -77,6 +81,14 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
   const effectiveUserId = merchantId ?? user?.id;
   const { merchant, isLoading, error, saveSettings } =
     useMerchantSettings(effectiveUserId);
+  const {
+    tiers,
+    isLoading: tiersLoading,
+    error: tiersError,
+    addTier,
+    editTier,
+    removeTier,
+  } = useDeliveryFeeTiers(merchant?.id);
   const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
@@ -455,6 +467,12 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
             feeInput={deliveryFeeInput}
             onFeeInputChange={setDeliveryFeeInput}
             error={formErrors.delivery_fee}
+            tiers={tiers}
+            tiersLoading={tiersLoading}
+            tiersError={tiersError}
+            onAddTier={addTier}
+            onEditTier={editTier}
+            onRemoveTier={removeTier}
           />
         )}
 
@@ -757,6 +775,12 @@ interface DeliveryTabProps {
   feeInput: string;
   onFeeInputChange: (value: string) => void;
   error?: string;
+  tiers: DeliveryFeeTierRow[];
+  tiersLoading: boolean;
+  tiersError: string | null;
+  onAddTier: (input: DeliveryFeeTierInput) => Promise<void>;
+  onEditTier: (tierId: string, input: DeliveryFeeTierInput) => Promise<void>;
+  onRemoveTier: (tierId: string) => Promise<void>;
 }
 
 /**
@@ -774,6 +798,12 @@ function DeliveryTab({
   feeInput,
   onFeeInputChange,
   error,
+  tiers,
+  tiersLoading,
+  tiersError,
+  onAddTier,
+  onEditTier,
+  onRemoveTier,
 }: DeliveryTabProps) {
   const fee = parseDeliveryFee(feeInput);
   const isFree = fee !== null && fee === 0;
@@ -807,41 +837,53 @@ function DeliveryTab({
       </fieldset>
 
       {offersDelivery && (
-        <div>
-          <label
-            htmlFor="merchant-delivery-fee"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Costo del envío (USD)
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              id="merchant-delivery-fee"
-              type="number"
-              inputMode="decimal"
-              min={MIN_DELIVERY_FEE}
-              max={MAX_DELIVERY_FEE}
-              step="0.01"
-              value={feeInput}
-              onChange={(e) => onFeeInputChange(e.target.value)}
-              placeholder="0.00"
-              aria-describedby="merchant-delivery-fee-help"
-              className={`w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
-                error ? 'border-red-500' : 'border-gray-300'
-              }`}
-            />
-            <span
-              className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800"
-              data-testid="merchant-delivery-fee-preview"
+        <div className="space-y-5">
+          <div>
+            <label
+              htmlFor="merchant-delivery-fee"
+              className="block text-sm font-medium text-gray-700 mb-1"
             >
-              {isFree || fee === null ? 'Envío gratis' : `${formatUSD(fee)} envío`}
-            </span>
+              Costo del envío (USD)
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                id="merchant-delivery-fee"
+                type="number"
+                inputMode="decimal"
+                min={MIN_DELIVERY_FEE}
+                max={MAX_DELIVERY_FEE}
+                step="0.01"
+                value={feeInput}
+                onChange={(e) => onFeeInputChange(e.target.value)}
+                placeholder="0.00"
+                aria-describedby="merchant-delivery-fee-help"
+                className={`w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                  error ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              <span
+                className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800"
+                data-testid="merchant-delivery-fee-preview"
+              >
+                {isFree || fee === null ? 'Envío gratis' : `${formatUSD(fee)} envío`}
+              </span>
+            </div>
+            <p id="merchant-delivery-fee-help" className="mt-1 text-xs text-gray-500">
+              Déjalo vacío o en 0 para entregar gratis. El monto se suma al total
+              del pedido en el checkout y se ve en la tarjeta de tu comercio.
+              Si configuras tramos por distancia, estos tienen prioridad.
+            </p>
+            {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
           </div>
-          <p id="merchant-delivery-fee-help" className="mt-1 text-xs text-gray-500">
-            Déjalo vacío o en 0 para entregar gratis. El monto se suma al total
-            del pedido en el checkout y se ve en la tarjeta de tu comercio.
-          </p>
-          {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+
+          <DeliveryFeeTiersEditor
+            tiers={tiers}
+            loading={tiersLoading}
+            error={tiersError}
+            onAdd={onAddTier}
+            onEdit={onEditTier}
+            onRemove={onRemoveTier}
+          />
         </div>
       )}
     </div>

@@ -1,0 +1,3 @@
+-- Copia del SQL aplicado para que el repositorio lo registre y pueda
+-- reproducirse en otros entornos (fresh install / staging).
+-- (contenido idéntico a la migración fix_push_subscription_owner_conflict)

@@ -69,6 +69,17 @@ vi.mock('../../hooks/useMerchantSettings', () => ({
   useMerchantSettings: vi.fn(),
 }));
 
+vi.mock('../../hooks/useDeliveryFeeTiers', () => ({
+  useDeliveryFeeTiers: vi.fn(() => ({
+    tiers: [],
+    isLoading: false,
+    error: null,
+    addTier: vi.fn().mockResolvedValue(undefined),
+    editTier: vi.fn().mockResolvedValue(undefined),
+    removeTier: vi.fn().mockResolvedValue(undefined),
+  })),
+}));
+
 vi.mock('../../hooks/useToast', () => ({
   useToast: () => ({
     showToast: authMocks.showToastMock,

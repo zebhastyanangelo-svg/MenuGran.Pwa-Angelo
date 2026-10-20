@@ -345,6 +345,16 @@ export interface DeliveryRow {
   updated_at: IsoTimestamp;
 }
 
+/** Tramo de tarifa de delivery por distancia configurado por el comercio. */
+export interface DeliveryFeeTierRow {
+  id: string;
+  merchant_id: string;
+  min_km: number;
+  max_km: number;
+  fee: number;
+  created_at: IsoTimestamp;
+}
+
 /** Suscripción Web Push de un usuario (una fila por endpoint de navegador). */
 export interface UserPushSubscriptionRow {
   id: string;

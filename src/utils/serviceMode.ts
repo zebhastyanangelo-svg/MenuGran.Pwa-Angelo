@@ -116,7 +116,7 @@ export const IN_STORE_SCAN_PATH = '/scan';
 export const DELIVERY_MARKETPLACE_PATH = '/marketplace';
 
 /** Radio de cobertura que el marketplace aplica en el flujo de delivery (km). */
-export const DELIVERY_COVERAGE_RADIUS_KM = 1.0;
+export const DELIVERY_COVERAGE_RADIUS_KM = 25;
 
 /** `true` si el valor persistido es un modo de servicio conocido. */
 export function isValidServiceMode(value: unknown): value is ServiceMode {

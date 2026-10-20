@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type {
   CategoryRow,
+  DeliveryFeeTierRow,
   DeliveryRow,
   MerchantRow,
   MerchantStaffRow,
@@ -36,6 +37,7 @@ const TABLE_NAMES = {
   deliveries: 'deliveries',
   orderRatings: 'order_ratings',
   userPushSubscriptions: 'user_push_subscriptions',
+  deliveryFeeTiers: 'delivery_fee_tiers',
 } as const;
 
 export type TableName = (typeof TABLE_NAMES)[keyof typeof TABLE_NAMES];
@@ -51,6 +53,7 @@ export interface DatabaseTables {
   deliveries: DeliveryRow;
   order_ratings: OrderRatingRow;
   user_push_subscriptions: UserPushSubscriptionRow;
+  delivery_fee_tiers: DeliveryFeeTierRow;
 }
 
 export const supabase: SupabaseClient = createClient(

@@ -451,7 +451,7 @@ const fetchData = useCallback(
                 userLocation ? (
                   <div className="col-span-full py-8 text-center">
                     <p className="text-sm text-gray-500">
-                      No hay comercios a menos de 1 km. Puedes ampliar tu búsqueda o cambiar tu punto de entrega.
+No hay comercios a menos de {COVERAGE_RADIUS_KM} km. Puedes ampliar tu búsqueda o cambiar tu punto de entrega.
                     </p>
                     <button
                       type="button"
