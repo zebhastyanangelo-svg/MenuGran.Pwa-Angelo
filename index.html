@@ -55,7 +55,9 @@
         analytics_storage: 'denied',
       });
     </script>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <!-- gtag.js (GA4) se inyecta dinámicamente por `src/services/googleAnalytics.ts`
+         solo cuando el usuario acepta las cookies de analítica (Consent Mode v2).
+         No se carga aquí para evitar una doble carga del script. -->
   </head>
   <body>
     <!-- Google Tag Manager (noscript) -->

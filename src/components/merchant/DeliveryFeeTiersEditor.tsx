@@ -7,7 +7,7 @@
  *
  * Los tramos no deben solapar y deben cubrir desde 0 km.
  */
-import { useState, type FormEvent } from 'react';
+import { useState, type KeyboardEvent, type MouseEvent } from 'react';
 import type { DeliveryFeeTierRow } from '../../types/database';
 import type { DeliveryFeeTierInput } from '../../services/deliveryFeeTiersService';
 import { formatFeeTier, validateDeliveryFeeTiers } from '../../utils/deliveryFeeTiers';
@@ -40,6 +40,7 @@ export function DeliveryFeeTiersEditor({
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const resetForm = () => {
     setForm(EMPTY_FORM);
@@ -57,39 +58,61 @@ export function DeliveryFeeTiersEditor({
     setError(null);
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  /**
+   * Validación local del formulario: números finitos, rango coherente y
+   * tarifa no negativa. Devuelve el mensaje de error o `null` si es válido.
+   */
+  const validateTierInput = (
+    minKm: number,
+    maxKm: number,
+    fee: number,
+  ): string | null => {
+    if (!Number.isFinite(minKm) || !Number.isFinite(maxKm) || !Number.isFinite(fee)) {
+      return 'Todos los campos deben ser valores numéricos.';
+    }
+    if (minKm < 0 || maxKm <= minKm) {
+      return 'El rango debe ser válido: mínimo ≥ 0 y máximo > mínimo.';
+    }
+    if (fee < 0) {
+      return 'La tarifa no puede ser negativa.';
+    }
+    return null;
+  };
+
+  /** Tramos existentes (excluyendo el que se edita) para validar solapamientos. */
+  const collectTiersForValidation = (): DeliveryFeeTierInput[] =>
+    tiers
+      .filter((t) => editingId === null || t.id !== editingId)
+      .map((t) => ({ minKm: t.min_km, maxKm: t.max_km, fee: t.fee }));
+
+  /**
+   * Guarda el tramo del formulario: inserta (onAdd) o actualiza (onEdit)
+   * según el modo, con estado de carga y manejo de errores.
+   */
+  const submitTier = async () => {
+    if (saving) return;
+
     const minKm = Number(form.minKm);
     const maxKm = Number(form.maxKm);
     const fee = Number(form.fee);
 
-    if (!Number.isFinite(minKm) || !Number.isFinite(maxKm) || !Number.isFinite(fee)) {
-      setError('Todos los campos deben ser valores numéricos.');
+    const inputError = validateTierInput(minKm, maxKm, fee);
+    if (inputError) {
+      setError(inputError);
       return;
     }
-    if (minKm < 0 || maxKm <= minKm) {
-      setError('El rango debe ser válido: mínimo ≥ 0 y máximo > mínimo.');
-      return;
-    }
-    if (fee < 0) {
-      setError('La tarifa no puede ser negativa.');
-      return;
-    }
-
-    const currentTiers: DeliveryFeeTierInput[] =
-      editingId !== null
-        ? tiers
-            .filter((t) => t.id !== editingId)
-            .map((t) => ({ minKm: t.min_km, maxKm: t.max_km, fee: t.fee }))
-        : tiers.map((t) => ({ minKm: t.min_km, maxKm: t.max_km, fee: t.fee }));
 
     const newTier: DeliveryFeeTierInput = { minKm, maxKm, fee };
-    const validation = validateDeliveryFeeTiers([...currentTiers, newTier]);
+    const validation = validateDeliveryFeeTiers([
+      ...collectTiersForValidation(),
+      newTier,
+    ]);
     if (!validation.isValid) {
       setError(validation.errors.join(' '));
       return;
     }
 
+    setSaving(true);
     try {
       if (editingId !== null) {
         await onEdit(editingId, newTier);
@@ -99,7 +122,31 @@ export function DeliveryFeeTiersEditor({
       resetForm();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al guardar el tramo.');
+    } finally {
+      setSaving(false);
     }
+  };
+
+  /**
+   * El editor vive dentro del `<form>` de la página de configuración, así que
+   * el botón NO puede ser `type="submit"` de un formulario anidado: el evento
+   * `submit` burbujearía y dispararía el guardado de toda la página (o una
+   * recarga de la PWA). Se cancela el comportamiento por defecto y se guarda
+   * de forma explícita.
+   */
+  const handleSubmitClick = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    void submitTier();
+  };
+
+  /**
+   * Enter en los inputs del tramo también haría "implicit submission" del
+   * formulario contenedor; se cancela y se guarda el tramo en su lugar.
+   */
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Enter' || !(e.target instanceof HTMLInputElement)) return;
+    e.preventDefault();
+    void submitTier();
   };
 
   const inputClass =
@@ -158,7 +205,16 @@ export function DeliveryFeeTiersEditor({
         </ul>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-3 rounded-md border border-gray-200 p-3" noValidate>
+      {/*
+        Sin `<form>`: este editor se renderiza dentro del formulario de la
+        página y un form anidado es HTML inválido cuyo evento `submit`
+        burbujea y dispara el guardado completo (o recarga la PWA). El
+        guardado se hace explícito desde el onClick del botón.
+      */}
+      <div
+        className="space-y-3 rounded-md border border-gray-200 p-3"
+        onKeyDown={handleKeyDown}
+      >
         <div className="grid grid-cols-3 gap-2">
           <div>
             <label htmlFor="tier-min-km" className="block text-xs font-medium text-gray-600 mb-1">
@@ -211,22 +267,29 @@ export function DeliveryFeeTiersEditor({
 
         <div className="flex gap-2">
           <button
-            type="submit"
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
+            type="button"
+            onClick={handleSubmitClick}
+            disabled={saving}
+            className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {editingId !== null ? 'Guardar cambios' : 'Agregar tramo'}
+            {saving
+              ? 'Guardando...'
+              : editingId !== null
+                ? 'Guardar cambios'
+                : 'Agregar tramo'}
           </button>
           {editingId !== null && (
             <button
               type="button"
               onClick={resetForm}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              disabled={saving}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
               Cancelar
             </button>
           )}
         </div>
-      </form>
+      </div>
     </div>
   );
 }

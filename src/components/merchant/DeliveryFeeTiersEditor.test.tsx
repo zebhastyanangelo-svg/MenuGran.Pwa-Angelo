@@ -137,4 +137,86 @@ describe('DeliveryFeeTiersEditor', () => {
       'Error al cargar los tramos de tarifa.',
     );
   });
+
+  it('no dispara el submit del formulario contenedor al agregar un tramo', async () => {
+    const outerSubmit = vi.fn((e) => e.preventDefault());
+    render(
+      <form onSubmit={outerSubmit}>
+        <DeliveryFeeTiersEditor
+          tiers={[]}
+          loading={false}
+          error={null}
+          onAdd={onAdd}
+          onEdit={onEdit}
+          onRemove={onRemove}
+        />
+      </form>,
+    );
+
+    await fillTierForm(user, '0', '5', '2.50');
+    await user.click(screen.getByRole('button', { name: /Agregar tramo/i }));
+
+    await waitFor(() => {
+      expect(onAdd).toHaveBeenCalledWith({ minKm: 0, maxKm: 5, fee: 2.5 });
+    });
+    expect(outerSubmit).not.toHaveBeenCalled();
+  });
+
+  it('agrega el tramo con Enter sin enviar el formulario contenedor', async () => {
+    const outerSubmit = vi.fn((e) => e.preventDefault());
+    render(
+      <form onSubmit={outerSubmit}>
+        <DeliveryFeeTiersEditor
+          tiers={[]}
+          loading={false}
+          error={null}
+          onAdd={onAdd}
+          onEdit={onEdit}
+          onRemove={onRemove}
+        />
+      </form>,
+    );
+
+    await fillTierForm(user, '0', '5', '3');
+    await user.type(screen.getByLabelText(/Tarifa \(\$\)/i), '{Enter}');
+
+    await waitFor(() => {
+      expect(onAdd).toHaveBeenCalledWith({ minKm: 0, maxKm: 5, fee: 3 });
+    });
+    expect(outerSubmit).not.toHaveBeenCalled();
+  });
+
+  it('muestra estado de carga y evita el doble envío mientras guarda', async () => {
+    let resolveAdd: () => void = () => {};
+    onAdd.mockImplementation(
+      () => new Promise<void>((resolve) => { resolveAdd = resolve; }),
+    );
+    renderEditor();
+
+    await fillTierForm(user, '0', '5', '2');
+    const submitButton = screen.getByRole('button', { name: /Agregar tramo/i });
+    await user.click(submitButton);
+
+    expect(await screen.findByRole('button', { name: /Guardando\.\.\./i })).toBeDisabled();
+
+    // Un segundo clic mientras guarda no debe insertar dos veces.
+    await user.click(screen.getByRole('button', { name: /Guardando\.\.\./i }));
+    resolveAdd();
+
+    await waitFor(() => {
+      expect(onAdd).toHaveBeenCalledTimes(1);
+    });
+    expect(await screen.findByRole('button', { name: /Agregar tramo/i })).toBeInTheDocument();
+  });
+
+  it('muestra el error y mantiene el formulario cuando onAdd falla', async () => {
+    onAdd.mockRejectedValue(new Error('Error de red'));
+    renderEditor();
+
+    await fillTierForm(user, '0', '5', '2');
+    await user.click(screen.getByRole('button', { name: /Agregar tramo/i }));
+
+    expect(await screen.findByText(/Error de red/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Desde \(km\)/i)).toHaveValue(0);
+  });
 });

@@ -74,6 +74,11 @@ export function grantAnalyticsConsent(): void {
 /**
  * Habilita GA4 si (y solo si) hay ID configurado y el usuario aceptó las
  * cookies de analítica. Es idempotente: reintentos no duplican el script.
+ *
+ * `send_page_view: false` desactiva el `page_view` automático que GA4 emite
+ * al configurarse: en una SPA las vistas se registran de forma manual con
+ * `trackPageView` en cada cambio de ruta (ver `useGoogleAnalytics`), de lo
+ * contrario la primera ruta se contaría dos veces.
  */
 export function enableGoogleAnalytics(): boolean {
   const measurementId = getGaMeasurementId();
@@ -84,7 +89,7 @@ export function enableGoogleAnalytics(): boolean {
     const gtag = ensureDataLayer();
     grantAnalyticsConsent();
     gtag('js', new Date());
-    gtag('config', measurementId, { anonymize_ip: true });
+    gtag('config', measurementId, { anonymize_ip: true, send_page_view: false });
     injectGtagScript(measurementId);
     return true;
   } catch (error) {
