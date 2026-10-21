@@ -105,7 +105,7 @@ describe('getMerchantAvailability', () => {
 
     expect(getMerchantAvailability(merchant, MONDAY_NOON)).toEqual({
       isOpen: true,
-      todayLabel: '09:00 – 17:00',
+      todayLabel: '9:00 AM - 5:00 PM',
       badgeLabel: 'Abierto',
     });
   });
@@ -129,7 +129,7 @@ describe('getMerchantAvailability', () => {
   it('usa las columnas legacy cuando no hay agenda semanal', () => {
     const merchant = buildMerchant({ opening_time: '10:00', closing_time: '22:00' });
 
-    expect(getMerchantAvailability(merchant, MONDAY_NOON).todayLabel).toBe('10:00 – 22:00');
+    expect(getMerchantAvailability(merchant, MONDAY_NOON).todayLabel).toBe('10:00 AM - 10:00 PM');
   });
 
   it('avisa que el horario no está configurado en lugar de mostrar un rango vacío', () => {

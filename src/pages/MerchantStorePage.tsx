@@ -13,6 +13,7 @@ import { useToast } from '../hooks/useToast';
 import { useBCVRate } from '../hooks/useExchangeRate';
 import { formatBCVRate } from '../services/exchangeRate';
 import { formatEstimatedDeliveryRange, resolveMerchantPromoChips } from '../utils/promos';
+import { getMerchantAvailability } from '../utils/merchantAvailability';
 
 const SKELETON_COUNT = 4;
 
@@ -156,7 +157,11 @@ export function MerchantStorePage() {
     [confirmAddItem, showToast, merchant],
   );
 
-  const isOpen = merchant?.is_active && merchant?.is_open;
+  // Misma fuente de verdad que la tarjeta del marketplace: interruptores
+  // manuales + agenda semanal/horario legacy. Así el estado "Abierto" nunca
+  // desentona entre ambas vistas.
+  const availability = merchant !== null ? getMerchantAvailability(merchant) : null;
+  const isOpen = availability?.isOpen ?? false;
   const promoChips = merchant ? resolveMerchantPromoChips(merchant) : [];
   const etaLabel = merchant
     ? formatEstimatedDeliveryRange(merchant.estimated_delivery_minutes)
@@ -321,7 +326,7 @@ export function MerchantStorePage() {
               <p className="truncate text-xs text-slate-500">@{merchant.slug}</p>
             </div>
             <Badge variant={isOpen ? 'success' : 'neutral'}>
-              {isOpen ? 'Abierto' : 'Cerrado'}
+              {availability?.badgeLabel ?? 'Cerrado'}
             </Badge>
           </div>
 
@@ -338,13 +343,21 @@ export function MerchantStorePage() {
                 {merchant.zone}
               </span>
             )}
-            {etaLabel !== null && (
+            {etaLabel !== null ? (
               <span
                 className="inline-flex items-center gap-1 rounded-full bg-brand-red/10 px-2 py-0.5 font-semibold text-brand-red"
                 data-testid="store-eta"
               >
                 <i className="fa-solid fa-clock text-xs" aria-hidden="true" />
                 {etaLabel}
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700"
+                data-testid="store-schedule"
+              >
+                <i className="fa-solid fa-clock text-xs" aria-hidden="true" />
+                {availability?.todayLabel ?? 'Horario no configurado'}
               </span>
             )}
             {bcvRate > 0 && (

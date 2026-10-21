@@ -9,6 +9,7 @@
 
 import type { MerchantRow } from '../types/database';
 import { isMerchantOpenNow } from './dateUtils';
+import { formatTimeRange } from './format';
 import {
   describeDaySchedule,
   getScheduleForDate,
@@ -18,7 +19,7 @@ import {
 
 export interface MerchantAvailability {
   isOpen: boolean;
-  /** Rango del día actual ("08:00 – 20:00") o "Cerrado". */
+  /** Rango del día actual ("8:00 AM - 8:00 PM") o "Cerrado". */
   todayLabel: string;
   /** Texto de la insignia. */
   badgeLabel: string;
@@ -56,7 +57,7 @@ export function getMerchantAvailability(
     merchant.weekly_hours != null
       ? describeDaySchedule(getScheduleForDate(parseWeeklyHours(merchant.weekly_hours), date))
       : merchant.opening_time && merchant.closing_time
-        ? `${merchant.opening_time} – ${merchant.closing_time}`
+        ? formatTimeRange(merchant.opening_time, merchant.closing_time)
         : 'Horario no configurado';
 
   return { isOpen, todayLabel, badgeLabel: isOpen ? 'Abierto' : 'Cerrado' };

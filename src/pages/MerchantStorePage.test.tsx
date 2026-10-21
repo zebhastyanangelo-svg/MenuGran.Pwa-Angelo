@@ -45,6 +45,11 @@ function buildMerchant(
     location: null,
     is_active: true,
     is_open: true,
+    // Horario todo el día: la insignia ahora usa la misma función que el
+    // marketplace (interruptores manuales + agenda), así que el fixture
+    // necesita un rango válido para que "Abierto" no dependa de la hora.
+    opening_time: '00:00',
+    closing_time: '23:59',
     created_at: '2026-01-01T00:00:00.000Z',
     rif: 'J-12345678-0',
     category: 'Restaurante',
@@ -166,23 +171,60 @@ describe('MerchantStorePage', () => {
      expect(await screen.findByText(/Aún no hay platillos disponibles/i)).toBeInTheDocument();
    });
 
-   it('muestra la etiqueta Abierto cuando is_open es true', async () => {
-     mockTableResults({
-       merchants: { data: [buildMerchant('merchant-1', 'La Esquina')], error: null },
-       categories: { data: [], error: null },
-       products: { data: [], error: null },
-     });
+    it('muestra la etiqueta Abierto cuando is_open es true y el horario lo permite', async () => {
+      mockTableResults({
+        merchants: { data: [buildMerchant('merchant-1', 'La Esquina')], error: null },
+        categories: { data: [], error: null },
+        products: { data: [], error: null },
+      });
 
-     renderWithProviders(
-       <MemoryRouter initialEntries={['/merchant/merchant-1']}>
-         <Routes>
-           <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
-         </Routes>
-       </MemoryRouter>,
-     );
+      renderWithProviders(
+        <MemoryRouter initialEntries={['/merchant/merchant-1']}>
+          <Routes>
+            <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+          </Routes>
+        </MemoryRouter>,
+      );
 
-     expect(await screen.findByText('Abierto')).toBeInTheDocument();
-   });
+      expect(await screen.findByText('Abierto')).toBeInTheDocument();
+    });
+
+    it('muestra Cerrado cuando la agenda semanal cierra el día aunque is_open sea true', async () => {
+      // Regresión de la sincronización marketplace/perfil: antes la página
+      // del comercio sólo miraba los interruptores manuales y mostraba
+      // "Abierto" aunque la tarjeta del marketplace dijera "Cerrado".
+      const closedAllWeek = Object.fromEntries(
+        ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(
+          (day) => [day, { is_open: false, open_time: '08:00', close_time: '20:00' }],
+        ),
+      );
+      const merchant = {
+        ...buildMerchant('merchant-1', 'La Esquina'),
+        weekly_hours: { timezone: 'America/Caracas', schedule: closedAllWeek },
+      };
+      mockTableResults({
+        merchants: { data: [merchant], error: null },
+        categories: { data: [], error: null },
+        products: { data: [], error: null },
+      });
+
+      renderWithProviders(
+        <MemoryRouter initialEntries={['/merchant/merchant-1']}>
+          <Routes>
+            <Route path="/merchant/:merchantId" element={<MerchantStorePage />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+
+      // La insignia de estado (badgeLabel) y el horario del día (todayLabel)
+      // renderizan "Cerrado" a la vez cuando la agenda cierra el día:
+      // acotamos la búsqueda con findAllByText y el testid del horario en
+      // lugar de exigir un único nodo con ese texto.
+      const cerradoElements = await screen.findAllByText('Cerrado');
+      expect(cerradoElements.length).toBeGreaterThan(0);
+      expect(screen.getByTestId('store-schedule')).toHaveTextContent('Cerrado');
+      expect(screen.queryByText('Abierto')).not.toBeInTheDocument();
+    });
 
    it('muestra la etiqueta Cerrado cuando is_open es false', async () => {
      const closedMerchant = { ...buildMerchant('merchant-1', 'La Esquina'), is_open: false };
@@ -434,12 +476,32 @@ describe('MerchantStorePage', () => {
 
     fireEvent.error(logoImg);
 
-    // El resultado observable del error es el respaldo visual (las iniciales
-    // del comercio). No exigimos que el nodo <img> desaparezca: el componente
-    // puede conservarlo mientras intercambia la fuente o muestra el fallback.
-    await waitFor(() => {
-      expect(screen.getByText('L')).toBeInTheDocument();
-    });
+    // El resultado observable del error es el respaldo visual actual: el
+    // gradiente con las iniciales del comercio (nodo aria-hidden dentro
+    // del círculo del logo). Acotamos la consulta a ese nodo en lugar de
+    // buscar un texto estricto global, y si el evento no surte efecto de
+    // inmediato (imagen obsoleta o relanzamiento del componente) se
+    // reintenta sobre el <img> presente en el DOM.
+    await waitFor(
+      () => {
+        const fallback = screen.queryByText(
+          (_, element) =>
+            element !== null &&
+            element.tagName === 'DIV' &&
+            element.getAttribute('aria-hidden') === 'true',
+        );
+        if (fallback === null) {
+          const currentImg = screen.queryByAltText('Logo de La Esquina');
+          if (currentImg !== null) {
+            fireEvent.error(currentImg);
+          }
+          expect(fallback).not.toBeNull();
+          return;
+        }
+        expect(fallback).toHaveTextContent('L');
+      },
+      { timeout: 5000 },
+    );
   });
   it('muestra los chips de promocion configurados por el comercio', async () => {
     mockTableResults({

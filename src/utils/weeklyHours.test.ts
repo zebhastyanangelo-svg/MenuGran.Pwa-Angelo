@@ -308,9 +308,9 @@ describe('isOpenOnDay', () => {
 });
 
 describe('describeDaySchedule', () => {
-  it('describe un día abierto', () => {
+  it('describe un día abierto en formato 12 horas con AM/PM', () => {
     expect(describeDaySchedule({ is_open: true, open_time: '08:00', close_time: '20:00' })).toBe(
-      '08:00 – 20:00',
+      '8:00 AM - 8:00 PM',
     );
   });
 
@@ -397,9 +397,9 @@ describe('datos reales de una columna time de Postgres', () => {
     });
   });
 
-  it('describe el rango con formato HH:mm, sin segundos', () => {
+  it('describe el rango en formato 12 horas, sin segundos', () => {
     expect(describeDaySchedule({ is_open: true, open_time: '09:00', close_time: '02:00' })).toBe(
-      '09:00 – 02:00',
+      '9:00 AM - 2:00 AM',
     );
   });
 });

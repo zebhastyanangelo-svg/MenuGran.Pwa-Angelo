@@ -7,6 +7,7 @@
  */
 
 import type { DaySchedule, WeeklyHours } from '../../types/database';
+import { formatTime } from '../../utils/format';
 import {
   describeDaySchedule,
   isValidTimeString,
@@ -148,8 +149,8 @@ export function WeeklyHoursEditor({
                       className="rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-700 sm:col-span-2"
                       role="note"
                     >
-                      Horario continuo: abierto desde las {day.open_time} hasta las {day.close_time} del
-                      día siguiente.
+                      Horario continuo: abierto desde las {formatTime(day.open_time)} hasta las{' '}
+                      {formatTime(day.close_time)} del día siguiente.
                     </p>
                   )}
                 </div>

@@ -54,12 +54,6 @@ export function formatDate(value: string | Date): string {
   return dateFormatter.format(new Date(value));
 }
 
-const timeFormatter = new Intl.DateTimeFormat('es-MX', {
-  hour: 'numeric',
-  minute: '2-digit',
-  hour12: true,
-});
-
 function parseTimeString(timeStr: string): Date | null {
   if (!timeStr) return null;
   // Accept HH:mm or HH:mm:ss
@@ -75,16 +69,37 @@ function parseTimeString(timeStr: string): Date | null {
   return date;
 }
 
+/**
+ * Convierte una hora de 24 horas ("HH:mm" o "HH:mm:ss") al formato legible de
+ * 12 horas con indicador AM/PM: "08:00" -> "8:00 AM", "20:00" -> "8:00 PM",
+ * "00:30" -> "12:30 AM", "12:00" -> "12:00 PM".
+ *
+ * Es el único formateador de horas del proyecto: la tarjeta del marketplace y
+ * el perfil del comercio lo usan para mostrar exactamente el mismo texto y
+ * evitar desajustes por formato militar.
+ */
+function formatHourMinute(hours: number, minutes: number): string {
+  const period = hours < 12 ? 'AM' : 'PM';
+  const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+  return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+}
+
 export function formatTime(value?: string | Date | null): string {
   if (!value) return '';
   if (value instanceof Date) {
-    return isNaN(value.getTime()) ? '' : timeFormatter.format(value);
+    return Number.isNaN(value.getTime())
+      ? ''
+      : formatHourMinute(value.getHours(), value.getMinutes());
   }
   const parsed = parseTimeString(value);
   if (!parsed) return value; // fallback to original string
-  return timeFormatter.format(parsed);
+  return formatHourMinute(parsed.getHours(), parsed.getMinutes());
 }
 
+/**
+ * Formatea un rango de horario ("08:00" - "20:00") como "8:00 AM - 8:00 PM".
+ * Devuelve cadena vacía si falta alguno de los dos extremos.
+ */
 export function formatTimeRange(opening: string | null | undefined, closing: string | null | undefined): string {
   if (!opening || !closing) return '';
   return `${formatTime(opening)} - ${formatTime(closing)}`;

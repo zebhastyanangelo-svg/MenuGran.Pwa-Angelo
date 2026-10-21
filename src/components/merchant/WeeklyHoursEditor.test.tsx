@@ -30,11 +30,11 @@ describe('WeeklyHoursEditor', () => {
     }
   });
 
-  it('muestra el rango de cada día abierto', () => {
+  it('muestra el rango de cada día abierto en formato 12 horas', () => {
     renderEditor();
 
     // Los siete días comparten el mismo rango en el fixture.
-    expect(screen.getAllByText('08:00 – 20:00')).toHaveLength(7);
+    expect(screen.getAllByText('8:00 AM - 8:00 PM')).toHaveLength(7);
   });
 
   it('marca Cerrado en los días no abiertos y oculta sus horas', () => {
@@ -103,7 +103,7 @@ describe('WeeklyHoursEditor', () => {
     hours.schedule.friday = { is_open: true, open_time: '20:00', close_time: '02:00' };
     renderEditor(hours);
 
-    expect(screen.getByRole('note')).toHaveTextContent(/abierto desde las 20:00 hasta las 02:00/i);
+    expect(screen.getByRole('note')).toHaveTextContent(/abierto desde las 8:00 PM hasta las 2:00 AM/i);
   });
 
   it('no muestra aviso de medianoche cuando el cierre es posterior a la apertura', () => {

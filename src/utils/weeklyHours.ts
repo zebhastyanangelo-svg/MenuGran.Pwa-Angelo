@@ -7,6 +7,7 @@
  */
 
 import type { DaySchedule, WeekdayKey, WeeklyHours, WeeklySchedule } from '../types/database';
+import { formatTimeRange } from './format';
 
 /** Días en el orden en que se muestran al usuario (lunes primero). */
 export const WEEKDAY_KEYS: readonly WeekdayKey[] = [
@@ -185,10 +186,10 @@ export function isMerchantOpenOnDate(hours: WeeklyHours, date: Date = new Date()
   return isOpenAtMinutes(getScheduleForDate(hours, date), currentMinutesFor(date));
 }
 
-/** Resumen "08:00 – 20:00" o "Cerrado" para un día. */
+/** Resumen "8:00 AM - 8:00 PM" o "Cerrado" para un día. */
 export function describeDaySchedule(schedule: DaySchedule): string {
   if (!schedule.is_open) return 'Cerrado';
-  return `${schedule.open_time} – ${schedule.close_time}`;
+  return formatTimeRange(schedule.open_time, schedule.close_time);
 }
 
 /** Número de días a la semana en los que el comercio abre. */
