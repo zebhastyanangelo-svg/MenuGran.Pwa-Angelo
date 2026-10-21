@@ -123,6 +123,9 @@ const fetchData = useCallback(
         .from(TABLE_NAMES.merchants)
         .select(MERCHANT_COLUMNS)
         .eq('is_active', true)
+        // Visibilidad administrativa: un comercio ocultado por el Superadmin
+        // no aparece en el listado ni en la búsqueda del público general.
+        .eq('is_admin_active', true)
         .eq('status', 'active');
 
       // Si el cliente ya eligió el flujo de delivery en la pantalla de

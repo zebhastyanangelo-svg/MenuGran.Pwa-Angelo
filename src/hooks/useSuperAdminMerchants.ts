@@ -3,6 +3,7 @@ import {
   createMerchantAccount,
   deleteMerchant,
   listMerchantsWithOwners,
+  setMerchantAdminVisibility,
   type MerchantAccountListItem,
 } from '../services/superAdminService'
 import type { CreateMerchantAccountInput } from '../utils/merchantRegistration'
@@ -15,6 +16,7 @@ export interface UseSuperAdminMerchantsResult {
   lastCreatedPassword: string | null
   addMerchant: (input: CreateMerchantAccountInput) => Promise<MerchantAccountListItem['id']>
   removeMerchant: (merchant: MerchantAccountListItem) => Promise<void>
+  toggleMerchantVisibility: (merchantId: string, isVisible: boolean) => Promise<void>
 }
 
 export function useSuperAdminMerchants(): UseSuperAdminMerchantsResult {
@@ -64,6 +66,17 @@ export function useSuperAdminMerchants(): UseSuperAdminMerchantsResult {
     },
   })
 
+  const { mutateAsync: toggleMerchantVisibility } =
+    useMutation<void, Error, { merchantId: string; isVisible: boolean }>({
+      mutationKey: ['toggleMerchantVisibility'],
+      mutationFn: async ({ merchantId, isVisible }) => {
+        await setMerchantAdminVisibility(merchantId, isVisible)
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['superAdminMerchants'] })
+      },
+    })
+
   return {
     merchants: merchants ?? [],
     isLoading: isListLoading || isAdding || isRemoving,
@@ -72,6 +85,8 @@ export function useSuperAdminMerchants(): UseSuperAdminMerchantsResult {
     addMerchant: async (input: CreateMerchantAccountInput) => await addMerchant(input),
     removeMerchant: async (merchant: MerchantAccountListItem) =>
       await removeMerchant(merchant),
+    toggleMerchantVisibility: async (merchantId: string, isVisible: boolean) =>
+      await toggleMerchantVisibility({ merchantId, isVisible }),
   }
 }
 

@@ -26,6 +26,8 @@ export interface MerchantAccountListItem {
   rif: string;
   status: MerchantStatus;
   is_active: boolean;
+  /** Visibilidad administrativa en el marketplace. `undefined` = visible. */
+  is_admin_active?: boolean;
   created_at: IsoTimestamp;
   owner_id: string | null;
   owner_email: string | null;
@@ -38,6 +40,7 @@ interface MerchantListQueryRow {
   rif: string;
   status: MerchantStatus;
   is_active: boolean;
+  is_admin_active?: boolean;
   created_at: IsoTimestamp;
   owner_id: string | null;
   profiles: { email: string; full_name: string | null } | null;
@@ -131,7 +134,7 @@ export async function listMerchantsWithOwners(): Promise<
 > {
   const { data, error } = await supabase
     .from(TABLE_NAMES.merchants)
-    .select('id, owner_id, name, rif, status, is_active, created_at, profiles(email, full_name)')
+    .select('id, owner_id, name, rif, status, is_active, is_admin_active, created_at, profiles(email, full_name)')
     .order('created_at', { ascending: false });
 
   if (error !== null) {
@@ -144,6 +147,7 @@ export async function listMerchantsWithOwners(): Promise<
     rif: row.rif,
     status: row.status,
     is_active: row.is_active,
+    is_admin_active: row.is_admin_active ?? true,
     created_at: row.created_at,
     owner_id: row.owner_id ?? null,
     owner_email: row.profiles?.email ?? null,
@@ -159,6 +163,8 @@ export interface MerchantDetails {
   rif: string;
   status: MerchantStatus;
   is_active: boolean;
+  /** Visibilidad administrativa en el marketplace. `undefined` = visible. */
+  is_admin_active?: boolean;
   is_open: boolean;
   category: MerchantCategory;
   description: string | null;
@@ -175,7 +181,7 @@ export interface MerchantDetails {
 }
 
 const MERCHANT_DETAILS_COLUMNS =
-  'id, name, slug, rif, status, is_active, is_open, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, opening_time, closing_time, subscription_expires_at, created_at';
+  'id, name, slug, rif, status, is_active, is_admin_active, is_open, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, opening_time, closing_time, subscription_expires_at, created_at';
 
 /**
  * Obtiene la ficha completa de un comercio para el panel de Super Admin.
@@ -236,6 +242,35 @@ export async function updateMerchantSubscription(
   const stored = (data as { subscription_expires_at: string | null } | null)
     ?.subscription_expires_at;
   return stored ?? expirationDate.trim();
+}
+
+/**
+ * Alterna la visibilidad administrativa de un comercio en el marketplace.
+ *
+ * Solo el Superadmin puede llamarla: RLS y el trigger guardián
+ * `merchants_guard_admin_visibility` rechazan cualquier otro llamador.
+ * Devuelve el estado almacenado tras la actualización.
+ */
+export async function setMerchantAdminVisibility(
+  merchantId: string,
+  isVisible: boolean,
+): Promise<boolean> {
+  if (merchantId.trim() === '') {
+    throw new Error('Se requiere el identificador del comercio.');
+  }
+
+  const { data, error } = await supabase
+    .from(TABLE_NAMES.merchants)
+    .update({ is_admin_active: isVisible })
+    .eq('id', merchantId)
+    .select('is_admin_active')
+    .single();
+
+  if (error !== null) {
+    throw new Error(`Error al actualizar la visibilidad del comercio: ${error.message}`);
+  }
+  const stored = (data as { is_admin_active: boolean } | null)?.is_admin_active;
+  return stored ?? isVisible;
 }
 
 /** Comercio con su suscripción vencida o próxima a vencer (alerta SuperAdmin). */

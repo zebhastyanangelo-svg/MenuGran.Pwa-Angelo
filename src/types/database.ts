@@ -210,6 +210,13 @@ export interface MerchantRow {
   status: MerchantStatus;
   verification_docs: MerchantVerificationDocs;
   is_active: boolean;
+  /**
+   * Visibilidad administrativa controlada por el Superadmin. Cuando es
+   * `false` el marketplace oculta el comercio del público general; el dueño
+   * conserva el acceso interno a su panel. Solo el Superadmin puede
+   * modificarla (la base de datos la protege con un trigger guardián).
+   */
+  is_admin_active?: boolean;
   is_open: boolean;
   location: GeoPoint | null;
   created_at: IsoTimestamp;

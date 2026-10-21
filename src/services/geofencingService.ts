@@ -76,12 +76,17 @@ export function getCurrentPosition(): Promise<Coordinates> {
 
 /**
  * Consulta los comercios activos con ubicación desde Supabase.
+ *
+ * Excluye a los comercios ocultados administrativamente: las notificaciones
+ * de "comercio cercano" nunca deben recomendar un negocio invisible en el
+ * marketplace.
  */
 async function getMerchantsWithLocation(): Promise<MerchantWithLocation[]> {
   const { data, error } = await supabase
     .from(TABLE_NAMES.merchants)
     .select('id, name, location')
     .eq('is_active', true)
+    .eq('is_admin_active', true)
     .not('location', 'is', null);
 
   if (error !== null || data === null) {

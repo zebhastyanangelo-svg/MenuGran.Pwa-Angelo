@@ -222,7 +222,7 @@ describe('listMerchantsWithOwners', () => {
     const items = await listMerchantsWithOwners();
 
     expect(merchants.select).toHaveBeenCalledWith(
-      'id, owner_id, name, rif, status, is_active, created_at, profiles(email, full_name)',
+      'id, owner_id, name, rif, status, is_active, is_admin_active, created_at, profiles(email, full_name)',
     );
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({

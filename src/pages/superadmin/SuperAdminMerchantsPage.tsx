@@ -27,6 +27,7 @@ export function SuperAdminMerchantsPage() {
     lastCreatedPassword,
     addMerchant,
     removeMerchant,
+    toggleMerchantVisibility,
   } = useSuperAdminMerchants();
   const [merchantPendingDelete, setMerchantPendingDelete] =
     useState<MerchantAccountListItem | null>(null);
@@ -37,6 +38,9 @@ export function SuperAdminMerchantsPage() {
     useState<MerchantAccountListItem | null>(null);
   /** Modal de métricas financieras, accesible desde la ficha del comercio. */
   const [metricsMerchant, setMetricsMerchant] = useState<string | null>(null);
+  /** Id del comercio cuyo interruptor de visibilidad está en vuelo. */
+  const [togglingMerchantId, setTogglingMerchantId] = useState<string | null>(null);
+  const [visibilityError, setVisibilityError] = useState<string | null>(null);
 
   const handleCreate = useCallback(
     async (input: CreateMerchantAccountInput) => {
@@ -70,6 +74,33 @@ export function SuperAdminMerchantsPage() {
       setIsDeleting(false);
     }
   }, [merchantPendingDelete, removeMerchant, closeDeleteModal]);
+
+  /**
+   * Alterna la visibilidad administrativa del comercio en el marketplace.
+   * El interruptor es exclusivo del Superadmin: ocultar un comercio no
+   * suspende su operación interna, solo lo excluye del público general.
+   */
+  const handleToggleVisibility = useCallback(
+    async (merchant: MerchantAccountListItem) => {
+      setTogglingMerchantId(merchant.id);
+      setVisibilityError(null);
+      try {
+        await toggleMerchantVisibility(
+          merchant.id,
+          !(merchant.is_admin_active ?? true),
+        );
+      } catch (caught) {
+        setVisibilityError(
+          caught instanceof Error
+            ? caught.message
+            : 'No se pudo actualizar la visibilidad del comercio.',
+        );
+      } finally {
+        setTogglingMerchantId(null);
+      }
+    },
+    [toggleMerchantVisibility],
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
@@ -117,6 +148,11 @@ export function SuperAdminMerchantsPage() {
               {error}
             </p>
           )}
+          {visibilityError !== null && (
+            <p className="text-sm text-red-600" role="alert">
+              {visibilityError}
+            </p>
+          )}
           {isLoading ? (
             <p className="text-sm text-gray-600" role="status">
               Cargando comercios...
@@ -127,7 +163,10 @@ export function SuperAdminMerchantsPage() {
             </p>
           ) : (
             <ul className="divide-y divide-gray-100" aria-label="Listado de comercios">
-              {merchants.map((merchant) => (
+              {merchants.map((merchant) => {
+                const isVisible = merchant.is_admin_active ?? true;
+                const isTogglingThis = togglingMerchantId === merchant.id;
+                return (
                 <li
                   key={merchant.id}
                   data-testid="merchant-row"
@@ -157,6 +196,34 @@ export function SuperAdminMerchantsPage() {
                     </Badge>
                     <button
                       type="button"
+                      role="switch"
+                      aria-checked={isVisible}
+                      data-testid="toggle-merchant-visibility"
+                      aria-label={`${isVisible ? 'Ocultar' : 'Mostrar'} ${merchant.name} en el marketplace`}
+                      title={
+                        isVisible
+                          ? `Ocultar ${merchant.name} del marketplace`
+                          : `Mostrar ${merchant.name} en el marketplace`
+                      }
+                      disabled={isTogglingThis}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleToggleVisibility(merchant);
+                      }}
+                      className={
+                        isVisible
+                          ? 'inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 transition-colors hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-200 disabled:opacity-60'
+                          : 'inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:opacity-60'
+                      }
+                    >
+                      <i
+                        className={`fa-solid ${isTogglingThis ? 'fa-spinner animate-spin' : isVisible ? 'fa-eye' : 'fa-eye-slash'} text-sm`}
+                        aria-hidden="true"
+                      />
+                      {isVisible ? 'Activo en Marketplace' : 'Oculto por Administrador'}
+                    </button>
+                    <button
+                      type="button"
                       data-testid="delete-merchant"
                       aria-label={`Eliminar ${merchant.name}`}
                       title={`Eliminar ${merchant.name}`}
@@ -171,7 +238,8 @@ export function SuperAdminMerchantsPage() {
                     </button>
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </Card>
