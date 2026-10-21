@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { MouseEvent } from 'react';
 import type { OrderRow } from '../../types/database';
@@ -25,6 +25,8 @@ export function PaymentProofLightbox({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  const [proofError, setProofError] = useState(false);
 
   const handleBackdropClick = (event: MouseEvent<HTMLDivElement>) => {
     if (event.target === event.currentTarget) onClose();
@@ -77,15 +79,20 @@ export function PaymentProofLightbox({
         </div>
 
         <div className="flex-1 flex items-center justify-center w-full overflow-auto">
-          {error ? (
-            <p className="text-center text-red-400 py-6">{error}</p>
-          ) : (
-            <img
-              src={proofUrl}
-              alt="Comprobante de pago"
-              className="max-w-full max-h-[80vh] object-contain rounded shadow-lg"
-            />
-          )}
+        {error ? (
+          <p className="text-center text-red-400 py-6">{error}</p>
+        ) : proofError ? (
+          <div className="flex h-full w-full items-center justify-center rounded-lg bg-gray-100 text-gray-400">
+            <i className="fa-solid fa-file-image text-4xl" />
+          </div>
+        ) : (
+          <img
+            src={proofUrl}
+            alt="Comprobante de pago"
+            onError={() => setProofError(true)}
+            className="max-w-full max-h-[80vh] object-contain rounded shadow-lg"
+          />
+        )}
         </div>
       </div>
     </div>,

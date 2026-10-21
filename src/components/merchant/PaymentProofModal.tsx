@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { formatPrice } from '../../types/cart';
 import { getPaymentMethodLabel } from '../../utils/paymentMethod';
 import type { OrderRow } from '../../types/database';
@@ -15,6 +16,8 @@ export function PaymentProofModal({
   error,
   onClose,
 }: PaymentProofModalProps) {
+  const [proofError, setProofError] = useState(false);
+
   if (!order) return null;
 
   return (
@@ -61,11 +64,18 @@ export function PaymentProofModal({
 
         {proofUrl ? (
           <div className="flex justify-center bg-gray-100 p-2 rounded">
-            <img
-              src={proofUrl}
-              alt="Comprobante de Pago"
-              className="max-w-full h-auto rounded border border-gray-200 max-h-[400px] object-contain"
-            />
+            {proofError ? (
+              <div className="flex h-48 items-center justify-center rounded border border-gray-200 text-gray-400">
+                <i className="fa-solid fa-file-image text-3xl" />
+              </div>
+            ) : (
+              <img
+                src={proofUrl}
+                alt="Comprobante de Pago"
+                onError={() => setProofError(true)}
+                className="max-w-full h-auto rounded border border-gray-200 max-h-[400px] object-contain"
+              />
+            )}
           </div>
         ) : error ? (
           <p className="text-center text-red-600 py-6">{error}</p>

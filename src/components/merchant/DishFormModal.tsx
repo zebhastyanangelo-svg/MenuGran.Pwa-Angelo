@@ -460,6 +460,7 @@ export function DishFormModal({
             value={image}
             onFileChange={handleImageChange}
             onRemove={handleRemoveImage}
+            version={initialData?.image_version ?? null}
           />
 
           {/* Etiqueta y descuento: se muestran como chips flotantes en el menú */}

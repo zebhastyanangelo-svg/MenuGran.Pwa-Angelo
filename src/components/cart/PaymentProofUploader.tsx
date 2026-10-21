@@ -27,6 +27,7 @@ export function PaymentProofUploader({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [typeError, setTypeError] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -141,11 +142,18 @@ export function PaymentProofUploader({
           <div className="flex items-center gap-3">
             {previewUrl ? (
               <div className="relative overflow-hidden rounded-md bg-gray-100 max-w-full w-full max-h-48">
-                <img
-                  src={previewUrl}
-                  alt="Vista previa del comprobante"
-                  className="max-w-full w-full max-h-48 object-contain"
-                />
+                {previewError ? (
+                  <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-400" aria-hidden="true">
+                    <i className="fa-solid fa-file-image text-3xl" aria-hidden="true" />
+                  </div>
+                ) : (
+                  <img
+                    src={previewUrl}
+                    alt="Vista previa del comprobante"
+                    onError={() => setPreviewError(true)}
+                    className="max-w-full w-full max-h-48 object-contain"
+                  />
+                )}
               </div>
             ) : (
               <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-400" aria-hidden="true">

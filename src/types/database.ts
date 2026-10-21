@@ -200,6 +200,13 @@ export interface MerchantRow {
   slug: string;
   logo_url: string | null;
   banner_url: string | null;
+  /**
+   * Versión de la imagen del comercio. La base de datos la actualiza sola
+   * cuando cambia `logo_url` o `banner_url`; el frontend la anexa como `?v=`
+   * a la URL de la imagen para invalidar la copia cacheada por el navegador
+   * móvil y por el Service Worker.
+   */
+  image_version?: string | null;
   status: MerchantStatus;
   verification_docs: MerchantVerificationDocs;
   is_active: boolean;
@@ -274,6 +281,13 @@ export interface ProductRow {
   description: string | null;
   price: string; // Postgres DECIMAL → string en JSON para preservar precisión
   image_url: string | null;
+  /**
+   * Versión de la foto del plato. La base de datos la actualiza sola cuando
+   * cambia `image_url`; el frontend la anexa como `?v=` a la URL de la
+   * imagen para invalidar la copia cacheada por el navegador móvil y por el
+   * Service Worker.
+   */
+  image_version?: string | null;
   is_available: boolean;
   created_at: IsoTimestamp;
   /** Distintivo del plato (ej. 'Más vendido', 'Nuevo', '2x1'). */
@@ -473,13 +487,15 @@ export type ProfileUpdate = Partial<Omit<ProfileRow, 'id' | 'created_at'>>;
  * (ver `formatGeoPoint`), por lo que se acepta DbPoint además de GeoPoint.
  */
 export type MerchantUpdate = Partial<
-  Omit<MerchantRow, 'id' | 'created_at' | 'location'>
+  Omit<MerchantRow, 'id' | 'created_at' | 'location' | 'image_version'>
 > & { location?: DbPoint | GeoPoint | null };
 export type MerchantStaffUpdate = Partial<
   Omit<MerchantStaffRow, 'id' | 'created_at'>
 >;
 export type CategoryUpdate = Partial<Omit<CategoryRow, 'id' | 'created_at'>>;
-export type ProductUpdate = Partial<Omit<ProductRow, 'id' | 'created_at'>>;
+export type ProductUpdate = Partial<
+  Omit<ProductRow, 'id' | 'created_at' | 'image_version'>
+>;
 export type OrderUpdate = Partial<Omit<OrderRow, 'id' | 'created_at'>>;
 export type DeliveryUpdate = Partial<
   Omit<DeliveryRow, 'id' | 'order_id' | 'created_at'>

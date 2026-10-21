@@ -263,6 +263,7 @@ export function MerchantStorePage() {
               alt={`Banner de ${merchant.name}`}
               className="h-full w-full object-cover"
               fallback={null}
+              version={merchant.image_version}
             />
 
             {promoChips.length > 0 ? (
@@ -296,6 +297,7 @@ export function MerchantStorePage() {
                 src={merchant.logo_url}
                 alt={`Logo de ${merchant.name}`}
                 className="h-full w-full object-cover"
+                version={merchant.image_version}
                 fallback={
                   <div
                     className="flex h-full w-full items-center justify-center bg-red-50 text-xl font-bold text-brand-red"

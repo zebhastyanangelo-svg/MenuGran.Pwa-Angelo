@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { buildTelUrl, buildWhatsAppUrl } from '../../utils/delivery';
 
 /**
@@ -39,6 +40,7 @@ export function ContactCard({
   const telUrl = buildTelUrl(phone);
   const whatsappUrl = buildWhatsAppUrl(phone ?? '');
   const canChat = showWhatsApp && whatsappUrl !== null;
+  const [avatarError, setAvatarError] = useState(false);
 
   return (
     <section
@@ -51,8 +53,13 @@ export function ContactCard({
       </p>
       <div className="flex items-center gap-3">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-red/10 text-sm font-bold text-brand-red ring-1 ring-brand-red/20">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+          {avatarUrl && !avatarError ? (
+            <img
+              src={avatarUrl}
+              alt=""
+              onError={() => setAvatarError(true)}
+              className="h-full w-full object-cover"
+            />
           ) : (
             buildMonogram(name)
           )}

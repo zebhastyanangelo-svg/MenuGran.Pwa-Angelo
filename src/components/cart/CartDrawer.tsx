@@ -7,6 +7,7 @@ import { formatVES } from '../../utils/format';
 import { useBCVRate } from '../../hooks/useExchangeRate';
 import { resolveCartItemPricing, summarizeCartPricing } from '../../utils/cartPricing';
 import { getMissingProfileFields, isProfileIncomplete } from '../../utils/profileUtils';
+import { ExternalImage } from '../ui/ExternalImage';
 import { IncompleteProfileOrderModal } from './IncompleteProfileOrderModal';
 
 export interface CartDrawerProps {
@@ -141,10 +142,16 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   <li key={item.product.id} className="flex gap-3 p-4">
                     <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
                       {item.product.image_url ? (
-                        <img
+                        <ExternalImage
                           src={item.product.image_url}
                           alt={item.product.title}
                           className="h-full w-full object-cover"
+                          version={item.product.image_version}
+                          fallback={
+                            <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
+                              Sin foto
+                            </div>
+                          }
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">

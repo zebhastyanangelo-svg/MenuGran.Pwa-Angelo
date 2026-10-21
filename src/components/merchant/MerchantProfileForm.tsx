@@ -6,7 +6,9 @@ import {
 } from 'react';
 import { supabase, TABLE_NAMES } from '../../services/supabase';
 import { uploadToImgBB } from '../../services/imgbb';
+import { normalizeImageUrl } from '../../utils/imageUrl';
 import type { MerchantRow } from '../../types/database';
+import { ExternalImage } from '../ui/ExternalImage';
 import {
   MAX_BADGE_LABEL_LENGTH,
   MAX_DISCOUNT_PERCENTAGE,
@@ -31,6 +33,12 @@ interface ImageFieldState {
   url: string | null;
   uploading: boolean;
   error: string | null;
+  /**
+   * Versión de la imagen en la base de datos (`image_version`). Se anexa como
+   * `?v=` a la URL de la vista previa para que el móvil no muestre la copia
+   * cacheada de un logo o banner que el comercio ya reemplazó.
+   */
+  version: string | null;
 }
 
 interface PromoFieldErrors {
@@ -76,11 +84,13 @@ export function MerchantProfileForm({
     url: null,
     uploading: false,
     error: null,
+    version: null,
   });
   const [banner, setBanner] = useState<ImageFieldState>({
     url: null,
     uploading: false,
     error: null,
+    version: null,
   });
   const [promoLabel, setPromoLabel] = useState('');
   const [discountInput, setDiscountInput] = useState('');
@@ -113,8 +123,18 @@ export function MerchantProfileForm({
         const row = data as MerchantRow;
         setMerchant(row);
         setName(row.name ?? '');
-        setLogo({ url: row.logo_url ?? null, uploading: false, error: null });
-        setBanner({ url: row.banner_url ?? null, uploading: false, error: null });
+        setLogo({
+          url: row.logo_url ?? null,
+          uploading: false,
+          error: null,
+          version: row.image_version ?? null,
+        });
+        setBanner({
+          url: row.banner_url ?? null,
+          uploading: false,
+          error: null,
+          version: row.image_version ?? null,
+        });
         setPromoLabel(row.promo_label ?? '');
         setDiscountInput(
           row.discount_percentage != null ? String(row.discount_percentage) : '',
@@ -151,19 +171,22 @@ export function MerchantProfileForm({
 
     try {
       const url = await uploadToImgBB(file);
-      setter({ url, uploading: false, error: null });
+      // La URL recién subida es única: no hay copia cacheada que invalidar,
+      // así que la vista previa se muestra tal cual.
+      setter({ url, uploading: false, error: null, version: null });
     } catch (err: unknown) {
       setter({
         url: null,
         uploading: false,
         error: err instanceof Error ? err.message : 'Error al subir la imagen.',
+        version: null,
       });
     }
   };
 
   const clearImage = (field: 'logo' | 'banner') => {
     const setter = field === 'logo' ? setLogo : setBanner;
-    setter({ url: null, uploading: false, error: null });
+    setter({ url: null, uploading: false, error: null, version: null });
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -199,8 +222,11 @@ export function MerchantProfileForm({
         >
       > = {
         name: name.trim(),
-        logo_url: logo.url,
-        banner_url: banner.url,
+        // Se normaliza antes de persistir: una URL que no sea web válida
+        // (vacía, blob efímero, etc.) se guarda como null para que las
+        // vistas móviles/PWA muestren el fallback limpio.
+        logo_url: normalizeImageUrl(logo.url),
+        banner_url: normalizeImageUrl(banner.url),
         promo_label: parseBadgeLabel(promoLabel),
         discount_percentage: parseDiscountPercentage(discountInput),
         estimated_delivery_minutes: parseEstimatedMinutes(estimatedInput),
@@ -220,6 +246,12 @@ export function MerchantProfileForm({
         ...updates,
       }) as MerchantRow;
       setMerchant(updated);
+      // La base de datos bumpea `image_version` cuando cambia el logo o el
+      // banner: se adopta esa versión para que la vista previa se recargue
+      // con la imagen recién guardada.
+      const savedVersion = updated.image_version ?? null;
+      setLogo((prev) => ({ ...prev, version: savedVersion }));
+      setBanner((prev) => ({ ...prev, version: savedVersion }));
       setSubmitSuccess('Perfil actualizado correctamente.');
       onUpdated?.(updated);
     } catch (err: unknown) {
@@ -250,10 +282,16 @@ export function MerchantProfileForm({
         <div className="flex items-center gap-4">
           {state.url ? (
             <div className="relative w-24 h-24 sm:w-32 sm:h-24 bg-gray-100 rounded border overflow-hidden flex-shrink-0">
-              <img
+              <ExternalImage
                 src={state.url}
                 alt={`Vista previa ${label.toLowerCase()}`}
                 className="w-full h-full object-cover"
+                version={state.version}
+                fallback={
+                  <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                    <i className="fa-solid fa-image text-gray-400 text-2xl" />
+                  </div>
+                }
               />
               <button
                 type="button"

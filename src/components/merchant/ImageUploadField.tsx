@@ -1,4 +1,5 @@
 import type { ChangeEvent } from 'react';
+import { ExternalImage } from '../ui/ExternalImage';
 
 export interface ImageFieldState {
   url: string | null;
@@ -12,6 +13,12 @@ export interface ImageUploadFieldProps {
   value: ImageFieldState;
   onFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onRemove: () => void;
+  /**
+   * Versión de la imagen en la base de datos (`image_version`). Se anexa como
+   * `?v=` a la URL de la vista previa para que el móvil no muestre la copia
+   * cacheada de una foto que el comercio ya reemplazó.
+   */
+  version?: string | null;
 }
 
 export function ImageUploadField({
@@ -20,6 +27,7 @@ export function ImageUploadField({
   value,
   onFileChange,
   onRemove,
+  version = null,
 }: ImageUploadFieldProps) {
   const inputId = `merchant-${fieldName}-input`;
 
@@ -34,10 +42,16 @@ export function ImageUploadField({
       <div className="flex items-center gap-4">
         {value.url ? (
           <div className="relative w-20 h-20 rounded-xl border overflow-hidden flex-shrink-0">
-            <img
+            <ExternalImage
               src={value.url}
               alt={`Vista previa ${label.toLowerCase()}`}
               className="w-full h-full object-cover"
+              version={version}
+              fallback={
+                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                  <i className="fa-solid fa-image text-gray-400 text-xl" />
+                </div>
+              }
             />
             <button
               type="button"

@@ -26,6 +26,7 @@ export function MerchantQrPanel({ merchant, onPersistToken }: MerchantQrPanelPro
   const [qrToken, setQrToken] = useState<string | null>(merchant.qr_token ?? null);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [qrImageError, setQrImageError] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
 
   const qrUrl = qrToken === null ? null : buildMerchantQrUrl(qrToken);
@@ -107,19 +108,20 @@ export function MerchantQrPanel({ merchant, onPersistToken }: MerchantQrPanelPro
         )}
 
         <div className="rounded-lg border border-gray-200 bg-white p-2">
-          {dataUrl !== null ? (
-            <img
-              src={dataUrl}
-              alt={`Código QR de ${merchant.name}`}
-              width={PREVIEW_SIZE}
-              height={PREVIEW_SIZE}
-              className="h-56 w-56"
-            />
-          ) : (
-            <div
-              className="flex h-56 w-56 items-center justify-center rounded-md bg-gray-50 text-xs text-gray-400"
-              role="status"
-            >
+        {dataUrl !== null && !qrImageError ? (
+          <img
+            src={dataUrl}
+            alt={`Código QR de ${merchant.name}`}
+            onError={() => setQrImageError(true)}
+            width={PREVIEW_SIZE}
+            height={PREVIEW_SIZE}
+            className="h-56 w-56"
+          />
+        ) : (
+          <div
+            className="flex h-56 w-56 items-center justify-center rounded-md bg-gray-50 text-xs text-gray-400"
+            role="status"
+          >
               Generando código QR...
             </div>
           )}

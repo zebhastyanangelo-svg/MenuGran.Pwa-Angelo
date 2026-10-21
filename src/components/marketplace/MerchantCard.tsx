@@ -154,6 +154,7 @@ export function MerchantCard({ merchant, onClick, distance, rating }: MerchantCa
           alt={merchant.name}
           className="h-full w-full object-cover"
           fallback={null}
+          version={merchant.image_version}
         />
 
         {/* Los chips flotantes se posicionan sobre la imagen para que el
@@ -186,6 +187,7 @@ export function MerchantCard({ merchant, onClick, distance, rating }: MerchantCa
             src={merchant.logo_url}
             alt={`Logo de ${merchant.name}`}
             className="h-full w-full object-cover"
+            version={merchant.image_version}
             fallback={
               <div
                 className="flex h-full w-full items-center justify-center bg-red-50 text-lg font-bold text-brand-red"

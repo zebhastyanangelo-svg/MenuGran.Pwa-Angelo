@@ -12,7 +12,7 @@
  *    de acción principal a ancho completo.
  */
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { ManeuverIconName } from '../../utils/navigationInstruction';
 import { buildTelUrl } from '../../utils/delivery';
 
@@ -178,6 +178,7 @@ export function NavigationPersonCard({
   primaryAction,
 }: NavigationPersonCardProps) {
   const telUrl = buildTelUrl(phone);
+  const [avatarError, setAvatarError] = useState(false);
 
   return (
     <div
@@ -200,10 +201,11 @@ export function NavigationPersonCard({
 
       <div className="flex items-center gap-3">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-brand-red/20 bg-brand-red/10 text-sm font-bold text-brand-red">
-          {avatarUrl ? (
+          {avatarUrl && !avatarError ? (
             <img
               src={avatarUrl}
               alt={name}
+              onError={() => setAvatarError(true)}
               className="h-full w-full object-cover"
             />
           ) : (

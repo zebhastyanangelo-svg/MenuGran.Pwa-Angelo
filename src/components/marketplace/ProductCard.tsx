@@ -128,6 +128,7 @@ export function ProductCard({ product, categoryName, onSelect }: ProductCardProp
           src={product.image_url}
           alt={product.title}
           className="h-full w-full object-cover"
+          version={product.image_version}
           fallback={
             <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
               Sin foto

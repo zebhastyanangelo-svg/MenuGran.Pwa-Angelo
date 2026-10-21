@@ -105,9 +105,12 @@ export function MarketplacePage() {
  * Columnas solicitadas al marketplace. La lista es explícita para no arrastrar
  * campos pesados del comercio; las columnas de promoción deben añadirse aquí
  * para que `MerchantCard` pueda renderizar los chips de descuento.
+ *
+ * `image_version` es obligatoria: identifica la versión vigente del logo y del
+ * banner para que la PWA no sirva la copia cacheada tras un cambio.
  */
 const MERCHANT_COLUMNS =
-  'id, name, slug, logo_url, banner_url, status, is_active, is_open, location, created_at, rif, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, pago_movil_bank, pago_movil_id_number, pago_movil_phone, opening_time, closing_time, weekly_hours, promo_label, discount_percentage, estimated_delivery_minutes, offers_delivery, delivery_fee';
+  'id, name, slug, logo_url, banner_url, image_version, status, is_active, is_open, location, created_at, rif, category, description, address, zone, phone_whatsapp, service_modalities, business_hours, pago_movil_bank, pago_movil_id_number, pago_movil_phone, opening_time, closing_time, weekly_hours, promo_label, discount_percentage, estimated_delivery_minutes, offers_delivery, delivery_fee';
 
 const fetchData = useCallback(
   async (silent: boolean = false) => {

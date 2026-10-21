@@ -160,10 +160,16 @@ function TrackingTopBar({
 }
 
 function Avatar({ name, avatarUrl }: { name: string; avatarUrl: string | null }) {
+  const [avatarError, setAvatarError] = useState(false);
   return (
     <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-brand-red/20 bg-brand-red/10 text-sm font-bold text-brand-red">
-      {avatarUrl !== null && avatarUrl !== '' ? (
-        <img src={avatarUrl} alt={name} className="h-full w-full object-cover" />
+      {avatarUrl !== null && avatarUrl !== '' && !avatarError ? (
+        <img
+          src={avatarUrl}
+          alt={name}
+          onError={() => setAvatarError(true)}
+          className="h-full w-full object-cover"
+        />
       ) : (
         buildMonogram(name)
       )}

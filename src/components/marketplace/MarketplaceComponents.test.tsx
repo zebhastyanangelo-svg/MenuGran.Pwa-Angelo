@@ -188,11 +188,63 @@ describe('ProductCard', () => {
     expect(onSelect).toHaveBeenCalledWith(product);
   });
 });
-
 describe('ProductCardSkeleton', () => {
   it('renderiza un marcador de carga accesible', () => {
     const { container } = render(<ProductCardSkeleton />);
+
     expect(container.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
+  });
+});
+
+describe('Versionado de imágenes (cache busting)', () => {
+  it('versiona el banner y el logo del comercio con su image_version', () => {
+    const merchant = {
+      ...buildMerchant('m1', 'La Esquina', 'la-esquina'),
+      logo_url: 'https://i.ibb.co/existing/logo.jpg',
+      banner_url: 'https://i.ibb.co/existing/banner.jpg',
+      image_version: '2026-10-20T20:20:20.000Z',
+    };
+
+    render(<MerchantCard merchant={merchant} />);
+
+    const token = Date.parse('2026-10-20T20:20:20.000Z');
+    expect(screen.getByAltText('La Esquina')).toHaveAttribute(
+      'src',
+      `https://i.ibb.co/existing/banner.jpg?v=${token}`,
+    );
+    expect(screen.getByAltText('Logo de La Esquina')).toHaveAttribute(
+      'src',
+      `https://i.ibb.co/existing/logo.jpg?v=${token}`,
+    );
+  });
+
+  it('versiona la foto del plato con su image_version', () => {
+    const product = {
+      ...buildProduct('p1', 'Hamburguesa', '12.50'),
+      image_url: 'https://i.ibb.co/existing/plato.jpg',
+      image_version: '2026-10-20T20:20:20.000Z',
+    };
+
+    render(<ProductCard product={product} />);
+
+    expect(screen.getByRole('img', { name: 'Hamburguesa', hidden: true })).toHaveAttribute(
+      'src',
+      `https://i.ibb.co/existing/plato.jpg?v=${Date.parse('2026-10-20T20:20:20.000Z')}`,
+    );
+  });
+
+  it('deja la URL intacta cuando la fila no tiene versión', () => {
+    const merchant = {
+      ...buildMerchant('m1', 'La Esquina', 'la-esquina'),
+      logo_url: 'https://i.ibb.co/existing/logo.jpg',
+    };
+
+    render(<MerchantCard merchant={merchant} />);
+
+    expect(screen.getByAltText('Logo de La Esquina')).toHaveAttribute(
+      'src',
+      'https://i.ibb.co/existing/logo.jpg',
+    );
   });
 });
 

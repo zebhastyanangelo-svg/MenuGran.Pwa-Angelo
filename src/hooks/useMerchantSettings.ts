@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase, TABLE_NAMES } from '../services/supabase';
+import { sanitizeMerchantImageUpdates } from '../services/merchantService';
 import type { MerchantRow, MerchantUpdate } from '../types/database';
 
 export interface UseMerchantSettingsResult {
@@ -64,9 +65,12 @@ export function useMerchantSettings(
         throw new Error('No hay comercio cargado para actualizar.');
       }
 
+      // Las URLs de logo/banner se sanitizan antes de persistir: un valor
+      // efímero (blob:) o inválido nunca debe llegar a la base de datos,
+      // porque rompe el renderizado en móviles y PWAs cacheadas.
       const { data, error: updateError } = await supabase
         .from(TABLE_NAMES.merchants)
-        .update(updates)
+        .update(sanitizeMerchantImageUpdates(updates))
         .eq('id', merchant.id)
         .select()
         .single();

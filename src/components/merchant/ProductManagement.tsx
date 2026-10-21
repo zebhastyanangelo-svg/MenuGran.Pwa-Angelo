@@ -3,6 +3,7 @@ import { supabase, TABLE_NAMES } from '../../services/supabase';
 import type { CategoryRow, ProductRow } from '../../types/database';
 import { formatPrice } from '../../types/cart';
 import { DishFormModal } from './DishFormModal';
+import { ExternalImage } from '../ui/ExternalImage';
 import type { ProductFormData } from '../../utils/productForm';
 import { resolveProductBadges } from '../../utils/promos';
 
@@ -365,10 +366,16 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
               <div>
                 <div className="flex items-start gap-3 mb-3">
                   {prod.image_url ? (
-                    <img
+                    <ExternalImage
                       src={prod.image_url}
                       alt={prod.title}
                       className="w-16 h-16 object-cover rounded-md border flex-shrink-0 bg-gray-100"
+                      version={prod.image_version}
+                      fallback={
+                        <div className="w-16 h-16 bg-gray-100 rounded-md border border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xs text-center flex-shrink-0">
+                          Sin foto
+                        </div>
+                      }
                     />
                   ) : (
                     <div className="w-16 h-16 bg-gray-100 rounded-md border border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xs text-center flex-shrink-0">

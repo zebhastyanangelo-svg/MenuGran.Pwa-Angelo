@@ -2,6 +2,17 @@ import { defineConfig, type UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+/**
+ * Hostnames que pertenecen a Supabase (proyecto, API REST y Storage).
+ *
+ * El match es por sufijo exacto del dominio: `includes('supabase.co')`
+ * también capturaba hosts ajenos como `notsupabase.co`, queiban a parar en
+ * la caché del Service Worker y a servirse desde ella.
+ */
+function isSupabaseHost(url: URL): boolean {
+  return url.hostname === 'supabase.co' || url.hostname.endsWith('.supabase.co')
+}
+
 // https://vite.dev/config/
 export default defineConfig(() => {
   const config: UserConfig = {
@@ -47,7 +58,7 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          cacheId: 'menu-pwa-v1',
+          cacheId: 'menu-pwa-v2',
           cleanupOutdatedCaches: true,
           globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
           // Handler de Web Push (evento push + notificationclick). El SW es
@@ -91,6 +102,11 @@ export default defineConfig(() => {
               // y el siguiente intento traiga la imagen fresca. Debe ser la
               // PRIMERA regla para que gane sobre cualquier otra que pudiera
               // coincidir con esos dominios.
+              //
+              // La vigencia del contenido la aporta el frontend: cada URL de
+              // imagen lleva un parámetro `?v=<image_version>` que cambia al
+              // sustituirse la foto, de modo que el navegador no puede
+              // servir la copia vieja de la misma URL.
               urlPattern: ({ url }) =>
                 url.hostname === 'ibb.co' ||
                 url.hostname.endsWith('.ibb.co') ||
@@ -98,6 +114,8 @@ export default defineConfig(() => {
               handler: 'NetworkOnly',
             },
             {
+              // API propia del backend (Express en Render): siempre se intenta
+              // la red primero y la caché solo actúa de respaldo.
               urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
               handler: 'NetworkFirst',
               options: {
@@ -110,7 +128,37 @@ export default defineConfig(() => {
               },
             },
             {
-              urlPattern: ({ url }) => url.hostname.includes('supabase.co'),
+              // Objetos de Supabase Storage (logos, banners, fotos de platos
+              // y comprobantes de pago): `NetworkFirst` da prioridad a la
+              // versión más reciente siempre que haya conexión y cae en la
+              // caché solo si la red no responde dentro del timeout (modo
+              // avión o señal mala).
+              //
+              // La clave de caché incluye el query string, así que el
+              // parámetro `?v=<image_version>` que antepone el frontend
+              // invalida la entrada anterior: una foto nueva nunca se sirve
+              // desde la copia cacheada de la anterior.
+              urlPattern: ({ url }) =>
+                isSupabaseHost(url) &&
+                url.pathname.startsWith('/storage/v1/object/'),
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'supabase-storage-images-cache',
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 24 * 60 * 60, // 1 day
+                },
+                networkTimeoutSeconds: 5,
+                // 0 cubre respuestas opacas (cross-origin sin CORS) y 200 las
+                // imágenes válidas; los errores 4xx/5xx no se cachean.
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              // Resto de tráfico de Supabase (API REST, Auth, Realtime):
+              // `NetworkFirst` con TTL corto para que los datos del comercio
+              // y del menú no queden congelados en el dispositivo.
+              urlPattern: ({ url }) => isSupabaseHost(url),
               handler: 'NetworkFirst',
               options: {
                 cacheName: 'supabase-cache',
