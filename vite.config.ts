@@ -3,15 +3,21 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 /**
- * Hostnames que pertenecen a Supabase (proyecto, API REST y Storage).
+ * IMPORTANTE — funciones `urlPattern` de Workbox:
  *
- * El match es por sufijo exacto del dominio: `includes('supabase.co')`
- * también capturaba hosts ajenos como `notsupabase.co`, queiban a parar en
- * la caché del Service Worker y a servirse desde ella.
+ * Workbox (generateSW) SERIALIZA el cuerpo de cada `urlPattern` y lo inyecta
+ * literalmente en `dist/sw.js`. Por eso NINGUNA de estas funciones puede
+ * referenciar helpers definidos en vite.config.ts: el closure no existe en el
+ * ámbito del Service Worker y la llamada revienta en consola con
+ * `ReferenceError: isSupabaseHost is not defined`. Toda la lógica de match
+ * debe ir INLINE y auto-contenida en cada `urlPattern`.
+ *
+ * Hostnames de Supabase (proyecto, API REST y Storage): el match es por
+ * sufijo exacto del dominio (`hostname === 'supabase.co' ||
+ * hostname.endsWith('.supabase.co')`). Un `includes('supabase.co')` también
+ * capturaría hosts ajenos como `notsupabase.co`, que acabarían cacheados
+ * por el Service Worker.
  */
-function isSupabaseHost(url: URL): boolean {
-  return url.hostname === 'supabase.co' || url.hostname.endsWith('.supabase.co')
-}
 
 // https://vite.dev/config/
 export default defineConfig(() => {
@@ -138,8 +144,12 @@ export default defineConfig(() => {
               // parámetro `?v=<image_version>` que antepone el frontend
               // invalida la entrada anterior: una foto nueva nunca se sirve
               // desde la copia cacheada de la anterior.
+              // El hostname check va INLINE (no delega a ningún helper):
+              // Workbox serializa esta función a sw.js, donde un closure de
+              // vite.config.ts no existiría (ReferenceError).
               urlPattern: ({ url }) =>
-                isSupabaseHost(url) &&
+                (url.hostname === 'supabase.co' ||
+                  url.hostname.endsWith('.supabase.co')) &&
                 url.pathname.startsWith('/storage/v1/object/'),
               handler: 'NetworkFirst',
               options: {
@@ -158,7 +168,11 @@ export default defineConfig(() => {
               // Resto de tráfico de Supabase (API REST, Auth, Realtime):
               // `NetworkFirst` con TTL corto para que los datos del comercio
               // y del menú no queden congelados en el dispositivo.
-              urlPattern: ({ url }) => isSupabaseHost(url),
+              // INLINE y auto-contenida por la misma razón: esta función se
+              // serializa tal cual dentro de sw.js.
+              urlPattern: ({ url }) =>
+                url.hostname === 'supabase.co' ||
+                url.hostname.endsWith('.supabase.co'),
               handler: 'NetworkFirst',
               options: {
                 cacheName: 'supabase-cache',
