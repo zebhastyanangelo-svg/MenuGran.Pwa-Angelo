@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import type { User, RealtimeChannel } from '@supabase/supabase-js'
 import { supabase, TABLE_NAMES } from '../services/supabase'
 import { fetchMerchantDrivers } from '../services/merchantStaffService'
@@ -39,6 +39,12 @@ export interface MerchantDashboardData {
 
 export interface UseMerchantDashboardOptions {
   onNewOrder?: (order: OrderRow) => void
+  /**
+   * Comercio fijado por el Superadmin (`?merchant_id=`). Cuando está activo
+   * se usa como único contexto del tablero: pedidos, repartidores y realtime
+   * se filtran por ese comercio en lugar de los propios del usuario.
+   */
+  overrideMerchantId?: string | null
 }
 
 async function fetchMerchantIds(user: User): Promise<string[]> {
@@ -162,14 +168,25 @@ export function useMerchantDashboard(
 ): MerchantDashboardData {
   const queryClient = useQueryClient()
 
-  const { data: merchantIds = [] } = useQuery<string[]>({
+  const overrideMerchantId = options?.overrideMerchantId?.trim() ?? ''
+  const hasOverride = overrideMerchantId !== ''
+
+  const { data: ownedMerchantIds = [] } = useQuery<string[]>({
     queryKey: ['merchantIds', user?.id],
-    enabled: !!user,
+    enabled: !!user && !hasOverride,
     queryFn: async (): Promise<string[]> => {
       if (!user) return []
       return fetchMerchantIds(user)
     },
   })
+
+  // Con el override del Superadmin el tablero entero opera sobre el comercio
+  // fijado en la URL; en caso contrario se usan los comercios propios. Se
+  // memoiza para que la suscripción realtime no se re-crea en cada render.
+  const merchantIds = useMemo(
+    () => (hasOverride ? [overrideMerchantId] : ownedMerchantIds),
+    [hasOverride, overrideMerchantId, ownedMerchantIds],
+  )
 
   const { data: orders = [], isLoading, isError, error } = useQuery<OrderWithCustomer[]>({
     queryKey: ['merchantOrders', user?.id, merchantIds.join('-')],

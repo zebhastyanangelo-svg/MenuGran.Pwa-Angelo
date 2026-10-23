@@ -17,13 +17,17 @@ vi.mock('../../services/supabase', () => ({
   },
 }));
 
-vi.mock('../../services/imgbb', () => ({
-  uploadToImgBB: vi.fn().mockResolvedValue('https://i.ibb.co/sample/logo.jpg'),
+vi.mock('../../services/storageService', () => ({
+  uploadPublicImage: vi.fn().mockResolvedValue({
+    url: 'https://ejemplo.supabase.co/storage/v1/object/public/merchant-media/merchants/merchant-123/logo/logo.jpg',
+    path: 'merchants/merchant-123/logo/logo.jpg',
+  }),
+  deletePublicImageFromUrl: vi.fn().mockResolvedValue(true),
 }));
 
 // Import after mocks so the mocked modules are applied.
 import { supabase } from '../../services/supabase';
-import { uploadToImgBB } from '../../services/imgbb';
+import { uploadPublicImage } from '../../services/storageService';
 
 const mockMerchant: MerchantRow = {
   id: 'merchant-123',
@@ -51,9 +55,10 @@ const mockMerchant: MerchantRow = {
 describe('MerchantProfileForm', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    (uploadToImgBB as ReturnType<typeof vi.fn>).mockResolvedValue(
-      'https://i.ibb.co/sample/logo.jpg',
-    );
+    (uploadPublicImage as ReturnType<typeof vi.fn>).mockResolvedValue({
+      url: 'https://ejemplo.supabase.co/storage/v1/object/public/merchant-media/merchants/merchant-123/logo/logo.jpg',
+      path: 'merchants/merchant-123/logo/logo.jpg',
+    });
   });
 
   afterEach(() => {
@@ -128,7 +133,7 @@ describe('MerchantProfileForm', () => {
     expect(previews[0]).toHaveAttribute('src', 'https://i.ibb.co/existing/logo.jpg');
   });
 
-  it('sube el logo a ImgBB al seleccionar un archivo', async () => {
+  it('sube el logo a Supabase Storage al seleccionar un archivo', async () => {
     mockSupabase();
 
     render(<MerchantProfileForm merchantId="merchant-123" />);
@@ -142,11 +147,17 @@ describe('MerchantProfileForm', () => {
     fireEvent.change(input, { target: { files: [file] } });
 
     await waitFor(() => {
-      expect(uploadToImgBB).toHaveBeenCalledWith(file);
+      expect(uploadPublicImage).toHaveBeenCalledWith(file, {
+        merchantId: 'merchant-123',
+        kind: 'logo',
+      });
     });
 
     const preview = await screen.findByAltText(/vista previa logo/i);
-    expect(preview).toHaveAttribute('src', 'https://i.ibb.co/sample/logo.jpg');
+    expect(preview).toHaveAttribute(
+      'src',
+      'https://ejemplo.supabase.co/storage/v1/object/public/merchant-media/merchants/merchant-123/logo/logo.jpg',
+    );
   });
 
   it('envia name, logo_url y banner_url al guardar', async () => {
@@ -184,10 +195,10 @@ describe('MerchantProfileForm', () => {
     expect(builder.update.mock.results[0].value.eq).toHaveBeenCalled();
   }, 10000);
 
-  it('muestra el error de la API si la subida a ImgBB falla', async () => {
+  it('muestra el error de la API si la subida a Supabase Storage falla', async () => {
     mockSupabase();
-    (uploadToImgBB as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error('La API key de ImgBB no está configurada.'),
+    (uploadPublicImage as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('La subida a Supabase Storage falló.'),
     );
 
     render(<MerchantProfileForm merchantId="merchant-123" />);
@@ -203,7 +214,7 @@ describe('MerchantProfileForm', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/La API key de ImgBB no está configurada./i),
+        screen.getByText(/La subida a Supabase Storage falló./i),
       ).toBeInTheDocument();
     });
   });

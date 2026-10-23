@@ -20,14 +20,25 @@ interface CleanupTarget {
  * `orders.payment_proof_url` guarda la ruta del objeto (`storage.objects.name`,
  * p. ej. `tmp/abc.jpg` de un checkout abandonado o `<orderId>/abc.jpg`).
  * Los huérfanos son archivos sin ninguna referencia activa: comprobantes
- * subidos cuyo pedido nunca se creó. Las imágenes del catálogo son externas
- * (ImgBB/Cloudinary) y no forman parte de este bucket.
+ * subidos cuyo pedido nunca se creó.
+ *
+ * El bucket público `merchant-media` (logos, banners y fotos de platos)
+ * está en `PROTECTED_BUCKETS` y jamás se limpia: sus archivos son catálogo
+ * permanente del comercio y solo se eliminan por acciones explícitas del
+ * propio comercio (reemplazo de logo/banner o borrado de un plato).
  */
 const DEFAULT_TARGET: CleanupTarget = {
   bucket: 'payment-proofs',
   table: 'orders',
   column: 'payment_proof_url',
 };
+
+/**
+ * Buckets que la limpieza nunca debe tocar. `cleanBucket` los rechaza aunque
+ * algún cambio futuro intente ampliar los objetivos: el catálogo público es
+ * permanente y su purga dejaría logos, banners y platos sin imagen.
+ */
+const PROTECTED_BUCKETS: ReadonlySet<string> = new Set(['merchant-media']);
 
 /** Antigüedad mínima de un huérfano antes de borrarlo (horas), con topes. */
 const DEFAULT_MIN_AGE_HOURS = 24;
@@ -390,12 +401,21 @@ interface BucketCleanupSummary {
 /**
  * Limpia un bucket: lista sus archivos, recopila las referencias activas,
  * clasifica los huérfanos y (salvo dry-run) los elimina por lotes.
+ *
+ * Los buckets protegidos (catálogo público) se rechazan de antemano: esta
+ * función solo debe purgar comprobantes de pago del bucket privado.
  */
 async function cleanBucket(
   client: SupabaseClient,
   target: CleanupTarget,
   options: { dryRun: boolean; minAgeMs: number },
 ): Promise<BucketCleanupSummary> {
+  if (PROTECTED_BUCKETS.has(target.bucket)) {
+    throw new Error(
+      `El bucket '${target.bucket}' está protegido: la limpieza solo opera sobre comprobantes de pago ('payment-proofs').`,
+    );
+  }
+
   const files = await listBucketFiles(client, target.bucket);
   const references = await collectActiveReferences(client, target);
   const classification = classifyFiles(files, references, options.minAgeMs, Date.now());

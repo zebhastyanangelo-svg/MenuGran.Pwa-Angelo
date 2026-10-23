@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useSuperAdminMerchantOverride } from '../../hooks/useSuperAdminMerchantOverride';
 import type { MerchantContext } from '../../services/merchantStaffService';
 import { getMerchantContext } from '../../services/merchantStaffService';
 import { updateAuthPassword } from '../../services/superAdminMetricsService';
@@ -13,6 +14,8 @@ import { NoMerchantWarning } from '../../components/merchant/NoMerchantWarning';
 export function MerchantProfilePage() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+  // Acceso transparente del Superadmin: `?merchant_id=` fija el comercio.
+  const { merchantId: superAdminMerchantId } = useSuperAdminMerchantOverride();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [context, setContext] = useState<MerchantContext | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,7 +37,10 @@ export function MerchantProfilePage() {
     setIsLoading(true);
     void (async () => {
       try {
-        const merchantContext = await getMerchantContext(user.id);
+        const merchantContext = await getMerchantContext(
+          user.id,
+          superAdminMerchantId,
+        );
         if (cancelled) return;
         setContext(merchantContext);
         if (!cancelled) setError(null);
@@ -53,7 +59,7 @@ export function MerchantProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, superAdminMerchantId]);
 
   const updatePasswordField = useCallback(
     (field: keyof PasswordChangeInput, value: string): void => {
@@ -129,8 +135,25 @@ export function MerchantProfilePage() {
     return <NoMerchantWarning />;
   }
 
+  const roleLabel = context.isSuperAdminAccess
+    ? 'Super Admin (acceso simulado)'
+    : context.isOwner
+      ? 'Dueño de Comercio'
+      : 'Empleado';
+
   return (
     <div className="mx-auto max-w-xl space-y-6 p-4 sm:p-6">
+      {context.isSuperAdminAccess === true && (
+        <p
+          className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+          role="status"
+          data-testid="superadmin-access-banner"
+        >
+          <i className="fa-solid fa-shield-halved mr-1.5" aria-hidden="true" />
+          Estás viendo el perfil de{' '}
+          <strong>{context.merchantName}</strong> como Super Admin.
+        </p>
+      )}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
         <div className="mb-6 flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-brand-red">
@@ -139,7 +162,7 @@ export function MerchantProfilePage() {
           <div>
             <p className="flex items-center gap-1.5 text-sm font-medium uppercase tracking-[0.12em] text-slate-500">
               <i className="fa-solid fa-shield-halved text-base text-brand-red" aria-hidden="true" />
-              {context.isOwner ? 'Dueño de Comercio' : 'Empleado'}
+              {roleLabel}
             </p>
             <h1
               className="text-2xl font-bold text-slate-900"
@@ -193,7 +216,7 @@ export function MerchantProfilePage() {
               className="text-base font-semibold text-slate-900"
               data-testid="profile-role"
             >
-              {context.isOwner ? 'Dueño de Comercio' : 'Empleado'}
+              {roleLabel}
             </p>
           </div>
         </div>

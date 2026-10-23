@@ -1,10 +1,15 @@
 import { useAuth } from '../../hooks/useAuth';
 import { useMerchantDashboard } from '../../hooks/useMerchantDashboard';
+import { useSuperAdminMerchantOverride } from '../../hooks/useSuperAdminMerchantOverride';
 import { ProductManagement } from '../../components/merchant/ProductManagement';
 
 export function MerchantDishesPage() {
   const { user } = useAuth();
-  const { merchantIds, loading } = useMerchantDashboard(user);
+  // Acceso transparente del Superadmin: `?merchant_id=` fija el comercio.
+  const { merchantId: superAdminMerchantId } = useSuperAdminMerchantOverride();
+  const { merchantIds, loading } = useMerchantDashboard(user, {
+    overrideMerchantId: superAdminMerchantId,
+  });
   const merchantId = merchantIds[0] ?? '';
 
   return (

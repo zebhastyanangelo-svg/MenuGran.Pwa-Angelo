@@ -1,4 +1,6 @@
 import { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import type { NavigateFunction } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -20,6 +22,17 @@ const STATUS_LABELS: Record<string, string> = {
 
 /** Panel de Super Admin: creación, listado y eliminación de comercios. */
 export function SuperAdminMerchantsPage() {
+  let navigate: NavigateFunction;
+  try {
+    navigate = useNavigate();
+  } catch {
+    // Montajes fuera de un <Router> (pruebas unitarias aisladas) hacen que
+    // `useNavigate` lance; se degrada a la navegación nativa del navegador
+    // sin romper el render. Con Router presente nunca entra aquí.
+    navigate = ((to: string) => {
+      window.location.assign(to);
+    }) as NavigateFunction;
+  }
   const {
     merchants,
     isLoading,
@@ -100,6 +113,18 @@ export function SuperAdminMerchantsPage() {
       }
     },
     [toggleMerchantVisibility],
+  );
+
+  /**
+   * Acceso transparente al panel de gestión del comercio: navega al tablero
+   * del comerciante con `?merchant_id=` para operar ese negocio (pedidos,
+   * catálogo y perfil) sin cambiar de sesión.
+   */
+  const handleOpenMerchantPanel = useCallback(
+    (merchant: MerchantAccountListItem) => {
+      navigate(`/admin?merchant_id=${encodeURIComponent(merchant.id)}`);
+    },
+    [navigate],
   );
 
   return (
@@ -194,6 +219,23 @@ export function SuperAdminMerchantsPage() {
                     <Badge variant={merchant.is_active ? 'success' : 'neutral'}>
                       {STATUS_LABELS[merchant.status] ?? merchant.status}
                     </Badge>
+                    <button
+                      type="button"
+                      data-testid="open-merchant-panel"
+                      aria-label={`Acceder al panel de ${merchant.name}`}
+                      title={`Acceder al panel de gestión de ${merchant.name}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleOpenMerchantPanel(merchant);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                    >
+                      <i
+                        className="fa-solid fa-arrow-up-right-from-square text-sm"
+                        aria-hidden="true"
+                      />
+                      Acceder al panel
+                    </button>
                     <button
                       type="button"
                       role="switch"

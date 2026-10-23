@@ -34,7 +34,7 @@ const authMocks = vi.hoisted(() => ({
   useAuthMock: vi.fn(),
   supabaseMock: { from: vi.fn() },
   showToastMock: vi.fn(),
-  uploadToImgBBMock: vi.fn(),
+  uploadPublicImageMock: vi.fn(),
   saveSettingsMock: vi.fn(),
 }));
 
@@ -88,8 +88,13 @@ vi.mock('../../hooks/useToast', () => ({
   }),
 }));
 
-vi.mock('../../services/imgbb', () => ({
-  uploadToImgBB: authMocks.uploadToImgBBMock,
+vi.mock('../../services/storageService', () => ({
+  uploadPublicImage: authMocks.uploadPublicImageMock,
+  deletePublicImageFromUrl: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock('../../hooks/useSuperAdminMerchantOverride', () => ({
+  useSuperAdminMerchantOverride: vi.fn(() => ({ merchantId: null, isActive: false })),
 }));
 
 async function getUseMerchantSettings() {
@@ -105,7 +110,10 @@ describe('MerchantSettingsPage', () => {
       profile: null,
       isLoading: false,
     });
-    authMocks.uploadToImgBBMock.mockResolvedValue('https://i.ibb.co/sample/logo.jpg');
+    authMocks.uploadPublicImageMock.mockResolvedValue({
+      url: 'https://ejemplo.supabase.co/storage/v1/object/public/merchant-media/merchants/merchant-123/logo/logo.jpg',
+      path: 'merchants/merchant-123/logo/logo.jpg',
+    });
     authMocks.saveSettingsMock.mockResolvedValue(mockMerchant);
     Object.defineProperty(navigator, 'geolocation', {
       value: mockGeolocation,
@@ -328,7 +336,10 @@ describe('MerchantSettingsPage', () => {
     fireEvent.change(input, { target: { files: [file] } });
 
     await waitFor(() => {
-      expect(authMocks.uploadToImgBBMock).toHaveBeenCalledWith(file);
+      expect(authMocks.uploadPublicImageMock).toHaveBeenCalledWith(file, {
+        merchantId: 'merchant-123',
+        kind: 'logo',
+      });
     });
   });
 
@@ -369,8 +380,8 @@ describe('MerchantSettingsPage', () => {
     const file = new File(['logo-bytes'], 'logo.png', { type: 'image/png' });
     const input = screen.getByLabelText(/Seleccionar foto de logo/i);
 
-    let resolveUpload: ((value: string) => void) | undefined;
-    authMocks.uploadToImgBBMock.mockReturnValue(
+    let resolveUpload: ((value: { url: string; path: string }) => void) | undefined;
+    authMocks.uploadPublicImageMock.mockReturnValue(
       new Promise((resolve) => {
         resolveUpload = resolve;
       }),
@@ -384,7 +395,10 @@ describe('MerchantSettingsPage', () => {
 
     expect(screen.getByRole('button', { name: /Guardar cambios/i })).toBeDisabled();
 
-    resolveUpload!('https://i.ibb.co/uploaded/logo.jpg');
+    resolveUpload!({
+      url: 'https://ejemplo.supabase.co/storage/v1/object/public/merchant-media/merchants/merchant-123/logo/logo.jpg',
+      path: 'merchants/merchant-123/logo/logo.jpg',
+    });
   });
 
   it('cambia el estado activo del checkbox', async () => {

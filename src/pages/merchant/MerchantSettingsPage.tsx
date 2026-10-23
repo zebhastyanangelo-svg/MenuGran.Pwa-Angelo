@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
   type FormEvent,
@@ -10,7 +11,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { useMerchantSettings } from '../../hooks/useMerchantSettings';
 import { useDeliveryFeeTiers } from '../../hooks/useDeliveryFeeTiers';
 import { useToast } from '../../hooks/useToast';
-import { uploadToImgBB } from '../../services/imgbb';
+import { useSuperAdminMerchantOverride } from '../../hooks/useSuperAdminMerchantOverride';
+import {
+  deletePublicImageFromUrl,
+  uploadPublicImage,
+} from '../../services/storageService';
 import type { ImageFieldState } from '../../components/merchant/ImageUploadField';
 import { ImageUploadField } from '../../components/merchant/ImageUploadField';
 import { LocationSettingsForm } from '../../components/merchant/LocationSettingsForm';
@@ -72,15 +77,38 @@ function initialImageField(): ImageFieldState {
   return { url: null, uploading: false, error: null };
 }
 
+/**
+ * Borra físicamente del bucket público la imagen persistida que la guardada
+ * reemplazó o quitó. Solo se limpian URLs de Storage propias: las heredadas
+ * de ImgBB son externas y no se pueden retirar.
+ */
+function cleanupReplacedStorageImage(
+  originalUrl: string | null | undefined,
+  persistedUrl: string | null | undefined,
+): void {
+  if (
+    originalUrl !== null &&
+    originalUrl !== undefined &&
+    originalUrl !== persistedUrl
+  ) {
+    void deletePublicImageFromUrl(originalUrl);
+  }
+}
+
 export interface MerchantSettingsPageProps {
   merchantId?: string;
 }
 
 export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) {
   const { user, isLoading: authLoading } = useAuth();
+  // Acceso transparente del Superadmin (`?merchant_id=`): carga el comercio
+  // fijado en la URL en lugar del propio del usuario.
+  const { merchantId: superAdminMerchantId } = useSuperAdminMerchantOverride();
   const effectiveUserId = merchantId ?? user?.id;
   const { merchant, isLoading, error, saveSettings } =
-    useMerchantSettings(effectiveUserId);
+    useMerchantSettings(effectiveUserId, {
+      merchantId: superAdminMerchantId,
+    });
   const {
     tiers,
     isLoading: tiersLoading,
@@ -178,17 +206,39 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
     return errors;
   }, [promoLabel, discountInput, estimatedInput, offersDelivery, deliveryFeeInput]);
 
+  /** URLs subidas en esta sesión que aún no se han persistido. */
+  const sessionUploadsRef = useRef<Set<string>>(new Set());
+
+  /**
+   * Sube la imagen al bucket público de Supabase Storage bajo la carpeta del
+   * comercio (`merchants/<id>/logo|banner/...`).
+   */
   const handleImageChange = async (
     e: ChangeEvent<HTMLInputElement>,
     field: 'logo' | 'banner',
   ) => {
     const file = e.target.files?.[0];
     const setter = field === 'logo' ? setLogo : setBanner;
-    if (!file) return;
+    const currentUrl = field === 'logo' ? logo.url : banner.url;
+    if (!file || !merchant) return;
 
     setter((prev) => ({ ...prev, uploading: true, error: null }));
     try {
-      const url = await uploadToImgBB(file);
+      const { url } = await uploadPublicImage(file, {
+        merchantId: merchant.id,
+        kind: field,
+      });
+      // Una subida previa de esta sesión que se descarta al reemplazar se
+      // borra físicamente: nunca llegó a la base y quedaría huérfana.
+      if (
+        currentUrl !== null &&
+        sessionUploadsRef.current.has(currentUrl) &&
+        currentUrl !== url
+      ) {
+        void deletePublicImageFromUrl(currentUrl);
+        sessionUploadsRef.current.delete(currentUrl);
+      }
+      sessionUploadsRef.current.add(url);
       setter({ url, uploading: false, error: null });
     } catch (err: unknown) {
       setter({
@@ -201,6 +251,11 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
 
   const clearImage = (field: 'logo' | 'banner') => {
     const setter = field === 'logo' ? setLogo : setBanner;
+    const currentUrl = field === 'logo' ? logo.url : banner.url;
+    if (currentUrl !== null && sessionUploadsRef.current.has(currentUrl)) {
+      void deletePublicImageFromUrl(currentUrl);
+      sessionUploadsRef.current.delete(currentUrl);
+    }
     setter(initialImageField());
   };
 
@@ -271,6 +326,14 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
       };
 
       await saveSettings(updates);
+
+      // Borrado físico de las imágenes reemplazadas o quitadas: la fila ya
+      // persiste las URLs nuevas y los archivos anteriores quedarían
+      // huérfanos en el bucket público. Las URLs externas se ignoran.
+      cleanupReplacedStorageImage(merchant.logo_url, updates.logo_url);
+      cleanupReplacedStorageImage(merchant.banner_url, updates.banner_url);
+      sessionUploadsRef.current.clear();
+
       showToast({
         title:
           location !== null
@@ -322,6 +385,16 @@ export function MerchantSettingsPage({ merchantId }: MerchantSettingsPageProps) 
 
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-6">
+      {superAdminMerchantId !== null && (
+        <p
+          className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+          role="status"
+          data-testid="superadmin-access-banner"
+        >
+          <i className="fa-solid fa-shield-halved mr-1.5" aria-hidden="true" />
+          Estás gestionando <strong>{merchant.name}</strong> como Super Admin.
+        </p>
+      )}
       <header className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>

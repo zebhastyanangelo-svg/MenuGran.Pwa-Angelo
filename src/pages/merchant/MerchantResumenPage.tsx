@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
+import { useSuperAdminMerchantOverride } from '../../hooks/useSuperAdminMerchantOverride';
 import { useMerchantPopularity } from '../../hooks/useMerchantPopularity';
 import { useMerchantDeliveryMetrics } from '../../hooks/useMerchantDeliveryMetrics';
 import { MerchantDeliveriesCard } from '../../components/merchant/MerchantDeliveriesCard';
@@ -125,6 +126,8 @@ export function buildRepurchaseHelperText(
 
 export function MerchantResumenPage() {
   const { user } = useAuth();
+  // Acceso transparente del Superadmin: `?merchant_id=` fija el comercio.
+  const { merchantId: superAdminMerchantId } = useSuperAdminMerchantOverride();
   const [context, setContext] = useState<MerchantContext | null>(null);
   const [metrics, setMetrics] = useState<MerchantMetrics | null>(null);
   const [analytics, setAnalytics] = useState<MerchantAnalytics | null>(null);
@@ -216,7 +219,10 @@ export function MerchantResumenPage() {
     setIsLoading(true);
     void (async () => {
       try {
-        const merchantContext = await getMerchantContext(user.id);
+        const merchantContext = await getMerchantContext(
+          user.id,
+          superAdminMerchantId,
+        );
         if (cancelled) return;
         setContext(merchantContext);
         if (merchantContext !== null) {
@@ -241,7 +247,7 @@ export function MerchantResumenPage() {
     return () => {
       cancelled = true;
     };
-  }, [user, refetchMetrics, loadAnalytics]);
+  }, [user, superAdminMerchantId, refetchMetrics, loadAnalytics]);
 
   useEffect(() => {
     if (context === null) return;
@@ -297,6 +303,17 @@ export function MerchantResumenPage() {
 
   return (
     <div className="space-y-6">
+      {context.isSuperAdminAccess === true && (
+        <p
+          className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+          role="status"
+          data-testid="superadmin-access-banner"
+        >
+          <i className="fa-solid fa-shield-halved mr-1.5" aria-hidden="true" />
+          Estás viendo el resumen de{' '}
+          <strong>{context.merchantName}</strong> como Super Admin.
+        </p>
+      )}
       {error !== null && (
         <p
           className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600"

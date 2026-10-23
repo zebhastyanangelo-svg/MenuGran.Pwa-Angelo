@@ -20,8 +20,9 @@ vi.mock('./supabase', () => ({
   },
 }));
 
-vi.mock('./imgbb', () => ({
-  uploadToImgBB: vi.fn(),
+vi.mock('./storageService', () => ({
+  uploadPublicImage: vi.fn(),
+  deletePublicImageFromUrl: vi.fn().mockResolvedValue(true),
 }));
 
 interface Chain {

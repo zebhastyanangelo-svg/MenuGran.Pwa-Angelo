@@ -11,21 +11,34 @@ export interface UseMerchantSettingsResult {
   refetch: () => void;
 }
 
+export interface UseMerchantSettingsOptions {
+  /**
+   * Id de comercio forzado por el Superadmin (`?merchant_id=`). Cuando está
+   * presente se carga ese comercio por id (la RLS permite al superadmin leer
+   * cualquier fila) en lugar de resolver por `owner_id`.
+   */
+  merchantId?: string | null;
+}
+
 /**
  * Hook de gestión de la configuración del comercio.
  *
  * Carga el comercio cuyo `owner_id` coincide con el usuario autenticado
- * y expone una función para persistir cambios parciales.
+ * (o el fijado por el Superadmin vía `options.merchantId`) y expone una
+ * función para persistir cambios parciales.
  */
 export function useMerchantSettings(
   userId: string | null | undefined,
+  options?: UseMerchantSettingsOptions,
 ): UseMerchantSettingsResult {
   const [merchant, setMerchant] = useState<MerchantRow | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const forcedMerchantId = options?.merchantId?.trim() ?? '';
+
   const fetchMerchant = useCallback(async () => {
-    if (!userId) {
+    if (!userId && forcedMerchantId === '') {
       setMerchant(null);
       setIsLoading(false);
       return;
@@ -35,11 +48,13 @@ export function useMerchantSettings(
     setError(null);
 
     try {
-      const { data, error: fetchError } = await supabase
-        .from(TABLE_NAMES.merchants)
-        .select('*')
-        .eq('owner_id', userId)
-        .maybeSingle();
+      let query = supabase.from(TABLE_NAMES.merchants).select('*');
+      query =
+        forcedMerchantId !== ''
+          ? query.eq('id', forcedMerchantId)
+          : query.eq('owner_id', userId);
+
+      const { data, error: fetchError } = await query.maybeSingle();
 
       if (fetchError) throw fetchError;
       setMerchant((data ?? null) as MerchantRow | null);
@@ -53,7 +68,7 @@ export function useMerchantSettings(
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, [userId, forcedMerchantId]);
 
   useEffect(() => {
     void fetchMerchant();

@@ -21,6 +21,12 @@ export interface MerchantContext {
   merchantId: string;
   merchantName: string;
   isOwner: boolean;
+  /**
+   * `true` cuando el contexto viene del acceso transparente del Superadmin
+   * (`?merchant_id=`): la sesión NO pertenece al comercio y las acciones de
+   * cuenta propia (p. ej. cambiar contraseña) deben ocultarse.
+   */
+  isSuperAdminAccess?: boolean;
 }
 
 export interface StaffListItem {
@@ -165,10 +171,40 @@ export interface MerchantMetrics {
   activeProducts: number;
 }
 
-/** Resuelve el negocio del usuario: como propietario o como empleado. */
+/**
+ * Resuelve el negocio del usuario: como propietario o como empleado.
+ *
+ * `forcedMerchantId` habilita el acceso transparente del Superadmin: cuando se
+ * entrega, se devuelve ese comercio en lugar del propio del usuario. La
+ * responsabilidad de verificar el rol `superadmin` es del llamador (el hook
+ * `useSuperAdminMerchantOverride` ya lo comprueba); la RLS de la tabla
+ * `merchants` permite al superadmin leer cualquier fila, así que un staff no
+ * puede aprovechar el parámetro para espiar comercios ajenos.
+ */
 export async function getMerchantContext(
   userId: string,
+  forcedMerchantId?: string | null,
 ): Promise<MerchantContext | null> {
+  const forcedId = forcedMerchantId?.trim() ?? '';
+  if (forcedId !== '') {
+    const forcedResult = await supabase
+      .from(TABLE_NAMES.merchants)
+      .select('id, name')
+      .eq('id', forcedId)
+      .maybeSingle();
+
+    const forcedRow = forcedResult.data as { id: string; name: string } | null;
+    if (forcedResult.error === null && forcedRow !== null) {
+      return {
+        merchantId: forcedRow.id,
+        merchantName: forcedRow.name,
+        isOwner: false,
+        isSuperAdminAccess: true,
+      };
+    }
+    return null;
+  }
+
   const ownerResult = await supabase
     .from(TABLE_NAMES.merchants)
     .select('id, name')

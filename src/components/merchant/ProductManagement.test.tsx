@@ -17,9 +17,19 @@ vi.mock('../../services/supabase', () => ({
   },
 }));
 
-// Mock ImgBB upload
-vi.mock('../../services/imgbb', () => ({
-  uploadToImgBB: vi.fn().mockResolvedValue('https://i.ibb.co/sample/food.jpg'),
+// Mock de la subida a Supabase Storage (reemplazo de ImgBB)
+vi.mock('../../services/storageService', () => ({
+  uploadPublicImage: vi.fn().mockResolvedValue({
+    url: 'https://ejemplo.supabase.co/storage/v1/object/public/merchant-media/merchants/merchant-123/dish/food.jpg',
+    path: 'merchants/merchant-123/dish/food.jpg',
+  }),
+  deletePublicImageFromUrl: vi.fn().mockResolvedValue(true),
+  isManagedPublicImageUrl: vi.fn(
+    (url: string | null | undefined) =>
+      url !== null &&
+      url !== undefined &&
+      url.includes('/merchant-media/'),
+  ),
 }));
 
 const mockCategories: CategoryRow[] = [

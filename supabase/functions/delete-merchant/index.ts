@@ -101,6 +101,79 @@ async function deleteMerchantRecord(
   return error === null ? null : { error: error.message, status: 400 };
 }
 
+/** Bucket público del catálogo (logos, banners y fotos de platos). */
+const MERCHANT_MEDIA_BUCKET = 'merchant-media';
+
+/** Límites de seguridad del recorrido de la carpeta del comercio. */
+const LIST_PAGE_SIZE = 100;
+const MAX_FOLDERS_SCANNED = 5_000;
+
+/**
+ * Elimina físicamente la carpeta `merchants/<merchantId>/` del bucket
+ * público: logos, banners y fotos de platos del comercio borrado. Sin esta
+ * limpieza los archivos quedarían huérfanos para siempre, porque el cron de
+ * limpieza protege el catálogo público.
+ *
+ * Es best-effort: un fallo de Storage se registra pero no revierte el
+ * borrado del comercio ni de sus cuentas.
+ */
+async function cleanupMerchantPublicMedia(
+  serviceClient: ServiceClient,
+  merchantId: string,
+): Promise<void> {
+  const root = `merchants/${merchantId}`;
+  const pendingFolders: string[] = [root];
+  let foldersVisited = 0;
+
+  while (pendingFolders.length > 0) {
+    const folder = pendingFolders.shift()!;
+    foldersVisited += 1;
+    if (foldersVisited > MAX_FOLDERS_SCANNED) {
+      console.warn(`cleanupMerchantPublicMedia: demasiadas carpetas bajo '${root}'.`);
+      return;
+    }
+
+    let offset = 0;
+    for (;;) {
+      const { data, error } = await serviceClient.storage
+        .from(MERCHANT_MEDIA_BUCKET)
+        .list(folder, { limit: LIST_PAGE_SIZE, offset });
+
+      if (error !== null) {
+        console.warn(
+          `cleanupMerchantPublicMedia: no se pudo listar '${folder}': ${error.message}`,
+        );
+        return;
+      }
+
+      const entries = data ?? [];
+      const filePaths: string[] = [];
+      for (const entry of entries) {
+        // Las carpetas llegan con `id === null`; los archivos con id.
+        if (entry.id === null) {
+          pendingFolders.push(`${folder}/${entry.name}`);
+        } else {
+          filePaths.push(`${folder}/${entry.name}`);
+        }
+      }
+
+      if (filePaths.length > 0) {
+        const { error: removeError } = await serviceClient.storage
+          .from(MERCHANT_MEDIA_BUCKET)
+          .remove(filePaths);
+        if (removeError !== null) {
+          console.warn(
+            `cleanupMerchantPublicMedia: no se pudieron borrar ${filePaths.length} archivos: ${removeError.message}`,
+          );
+        }
+      }
+
+      if (entries.length < LIST_PAGE_SIZE) break;
+      offset += LIST_PAGE_SIZE;
+    }
+  }
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   const authResult = await assertSuperadmin(req.headers.get('Authorization'));
@@ -127,6 +200,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (staffDeletion !== null) return jsonResponse({ error: staffDeletion.error }, staffDeletion.status);
     const merchantDeletion = await deleteMerchantRecord(serviceClient, validated.merchantId);
     if (merchantDeletion !== null) return jsonResponse({ error: merchantDeletion.error }, merchantDeletion.status);
+    // El comercio ya no existe: su carpeta pública (logos, banners, platos)
+    // queda huérfana si no se purga aquí.
+    await cleanupMerchantPublicMedia(serviceClient, validated.merchantId);
     const ownerDeletion = await deleteAuthUserIfUnused(serviceClient, validated.ownerId, validated.merchantId);
     if (ownerDeletion !== null) return jsonResponse({ error: ownerDeletion.error }, ownerDeletion.status);
     return jsonResponse({ deleted: true });

@@ -1,11 +1,15 @@
 import {
   useEffect,
+  useRef,
   useState,
   type ChangeEvent,
   type FormEvent,
 } from 'react';
 import { supabase, TABLE_NAMES } from '../../services/supabase';
-import { uploadToImgBB } from '../../services/imgbb';
+import {
+  deletePublicImageFromUrl,
+  uploadPublicImage,
+} from '../../services/storageService';
 import { normalizeImageUrl } from '../../utils/imageUrl';
 import type { MerchantRow } from '../../types/database';
 import { ExternalImage } from '../ui/ExternalImage';
@@ -71,8 +75,10 @@ function collectPromoFieldErrors(fields: PromoFieldErrors): Record<string, strin
 /**
  * Formulario de edición del perfil de negocio (nombre, logo y banner).
  *
- * Las imágenes públicas (logo y banner) se suben a ImgBB, manteniendo
- * Supabase Storage exclusivamente para los comprobantes de pago.
+ * Las imágenes públicas (logo y banner) se suben al bucket público
+ * `merchant-media` de Supabase Storage (`merchants/<id>/logo|banner/...`),
+ * con borrado físico del archivo anterior cuando se reemplaza o se quita,
+ * para no acumular huérfanos.
  */
 export function MerchantProfileForm({
   merchantId,
@@ -80,6 +86,8 @@ export function MerchantProfileForm({
 }: MerchantProfileFormProps) {
   const [merchant, setMerchant] = useState<MerchantRow | null>(null);
   const [name, setName] = useState('');
+  /** URLs subidas en esta sesión que aún no se han persistido. */
+  const sessionUploadsRef = useRef<Set<string>>(new Set());
   const [logo, setLogo] = useState<ImageFieldState>({
     url: null,
     uploading: false,
@@ -165,14 +173,27 @@ export function MerchantProfileForm({
   ) => {
     const file = e.target.files?.[0];
     const setter = field === 'logo' ? setLogo : setBanner;
-    if (!file) return;
+    const currentUrl = field === 'logo' ? logo.url : banner.url;
+    if (!file || !merchant) return;
 
     setter((prev) => ({ ...prev, uploading: true, error: null }));
 
     try {
-      const url = await uploadToImgBB(file);
+      const { url } = await uploadPublicImage(file, {
+        merchantId: merchant.id,
+        kind: field,
+      });
       // La URL recién subida es única: no hay copia cacheada que invalidar,
       // así que la vista previa se muestra tal cual.
+      if (
+        currentUrl !== null &&
+        sessionUploadsRef.current.has(currentUrl) &&
+        currentUrl !== url
+      ) {
+        void deletePublicImageFromUrl(currentUrl);
+        sessionUploadsRef.current.delete(currentUrl);
+      }
+      sessionUploadsRef.current.add(url);
       setter({ url, uploading: false, error: null, version: null });
     } catch (err: unknown) {
       setter({
@@ -186,7 +207,29 @@ export function MerchantProfileForm({
 
   const clearImage = (field: 'logo' | 'banner') => {
     const setter = field === 'logo' ? setLogo : setBanner;
+    const currentUrl = field === 'logo' ? logo.url : banner.url;
+    // Una subida de esta sesión que se descarta nunca llegó a la base:
+    // se borra físicamente para no dejar huérfanos. La imagen persistida
+    // se limpia al guardar (ver `handleSubmit`).
+    if (currentUrl !== null && sessionUploadsRef.current.has(currentUrl)) {
+      void deletePublicImageFromUrl(currentUrl);
+      sessionUploadsRef.current.delete(currentUrl);
+    }
     setter({ url: null, uploading: false, error: null, version: null });
+  };
+
+  /**
+   * Borra físicamente del bucket público la imagen persistida que esta
+   * guardada reemplazó o quitó. Solo se limpian URLs de Storage propias:
+   * las heredadas de ImgBB son externas y no se pueden retirar.
+   */
+  const deleteReplacedImage = (
+    originalUrl: string | null,
+    persistedUrl: string | null,
+  ) => {
+    if (originalUrl !== null && originalUrl !== persistedUrl) {
+      void deletePublicImageFromUrl(originalUrl);
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -252,6 +295,12 @@ export function MerchantProfileForm({
       const savedVersion = updated.image_version ?? null;
       setLogo((prev) => ({ ...prev, version: savedVersion }));
       setBanner((prev) => ({ ...prev, version: savedVersion }));
+      // Borrado físico de las imágenes reemplazadas o quitadas: la fila ya
+      // persiste las URLs nuevas, así que los archivos anteriores quedan
+      // huérfanos si no se eliminan aquí.
+      deleteReplacedImage(merchant.logo_url ?? null, updated.logo_url ?? null);
+      deleteReplacedImage(merchant.banner_url ?? null, updated.banner_url ?? null);
+      sessionUploadsRef.current.clear();
       setSubmitSuccess('Perfil actualizado correctamente.');
       onUpdated?.(updated);
     } catch (err: unknown) {

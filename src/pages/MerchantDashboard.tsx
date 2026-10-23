@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useStaffPermissions } from '../hooks/useStaffPermissions';
 import { useToast } from '../hooks/useToast';
+import { useSuperAdminMerchantOverride } from '../hooks/useSuperAdminMerchantOverride';
 import {
   useMerchantDashboard,
   PAYMENT_PROOF_BUCKET,
@@ -27,8 +28,11 @@ function buildReferenceRequestMessage(order: OrderWithCustomer): string {
 export function MerchantDashboard() {
   const { user, profile } = useAuth();
   const { showToast } = useToast();
+  // Acceso transparente del Superadmin: `?merchant_id=<id>` fija el comercio
+  // que opera todo el tablero (pedidos, catálogo y perfil).
+  const { merchantId: superAdminMerchantId } = useSuperAdminMerchantOverride();
   const { merchantIds, orders, drivers, loading, error, updateOrderStatus, assignDriver } =
-    useMerchantDashboard(user);
+    useMerchantDashboard(user, { overrideMerchantId: superAdminMerchantId });
   // Datos de Pago Móvil del comercio: la conciliación de cada pedido los
   // contrasta contra el comprobante que adjuntó el cliente. Sin ellos la tarjeta
   // pintaba "No configurado" aunque el comercio ya los hubiera guardado.
@@ -112,6 +116,17 @@ export function MerchantDashboard() {
             Gestiona tu catálogo y los pedidos entrantes en tiempo real.
           </p>
         </header>
+
+        {superAdminMerchantId !== null && (
+          <p
+            className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+            role="status"
+            data-testid="superadmin-access-banner"
+          >
+            <i className="fa-solid fa-shield-halved mr-1.5" aria-hidden="true" />
+            Estás gestionando este comercio como Super Admin.
+          </p>
+        )}
 
         {loading && (
           <p className="text-gray-600 text-sm" role="status">

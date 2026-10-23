@@ -1,5 +1,8 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
-import { uploadToImgBB } from '../../services/imgbb';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import {
+  deletePublicImageFromUrl,
+  uploadPublicImage,
+} from '../../services/storageService';
 import {
   ImageUploadField,
   type ImageFieldState,
@@ -30,6 +33,8 @@ export interface DishFormModalProps {
   categories: CategoryRow[];
   initialData?: ProductRow | null;
   onAddCategory?: (categoryName: string) => Promise<CategoryRow | null>;
+  /** Comercio dueño del plato: define la carpeta de la imagen en Storage. */
+  merchantId?: string;
 }
 
 /**
@@ -52,6 +57,7 @@ export function DishFormModal({
   categories,
   initialData,
   onAddCategory,
+  merchantId,
 }: DishFormModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -67,6 +73,12 @@ export function DishFormModal({
     uploading: false,
     error: null,
   });
+  /**
+   * URL subida a Storage en esta sesión que aún no se ha guardado. Si el
+   * plato se cancela (o la foto se reemplaza) se borra físicamente para no
+   * dejar huérfanos en el bucket público.
+   */
+  const sessionUploadRef = useRef<string | null>(null);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -110,6 +122,7 @@ export function DishFormModal({
     setErrors({});
     setShowNewCategory(false);
     setNewCatName('');
+    sessionUploadRef.current = null;
   }, [initialData, isOpen, categories]);
 
   if (!isOpen) return null;
@@ -118,10 +131,29 @@ export function DishFormModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!merchantId) {
+      setImage({
+        url: null,
+        uploading: false,
+        error: 'No se pudo identificar el comercio para subir la imagen.',
+      });
+      return;
+    }
+
     setImage((prev) => ({ ...prev, uploading: true, error: null }));
 
     try {
-      const url = await uploadToImgBB(file);
+      const { url } = await uploadPublicImage(file, {
+        merchantId,
+        kind: 'dish',
+      });
+      // El plato todavía no guarda esta foto: si el comercio la cambia de
+      // nuevo, la subida anterior se borra para no dejar huérfanos.
+      const previousSessionUpload = sessionUploadRef.current;
+      if (previousSessionUpload !== null && previousSessionUpload !== url) {
+        void deletePublicImageFromUrl(previousSessionUpload);
+      }
+      sessionUploadRef.current = url;
       setImage({ url, uploading: false, error: null });
     } catch (err: unknown) {
       setImage((prev) => ({
@@ -130,13 +162,33 @@ export function DishFormModal({
         error:
           err instanceof Error
             ? err.message
-            : 'Error al subir la imagen a ImgBB',
+            : 'Error al subir la imagen a Supabase Storage',
       }));
     }
   };
 
-  const handleRemoveImage = () =>
+  const handleRemoveImage = () => {
+    const previousSessionUpload = sessionUploadRef.current;
+    if (previousSessionUpload !== null) {
+      void deletePublicImageFromUrl(previousSessionUpload);
+      sessionUploadRef.current = null;
+    }
     setImage({ url: null, uploading: false, error: null });
+  };
+
+  /**
+   * Cierre sin guardar: la foto subida en esta sesión nunca llegó a la base,
+   * así que se borra físicamente del bucket público. Tras un guardado
+   * exitoso la foto queda referenciada por el plato y NO se borra.
+   */
+  const handleDiscard = () => {
+    const previousSessionUpload = sessionUploadRef.current;
+    if (previousSessionUpload !== null) {
+      void deletePublicImageFromUrl(previousSessionUpload);
+      sessionUploadRef.current = null;
+    }
+    onClose();
+  };
 
   /**
    * El texto se normaliza dentro de `addIngredient`, así que el comercio puede
@@ -194,6 +246,9 @@ export function DishFormModal({
 
     try {
       await onSave(formData);
+      // La foto ya quedó referenciada por el plato: deja de ser una subida
+      // descartable de la sesión.
+      sessionUploadRef.current = null;
       if (isPostHogEnabled) {
         posthog.capture('menu_item_saved', {
           action: initialData ? 'updated' : 'created',
@@ -229,7 +284,7 @@ export function DishFormModal({
           </h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleDiscard}
             className="text-gray-400 hover:text-gray-600 text-2xl font-bold leading-none"
             aria-label="Cerrar modal"
           >
@@ -564,7 +619,7 @@ export function DishFormModal({
           <div className="flex justify-end gap-3 border-t pt-4 mt-6">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleDiscard}
               disabled={isSaving}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
             >

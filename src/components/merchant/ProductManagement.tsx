@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase, TABLE_NAMES } from '../../services/supabase';
+import {
+  deletePublicImageFromUrl,
+  isManagedPublicImageUrl,
+} from '../../services/storageService';
 import type { CategoryRow, ProductRow } from '../../types/database';
 import { formatPrice } from '../../types/cart';
 import { DishFormModal } from './DishFormModal';
@@ -125,6 +129,17 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
         .eq('id', editingProduct.id);
 
       if (updateError) throw updateError;
+      // Borrado físico de la foto anterior cuando el plato cambió de imagen:
+      // el registro ya apunta a la URL nueva y el archivo viejo quedaría
+      // huérfano en el bucket público. Las URLs externas (ImgBB) se ignoran.
+      const previousImageUrl = editingProduct.image_url ?? null;
+      if (
+        previousImageUrl !== null &&
+        formData.image_url !== previousImageUrl &&
+        isManagedPublicImageUrl(previousImageUrl)
+      ) {
+        void deletePublicImageFromUrl(previousImageUrl);
+      }
     } else {
       // Creación
       const { error: insertError } = await supabase
@@ -147,17 +162,23 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
     await fetchData();
   };
 
-  // Eliminar producto
-  const handleDeleteProduct = async (productId: string) => {
+  // Eliminar producto (y su foto del bucket público, para no dejar huérfanos)
+  const handleDeleteProduct = async (product: ProductRow) => {
     if (!window.confirm('¿Estás seguro de eliminar este producto?')) return;
 
     try {
       const { error: deleteError } = await supabase
         .from(TABLE_NAMES.products)
         .delete()
-        .eq('id', productId);
+        .eq('id', product.id);
 
       if (deleteError) throw deleteError;
+      // La fila ya no existe: la imagen de Storage queda huérfana si no se
+      // borra aquí. Las URLs externas (ImgBB) no se pueden retirar.
+      const imageUrl = product.image_url ?? null;
+      if (imageUrl !== null && isManagedPublicImageUrl(imageUrl)) {
+        void deletePublicImageFromUrl(imageUrl);
+      }
       await fetchData();
     } catch (err: unknown) {
       console.error('Error al eliminar producto:', err);
@@ -463,7 +484,7 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDeleteProduct(prod.id)}
+                    onClick={() => handleDeleteProduct(prod)}
                     className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-50"
                   >
                     Eliminar
@@ -487,6 +508,7 @@ export function ProductManagement({ merchantId }: ProductManagementProps) {
         categories={categories}
         initialData={editingProduct}
         onAddCategory={handleAddCategory}
+        merchantId={merchantId}
       />
     </div>
   );
