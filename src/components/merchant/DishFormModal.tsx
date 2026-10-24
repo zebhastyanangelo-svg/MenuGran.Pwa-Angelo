@@ -276,8 +276,8 @@ export function DishFormModal({
   const isIngredientsFull = ingredients.length >= MAX_INGREDIENTS_PER_DISH;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 relative my-8">
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-black bg-opacity-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-4 sm:p-6 relative m-auto">
         <div className="flex justify-between items-center mb-5 border-b pb-3">
           <h2 className="text-xl font-bold text-gray-900">
             {initialData ? 'Editar Platillo' : 'Nuevo Platillo'}
@@ -366,7 +366,7 @@ export function DishFormModal({
                   }
                 }}
                 placeholder="Ej. Cebolla"
-                className={`w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                className={`min-w-0 w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
                   errors.ingredients ? 'border-red-500' : 'border-gray-300'
                 }`}
               />
@@ -464,20 +464,20 @@ export function DishFormModal({
                     value={newCatName}
                     onChange={(e) => setNewCatName(e.target.value)}
                     placeholder="Nombre categoría"
-                    className="w-full border border-gray-300 rounded-md px-2 py-1 text-xs"
+                    className="min-w-0 flex-1 border border-gray-300 rounded-md px-2 py-1 text-xs"
                   />
                   <button
                     type="button"
                     onClick={handleCreateCategory}
                     disabled={addingCat || !newCatName.trim()}
-                    className="bg-indigo-600 text-white px-2 py-1 rounded text-xs hover:bg-indigo-700 disabled:opacity-50"
+                    className="shrink-0 bg-indigo-600 text-white px-2 py-1 rounded text-xs hover:bg-indigo-700 disabled:opacity-50"
                   >
                     Guardar
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowNewCategory(false)}
-                    className="text-xs text-gray-500 hover:text-gray-700"
+                    className="shrink-0 text-xs text-gray-500 hover:text-gray-700"
                   >
                     Cancelar
                   </button>
@@ -573,7 +573,7 @@ export function DishFormModal({
                     value={discountPercentage}
                     onChange={(e) => setDiscountPercentage(e.target.value)}
                     placeholder="0"
-                    className={`w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                    className={`min-w-0 w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
                       errors.discount_percentage ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
